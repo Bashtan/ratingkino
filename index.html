@@ -864,19 +864,23 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 32px 60px; }
 
 <script>
 /* ═══════════════════════════════════════════
-   CONFIG — keys live in localStorage
+   CONFIG — keys injected server-side via proxy
+   localStorage overrides for local dev only
 ═══════════════════════════════════════════ */
 const CFG = {
-  get tmdb() { return localStorage.getItem('rk_tmdb') || ''; },
-  get omdb() { return localStorage.getItem('rk_omdb') || ''; },
+  get tmdb() { return localStorage.getItem('rk_tmdb') || '__proxy__'; },
+  get omdb() { return localStorage.getItem('rk_omdb') || '__proxy__'; },
   set tmdb(v) { localStorage.setItem('rk_tmdb', v.trim()); },
   set omdb(v) { localStorage.setItem('rk_omdb', v.trim()); },
 };
 
-const TMDB_BASE = 'https://api.themoviedb.org/3';
-const TIMG_W500 = 'https://image.tmdb.org/t/p/w500';
-const TIMG_W780 = 'https://image.tmdb.org/t/p/w780';
-const OMDB_BASE = 'https://www.omdbapi.com';
+// All API calls go through /api/* proxy on production.
+// Proxy injects the real keys server-side (Cloudflare Pages secrets).
+const PROXY_BASE = '/api';
+const TMDB_BASE  = PROXY_BASE + '/tmdb';   // → api.themoviedb.org/3
+const TIMG_W500  = 'https://image.tmdb.org/t/p/w500';
+const TIMG_W780  = 'https://image.tmdb.org/t/p/w780';
+const OMDB_BASE  = PROXY_BASE + '/omdb';   // → www.omdbapi.com
 
 const COUNTRY_NAME = {
   US:'USA', GB:'UK', FR:'France', IT:'Italy', DE:'Germany',
@@ -950,9 +954,8 @@ function emojiFromGenreIds(ids) {
    API HELPERS
 ═══════════════════════════════════════════ */
 async function tmdbGet(path, params = {}) {
-  if (!CFG.tmdb) throw new Error('No TMDb key configured');
-  const u = new URL(TMDB_BASE + path);
-  u.searchParams.set('api_key', CFG.tmdb);
+  // Proxy URL: /api/tmdb/path?params  — key injected server-side
+  const u = new URL(TMDB_BASE + path, location.origin);
   for (const [k, v] of Object.entries(params)) {
     if (v !== '' && v != null) u.searchParams.set(k, v);
   }
@@ -965,9 +968,10 @@ async function tmdbGet(path, params = {}) {
 }
 
 async function omdbGet(imdbId) {
-  if (!CFG.omdb || !imdbId) return null;
+  if (!imdbId) return null;
   try {
-    const r = await fetch(`${OMDB_BASE}/?apikey=${CFG.omdb}&i=${imdbId}&plot=short`);
+    // Proxy URL: /api/omdb?i=imdbId  — key injected server-side
+    const r = await fetch(`${OMDB_BASE}?i=${imdbId}&plot=short`);
     if (!r.ok) return null;
     const d = await r.json();
     return d.Response === 'True' ? d : null;
@@ -1555,9 +1559,23 @@ function nativeShare() {
 }
 
 /* ═══════════════════════════════════════════
-   SETTINGS
+   SETTINGS — admin-only, protected by password
 ═══════════════════════════════════════════ */
-function openSettings(required = false) {
+const ADMIN_HASH = '86f4e615f592738e8b98853d2be7fc7ad2bef0be85f37a426a2b3fe9fe69c801';
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function openSettings(required = false) {
+  const pw = prompt('Admin password:');
+  if (!pw) return;
+  const hash = await sha256(pw.trim());
+  if (hash !== ADMIN_HASH) {
+    alert('Incorrect password.');
+    return;
+  }
   SETTINGS_REQ = required;
   document.getElementById('sTmdb').value = CFG.tmdb;
   document.getElementById('sOmdb').value = CFG.omdb;
@@ -1627,18 +1645,14 @@ document.getElementById('settingsOv').addEventListener('click', function(e) {
 /* ═══════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════ */
+// Settings button hidden from public — admin only via Ctrl+Shift+A
+document.querySelector('.btn-settings').style.display = 'none';
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.shiftKey && e.key === 'A') openSettings();
+});
+
 async function init() {
-  if (!CFG.tmdb) {
-    // First run — show settings, nothing else to do
-    openSettings(true);
-    document.getElementById('loadWrap').style.display = 'none';
-    document.getElementById('emptyState').classList.add('show');
-    document.getElementById('emptyState').querySelector('.empty-icon').textContent = '⚙️';
-    document.getElementById('emptyState').querySelector('.empty-title').textContent = 'Configure API Keys';
-    document.getElementById('emptyState').querySelector('.empty-sub').textContent =
-      'Click the ⚙ button or Save & Load Movies in settings to get started';
-    return;
-  }
+  // Keys are always available via server-side proxy — skip key check
   await loadGenres();
   await loadMovies(1, false);
 }
