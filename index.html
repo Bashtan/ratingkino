@@ -613,14 +613,159 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .settings-err { font-size: 12px; color: var(--rt); margin-top: 9px; text-align: center; min-height: 18px; }
 .settings-note { font-size: 11px; color: rgba(167,139,250,0.4); text-align: center; margin-top: 10px; line-height: 1.5; }
 
-/* ─── RESPONSIVE ──────────────────────────────── */
-@media (max-width: 700px) {
-  .m-body { grid-template-columns: 1fr; }
-  .m-left { border-right: none; border-bottom: 1px solid var(--border); }
-  .meta-grid { grid-template-columns: 1fr; }
-  .m-info-strip { flex-direction: column; align-items: flex-start; }
-  .m-meta-col { padding-top: 0; }
-  .m-poster { width: 90px; margin-top: -40px; }
+/* ─── FAB RANDOM (mobile) ────────────────────── */
+.fab-random {
+  display: none;
+  position: fixed; bottom: 24px; right: 18px; z-index: 150;
+  width: 58px; height: 58px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--orange), var(--yellow));
+  border: none; cursor: pointer; font-size: 26px;
+  box-shadow: 0 6px 28px rgba(249,115,22,0.55), 0 2px 8px rgba(0,0,0,0.4);
+  align-items: center; justify-content: center;
+  transition: transform 0.15s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.fab-random:active {
+  transform: scale(0.92);
+  box-shadow: 0 3px 14px rgba(249,115,22,0.4);
+}
+
+/* ─── MOBILE SEARCH TOGGLE ───────────────────── */
+.btn-search-toggle {
+  display: none;
+  width: 44px; height: 44px; flex-shrink: 0;
+  background: rgba(124,58,237,0.08);
+  border: 1.5px solid var(--border);
+  border-radius: 10px; color: var(--muted);
+  cursor: pointer; font-size: 17px;
+  align-items: center; justify-content: center;
+  transition: all 0.2s; -webkit-tap-highlight-color: transparent;
+}
+.btn-search-back {
+  display: none;
+  width: 44px; height: 44px; flex-shrink: 0;
+  background: none; border: none;
+  color: var(--muted); font-size: 22px; cursor: pointer;
+  align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ─── TOUCH: strip hover states ──────────────── */
+@media (hover: none) {
+  .movie-card:hover { transform: none; box-shadow: none; border-color: var(--border); }
+  .movie-card:hover .card-hover-overlay { opacity: 0; }
+  .movie-card:active { border-color: var(--purple); box-shadow: 0 0 0 2px rgba(124,58,237,0.25); }
+  .gpill:hover { border-color: var(--border); color: var(--muted); background: transparent; }
+  .gpill.active { background: var(--purple); border-color: var(--purple); color: #fff; }
+  .btn-random:hover { transform: none; box-shadow: none; }
+  .btn-trailer:hover { background: var(--orange); }
+  .btn-shr:hover { background: rgba(124,58,237,0.18); }
+  .btn-more:hover { background: transparent; color: var(--purple); box-shadow: none; }
+  .settings-save:hover { transform: none; box-shadow: none; }
+  .review-submit:hover { transform: none; }
+  .shr-btn:hover { background: rgba(255,255,255,0.04); border-color: var(--border); }
+}
+
+/* ─── RESPONSIVE — 768px (tablets / large phones) */
+@media (max-width: 768px) {
+  /* Compact header */
+  header { height: 56px; }
+  .header-inner { height: 56px; padding: 0 14px; }
+
+  /* Hide desktop search + RANDOM in header */
+  .search-wrap { display: none; }
+  .btn-random  { display: none; }
+
+  /* Show mobile controls */
+  .btn-search-toggle { display: flex; }
+  .fab-random        { display: flex; }
+
+  /* Search-open mode: expand search inline */
+  .header-inner.search-open .logo               { display: none; }
+  .header-inner.search-open .search-wrap        { display: flex; max-width: none; flex: 1; }
+  .header-inner.search-open .btn-search-toggle  { display: none; }
+  .header-inner.search-open .btn-search-back    { display: flex; }
+
+  /* Shift sticky filter bar */
+  .filters-bar { top: 56px; }
+
+  /* Larger touch targets for pills / selects / sort */
+  .gpill      { height: 38px; padding: 0 14px; font-size: 13px; }
+  .ct-btn     { height: 34px; padding: 0 14px; }
+  .src-btn    { height: 36px; padding: 0 12px; min-width: 44px; }
+  .filter-sel { height: 36px; min-width: 80px; }
+
+  /* Filter rows: tighten + no overflow */
+  .filter-row-1 { padding: 8px 14px 0; gap: 6px; }
+  .filter-row-2 { padding: 6px 14px 8px; gap: 6px; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .filter-row-2::-webkit-scrollbar { display: none; }
+  .filter-lbl   { display: none; }
+  .f-div        { display: none; }
+  .sort-wrap     { flex-shrink: 0; }
+
+  /* Compact hero — get cards above the fold */
+  .hero-band   { padding: 10px 14px 8px; flex-direction: column; gap: 4px; align-items: flex-start; }
+  .hero-title  { font-size: 20px; line-height: 1.15; }
+  .hero-sub    { font-size: 11px; margin-top: 2px; }
+  .source-badges { display: none; }
+
+  /* 2-column movie grid */
+  main { padding: 0 12px 90px; }
+  .movie-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .count-row  { margin-bottom: 10px; }
+  .movie-title { font-size: 11px; }
+  .movie-meta  { font-size: 9px; }
+  .load-wrap   { margin-top: 24px; }
+  .btn-more    { width: 100%; height: 50px; }
+
+  /* Modal: sheet sliding up from bottom */
+  .overlay { padding: 0; align-items: flex-end; }
+  .modal {
+    border-radius: 20px 20px 0 0; max-width: 100%;
+    max-height: 90vh; overflow-y: auto;
+    transform: translateY(100%);
+  }
+  .overlay.open .modal { transform: translateY(0); }
+  .m-backdrop  { height: 160px; }
+  .m-info-strip { padding: 0 14px 14px; margin-top: -52px; gap: 12px; }
+  .m-poster    { width: 80px; }
+  .m-meta-col  { padding-top: 58px; }
+  .m-title     { font-size: 18px; }
+  .m-close     { width: 44px; height: 44px; top: 10px; right: 10px; font-size: 16px; }
+  .m-body      { grid-template-columns: 1fr; }
+  .m-left      { padding: 14px 16px; border-right: none; border-bottom: 1px solid var(--border); }
+  .m-right     { padding: 14px 16px; }
+  .meta-grid   { grid-template-columns: 1fr 1fr; gap: 9px; }
+  .m-info-strip { flex-direction: row; }
+  .btn-trailer, .btn-shr { height: 44px; }
+
+  /* Share panel: full width */
+  .share-panel { width: 100%; border-radius: 16px 16px 0 0; }
+
+  /* No tap flash */
+  .movie-card, .gpill, .ct-btn, .src-btn, .fab-random, .btn-search-toggle {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* ─── 430px (Plus / Max phones) ────────────── */
+@media (max-width: 430px) {
+  .hero-title   { font-size: 18px; }
+  .movie-grid   { gap: 8px; }
+  .filter-row-1 { padding: 7px 12px 0; }
+  .filter-row-2 { padding: 5px 12px 7px; }
+  .ct-toggle    { flex-shrink: 0; }
+}
+
+/* ─── 375px (standard iPhone) ──────────────── */
+@media (max-width: 375px) {
+  .header-inner  { padding: 0 12px; }
+  .logo-name     { font-size: 16px; }
+  .hero-band     { padding: 8px 12px 6px; }
+  .hero-title    { font-size: 16px; }
+  main           { padding: 0 10px 90px; }
+  .movie-grid    { gap: 7px; }
+  .gpill         { height: 36px; padding: 0 11px; font-size: 12px; }
 }
 </style>
 </head>
@@ -629,6 +774,9 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 <!-- ════════════ HEADER ════════════ -->
 <header>
   <div class="header-inner">
+    <!-- Mobile: back arrow shown when search is expanded -->
+    <button class="btn-search-back" onclick="closeSearch()" aria-label="Close search">←</button>
+
     <a class="logo" href="#">
       <svg class="logo-icon" viewBox="0 0 48 56" fill="none">
         <defs>
@@ -662,6 +810,12 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
     </div>
 
     <div class="header-btns">
+      <!-- Mobile: search icon (collapses to full search) -->
+      <button class="btn-search-toggle" onclick="toggleSearch()" aria-label="Search">
+        <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+      </button>
       <button class="btn-random" onclick="randomMovie()">🎲 Random</button>
       <button class="btn-settings" onclick="openSettings()" title="Settings" style="display:none">⚙</button>
     </div>
@@ -833,6 +987,9 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   <div class="share-grid" id="shareGrid"></div>
   <button class="share-native" id="shareNative" onclick="nativeShare()">📤 Share via Device</button>
 </div>
+
+<!-- ════════════ FAB RANDOM (mobile) ════════════ -->
+<button class="fab-random" onclick="randomMovie()" aria-label="Random movie">🎲</button>
 
 <!-- ════════════ SETTINGS OVERLAY ════════════ -->
 <div class="overlay" id="settingsOv">
@@ -1681,9 +1838,31 @@ document.getElementById('settingsOv').addEventListener('click', function(e) {
   if (e.target === this && !SETTINGS_REQ) closeSettings();
 });
 
-// Admin shortcut
+// Admin shortcut + mobile search close
 document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.shiftKey && e.key === 'A') openSettings();
+  if (e.key === 'Escape') closeSearch();
+});
+
+/* ═══════════════════════════════════
+   MOBILE SEARCH TOGGLE
+═══════════════════════════════════ */
+function toggleSearch() {
+  document.querySelector('.header-inner').classList.add('search-open');
+  const inp = document.getElementById('searchInput');
+  inp.style.display = '';
+  setTimeout(() => inp.focus(), 60);
+}
+function closeSearch() {
+  const inner = document.querySelector('.header-inner');
+  if (!inner.classList.contains('search-open')) return;
+  inner.classList.remove('search-open');
+  const inp = document.getElementById('searchInput');
+  if (inp.value) { inp.value = ''; applyFilters(); }
+}
+// Close search when user submits (hits enter / blur on mobile)
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.target.blur(); }
 });
 
 /* ═══════════════════════════════════
