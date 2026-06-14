@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "ratingkino",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8282"],
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/bashtan/Projects/ratingkino && npx wrangler pages dev . --port 8282"],
       "port": 8282
     }
   ]
