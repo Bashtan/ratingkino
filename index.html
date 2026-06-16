@@ -1,10 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XF0GTFNRHX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XF0GTFNRHX');
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name='impact-site-verification' value='2d8e421c-95be-44b7-bc11-1fd85667d795'>
+<meta name='impact-site-verification' value='ce4807f1-c27d-4143-9a9d-4452962ff8bd'>
 <title>RatingKino — find your movie</title>
+
+<!-- Favicons -->
+<link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ratingkino.com/">
+<meta property="og:title" content="RatingKino — find your movie">
+<meta property="og:description" content="240,000 films. Scores from IMDb, Rotten Tomatoes & Metacritic combined into one weighted rating.">
+<meta property="og:image" content="https://ratingkino.com/assets/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="RatingKino — find your movie">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="RatingKino — find your movie">
+<meta name="twitter:description" content="240,000 films. Scores from IMDb, Rotten Tomatoes & Metacritic combined into one weighted rating.">
+<meta name="twitter:image" content="https://ratingkino.com/assets/og-image.jpg">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -53,8 +82,10 @@ header {
   height: 64px; padding: 0 24px;
 }
 
-.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
-.logo-icon { width: 38px; height: 38px; }
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; transition: opacity 0.2s; }
+.logo:hover { opacity: 0.85; }
+.logo:hover .logo-icon { filter: drop-shadow(0 0 8px rgba(124,58,237,0.7)) drop-shadow(0 0 16px rgba(249,115,22,0.4)); }
+.logo-icon { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; transition: filter 0.25s; }
 .logo-name {
   font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 20px;
   background: linear-gradient(90deg, var(--purple) 0%, var(--orange) 55%, var(--yellow) 100%);
@@ -498,6 +529,8 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .provider-tag.free { background: rgba(34,197,94,0.2); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
 .provider-tag.sub  { background: rgba(124,58,237,0.2); color: var(--muted); border: 1px solid var(--border); }
+.provider-chip[href] { text-decoration: none; cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.12s; }
+.provider-chip[href]:hover { background: rgba(255,255,255,0.11); border-color: rgba(255,255,255,0.22); transform: translateY(-1px); }
 
 /* ─── USER REVIEWS ────────────────────────────── */
 .review-compose {
@@ -508,16 +541,25 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   border-radius: 12px;
 }
 .review-stars {
-  display: flex; gap: 6px; margin-bottom: 10px;
+  display: flex; gap: 6px; margin-bottom: 14px; align-items: center;
 }
 .rev-star {
-  font-size: 22px; cursor: pointer; transition: transform 0.15s;
-  filter: grayscale(1); opacity: 0.4;
-  background: none; border: none; padding: 0; line-height: 1;
+  cursor: pointer; background: none; border: none;
+  padding: 2px; line-height: 0; flex-shrink: 0;
+  transition: transform 0.15s;
+  -webkit-tap-highlight-color: transparent;
 }
-.rev-star:hover, .rev-star.lit {
-  filter: none; opacity: 1; transform: scale(1.18);
+.rev-star svg {
+  width: 32px; height: 32px; display: block;
+  fill: rgba(180,130,0,0.22);
+  transition: fill 0.2s, filter 0.2s;
 }
+.rev-star:hover svg,
+.rev-star.lit svg {
+  fill: #FBBF24;
+  filter: drop-shadow(0 0 6px rgba(251,191,36,0.85)) drop-shadow(0 0 14px rgba(249,115,22,0.4));
+}
+.rev-star:hover { transform: scale(1.18); }
 .review-text {
   width: 100%; background: rgba(124,58,237,0.08);
   border: 1px solid var(--border); border-radius: 8px;
@@ -762,6 +804,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 @media (max-width: 375px) {
   .header-inner  { padding: 0 12px; }
   .logo-name     { font-size: 16px; }
+  .logo-icon     { width: 30px; height: 30px; }
   .hero-band     { padding: 8px 12px 6px; }
   .hero-title    { font-size: 16px; }
   main           { padding: 0 10px 90px; }
@@ -778,28 +821,8 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
     <!-- Mobile: back arrow shown when search is expanded -->
     <button class="btn-search-back" onclick="closeSearch()" aria-label="Close search">←</button>
 
-    <a class="logo" href="#">
-      <svg class="logo-icon" viewBox="0 0 48 56" fill="none">
-        <defs>
-          <linearGradient id="lg1" x1="0" y1="0" x2="48" y2="56" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#7C3AED"/>
-            <stop offset="50%" stop-color="#F97316"/>
-            <stop offset="100%" stop-color="#FBBF24"/>
-          </linearGradient>
-        </defs>
-        <rect x="9" y="2" width="30" height="52" rx="3" fill="url(#lg1)"/>
-        <rect x="2" y="9"  width="7" height="5" rx="1.5" fill="rgba(0,0,0,0.35)"/>
-        <rect x="2" y="20" width="7" height="5" rx="1.5" fill="rgba(0,0,0,0.35)"/>
-        <rect x="2" y="31" width="7" height="5" rx="1.5" fill="rgba(0,0,0,0.35)"/>
-        <rect x="2" y="42" width="7" height="5" rx="1.5" fill="rgba(0,0,0,0.35)"/>
-        <rect x="39" y="9"  width="7" height="5" rx="1.5" fill="rgba(0,0,0,0.35)"/>
-        <rect x="39" y="20" width="7" height="5" rx="1.5" fill="rgba(0,0,0,0.35)"/>
-        <rect x="39" y="31" width="7" height="5" rx="1.5" fill="rgba(0,0,0,0.35)"/>
-        <rect x="39" y="42" width="7" height="5" rx="1.5" fill="rgba(0,0,0,0.35)"/>
-        <rect x="13" y="7"  width="22" height="16" rx="2" fill="rgba(0,0,0,0.22)"/>
-        <rect x="13" y="27" width="22" height="16" rx="2" fill="rgba(0,0,0,0.22)"/>
-        <polygon points="20,12 29,15 20,18" fill="rgba(255,255,255,0.55)"/>
-      </svg>
+    <a class="logo" href="/">
+      <img class="logo-icon" src="/assets/logo-icon.webp" alt="RatingKino logo" width="38" height="38">
       <span class="logo-name">RatingKino</span>
     </a>
 
@@ -964,11 +987,11 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
         <div class="section-lbl">Your Review</div>
         <div class="review-compose" id="reviewCompose">
           <div class="review-stars" id="reviewStars">
-            <button class="rev-star" data-s="1">★</button>
-            <button class="rev-star" data-s="2">★</button>
-            <button class="rev-star" data-s="3">★</button>
-            <button class="rev-star" data-s="4">★</button>
-            <button class="rev-star" data-s="5">★</button>
+            <button class="rev-star" data-s="1" aria-label="1 star"><svg viewBox="0 0 24 24"><path d="M12 2l2.939 6.326L22 9.354l-5.5 5.667 1.299 7.979L12 19.25l-5.799 3.75L7.5 15.021 2 9.354l7.061-1.028Z"/></svg></button>
+            <button class="rev-star" data-s="2" aria-label="2 stars"><svg viewBox="0 0 24 24"><path d="M12 2l2.939 6.326L22 9.354l-5.5 5.667 1.299 7.979L12 19.25l-5.799 3.75L7.5 15.021 2 9.354l7.061-1.028Z"/></svg></button>
+            <button class="rev-star" data-s="3" aria-label="3 stars"><svg viewBox="0 0 24 24"><path d="M12 2l2.939 6.326L22 9.354l-5.5 5.667 1.299 7.979L12 19.25l-5.799 3.75L7.5 15.021 2 9.354l7.061-1.028Z"/></svg></button>
+            <button class="rev-star" data-s="4" aria-label="4 stars"><svg viewBox="0 0 24 24"><path d="M12 2l2.939 6.326L22 9.354l-5.5 5.667 1.299 7.979L12 19.25l-5.799 3.75L7.5 15.021 2 9.354l7.061-1.028Z"/></svg></button>
+            <button class="rev-star" data-s="5" aria-label="5 stars"><svg viewBox="0 0 24 24"><path d="M12 2l2.939 6.326L22 9.354l-5.5 5.667 1.299 7.979L12 19.25l-5.799 3.75L7.5 15.021 2 9.354l7.061-1.028Z"/></svg></button>
           </div>
           <textarea class="review-text" id="reviewText" placeholder="What did you think? (optional)" maxlength="200"></textarea>
           <button class="review-submit" id="reviewSubmit" onclick="submitReview()">Post Review</button>
@@ -1057,6 +1080,7 @@ let TRAILER_OPEN = false;
 let IS_LOADING   = false;
 let SETTINGS_REQ = false;
 let PENDING_STARS = 0;         // stars selected in compose
+let RANDOM_POOL  = [];         // cached 500-movie roulette pool (daily sync)
 
 const ENRICH_QUEUE    = [];
 const ENRICH_PROMISES = new Map();
@@ -1291,6 +1315,7 @@ async function doEnrich(tmdbId) {
         flatrate: (wp.flatrate || []).slice(0, 4),
         rent:     (wp.rent     || []).slice(0, 3),
       };
+      movie.wpLink = wp.link || null; // JustWatch URL for this specific movie
     }
 
     // Step 2: OMDb — IMDb + RT + MC
@@ -1447,6 +1472,63 @@ function applySortOrder() {
   });
 }
 
+/* ── Cache helpers ─────────────────────────────────────────── */
+
+// Normalize a cached (sync-worker) movie object to the frontend format.
+function fromCache(m) {
+  const genres = m.genres || (m.genreIds || []).map(id => GENRES[id]).filter(Boolean);
+  return {
+    id:           m.id,
+    title:        m.title || 'Untitled',
+    titleOrig:    m.titleOrig || '',
+    year:         m.year   || null,
+    genres,
+    genre:        m.genre  || genres[0] || '',
+    genreIds:     m.genreIds || [],
+    country:      m.country  || null,
+    director:     m.director || null,
+    imdb:         m.imdb  ?? null,
+    imdbV:        m.imdbV || 0,
+    rt:           m.rt    ?? null,
+    rtV:          0,
+    mc:           m.mc    ?? null,
+    mcV:          0,
+    tmdbScore:    m.tmdbScore  || null,
+    tmdbVotes:    m.tmdbVotes  || 0,
+    desc:         m.desc       || '',
+    actors:       m.actors     || [],
+    awards:       m.awards     || [],
+    poster:       m.poster     || null,
+    backdrop:     m.backdrop   || null,
+    imdbId:       m.imdbId     || null,
+    trailer:      m.trailer    || null,
+    watchProviders: m.watchProviders || { free: [], flatrate: [], rent: [] },
+    wpLink:       m.wpLink     || null,
+    enriched:     m.enriched   || false,
+    isTV:         false,
+  };
+}
+
+// Try loading the homepage from the daily KV cache.
+// Returns exactly 119 fully-enriched newest releases, refreshed each day by the cron.
+// Falls back to null so loadMovies() switches to live TMDB if the cache is empty.
+async function tryCache() {
+  // Only use cache for unfiltered movie browse (not TV, not search, not genre filter)
+  const q       = document.getElementById('searchInput').value.trim();
+  const country = document.getElementById('fCountry').value;
+  const rating  = document.getElementById('fMinRating').value;
+  const genre   = ACTIVE_GENRE;
+  if (CONTENT_TYPE !== 'movie' || q || country || +rating > 0 || genre) return null;
+
+  try {
+    const r = await fetch('/api/cache/new-releases');
+    if (!r.ok) return null;
+    const movies = await r.json();
+    if (!Array.isArray(movies) || !movies.length) return null;
+    return movies.map(fromCache); // already enriched by the sync-worker
+  } catch { return null; }
+}
+
 async function loadMovies(page = 1, append = false) {
   if (IS_LOADING) return;
   IS_LOADING = true;
@@ -1454,6 +1536,24 @@ async function loadMovies(page = 1, append = false) {
   moreBtn.disabled = true;
   if (!append) showSkeletons(20);
   try {
+    // ── Cache-first on initial unfiltered load ──────────────
+    if (page === 1 && !append) {
+      const cached = await tryCache();
+      if (cached) {
+        MOVIES      = cached;
+        CUR_PAGE    = 1;
+        TOTAL_PAGES = 1;   // cache is self-contained; hide Load More
+        TOTAL_COUNT = cached.length;
+        applySortOrder();
+        renderGrid(MOVIES, false);
+        // Cached enriched movies don't need re-enrichment
+        for (const m of MOVIES) if (!m.enriched) queueEnrich(m);
+        document.getElementById('loadWrap').style.display = 'none';
+        return;
+      }
+    }
+
+    // ── Live TMDB fallback ──────────────────────────────────
     const data = await fetchPage(page);
     CUR_PAGE    = page;
     TOTAL_PAGES = Math.min(data.total_pages || 1, 500);
@@ -1511,9 +1611,33 @@ function toggleSrc(src) {
 /* ═══════════════════════════════════
    RANDOM
 ═══════════════════════════════════ */
-function randomMovie() {
-  if (!MOVIES.length) return;
-  openMovie(MOVIES[Math.floor(Math.random() * MOVIES.length)].id);
+async function randomMovie() {
+  // Lazily load the cached random pool (500 movies) on first use
+  if (!RANDOM_POOL.length) {
+    try {
+      const r = await fetch('/api/cache/random-pool');
+      if (r.ok) {
+        const data = await r.json();
+        if (Array.isArray(data) && data.length) RANDOM_POOL = data;
+      }
+    } catch { /* fall back to current page */ }
+  }
+
+  const source = RANDOM_POOL.length ? RANDOM_POOL : MOVIES;
+  if (!source.length) return;
+
+  const pick = source[Math.floor(Math.random() * source.length)];
+
+  // If the picked movie isn't in MOVIES yet, add a stub so openMovie() can find it
+  if (!MOVIES.find(m => m.id === pick.id)) {
+    const stub = fromCache({
+      ...pick,
+      genres: (pick.genreIds || []).map(id => GENRES[id]).filter(Boolean),
+    });
+    MOVIES.push(stub);
+  }
+
+  openMovie(pick.id);
 }
 
 /* ═══════════════════════════════════
@@ -1618,6 +1742,34 @@ function refreshModalDetails(m) {
   document.getElementById('btnTrailer').style.display = m.trailer ? '' : 'none';
 }
 
+/* ── Provider URL map ─────────────────────────────────────────
+   Keyed by TMDB provider_id. Builds the best direct URL for
+   each platform using the movie title. Falls back to wpLink
+   (the TMDB→JustWatch page for this exact movie).           */
+const PROVIDER_SEARCH = {
+  2:    t => `https://tv.apple.com/search?term=${encodeURIComponent(t)}`,                   // Apple iTunes
+  3:    t => `https://play.google.com/store/search?q=${encodeURIComponent(t)}&c=movies`,    // Google Play Movies
+  8:    t => `https://www.netflix.com/search?q=${encodeURIComponent(t)}`,                   // Netflix
+  9:    t => `https://www.amazon.com/s?k=${encodeURIComponent(t)}&i=instant-video`,        // Amazon Prime
+  10:   t => `https://www.amazon.com/s?k=${encodeURIComponent(t)}&i=instant-video`,        // Amazon Video
+  15:   t => `https://www.hulu.com/search?q=${encodeURIComponent(t)}`,                      // Hulu
+  119:  t => `https://www.amazon.com/s?k=${encodeURIComponent(t)}&i=instant-video`,        // Amazon Prime (alt)
+  191:  () => 'https://www.kanopy.com/',                                                     // Kanopy
+  257:  () => 'https://www.fubo.tv/',                                                        // fuboTV
+  337:  t => `https://www.disneyplus.com/search?q=${encodeURIComponent(t)}`,               // Disney+
+  350:  t => `https://tv.apple.com/search?term=${encodeURIComponent(t)}`,                   // Apple TV+
+  363:  () => 'https://tv.youtube.com/',                                                     // YouTube TV
+  386:  t => `https://www.peacocktv.com/search?q=${encodeURIComponent(t)}`,                 // Peacock
+  387:  t => `https://www.peacocktv.com/search?q=${encodeURIComponent(t)}`,                 // Peacock Premium
+  531:  t => `https://www.paramountplus.com/search/results/${encodeURIComponent(t)}/`,      // Paramount+
+  1796: t => `https://www.netflix.com/search?q=${encodeURIComponent(t)}`,                   // Netflix (ads tier)
+};
+
+function providerUrl(p, title, wpLink) {
+  const fn = PROVIDER_SEARCH[p.provider_id];
+  return fn ? fn(title) : (wpLink || '#');
+}
+
 function refreshWatchProviders(m) {
   const lbl = document.getElementById('watchLbl');
   const container = document.getElementById('watchProviders');
@@ -1626,10 +1778,10 @@ function refreshWatchProviders(m) {
     container.innerHTML = '';
     return;
   }
-  const wp = m.watchProviders;
-  const free     = wp.free || [];
+  const wp       = m.watchProviders;
+  const free     = wp.free     || [];
   const flatrate = wp.flatrate || [];
-  const rent     = wp.rent || [];
+  const rent     = wp.rent     || [];
   if (!free.length && !flatrate.length && !rent.length) {
     lbl.style.display = 'none';
     container.innerHTML = '';
@@ -1637,29 +1789,26 @@ function refreshWatchProviders(m) {
   }
   lbl.style.display = '';
 
-  function providerChips(list, tag) {
-    return list.map(p => `
-      <div class="provider-chip">
-        ${p.logo_path ? `<img src="${TIMG_W45}${p.logo_path}" alt="${esc(p.provider_name)}">` : ''}
-        <span>${esc(p.provider_name)}</span>
-        <span class="provider-tag ${tag}">${tag === 'free' ? 'Free' : 'Sub'}</span>
-      </div>`).join('');
-  }
-  function rentChips(list) {
-    return list.map(p => `
-      <div class="provider-chip">
-        ${p.logo_path ? `<img src="${TIMG_W45}${p.logo_path}" alt="${esc(p.provider_name)}">` : ''}
-        <span>${esc(p.provider_name)}</span>
-        <span class="provider-tag" style="background:rgba(249,115,22,0.15);color:var(--orange);border:1px solid rgba(249,115,22,0.3)">Rent</span>
-      </div>`).join('');
+  const title  = m.title || '';
+  const wpLink = m.wpLink || null;
+
+  const RENT_STYLE = 'background:rgba(249,115,22,0.15);color:var(--orange);border:1px solid rgba(249,115,22,0.3)';
+
+  function chip(p, tagClass, tagLabel, tagStyle) {
+    const url = providerUrl(p, title, wpLink);
+    const styleAttr = tagStyle ? ` style="${tagStyle}"` : '';
+    return `<a class="provider-chip" href="${url}" target="_blank" rel="noopener noreferrer" title="Watch on ${esc(p.provider_name)}">
+      ${p.logo_path ? `<img src="${TIMG_W45}${p.logo_path}" alt="${esc(p.provider_name)}">` : ''}
+      <span>${esc(p.provider_name)}</span>
+      <span class="provider-tag ${tagClass}"${styleAttr}>${tagLabel}</span>
+    </a>`;
   }
 
-  container.innerHTML = `
-    <div class="providers-row">
-      ${providerChips(free,'free')}
-      ${providerChips(flatrate,'sub')}
-      ${rentChips(rent)}
-    </div>`;
+  container.innerHTML = `<div class="providers-row">
+    ${free.map(p     => chip(p, 'free', 'Free')).join('')}
+    ${flatrate.map(p => chip(p, 'sub',  'Sub')).join('')}
+    ${rent.map(p     => chip(p, 'rent', 'Rent', RENT_STYLE)).join('')}
+  </div>`;
 }
 
 function overlayClick(e) {

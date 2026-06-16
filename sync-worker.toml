@@ -1,0 +1,22 @@
+# Cloudflare Worker — RatingKino Daily Sync
+# Deployed separately from Pages via:  npx wrangler deploy --config sync-worker.toml
+#
+# Cron fires at 00:00 UTC every day.
+# Secrets (set once via CLI):
+#   npx wrangler secret put TMDB_KEY --name ratingkino-sync
+#   npx wrangler secret put OMDB_KEY --name ratingkino-sync
+
+name              = "ratingkino-sync"
+main              = "sync-worker.js"
+compatibility_date = "2024-11-01"
+
+[triggers]
+# Three cron triggers — one per enrichment phase, 5 minutes apart.
+# Phase 1 (00:00): fetch discover pages + enrich movies  0–39
+# Phase 2 (00:05): enrich movies 40–79
+# Phase 3 (00:10): enrich movies 80–118, merge & write final 'new-releases' key
+crons = ["0 0 * * *", "5 0 * * *", "10 0 * * *"]
+
+[[kv_namespaces]]
+binding = "MOVIES_CACHE"
+id      = "9b1ddd3fe25446c390304fd3a460606e"
