@@ -1664,6 +1664,14 @@ function applyTranslations() {
   if (btnTrailer && btnTrailer.style.display !== 'none') {
     btnTrailer.textContent = TRAILER_OPEN ? t('modal.hideTrailer') : t('modal.trailer');
   }
+  // Hero title (static HTML has hardcoded words — update on lang change)
+  const heroTitle = document.getElementById('heroTitle');
+  if (heroTitle) {
+    const isTV = typeof CONTENT_TYPE !== 'undefined' && CONTENT_TYPE === 'tv';
+    const count = isTV ? '150,000' : '240,000';
+    const item  = isTV ? t('hero.shows') : t('hero.films');
+    heroTitle.innerHTML = `<span class="c-p">${count}</span> ${item}.<br><span class="c-o">3</span> ${t('hero.sources')}. <span class="c-y">1</span> ${t('hero.rating')}.`;
+  }
 }
 
 function switchLang(code) {
