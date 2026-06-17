@@ -742,6 +742,9 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .share-close { position: absolute; top: 11px; right: 12px; background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; }
 .share-native { width: 100%; margin-top: 9px; height: 38px; background: linear-gradient(135deg,var(--purple-mid),var(--orange-dark)); border: none; border-radius: 8px; color: #fff; font-size: 12px; font-weight: 700; font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; display: none; }
 .share-native.show { display: block; }
+.share-copy { width: 100%; margin-top: 8px; height: 38px; background: rgba(124,58,237,0.12); border: 1.5px solid var(--purple); border-radius: 8px; color: var(--text); font-size: 12px; font-weight: 700; font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; display: none; transition: background 0.2s, border-color 0.2s, color 0.2s; }
+.share-copy.show   { display: block; }
+.share-copy.copied { background: rgba(6,182,212,0.18); border-color: var(--cyan); color: var(--cyan); }
 
 /* ─── EMPTY STATE ─────────────────────────────── */
 .empty-state { text-align: center; padding: 80px 20px; display: none; }
@@ -1313,6 +1316,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   <div class="share-head">Share This Film</div>
   <div class="share-grid" id="shareGrid"></div>
   <button class="share-native" id="shareNative" onclick="nativeShare()">📤 Share via Device</button>
+  <button class="share-copy"   id="shareCopy"   onclick="copyLink()">🔗 Copy Link</button>
 </div>
 
 <!-- ════════════ FAB RANDOM (mobile) ════════════ -->
@@ -2456,12 +2460,42 @@ function openShare() {
     <span class="shr-icon">${s.icon}</span>${s.label}</a>`).join('');
   const nativeBtn = document.getElementById('shareNative');
   navigator.share ? nativeBtn.classList.add('show') : nativeBtn.classList.remove('show');
+  // Show "Copy Link" on desktop (no native share) or always as a fallback
+  const copyBtn = document.getElementById('shareCopy');
+  copyBtn.classList.toggle('show', !navigator.share);
+  copyBtn.classList.remove('copied');
+  copyBtn.textContent = '🔗 Copy Link';
   document.getElementById('sharePanel').classList.add('open');
 }
 function closeShare() { document.getElementById('sharePanel').classList.remove('open'); }
 function nativeShare() {
   if (!ACTIVE_MOVIE || !navigator.share) return;
   navigator.share({ title: ACTIVE_MOVIE.title + ' — RatingKino', url: window.location.href });
+}
+
+function legacyCopy(text) {
+  const ta = Object.assign(document.createElement('textarea'), { value: text });
+  Object.assign(ta.style, { position: 'fixed', top: '-9999px', opacity: '0' });
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch {}
+  document.body.removeChild(ta);
+}
+
+function copyLink() {
+  if (!ACTIVE_MOVIE) return;
+  const url = window.location.href; // already contains ?movie=id
+  const btn = document.getElementById('shareCopy');
+  const confirm = () => {
+    btn.textContent = '✓ Link Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '🔗 Copy Link'; btn.classList.remove('copied'); }, 2500);
+  };
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(url).then(confirm).catch(() => { legacyCopy(url); confirm(); });
+  } else {
+    legacyCopy(url); confirm();
+  }
 }
 
 /* ═══════════════════════════════════
@@ -2588,6 +2622,36 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
 async function init() {
   await loadGenres();
   await loadMovies(1, false);
+
+  // ── Deep-link: open ?movie=<id> on direct navigation ──────
+  const deepId = parseInt(new URLSearchParams(location.search).get('movie'));
+  if (deepId && !isNaN(deepId)) {
+    // 1. Already in MOVIES (e.g. was in popular list or KV cache)
+    if (!MOVIES.find(x => x.id === deepId)) {
+      // 2. In CACHE_MOVIES (loaded separately) but not in MOVIES yet
+      const cachedMovie = CACHE_MOVIES.find(x => x.id === deepId);
+      if (cachedMovie) {
+        MOVIES = [cachedMovie, ...MOVIES];
+      } else {
+        // 3. Fetch directly from TMDB
+        try {
+          const res = await fetch(`/api/tmdb/movie/${deepId}?language=en-US`);
+          if (res.ok) {
+            const raw = await res.json();
+            // Detail endpoint returns genres:[{id,name}]; fromTMDb expects genre_ids
+            raw.genre_ids = (raw.genres || []).map(g => g.id);
+            MOVIES = [fromTMDb(raw), ...MOVIES];
+          }
+        } catch (e) {
+          console.warn('[deeplink] TMDB fetch failed:', e.message);
+        }
+      }
+    }
+    // Replace current history entry so the URL keeps ?movie= and back
+    // button takes the user to wherever they came from, not a duplicate entry
+    history.replaceState({ movie: deepId }, '', location.search);
+    if (MOVIES.find(x => x.id === deepId)) openMovie(deepId);
+  }
 }
 init();
 </script>
