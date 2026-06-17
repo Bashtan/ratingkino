@@ -1654,6 +1654,15 @@ async function openMovie(tmdbId) {
   populateModal(m);
   document.getElementById('overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+  // Push history state so the mobile back gesture closes the modal
+  // instead of leaving the page. If already in a movie state (switching
+  // movies without closing), replace rather than push to keep history clean.
+  const histState = { movie: tmdbId };
+  if (history.state?.movie) {
+    history.replaceState(histState, '', `?movie=${tmdbId}`);
+  } else {
+    history.pushState(histState, '', `?movie=${tmdbId}`);
+  }
   if (!m.enriched) {
     await enrichNow(tmdbId);
     if (ACTIVE_MOVIE?.id === tmdbId) {
@@ -1823,8 +1832,28 @@ function closeModal() {
   document.getElementById('trailerWrap').classList.remove('active');
   document.body.style.overflow = '';
   ACTIVE_MOVIE = null;
+  TRAILER_OPEN = false;
   closeShare();
+  // Clean up the ?movie= param without firing popstate
+  if (history.state?.movie) {
+    history.replaceState(null, '', location.pathname);
+  }
 }
+
+// Intercept browser back gesture / button while a movie modal is open.
+// Closes the modal instead of leaving the page.
+window.addEventListener('popstate', () => {
+  if (ACTIVE_MOVIE) {
+    document.getElementById('overlay').classList.remove('open');
+    document.getElementById('trailerFrame').src = '';
+    document.getElementById('trailerWrap').classList.remove('active');
+    document.body.style.overflow = '';
+    ACTIVE_MOVIE = null;
+    TRAILER_OPEN = false;
+    closeShare();
+    // history already moved back by the browser — no further manipulation needed
+  }
+});
 
 /* ═══════════════════════════════════
    TRAILER
