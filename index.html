@@ -103,7 +103,7 @@ header {
   color: var(--text);
   -webkit-text-fill-color: var(--text);
   font-size: 14px; font-family: 'Inter', sans-serif;
-  padding: 0 40px 0 14px; outline: none;
+  padding: 0 40px 0 36px; outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .search-input::placeholder { color: var(--muted); -webkit-text-fill-color: var(--muted); }
@@ -119,6 +119,73 @@ header {
 .search-icon {
   position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
   color: var(--muted); pointer-events: none;
+}
+
+/* ─── AI search badge inside input ──────────────────────────── */
+.ai-icon {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  display: flex; align-items: center; gap: 3px;
+  font-size: 11px; font-weight: 700; font-family: 'Montserrat', sans-serif;
+  color: var(--muted);
+  pointer-events: none;
+  transition: color 0.25s;
+  letter-spacing: 0.3px;
+}
+.ai-icon svg { flex-shrink: 0; }
+.search-wrap.ai-active .ai-icon { color: #a78bfa; }
+.search-wrap.ai-active .search-input {
+  border-color: rgba(167,139,250,0.5);
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+  padding-left: 36px;
+}
+
+/* ─── AI results banner ──────────────────────────────────────── */
+.ai-banner {
+  display: none;
+  align-items: center; gap: 10px;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  background: rgba(124,58,237,0.12);
+  border: 1px solid rgba(167,139,250,0.25);
+  border-radius: 10px;
+  font-size: 13px; color: #c4b5fd;
+  animation: fadeIn 0.25s ease;
+}
+.ai-banner.show { display: flex; }
+.ai-banner-spark {
+  font-size: 15px; flex-shrink: 0;
+  animation: sparkSpin 2s linear infinite;
+}
+@keyframes sparkSpin {
+  0%,100% { transform: rotate(0deg) scale(1); }
+  50%      { transform: rotate(180deg) scale(1.15); }
+}
+.ai-banner-text { flex: 1; line-height: 1.4; }
+.ai-banner-clear {
+  background: none; border: none; cursor: pointer;
+  color: rgba(167,139,250,0.6); font-size: 18px; line-height: 1;
+  padding: 0 2px; flex-shrink: 0;
+  transition: color 0.15s;
+}
+.ai-banner-clear:hover { color: #c4b5fd; }
+.ai-banner.loading .ai-banner-spark {
+  animation: sparkPulse 0.8s ease-in-out infinite;
+}
+@keyframes sparkPulse {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+/* AI no-match suggestions below banner */
+.ai-suggestions { display: none; margin: 0 0 18px; }
+.ai-suggestions.show { display: block; }
+.ai-sug-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
+  color: var(--muted); margin-bottom: 10px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .header-btns { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
@@ -826,8 +893,14 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
       <span class="logo-name">RatingKino</span>
     </a>
 
-    <div class="search-wrap">
-      <input class="search-input" id="searchInput" type="text" placeholder="Search by title, director, actor…" autocomplete="off" spellcheck="false">
+    <div class="search-wrap" id="searchWrap">
+      <!-- AI sparkle icon: dims when not in AI mode, glows purple when active -->
+      <span class="ai-icon" id="aiIcon" title="AI semantic search">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+        </svg>
+      </span>
+      <input class="search-input" id="searchInput" type="text" autocomplete="off" spellcheck="false">
       <svg class="search-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
       </svg>
@@ -923,6 +996,14 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   <div class="count-row">
     <span class="count-text">Showing: <strong id="countShown">—</strong> of <strong id="countTotal">—</strong></span>
   </div>
+
+  <!-- AI search result banner -->
+  <div class="ai-banner" id="aiBanner">
+    <span class="ai-banner-spark" id="aiBannerSpark">✦</span>
+    <span class="ai-banner-text" id="aiBannerText"></span>
+    <button class="ai-banner-clear" onclick="clearAISearch()" title="Clear AI search">✕</button>
+  </div>
+
   <div class="movie-grid" id="movieGrid"></div>
   <div class="empty-state" id="emptyState">
     <div class="empty-icon">🎬</div>
@@ -1082,6 +1163,11 @@ let SETTINGS_REQ = false;
 let PENDING_STARS = 0;         // stars selected in compose
 let RANDOM_POOL  = [];         // cached 500-movie roulette pool (daily sync)
 
+// ── AI search state ──────────────────────────────────────────
+let CACHE_MOVIES      = [];    // snapshot of the 119 KV movies for AI search
+let AI_SEARCH_ACTIVE  = false;
+let AI_SEARCH_TIMER   = null;
+
 const ENRICH_QUEUE    = [];
 const ENRICH_PROMISES = new Map();
 let   ACTIVE_ENRICHERS = 0;
@@ -1188,7 +1274,10 @@ function setContentType(type) {
     heroTitle.innerHTML = '<span class="c-p">240,000</span> films.<br><span class="c-o">3</span> sources. <span class="c-y">1</span> rating.';
   }
   // Flush state
-  MOVIES = [];
+  MOVIES       = [];
+  CACHE_MOVIES = [];
+  AI_SEARCH_ACTIVE = false;
+  hideAIBanner();
   ENRICH_QUEUE.length = 0;
   ENRICH_PROMISES.clear();
   ACTIVE_ENRICHERS = 0;
@@ -1542,7 +1631,8 @@ async function loadMovies(page = 1, append = false) {
     if (page === 1 && !append) {
       const cached = await tryCache();
       if (cached) {
-        MOVIES      = cached;
+        MOVIES       = cached;
+        CACHE_MOVIES = [...cached]; // keep for AI search
         CUR_PAGE    = 1;
         TOTAL_PAGES = 1;   // cache is self-contained; hide Load More
         TOTAL_COUNT = cached.length;
@@ -1586,15 +1676,179 @@ function loadMore() {
 }
 
 /* ═══════════════════════════════════
+   AI SEMANTIC SEARCH
+═══════════════════════════════════ */
+
+/* Rotating example queries shown in the placeholder */
+const AI_EXAMPLES = [
+  'mind-bending sci-fi with a twist ending',
+  'cozy feel-good comedy for a rainy evening',
+  'something tense like Breaking Bad but a movie',
+  'heartwarming family film with a great soundtrack',
+  'dark psychological thriller with an unreliable narrator',
+  'romantic drama set in Europe',
+  'intense action movie with a strong female lead',
+  'slow-burn mystery that keeps you guessing',
+  'documentary about nature or the ocean',
+  'animated film that adults will love too',
+];
+let aiPlaceholderIdx = 0;
+
+function rotatePlaceholder() {
+  const input = document.getElementById('searchInput');
+  if (document.activeElement === input || input.value) return;
+  aiPlaceholderIdx = (aiPlaceholderIdx + 1) % AI_EXAMPLES.length;
+  input.placeholder = `✦ Try: "${AI_EXAMPLES[aiPlaceholderIdx]}"…`;
+}
+// Set initial AI placeholder then rotate every 3.5 s
+document.getElementById('searchInput').placeholder = `✦ Try: "${AI_EXAMPLES[0]}"…`;
+setInterval(rotatePlaceholder, 3500);
+
+/* Show / hide the banner below the count row */
+function showAIBanner(text, isLoading = false) {
+  const banner = document.getElementById('aiBanner');
+  document.getElementById('aiBannerText').textContent = text;
+  banner.classList.toggle('loading', isLoading);
+  banner.classList.add('show');
+}
+
+function hideAIBanner() {
+  document.getElementById('aiBanner').classList.remove('show', 'loading');
+}
+
+/* Reset to full catalog */
+function clearAISearch() {
+  AI_SEARCH_ACTIVE = false;
+  clearTimeout(AI_SEARCH_TIMER);
+  hideAIBanner();
+  document.getElementById('searchWrap').classList.remove('ai-active');
+  document.getElementById('searchInput').value = '';
+  if (CACHE_MOVIES.length) {
+    MOVIES      = [...CACHE_MOVIES];
+    TOTAL_COUNT = CACHE_MOVIES.length;
+    renderGrid(MOVIES, false);
+    document.getElementById('loadWrap').style.display = 'none';
+  } else {
+    loadMovies(1, false);
+  }
+}
+
+/* Client-side keyword fallback when AI endpoint is unavailable */
+function keywordFilterCache(query) {
+  const q = query.toLowerCase();
+  const results = CACHE_MOVIES.filter(m =>
+    m.title.toLowerCase().includes(q) ||
+    (m.director || '').toLowerCase().includes(q) ||
+    (m.actors || []).some(a => a.toLowerCase().includes(q)) ||
+    (m.desc || '').toLowerCase().includes(q) ||
+    (m.genres || []).some(g => g.toLowerCase().includes(q))
+  );
+  MOVIES      = results;
+  TOTAL_COUNT = CACHE_MOVIES.length;
+  renderGrid(results, false);
+  if (!results.length) {
+    document.getElementById('emptySub').textContent =
+      'No matches in the current catalog. Try a different description.';
+  }
+}
+
+/* Main AI search function */
+async function aiSearch(query) {
+  AI_SEARCH_ACTIVE = true;
+  document.getElementById('searchWrap').classList.add('ai-active');
+  showSkeletons(12);
+  showAIBanner(`Searching with AI for "${query}"…`, true);
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    const r = await fetch('/api/ai-search', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ query }),
+      signal:  controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const { ids, message } = await r.json();
+
+    if (!ids || !ids.length) throw new Error('Empty AI response');
+
+    // Reorder CACHE_MOVIES to match AI ranking
+    const idOrder = new Map(ids.map((id, i) => [id, i]));
+    const results = CACHE_MOVIES
+      .filter(m => idOrder.has(m.id))
+      .sort((a, b) => idOrder.get(a.id) - idOrder.get(b.id));
+
+    MOVIES      = results;
+    TOTAL_COUNT = CACHE_MOVIES.length;
+
+    if (message) {
+      showAIBanner(`✦ ${message}`);
+    } else {
+      const n = results.length;
+      showAIBanner(`Found ${n} match${n !== 1 ? 'es' : ''} for "${query}"`);
+    }
+
+    renderGrid(results, false);
+    document.getElementById('countTotal').textContent = CACHE_MOVIES.length.toLocaleString();
+
+  } catch (e) {
+    // Fallback: client-side keyword filter
+    console.warn('[AI search] falling back to keyword:', e.message);
+    AI_SEARCH_ACTIVE = false;
+    hideAIBanner();
+    document.getElementById('searchWrap').classList.remove('ai-active');
+    keywordFilterCache(query);
+  }
+}
+
+/* ═══════════════════════════════════
    FILTERS
 ═══════════════════════════════════ */
 let filterTimer = null;
 function applyFilters() {
   clearTimeout(filterTimer);
+  clearTimeout(AI_SEARCH_TIMER);
+  const q = document.getElementById('searchInput').value.trim();
+
+  // ── AI mode: cache is loaded and query is present ──
+  if (q && CACHE_MOVIES.length && CONTENT_TYPE === 'movie') {
+    // Debounce AI call; show icon active state immediately
+    document.getElementById('searchWrap').classList.add('ai-active');
+    AI_SEARCH_TIMER = setTimeout(() => aiSearch(q), 700);
+    return;
+  }
+
+  // ── Clear search: restore full cached list ──
+  if (!q && AI_SEARCH_ACTIVE) {
+    clearAISearch();
+    return;
+  }
+
+  // ── Normal TMDB keyword search / no cache ──
+  document.getElementById('searchWrap').classList.remove('ai-active');
   filterTimer = setTimeout(() => loadMovies(1, false), 350);
 }
 
 document.getElementById('searchInput').addEventListener('input', applyFilters);
+
+// Enter key triggers AI search immediately (no debounce wait)
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  clearTimeout(filterTimer);
+  clearTimeout(AI_SEARCH_TIMER);
+  const q = e.target.value.trim();
+  if (q && CACHE_MOVIES.length && CONTENT_TYPE === 'movie') {
+    aiSearch(q);
+  } else if (q) {
+    loadMovies(1, false);
+  } else {
+    clearAISearch();
+  }
+});
 
 function toggleSrc(src) {
   SORT_SRC = SORT_SRC === src ? null : src;
