@@ -1060,6 +1060,113 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .ai-match-pill.show { display: inline-flex; }
 
+/* ─── FEED SECTIONS (horizontal rows) ────────── */
+.feed-sections { padding: 0 0 4px; }
+
+.feed-row { margin-bottom: 28px; }
+.feed-row-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 18px 10px;
+}
+.feed-row-title {
+  font-size: 13px; font-weight: 800; letter-spacing: 0.8px;
+  font-family: 'Montserrat', sans-serif; color: var(--text);
+  text-transform: uppercase;
+}
+.feed-row-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 20px;
+  background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.3);
+  color: rgba(167,139,250,0.9); font-size: 9px; font-weight: 700;
+  font-family: 'Montserrat', sans-serif; letter-spacing: 0.6px;
+}
+.feed-row-badge svg { opacity: 0.85; }
+.feed-scroll {
+  display: flex; gap: 12px; overflow-x: auto;
+  padding: 4px 18px 12px; scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.feed-scroll::-webkit-scrollbar { display: none; }
+
+/* Mini card for horizontal rows */
+.mini-card {
+  flex: 0 0 130px; cursor: pointer; border-radius: 10px;
+  overflow: hidden; background: var(--card-bg);
+  border: 1px solid var(--border);
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1),
+              box-shadow 0.25s ease;
+  position: relative;
+}
+.mini-card:hover {
+  transform: scale(1.06) translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  z-index: 2;
+}
+.mini-card-img {
+  width: 100%; aspect-ratio: 2/3; object-fit: cover;
+  background: rgba(255,255,255,0.04);
+  display: block;
+}
+.mini-card-img-placeholder {
+  width: 100%; aspect-ratio: 2/3;
+  background: rgba(99,102,241,0.08);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+}
+.mini-card-info {
+  padding: 7px 8px 8px;
+}
+.mini-card-title {
+  font-size: 11px; font-weight: 700; color: var(--text);
+  font-family: 'Montserrat', sans-serif;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+.mini-card-meta {
+  font-size: 10px; color: var(--muted);
+  font-family: 'DM Mono', monospace;
+}
+.mini-card-score {
+  position: absolute; top: 7px; right: 7px;
+  background: rgba(10,0,28,0.82); backdrop-filter: blur(6px);
+  border-radius: 6px; padding: 2px 6px;
+  font-size: 10px; font-weight: 700; color: #f5c518;
+  font-family: 'DM Mono', monospace;
+}
+.mini-card-new-badge {
+  position: absolute; top: 7px; left: 7px;
+  background: rgba(16,185,129,0.85); border-radius: 4px;
+  padding: 2px 5px; font-size: 8px; font-weight: 800;
+  color: #fff; font-family: 'Montserrat', sans-serif;
+  letter-spacing: 0.5px;
+}
+/* "For You" row: extra purple tint on cards */
+.feed-row.for-you .mini-card {
+  border-color: rgba(99,102,241,0.22);
+}
+.feed-row.for-you .mini-card:hover {
+  box-shadow: 0 12px 32px rgba(99,102,241,0.3);
+}
+/* Skeleton mini cards */
+.mini-card-skeleton {
+  flex: 0 0 130px; border-radius: 10px; overflow: hidden;
+  background: rgba(255,255,255,0.04);
+}
+.mini-card-skeleton .sk-img {
+  width: 100%; aspect-ratio: 2/3;
+  background: linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.09) 50%,rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+.mini-card-skeleton .sk-line {
+  height: 9px; margin: 8px 8px 4px;
+  border-radius: 4px;
+  background: linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.09) 50%,rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+.mini-card-skeleton .sk-line.short { width: 60%; }
+
 /* ─── LANGUAGE SWITCHER ──────────────────────── */
 .lang-switch { position: relative; flex-shrink: 0; }
 .lang-btn {
@@ -1262,6 +1369,39 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
     <div class="sbadge rt">🍅 Rotten Tomatoes</div>
     <div class="sbadge mc">🎯 Metacritic</div>
   </div>
+</div>
+
+<!-- ════════════ FEED SECTIONS (horizontal rows) ════════════ -->
+<div class="feed-sections" id="feedSections">
+
+  <!-- "For You" row — only shown after enough interactions -->
+  <div class="feed-row for-you" id="rowForYou" style="display:none">
+    <div class="feed-row-header">
+      <span class="feed-row-title">✨ For You</span>
+      <span class="feed-row-badge">
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+        Based on your taste
+      </span>
+    </div>
+    <div class="feed-scroll" id="scrollForYou"></div>
+  </div>
+
+  <!-- Fresh Additions row -->
+  <div class="feed-row" id="rowFresh">
+    <div class="feed-row-header">
+      <span class="feed-row-title">🔥 Fresh Additions</span>
+    </div>
+    <div class="feed-scroll" id="scrollFresh"></div>
+  </div>
+
+  <!-- All-Time Popular row -->
+  <div class="feed-row" id="rowPopular">
+    <div class="feed-row-header">
+      <span class="feed-row-title">🏆 Masterpieces</span>
+    </div>
+    <div class="feed-scroll" id="scrollPopular"></div>
+  </div>
+
 </div>
 
 <!-- ════════════ MAIN GRID ════════════ -->
@@ -1718,6 +1858,54 @@ document.addEventListener('click', (e) => {
 });
 
 /* ═══════════════════════════════════
+   TASTE PROFILE — client-side personalization
+═══════════════════════════════════ */
+const TASTE_KEY = 'rk_taste_v1';
+const TASTE_THRESHOLD = 3; // interactions needed before showing "For You"
+
+function getTasteProfile() {
+  try { return JSON.parse(localStorage.getItem(TASTE_KEY)) || { genres: {}, directors: {}, total: 0 }; }
+  catch { return { genres: {}, directors: {}, total: 0 }; }
+}
+
+function saveTasteProfile(p) {
+  localStorage.setItem(TASTE_KEY, JSON.stringify(p));
+}
+
+function recordInteraction(m) {
+  if (!m) return;
+  const p = getTasteProfile();
+  // Weight genres
+  for (const g of (m.genres || [])) {
+    p.genres[g] = (p.genres[g] || 0) + 1;
+  }
+  // Weight director
+  if (m.director) {
+    p.directors[m.director] = (p.directors[m.director] || 0) + 1;
+  }
+  p.total = (p.total || 0) + 1;
+  saveTasteProfile(p);
+  // Refresh "For You" row if we just crossed the threshold
+  if (p.total >= TASTE_THRESHOLD && window._FEED_POOL?.length) {
+    renderForYouRow();
+  }
+}
+
+function scoredForProfile(movies) {
+  const p = getTasteProfile();
+  return movies
+    .map(m => {
+      let score = 0;
+      for (const g of (m.genres || [])) score += (p.genres[g] || 0) * 2;
+      if (m.director && p.directors[m.director]) score += p.directors[m.director] * 3;
+      return { m, score };
+    })
+    .filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score || (b.m.avg || 0) - (a.m.avg || 0))
+    .map(x => x.m);
+}
+
+/* ═══════════════════════════════════
    STATE
 ═══════════════════════════════════ */
 let CONTENT_TYPE = 'movie';   // 'movie' | 'tv'
@@ -1744,6 +1932,113 @@ const ENRICH_QUEUE    = [];
 const ENRICH_PROMISES = new Map();
 let   ACTIVE_ENRICHERS = 0;
 const MAX_ENRICHERS    = 3;
+
+/* ═══════════════════════════════════
+   FEED SECTIONS — horizontal rows
+═══════════════════════════════════ */
+
+// All movies fetched for feed rows — shared pool for recommendations
+window._FEED_POOL = [];
+
+function renderMiniCard(m, opts = {}) {
+  const img   = m.poster ? `<img class="mini-card-img" src="${m.poster}" alt="${esc(m.title)}" loading="lazy">` :
+                            `<div class="mini-card-img-placeholder">🎬</div>`;
+  const score = m.avg ? `<div class="mini-card-score">★ ${m.avg}</div>` : '';
+  const newBadge = opts.showNew ? `<div class="mini-card-new-badge">NEW</div>` : '';
+  return `<div class="mini-card" onclick="openMovie(${m.id})" title="${esc(m.title)}">
+    ${img}${score}${newBadge}
+    <div class="mini-card-info">
+      <div class="mini-card-title">${esc(m.title)}</div>
+      <div class="mini-card-meta">${m.year || ''}${m.genres?.[0] ? ' · ' + m.genres[0] : ''}</div>
+    </div>
+  </div>`;
+}
+
+function renderFeedSkeletons(containerId, count = 8) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = Array.from({ length: count }, () =>
+    `<div class="mini-card-skeleton"><div class="sk-img"></div><div class="sk-line"></div><div class="sk-line short"></div></div>`
+  ).join('');
+}
+
+// Converts KV-cache movie (enriched format) to internal movie object
+function fromKV(m) {
+  return {
+    id:       m.id,
+    title:    m.title,
+    year:     m.year,
+    poster:   m.poster ? (m.poster.startsWith('http') ? m.poster : 'https://image.tmdb.org/t/p/w500' + m.poster) : null,
+    genres:   m.genres || [],
+    genre:    (m.genres || [])[0] || '',
+    desc:     m.desc || '',
+    avg:      m.avg ?? null,
+    imdb:     m.imdb ?? null,
+    rt:       m.rt   ?? null,
+    mc:       m.mc   ?? null,
+    director: m.director || '',
+    country:  m.country  || '',
+    trailer:  m.trailer  || null,
+    isTV:     false,
+    enriched: true,
+  };
+}
+
+function renderForYouRow() {
+  const profile = getTasteProfile();
+  if (profile.total < TASTE_THRESHOLD || !window._FEED_POOL.length) return;
+  const scored = scoredForProfile(window._FEED_POOL).slice(0, 20);
+  if (!scored.length) return;
+  document.getElementById('rowForYou').style.display = '';
+  document.getElementById('scrollForYou').innerHTML = scored.map(m => renderMiniCard(m)).join('');
+}
+
+async function loadFeedSections() {
+  // Only show feed rows on Movies (not TV) and not during AI search
+  if (CONTENT_TYPE !== 'movie') {
+    document.getElementById('feedSections').style.display = 'none';
+    return;
+  }
+  document.getElementById('feedSections').style.display = '';
+  renderFeedSkeletons('scrollFresh', 8);
+  renderFeedSkeletons('scrollPopular', 8);
+
+  const [freshRes, popRes] = await Promise.allSettled([
+    fetch('/api/cache/new-releases').then(r => r.json()),
+    fetch('/api/cache/popular').then(r => r.json()),
+  ]);
+
+  // Fresh Additions
+  if (freshRes.status === 'fulfilled' && Array.isArray(freshRes.value)) {
+    const fresh = freshRes.value.map(fromKV);
+    document.getElementById('scrollFresh').innerHTML =
+      fresh.slice(0, 20).map(m => renderMiniCard(m, { showNew: true })).join('');
+    // Add to pool (deduplicated by id)
+    for (const m of fresh) {
+      if (!window._FEED_POOL.find(x => x.id === m.id)) window._FEED_POOL.push(m);
+    }
+  } else {
+    document.getElementById('rowFresh').style.display = 'none';
+  }
+
+  // Masterpieces (popular / top-rated)
+  if (popRes.status === 'fulfilled' && Array.isArray(popRes.value)) {
+    const pop = popRes.value.map(fromKV)
+      .filter(m => m.avg && m.avg >= 7.0)          // only quality picks
+      .sort((a, b) => (b.avg || 0) - (a.avg || 0)); // highest rated first
+    document.getElementById('scrollPopular').innerHTML =
+      pop.slice(0, 20).map(m => renderMiniCard(m)).join('');
+    // Add to pool
+    for (const m of pop) {
+      if (!window._FEED_POOL.find(x => x.id === m.id)) window._FEED_POOL.push(m);
+    }
+  } else {
+    document.getElementById('rowPopular').style.display = 'none';
+  }
+
+  // Render "For You" if profile already exists
+  renderForYouRow();
+}
 
 /* ═══════════════════════════════════
    UTILS
@@ -1845,6 +2140,9 @@ function setContentType(type) {
   } else {
     heroTitle.innerHTML = `<span class="c-p">240,000</span> ${t('hero.films')}.<br><span class="c-o">3</span> ${t('hero.sources')}. <span class="c-y">1</span> ${t('hero.rating')}.`;
   }
+  // Feed sections: only shown for movies
+  document.getElementById('feedSections').style.display = type === 'movie' ? '' : 'none';
+  if (type === 'movie') loadFeedSections();
   // Flush state
   MOVIES       = [];
   CACHE_MOVIES = [];
@@ -2297,6 +2595,7 @@ function clearAISearch() {
   hideAIBanner();
   document.getElementById('searchWrap').classList.remove('ai-active');
   document.getElementById('searchInput').value = '';
+  if (CONTENT_TYPE === 'movie') document.getElementById('feedSections').style.display = '';
   if (CACHE_MOVIES.length) {
     MOVIES      = [...CACHE_MOVIES];
     TOTAL_COUNT = CACHE_MOVIES.length;
@@ -2329,6 +2628,7 @@ function keywordFilterCache(query) {
 async function aiSearch(query) {
   AI_SEARCH_ACTIVE = true;
   document.getElementById('searchWrap').classList.add('ai-active');
+  document.getElementById('feedSections').style.display = 'none'; // hide rows during AI search
   showSkeletons(12);
   showAIBanner(t('ai.searching', { q: query }), true);
 
@@ -2478,6 +2778,7 @@ async function openMovie(tmdbId) {
   ACTIVE_MOVIE = m;
   TRAILER_OPEN = false;
   PENDING_STARS = 0;
+  recordInteraction(m); // taste tracking
   populateModal(m);
   document.getElementById('overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -2967,6 +3268,7 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
 async function init() {
   await detectLang();
   await loadGenres();
+  loadFeedSections(); // fire and forget — loads KV rows in parallel
   await loadMovies(1, false);
 
   // ── Deep-link: open ?movie=<id> on direct navigation ──────
