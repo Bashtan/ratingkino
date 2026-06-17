@@ -177,16 +177,29 @@ async function handleAISearch(request, env, cors) {
   }
 
   try {
-    const aiResp = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+    const aiResp = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: userPrompt   },
       ],
       max_tokens:  400,
       temperature: 0.1,
+      stream:      false,
     });
 
-    const text = (aiResp.response || '').trim();
+    // Normalize response — CF AI returns OpenAI-compatible format for this model
+    let text = '';
+    if (aiResp?.choices?.[0]?.message?.content) {
+      // OpenAI-style: {choices:[{message:{content:"..."}}]}
+      text = aiResp.choices[0].message.content;
+    } else if (typeof aiResp?.response === 'string') {
+      text = aiResp.response;
+    } else if (typeof aiResp === 'string') {
+      text = aiResp;
+    } else {
+      throw new Error(`Unexpected AI response: ${JSON.stringify(aiResp).slice(0, 200)}`);
+    }
+    text = text.trim();
 
     // Extract first JSON object from response (model sometimes adds preamble)
     const match = text.match(/\{[\s\S]*\}/);
