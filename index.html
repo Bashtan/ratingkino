@@ -1167,44 +1167,122 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .mini-card-skeleton .sk-line.short { width: 60%; }
 
-/* ─── LANGUAGE SWITCHER ──────────────────────── */
+/* ─── LANGUAGE SWITCHER (text-only, premium) ─── */
 .lang-switch { position: relative; flex-shrink: 0; }
+
 .lang-btn {
-  display: flex; align-items: center; gap: 5px;
-  height: 38px; padding: 0 12px;
-  background: rgba(99,102,241,0.08);
-  border: 1.5px solid rgba(99,102,241,0.25);
-  border-radius: 9px; color: rgba(167,139,250,0.85);
-  font-size: 11px; font-weight: 800;
-  font-family: 'Montserrat', sans-serif; letter-spacing: 1px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
-  white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 11px;
+  background: transparent;
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: 8px;
+  color: rgba(167,139,250,0.75);
+  font-size: 12px; font-weight: 700;
+  font-family: 'Montserrat', sans-serif;
+  cursor: pointer; white-space: nowrap;
+  transition: border-color 0.2s, color 0.2s, box-shadow 0.2s;
+  position: relative; overflow: hidden;
 }
-.lang-btn:hover { background: rgba(99,102,241,0.18); border-color: rgba(99,102,241,0.55); color: #c4b5fd; box-shadow: 0 0 14px rgba(99,102,241,0.25); }
+/* Animated shimmer sweep on hover */
+.lang-btn::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(139,92,246,0.12) 50%, transparent 60%);
+  background-size: 200% 100%;
+  background-position: 200% 0;
+  transition: background-position 0.5s ease;
+  pointer-events: none;
+}
+.lang-btn:hover::before { background-position: -200% 0; }
+.lang-btn:hover {
+  border-color: rgba(139,92,246,0.5);
+  color: #c4b5fd;
+  box-shadow: 0 0 0 1px rgba(139,92,246,0.15), 0 0 16px rgba(139,92,246,0.18);
+}
+.lang-globe {
+  opacity: 0.6; flex-shrink: 0;
+  transition: opacity 0.2s, transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+.lang-btn:hover .lang-globe { opacity: 1; transform: rotate(15deg); }
+.lang-btn-name { letter-spacing: 0.3px; }
+.lang-chevron {
+  opacity: 0.5; flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s;
+}
+.lang-btn:hover .lang-chevron { opacity: 0.9; }
+.lang-btn[aria-expanded="true"] .lang-chevron { transform: rotate(180deg); }
+
 .lang-menu {
-  display: none; position: absolute; top: calc(100% + 8px); right: 0;
-  min-width: 158px; background: rgba(10,0,28,0.97);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(99,102,241,0.32); border-radius: 12px;
-  padding: 5px; z-index: 400; box-shadow: 0 10px 36px rgba(0,0,0,0.55);
+  display: none; position: absolute; top: calc(100% + 7px); right: 0;
+  min-width: 152px;
+  background: rgba(8,2,22,0.97);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(99,102,241,0.28); border-radius: 12px;
+  padding: 4px; z-index: 500;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.06);
 }
-.lang-menu.open { display: block; animation: langMenuIn 0.22s cubic-bezier(0.34,1.56,0.64,1); }
+[dir="rtl"] .lang-menu { right: auto; left: 0; }
+.lang-menu.open {
+  display: block;
+  animation: langMenuIn 0.2s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
 @keyframes langMenuIn {
-  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(-5px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
 }
+
 .lang-option {
-  display: flex; align-items: center; gap: 9px;
+  display: flex; align-items: center; justify-content: space-between;
   width: 100%; padding: 9px 12px;
   background: none; border: none; border-radius: 8px;
-  color: rgba(167,139,250,0.65); font-size: 12px; font-weight: 600;
-  font-family: 'Montserrat', sans-serif; cursor: pointer;
-  transition: background 0.15s, color 0.15s; text-align: left;
+  color: rgba(167,139,250,0.55);
+  font-size: 12.5px; font-weight: 600;
+  font-family: 'Montserrat', sans-serif;
+  cursor: pointer; transition: background 0.15s, color 0.15s;
+  text-align: left; letter-spacing: 0.2px; position: relative;
 }
-.lang-option:hover { background: rgba(99,102,241,0.15); color: var(--text); }
-.lang-option.active { background: rgba(99,102,241,0.12); color: #c4b5fd; }
-.lang-flag { font-size: 16px; line-height: 1; }
+.lang-option::after {
+  content: '';
+  width: 5px; height: 5px; border-radius: 50%;
+  background: rgba(139,92,246,0);
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.lang-option:hover {
+  background: rgba(99,102,241,0.1);
+  color: rgba(196,181,253,0.95);
+}
+.lang-option:hover::after { background: rgba(139,92,246,0.4); }
+.lang-option.active {
+  color: #c4b5fd;
+  background: rgba(99,102,241,0.08);
+}
+.lang-option.active::after { background: rgba(139,92,246,0.85); }
+
+/* RTL layout adjustments */
+[dir="rtl"] .header-inner   { flex-direction: row-reverse; }
+[dir="rtl"] .lang-option    { text-align: right; flex-direction: row-reverse; }
+[dir="rtl"] .count-row      { flex-direction: row-reverse; }
+[dir="rtl"] .filter-row-2   { flex-direction: row-reverse; }
+[dir="rtl"] .movie-info     { text-align: right; }
+[dir="rtl"] .m-meta-col     { text-align: right; }
+
+/* Translating state on movie description */
+.m-desc.translating {
+  opacity: 0.45;
+  transition: opacity 0.2s;
+  position: relative;
+}
+.m-desc.translating::after {
+  content: attr(data-translating-label);
+  display: block;
+  margin-top: 6px;
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  color: rgba(139,92,246,0.7);
+  letter-spacing: 0.5px;
+}
+.m-desc:not(.translating) { opacity: 1; transition: opacity 0.3s; }
 </style>
 </head>
 <body>
@@ -1242,20 +1320,26 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
       </button>
       <button class="btn-random" onclick="randomMovie()">🎲 Random</button>
       <div class="lang-switch" id="langSwitch">
-        <button class="lang-btn" id="langBtn" onclick="toggleLangMenu(event)" aria-label="Switch language">
-          <span id="langBtnFlag">🌐</span>
-          <span id="langBtnCode">EN</span>
+        <button class="lang-btn" id="langBtn" onclick="toggleLangMenu(event)"
+                aria-haspopup="listbox" aria-expanded="false" aria-label="Switch language">
+          <svg class="lang-globe" width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+          <span class="lang-btn-name" id="langBtnName">English</span>
+          <svg class="lang-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
         </button>
-        <div class="lang-menu" id="langMenu">
-          <button class="lang-option" data-lang="en" onclick="switchLang('en')">
-            <span class="lang-flag">🇺🇸</span><span data-i18n="lang.en">English</span>
-          </button>
-          <button class="lang-option" data-lang="es" onclick="switchLang('es')">
-            <span class="lang-flag">🇪🇸</span><span data-i18n="lang.es">Español</span>
-          </button>
-          <button class="lang-option" data-lang="uk" onclick="switchLang('uk')">
-            <span class="lang-flag">🇺🇦</span><span data-i18n="lang.uk">Українська</span>
-          </button>
+        <div class="lang-menu" id="langMenu" role="listbox" aria-label="Select language">
+          <button class="lang-option active" data-lang="en" onclick="switchLang('en')" role="option">English</button>
+          <button class="lang-option" data-lang="es" onclick="switchLang('es')" role="option">Español</button>
+          <button class="lang-option" data-lang="fr" onclick="switchLang('fr')" role="option">Français</button>
+          <button class="lang-option" data-lang="zh" onclick="switchLang('zh')" role="option">中文</button>
+          <button class="lang-option" data-lang="ar" onclick="switchLang('ar')" role="option">العربية</button>
+          <button class="lang-option" data-lang="uk" onclick="switchLang('uk')" role="option">Українська</button>
         </div>
       </div>
       <button class="btn-settings" onclick="openSettings()" title="Settings" style="display:none">⚙</button>
@@ -1570,6 +1654,8 @@ const COUNTRY_NAME = {
 /* ═══════════════════════════════════
    i18n — TRANSLATIONS + ENGINE
 ═══════════════════════════════════ */
+// All static UI strings for each supported language.
+// Movie descriptions are translated dynamically via /api/translate (m2m100-1.2b).
 const TRANSLATIONS = {
   en: {
     'nav.movies':           'Movies',
@@ -1606,6 +1692,7 @@ const TRANSLATIONS = {
     'modal.reviewPlaceholder': 'What did you think? (optional)',
     'modal.noReviews':      'No reviews yet. Be the first!',
     'modal.loading':        'Loading…',
+    'modal.translating':    'Translating…',
     'modal.noAwards':       'No award data available.',
     'modal.genre':          'Genre',
     'modal.country':        'Country',
@@ -1632,9 +1719,6 @@ const TRANSLATIONS = {
     'search.chips.family':       'Family film',
     'search.chips.trueStory':    'True story',
     'search.chips.action':       'Action',
-    'lang.en': 'English',
-    'lang.es': 'Español',
-    'lang.uk': 'Українська',
   },
   es: {
     'nav.movies':           'Películas',
@@ -1671,6 +1755,7 @@ const TRANSLATIONS = {
     'modal.reviewPlaceholder': '¿Qué te pareció? (opcional)',
     'modal.noReviews':      'Sin reseñas aún. ¡Sé el primero!',
     'modal.loading':        'Cargando…',
+    'modal.translating':    'Traduciendo…',
     'modal.noAwards':       'Sin datos de premios.',
     'modal.genre':          'Género',
     'modal.country':        'País',
@@ -1697,9 +1782,195 @@ const TRANSLATIONS = {
     'search.chips.family':       'Película familiar',
     'search.chips.trueStory':    'Historia real',
     'search.chips.action':       'Acción',
-    'lang.en': 'English',
-    'lang.es': 'Español',
-    'lang.uk': 'Українська',
+  },
+  fr: {
+    'nav.movies':           'Films',
+    'nav.tvShows':          'Séries',
+    'filter.all':           'Tous',
+    'filter.country':       'Pays',
+    'filter.allCountries':  'Tous les pays',
+    'filter.minRating':     'Note min.',
+    'filter.any':           'Peu importe',
+    'filter.sort':          'Trier',
+    'hero.subtitle':        'Nous agrégeons les scores IMDb, Rotten Tomatoes et Metacritic en une note pondérée unique.',
+    'hero.aiPowered':       'Recherche par IA',
+    'hero.films':           'films',
+    'hero.shows':           'séries',
+    'hero.sources':         'sources',
+    'hero.rating':          'note',
+    'grid.showing':         'Affichage :',
+    'grid.of':              'sur',
+    'grid.aiResults':       'Résultats IA',
+    'grid.loadMore':        'Charger plus',
+    'grid.noResults':       'Aucun résultat',
+    'grid.noResultsSub':    "Essayez d'autres filtres ou termes de recherche",
+    'grid.failedLoad':      'Échec du chargement',
+    'grid.noMatches':       'Aucune correspondance pour cette recherche IA',
+    'card.viewDetails':     'Voir les détails',
+    'modal.about':          'À propos',
+    'modal.details':        'Détails',
+    'modal.whereToWatch':   'Où regarder',
+    'modal.awards':         'Prix et distinctions',
+    'modal.yourReview':     'Votre avis',
+    'modal.postReview':     "Publier l'avis",
+    'modal.reviews':        'Avis',
+    'modal.smartMatch':     'Correspondance IA',
+    'modal.reviewPlaceholder': 'Votre avis ? (facultatif)',
+    'modal.noReviews':      'Aucun avis. Soyez le premier !',
+    'modal.loading':        'Chargement…',
+    'modal.translating':    'Traduction…',
+    'modal.noAwards':       'Aucune donnée sur les prix.',
+    'modal.genre':          'Genre',
+    'modal.country':        'Pays',
+    'modal.year':           'Année',
+    'modal.firstAired':     'Première diffusion',
+    'modal.director':       'Réalisateur',
+    'modal.creator':        'Créateur',
+    'modal.trailer':        '▶ Bande-annonce',
+    'modal.hideTrailer':    '▼ Cacher la bande-annonce',
+    'modal.share':          '↗ Partager',
+    'share.title':          'Partager ce film',
+    'share.device':         "Partager via l'appareil",
+    'share.copyLink':       'Copier le lien',
+    'share.copied':         '✓ Copié !',
+    'ai.searching':         '✦ Recherche de "{q}"…',
+    'ai.found':             '✦ L\'IA a trouvé {n} résultat pour "{q}"',
+    'ai.foundPlural':       '✦ L\'IA a trouvé {n} résultats pour "{q}"',
+    'search.placeholder':   'Essayez : thriller sombre avec une fin surprenante…',
+    'search.mobileTitle':   'Rechercher des films',
+    'search.tryAsking':     'Essayez de demander :',
+    'search.chips.darkThriller': 'Thriller sombre',
+    'search.chips.romCom':       'Comédie romantique',
+    'search.chips.scifi':        'Sci-fi épique',
+    'search.chips.family':       'Film familial',
+    'search.chips.trueStory':    'Histoire vraie',
+    'search.chips.action':       'Action',
+  },
+  zh: {
+    'nav.movies':           '电影',
+    'nav.tvShows':          '电视剧',
+    'filter.all':           '全部',
+    'filter.country':       '国家',
+    'filter.allCountries':  '所有国家',
+    'filter.minRating':     '最低评分',
+    'filter.any':           '不限',
+    'filter.sort':          '排序',
+    'hero.subtitle':        '我们将 IMDb、烂番茄和 Metacritic 的评分汇总为一个综合加权评分。',
+    'hero.aiPowered':       'AI 智能搜索',
+    'hero.films':           '部电影',
+    'hero.shows':           '部剧集',
+    'hero.sources':         '个来源',
+    'hero.rating':          '个评分',
+    'grid.showing':         '显示：',
+    'grid.of':              '共',
+    'grid.aiResults':       'AI 结果',
+    'grid.loadMore':        '加载更多',
+    'grid.noResults':       '未找到结果',
+    'grid.noResultsSub':    '请尝试不同的筛选条件或搜索词',
+    'grid.failedLoad':      '加载失败',
+    'grid.noMatches':       '此 AI 搜索无匹配结果',
+    'card.viewDetails':     '查看详情',
+    'modal.about':          '关于',
+    'modal.details':        '详情',
+    'modal.whereToWatch':   '在哪里观看',
+    'modal.awards':         '奖项与荣誉',
+    'modal.yourReview':     '您的评价',
+    'modal.postReview':     '发布评价',
+    'modal.reviews':        '评价',
+    'modal.smartMatch':     'AI 智能匹配',
+    'modal.reviewPlaceholder': '您的想法？（可选）',
+    'modal.noReviews':      '暂无评价，成为第一个吧！',
+    'modal.loading':        '加载中…',
+    'modal.translating':    '翻译中…',
+    'modal.noAwards':       '暂无奖项数据。',
+    'modal.genre':          '类型',
+    'modal.country':        '国家',
+    'modal.year':           '年份',
+    'modal.firstAired':     '首播日期',
+    'modal.director':       '导演',
+    'modal.creator':        '创作者',
+    'modal.trailer':        '▶ 预告片',
+    'modal.hideTrailer':    '▼ 隐藏预告片',
+    'modal.share':          '↗ 分享',
+    'share.title':          '分享这部影片',
+    'share.device':         '通过设备分享',
+    'share.copyLink':       '复制链接',
+    'share.copied':         '✓ 已复制！',
+    'ai.searching':         '✦ 正在搜索「{q}」…',
+    'ai.found':             '✦ AI 为「{q}」找到 {n} 个结果',
+    'ai.foundPlural':       '✦ AI 为「{q}」找到 {n} 个结果',
+    'search.placeholder':   '试试：带有反转结局的黑暗惊悚片…',
+    'search.mobileTitle':   '搜索电影',
+    'search.tryAsking':     '试着问一问：',
+    'search.chips.darkThriller': '黑暗惊悚',
+    'search.chips.romCom':       '浪漫喜剧',
+    'search.chips.scifi':        '科幻史诗',
+    'search.chips.family':       '家庭影片',
+    'search.chips.trueStory':    '真实故事',
+    'search.chips.action':       '动作片',
+  },
+  ar: {
+    'nav.movies':           'أفلام',
+    'nav.tvShows':          'مسلسلات',
+    'filter.all':           'الكل',
+    'filter.country':       'الدولة',
+    'filter.allCountries':  'كل الدول',
+    'filter.minRating':     'أدنى تقييم',
+    'filter.any':           'أي تقييم',
+    'filter.sort':          'ترتيب',
+    'hero.subtitle':        'نجمع تقييمات IMDb وRotten Tomatoes وMetacritic في تقييم واحد موزون.',
+    'hero.aiPowered':       'بحث بالذكاء الاصطناعي',
+    'hero.films':           'فيلم',
+    'hero.shows':           'مسلسل',
+    'hero.sources':         'مصادر',
+    'hero.rating':          'تقييم',
+    'grid.showing':         'عرض:',
+    'grid.of':              'من',
+    'grid.aiResults':       'نتائج الذكاء الاصطناعي',
+    'grid.loadMore':        'تحميل المزيد',
+    'grid.noResults':       'لا توجد نتائج',
+    'grid.noResultsSub':    'جرب فلاتر أو مصطلحات بحث مختلفة',
+    'grid.failedLoad':      'فشل التحميل',
+    'grid.noMatches':       'لا تطابقات لبحث الذكاء الاصطناعي هذا',
+    'card.viewDetails':     'عرض التفاصيل',
+    'modal.about':          'حول الفيلم',
+    'modal.details':        'تفاصيل',
+    'modal.whereToWatch':   'أين تشاهد',
+    'modal.awards':         'الجوائز والتقدير',
+    'modal.yourReview':     'مراجعتك',
+    'modal.postReview':     'نشر المراجعة',
+    'modal.reviews':        'المراجعات',
+    'modal.smartMatch':     'تطابق ذكي',
+    'modal.reviewPlaceholder': 'ما رأيك؟ (اختياري)',
+    'modal.noReviews':      'لا مراجعات بعد. كن الأول!',
+    'modal.loading':        'جاري التحميل…',
+    'modal.translating':    'جاري الترجمة…',
+    'modal.noAwards':       'لا تتوفر بيانات عن الجوائز.',
+    'modal.genre':          'النوع',
+    'modal.country':        'الدولة',
+    'modal.year':           'السنة',
+    'modal.firstAired':     'تاريخ أول عرض',
+    'modal.director':       'المخرج',
+    'modal.creator':        'المبدع',
+    'modal.trailer':        '▶ إعلان',
+    'modal.hideTrailer':    '▼ إخفاء الإعلان',
+    'modal.share':          '↗ مشاركة',
+    'share.title':          'شارك هذا الفيلم',
+    'share.device':         'المشاركة عبر الجهاز',
+    'share.copyLink':       'نسخ الرابط',
+    'share.copied':         '✓ تم النسخ!',
+    'ai.searching':         '✦ جاري البحث عن "{q}"…',
+    'ai.found':             '✦ وجد الذكاء الاصطناعي {n} نتيجة لـ "{q}"',
+    'ai.foundPlural':       '✦ وجد الذكاء الاصطناعي {n} نتائج لـ "{q}"',
+    'search.placeholder':   'جرب: إثارة مظلمة بنهاية مفاجئة…',
+    'search.mobileTitle':   'بحث عن أفلام',
+    'search.tryAsking':     'جرب السؤال عن:',
+    'search.chips.darkThriller': 'إثارة مظلمة',
+    'search.chips.romCom':       'كوميديا رومانسية',
+    'search.chips.scifi':        'خيال علمي ملحمي',
+    'search.chips.family':       'فيلم عائلي',
+    'search.chips.trueStory':    'قصة حقيقية',
+    'search.chips.action':       'أكشن',
   },
   uk: {
     'nav.movies':           'Фільми',
@@ -1736,6 +2007,7 @@ const TRANSLATIONS = {
     'modal.reviewPlaceholder': 'Що ви думаєте? (необов\'язково)',
     'modal.noReviews':      'Відгуків ще немає. Будьте першим!',
     'modal.loading':        'Завантаження…',
+    'modal.translating':    'Переклад…',
     'modal.noAwards':       'Дані про нагороди відсутні.',
     'modal.genre':          'Жанр',
     'modal.country':        'Країна',
@@ -1762,9 +2034,6 @@ const TRANSLATIONS = {
     'search.chips.family':       'Сімейне кіно',
     'search.chips.trueStory':    'Реальна історія',
     'search.chips.action':       'Бойовик',
-    'lang.en': 'English',
-    'lang.es': 'Español',
-    'lang.uk': 'Українська',
   },
 };
 
@@ -1779,8 +2048,11 @@ function t(key, vars = {}) {
   return str;
 }
 
+// Native language names (always shown in their own script — never translated)
+const LANG_NATIVE = { en: 'English', es: 'Español', fr: 'Français', zh: '中文', ar: 'العربية', uk: 'Українська' };
+
 function applyTranslations() {
-  // Text content
+  // Static text nodes
   document.querySelectorAll('[data-i18n]').forEach(el => {
     el.textContent = t(el.dataset.i18n);
   });
@@ -1788,29 +2060,31 @@ function applyTranslations() {
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     el.placeholder = t(el.dataset.i18nPlaceholder);
   });
-  // Update lang switcher button
-  const flags = { en: '🇺🇸', es: '🇪🇸', uk: '🇺🇦' };
-  const codes  = { en: 'EN',  es: 'ES',  uk: 'UK' };
-  const flagEl = document.getElementById('langBtnFlag');
-  const codeEl = document.getElementById('langBtnCode');
-  if (flagEl) flagEl.textContent = flags[CURRENT_LANG] || '🌐';
-  if (codeEl) codeEl.textContent = codes[CURRENT_LANG] || 'EN';
-  // Active state on lang options
+  // Switcher button: show native name of current language
+  const nameEl = document.getElementById('langBtnName');
+  if (nameEl) nameEl.textContent = LANG_NATIVE[CURRENT_LANG] || 'English';
+  // Active state on options + aria-expanded closed
   document.querySelectorAll('.lang-option').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.lang === CURRENT_LANG);
   });
+  // RTL support for Arabic
+  document.documentElement.dir = CURRENT_LANG === 'ar' ? 'rtl' : 'ltr';
   // Trailer button (if open)
   const btnTrailer = document.getElementById('btnTrailer');
   if (btnTrailer && btnTrailer.style.display !== 'none') {
     btnTrailer.textContent = TRAILER_OPEN ? t('modal.hideTrailer') : t('modal.trailer');
   }
-  // Hero title (static HTML has hardcoded words — update on lang change)
+  // Hero title
   const heroTitle = document.getElementById('heroTitle');
   if (heroTitle) {
-    const isTV = typeof CONTENT_TYPE !== 'undefined' && CONTENT_TYPE === 'tv';
+    const isTV  = typeof CONTENT_TYPE !== 'undefined' && CONTENT_TYPE === 'tv';
     const count = isTV ? '150,000' : '240,000';
     const item  = isTV ? t('hero.shows') : t('hero.films');
     heroTitle.innerHTML = `<span class="c-p">${count}</span> ${item}.<br><span class="c-o">3</span> ${t('hero.sources')}. <span class="c-y">1</span> ${t('hero.rating')}.`;
+  }
+  // Re-translate any open modal description
+  if (typeof ACTIVE_MOVIE !== 'undefined' && ACTIVE_MOVIE?.desc) {
+    refreshDescTranslation(ACTIVE_MOVIE);
   }
 }
 
@@ -1832,11 +2106,9 @@ async function detectLang() {
   try {
     const res  = await fetch('/api/geo-lang');
     const data = await res.json();
-    if (data.lang && TRANSLATIONS[data.lang]) {
-      CURRENT_LANG = data.lang;
-    }
+    if (data.lang && TRANSLATIONS[data.lang]) CURRENT_LANG = data.lang;
   } catch {
-    // fallback: use browser language
+    // Fallback: browser language → first two chars → match supported lang
     const nav = (navigator.language || 'en').split('-')[0].toLowerCase();
     if (TRANSLATIONS[nav]) CURRENT_LANG = nav;
   }
@@ -1845,17 +2117,82 @@ async function detectLang() {
 
 function toggleLangMenu(e) {
   e.stopPropagation();
-  document.getElementById('langMenu').classList.toggle('open');
+  const btn  = document.getElementById('langBtn');
+  const menu = document.getElementById('langMenu');
+  const open = menu.classList.toggle('open');
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
 function closeLangMenu() {
   document.getElementById('langMenu')?.classList.remove('open');
+  document.getElementById('langBtn')?.setAttribute('aria-expanded', 'false');
 }
 
-// Close lang menu when clicking outside
+// Close when clicking outside
 document.addEventListener('click', (e) => {
   if (!e.target.closest('#langSwitch')) closeLangMenu();
 });
+
+/* ═══════════════════════════════════
+   AI DESCRIPTION TRANSLATION LAYER
+═══════════════════════════════════ */
+
+// In-memory cache (Map) backed by sessionStorage for cross-component speed
+const _transCache = new Map();
+
+function _transCacheKey(movieId, lang) { return `rk_tr_${movieId}_${lang}`; }
+
+async function translateDesc(movieId, text, lang) {
+  if (!text || !lang || lang === 'en') return text;
+  const key = _transCacheKey(movieId, lang);
+  // 1. In-memory (fastest)
+  if (_transCache.has(key)) return _transCache.get(key);
+  // 2. sessionStorage (survives component re-renders, cleared on tab close)
+  try {
+    const stored = sessionStorage.getItem(key);
+    if (stored) { _transCache.set(key, stored); return stored; }
+  } catch { /* sessionStorage unavailable in some private modes */ }
+  // 3. Fetch from /api/translate (Cloudflare Workers AI m2m100-1.2b)
+  try {
+    const r = await fetch('/api/translate', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ text: text.slice(0, 1000), targetLang: lang }),
+    });
+    if (!r.ok) return text;
+    const { translated } = await r.json();
+    const result = translated || text;
+    _transCache.set(key, result);
+    try { sessionStorage.setItem(key, result); } catch { /* quota */ }
+    return result;
+  } catch {
+    return text; // always fall back to English on network/parse error
+  }
+}
+
+// Called by applyTranslations() when a modal is open + lang changes
+function refreshDescTranslation(m) {
+  if (!m?.desc || CURRENT_LANG === 'en') {
+    const el = document.getElementById('mDesc');
+    if (el) { el.textContent = m?.desc || '—'; el.classList.remove('translating'); }
+    return;
+  }
+  const el = document.getElementById('mDesc');
+  if (!el) return;
+  // Check cache first — if hit, swap instantly with no flicker
+  const cached = _transCache.get(_transCacheKey(m.id, CURRENT_LANG));
+  if (cached) { el.textContent = cached; el.classList.remove('translating'); return; }
+  // Show translating state while waiting
+  el.setAttribute('data-translating-label', t('modal.translating'));
+  el.classList.add('translating');
+  translateDesc(m.id, m.desc, CURRENT_LANG).then(translated => {
+    // Guard: still same movie + same lang when promise resolves
+    if (ACTIVE_MOVIE?.id === m.id && document.getElementById('mDesc') === el) {
+      el.textContent = translated;
+      el.classList.remove('translating');
+    }
+  });
+}
 
 /* ═══════════════════════════════════
    TASTE PROFILE — client-side personalization
@@ -2876,7 +3213,7 @@ function refreshModalRatings(m) {
 }
 
 function refreshModalDetails(m) {
-  document.getElementById('mDesc').textContent = m.desc || '—';
+  refreshDescTranslation(m);
   const countryDisplay = COUNTRY_NAME[m.country] || m.country || '—';
   const roleLabel = m.isTV ? t('modal.creator') : t('modal.director');
   document.getElementById('mMeta').innerHTML = `

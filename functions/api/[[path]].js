@@ -41,10 +41,61 @@ export async function onRequest({ request, env, params }) {
   if (path === '/geo-lang') {
     const country = request.cf?.country || '';
     const ES_COUNTRIES = ['ES','MX','AR','CO','CL','PE','VE','EC','BO','PY','UY','CR','PA','DO','HN','SV','GT','NI','CU','PR'];
-    const lang = country === 'UA' ? 'uk' : ES_COUNTRIES.includes(country) ? 'es' : 'en';
+    const FR_COUNTRIES = ['FR','BE','CH','LU','MC','SN','CI','ML','BF','NE','TD','CM','MG','RW','BJ','TG','GA','CD','CG','CF','GN','MR','DJ','KM','VU','SC','MU','HT','GF','GP','MQ','NC','PF','RE'];
+    const ZH_COUNTRIES = ['CN','TW','HK','MO','SG'];
+    const AR_COUNTRIES = ['SA','AE','EG','IQ','SY','JO','LB','KW','QA','BH','OM','YE','LY','TN','DZ','MA','SD','SO','PS','MR','DJ','KM'];
+    let lang = 'en';
+    if (country === 'UA')                      lang = 'uk';
+    else if (ZH_COUNTRIES.includes(country))   lang = 'zh';
+    else if (AR_COUNTRIES.includes(country))   lang = 'ar';
+    else if (FR_COUNTRIES.includes(country))   lang = 'fr';
+    else if (ES_COUNTRIES.includes(country))   lang = 'es';
     return new Response(JSON.stringify({ lang, country }), {
       headers: { 'Content-Type': 'application/json', ...cors },
     });
+  }
+
+  /* ── /api/translate ── AI description translation via m2m100 ── */
+  if (path === '/translate') {
+    if (request.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'POST required' }), { status: 405, headers: { 'Content-Type': 'application/json', ...cors } });
+    }
+    let text, targetLang;
+    try {
+      ({ text, targetLang } = await request.json());
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json', ...cors } });
+    }
+    if (!text || !targetLang || targetLang === 'en') {
+      return new Response(JSON.stringify({ translated: text || '' }), { headers: { 'Content-Type': 'application/json', ...cors } });
+    }
+    // m2m100-1.2b language code map (ISO 639-1 codes supported by model)
+    const LANG_CODES = { es: 'es', fr: 'fr', zh: 'zh', ar: 'ar', uk: 'uk' };
+    const tgtCode = LANG_CODES[targetLang];
+    if (!tgtCode) {
+      return new Response(JSON.stringify({ translated: text }), { headers: { 'Content-Type': 'application/json', ...cors } });
+    }
+    if (!env.AI) {
+      return new Response(JSON.stringify({ translated: text, error: 'AI binding not available' }), { headers: { 'Content-Type': 'application/json', ...cors } });
+    }
+    try {
+      // Truncate long descriptions to avoid hitting token limits
+      const input = text.slice(0, 1000);
+      const result = await env.AI.run('@cf/meta/m2m100-1.2b', {
+        text: input,
+        source_lang: 'en',
+        target_lang: tgtCode,
+      });
+      const translated = result?.translated_text || text;
+      return new Response(JSON.stringify({ translated }), {
+        headers: { 'Content-Type': 'application/json', ...cors },
+      });
+    } catch (e) {
+      // Fallback: return original text so the UI stays functional
+      return new Response(JSON.stringify({ translated: text, error: e.message }), {
+        headers: { 'Content-Type': 'application/json', ...cors },
+      });
+    }
   }
 
   /* ── /api/tmdb/* ── proxy to TMDB ── */
