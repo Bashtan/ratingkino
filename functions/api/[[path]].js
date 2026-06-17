@@ -37,6 +37,16 @@ export async function onRequest({ request, env, params }) {
     return handleAISearch(request, env, cors);
   }
 
+  /* ── /api/geo-lang ── detect language from visitor country ── */
+  if (path === '/geo-lang') {
+    const country = request.cf?.country || '';
+    const ES_COUNTRIES = ['ES','MX','AR','CO','CL','PE','VE','EC','BO','PY','UY','CR','PA','DO','HN','SV','GT','NI','CU','PR'];
+    const lang = country === 'UA' ? 'uk' : ES_COUNTRIES.includes(country) ? 'es' : 'en';
+    return new Response(JSON.stringify({ lang, country }), {
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+  }
+
   /* ── /api/tmdb/* ── proxy to TMDB ── */
   let upstreamUrl;
 

@@ -1059,6 +1059,45 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   margin-bottom: 12px;
 }
 .ai-match-pill.show { display: inline-flex; }
+
+/* ─── LANGUAGE SWITCHER ──────────────────────── */
+.lang-switch { position: relative; flex-shrink: 0; }
+.lang-btn {
+  display: flex; align-items: center; gap: 5px;
+  height: 38px; padding: 0 12px;
+  background: rgba(99,102,241,0.08);
+  border: 1.5px solid rgba(99,102,241,0.25);
+  border-radius: 9px; color: rgba(167,139,250,0.85);
+  font-size: 11px; font-weight: 800;
+  font-family: 'Montserrat', sans-serif; letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+}
+.lang-btn:hover { background: rgba(99,102,241,0.18); border-color: rgba(99,102,241,0.55); color: #c4b5fd; box-shadow: 0 0 14px rgba(99,102,241,0.25); }
+.lang-menu {
+  display: none; position: absolute; top: calc(100% + 8px); right: 0;
+  min-width: 158px; background: rgba(10,0,28,0.97);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(99,102,241,0.32); border-radius: 12px;
+  padding: 5px; z-index: 400; box-shadow: 0 10px 36px rgba(0,0,0,0.55);
+}
+.lang-menu.open { display: block; animation: langMenuIn 0.22s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes langMenuIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.lang-option {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%; padding: 9px 12px;
+  background: none; border: none; border-radius: 8px;
+  color: rgba(167,139,250,0.65); font-size: 12px; font-weight: 600;
+  font-family: 'Montserrat', sans-serif; cursor: pointer;
+  transition: background 0.15s, color 0.15s; text-align: left;
+}
+.lang-option:hover { background: rgba(99,102,241,0.15); color: var(--text); }
+.lang-option.active { background: rgba(99,102,241,0.12); color: #c4b5fd; }
+.lang-flag { font-size: 16px; line-height: 1; }
 </style>
 </head>
 <body>
@@ -1095,6 +1134,23 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
         </svg>
       </button>
       <button class="btn-random" onclick="randomMovie()">🎲 Random</button>
+      <div class="lang-switch" id="langSwitch">
+        <button class="lang-btn" id="langBtn" onclick="toggleLangMenu(event)" aria-label="Switch language">
+          <span id="langBtnFlag">🌐</span>
+          <span id="langBtnCode">EN</span>
+        </button>
+        <div class="lang-menu" id="langMenu">
+          <button class="lang-option" data-lang="en" onclick="switchLang('en')">
+            <span class="lang-flag">🇺🇸</span><span data-i18n="lang.en">English</span>
+          </button>
+          <button class="lang-option" data-lang="es" onclick="switchLang('es')">
+            <span class="lang-flag">🇪🇸</span><span data-i18n="lang.es">Español</span>
+          </button>
+          <button class="lang-option" data-lang="uk" onclick="switchLang('uk')">
+            <span class="lang-flag">🇺🇦</span><span data-i18n="lang.uk">Українська</span>
+          </button>
+        </div>
+      </div>
       <button class="btn-settings" onclick="openSettings()" title="Settings" style="display:none">⚙</button>
     </div>
   </div>
@@ -1104,7 +1160,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 <div class="mob-search-overlay" id="mobSearchOverlay">
   <div class="mob-search-inner">
     <div class="mob-search-top">
-      <span class="mob-search-title">Search movies</span>
+      <span class="mob-search-title" data-i18n="search.mobileTitle">Search movies</span>
       <button class="mob-search-close" onclick="closeMobSearch()" aria-label="Close">✕</button>
     </div>
     <div class="search-wrap mob-search-wrap" id="mobSearchWrap">
@@ -1113,20 +1169,20 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
           <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
         </svg>
       </span>
-      <input class="search-input" id="mobSearchInput" type="text" autocomplete="off" spellcheck="false" placeholder="Try: dark thriller with a twist…">
+      <input class="search-input" id="mobSearchInput" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="search.placeholder" placeholder="Try: dark thriller with a twist…">
       <svg class="search-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
       </svg>
     </div>
     <div class="mob-search-chips">
-      <div class="mob-chips-label">Try asking:</div>
+      <div class="mob-chips-label" data-i18n="search.tryAsking">Try asking:</div>
       <div class="mob-chips-row">
-        <button class="mob-chip" onclick="mobSearchChip('dark psychological thriller with twist ending')">🌀 Dark thriller</button>
-        <button class="mob-chip" onclick="mobSearchChip('romantic comedy set in Europe')">💕 Rom-com</button>
-        <button class="mob-chip" onclick="mobSearchChip('mind-bending sci-fi with stunning visuals')">🚀 Epic sci-fi</button>
-        <button class="mob-chip" onclick="mobSearchChip('feel-good family animated adventure')">🎠 Family film</button>
-        <button class="mob-chip" onclick="mobSearchChip('based on true story inspiring drama')">🏆 True story</button>
-        <button class="mob-chip" onclick="mobSearchChip('fast-paced action with great fight scenes')">💥 Action</button>
+        <button class="mob-chip" onclick="mobSearchChip('dark psychological thriller with twist ending')">🌀 <span data-i18n="search.chips.darkThriller">Dark thriller</span></button>
+        <button class="mob-chip" onclick="mobSearchChip('romantic comedy set in Europe')">💕 <span data-i18n="search.chips.romCom">Rom-com</span></button>
+        <button class="mob-chip" onclick="mobSearchChip('mind-bending sci-fi with stunning visuals')">🚀 <span data-i18n="search.chips.scifi">Epic sci-fi</span></button>
+        <button class="mob-chip" onclick="mobSearchChip('feel-good family animated adventure')">🎠 <span data-i18n="search.chips.family">Family film</span></button>
+        <button class="mob-chip" onclick="mobSearchChip('based on true story inspiring drama')">🏆 <span data-i18n="search.chips.trueStory">True story</span></button>
+        <button class="mob-chip" onclick="mobSearchChip('fast-paced action with great fight scenes')">💥 <span data-i18n="search.chips.action">Action</span></button>
       </div>
     </div>
   </div>
@@ -1137,19 +1193,19 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   <!-- Row 1: content type + genre pills -->
   <div class="filter-row-1">
     <div class="ct-toggle">
-      <button class="ct-btn active" id="ctMovies" onclick="setContentType('movie')">Movies</button>
-      <button class="ct-btn" id="ctTV" onclick="setContentType('tv')">TV Shows</button>
+      <button class="ct-btn active" id="ctMovies" onclick="setContentType('movie')" data-i18n="nav.movies">Movies</button>
+      <button class="ct-btn" id="ctTV" onclick="setContentType('tv')" data-i18n="nav.tvShows">TV Shows</button>
     </div>
     <div class="f-div"></div>
     <div class="genre-pills-wrap" id="genrePills">
-      <button class="gpill active" id="pill-all" onclick="setGenre('')">All</button>
+      <button class="gpill active" id="pill-all" onclick="setGenre('')" data-i18n="filter.all">All</button>
     </div>
   </div>
   <!-- Row 2: secondary filters + sort -->
   <div class="filter-row-2">
-    <span class="filter-lbl">Country</span>
+    <span class="filter-lbl" data-i18n="filter.country">Country</span>
     <select class="filter-sel" id="fCountry" onchange="applyFilters()">
-      <option value="">All Countries</option>
+      <option value="" data-i18n="filter.allCountries">All Countries</option>
       <option value="US">USA</option>
       <option value="GB">UK</option>
       <option value="FR">France</option>
@@ -1167,9 +1223,9 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
       <option value="BR">Brazil</option>
     </select>
 
-    <span class="filter-lbl">Min Rating</span>
+    <span class="filter-lbl" data-i18n="filter.minRating">Min Rating</span>
     <select class="filter-sel" id="fMinRating" onchange="applyFilters()">
-      <option value="">Any</option>
+      <option value="" data-i18n="filter.any">Any</option>
       <option value="6">6.0+</option>
       <option value="7">7.0+</option>
       <option value="7.5">7.5+</option>
@@ -1178,7 +1234,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
     </select>
 
     <div class="f-div"></div>
-    <span class="filter-lbl">Sort</span>
+    <span class="filter-lbl" data-i18n="filter.sort">Sort</span>
     <div class="sort-wrap">
       <button class="src-btn imd" id="btnIMD" onclick="toggleSrc('imd')">IMDb</button>
       <button class="src-btn rt"  id="btnRT"  onclick="toggleSrc('rt')">RT</button>
@@ -1195,10 +1251,10 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
       <span class="c-p">240,000</span> films.<br>
       <span class="c-o">3</span> sources. <span class="c-y">1</span> rating.
     </div>
-    <div class="hero-sub">We aggregate scores from IMDb, Rotten Tomatoes, and Metacritic into one weighted rating.</div>
+    <div class="hero-sub" data-i18n="hero.subtitle">We aggregate scores from IMDb, Rotten Tomatoes, and Metacritic into one weighted rating.</div>
     <div class="ai-powered-chip">
       <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
-      AI Powered Search
+      <span data-i18n="hero.aiPowered">AI Powered Search</span>
     </div>
   </div>
   <div class="source-badges">
@@ -1211,10 +1267,10 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 <!-- ════════════ MAIN GRID ════════════ -->
 <main>
   <div class="count-row">
-    <span class="count-text">Showing: <strong id="countShown">—</strong> of <strong id="countTotal">—</strong></span>
+    <span class="count-text"><span data-i18n="grid.showing">Showing:</span> <strong id="countShown">—</strong> <span data-i18n="grid.of">of</span> <strong id="countTotal">—</strong></span>
     <span class="ai-results-badge" id="aiResultsBadge">
       <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
-      AI Results
+      <span data-i18n="grid.aiResults">AI Results</span>
     </span>
   </div>
 
@@ -1228,15 +1284,15 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   <div class="movie-grid" id="movieGrid"></div>
   <div class="empty-state" id="emptyState">
     <div class="empty-icon">🎬</div>
-    <div class="empty-title">No results found</div>
-    <div class="empty-sub" id="emptySub">Try different filters or search terms</div>
+    <div class="empty-title" data-i18n="grid.noResults">No results found</div>
+    <div class="empty-sub" id="emptySub" data-i18n="grid.noResultsSub">Try different filters or search terms</div>
   </div>
   <div class="load-wrap" id="loadWrap">
     <button class="btn-more" id="btnMore" onclick="loadMore()">
       <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
         <path d="M12 5v14M5 12l7 7 7-7"/>
       </svg>
-      Load More
+      <span data-i18n="grid.loadMore">Load More</span>
     </button>
   </div>
 </main>
@@ -1259,12 +1315,12 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
         <div class="m-orig" id="mOrig"></div>
         <span class="ai-match-pill" id="aiMatchPill">
           <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
-          Smart Match
+          <span data-i18n="modal.smartMatch">Smart Match</span>
         </span>
         <div class="m-ratings-row" id="mRatings"></div>
         <div class="m-actions">
-          <button class="btn-trailer" id="btnTrailer" onclick="toggleTrailer()" style="display:none">▶ Trailer</button>
-          <button class="btn-shr" onclick="openShare()">↗ Share</button>
+          <button class="btn-trailer" id="btnTrailer" onclick="toggleTrailer()" style="display:none" data-i18n="modal.trailer">▶ Trailer</button>
+          <button class="btn-shr" onclick="openShare()" data-i18n="modal.share">↗ Share</button>
         </div>
       </div>
     </div>
@@ -1276,21 +1332,21 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
           <iframe id="trailerFrame" src="" allowfullscreen allow="autoplay"></iframe>
         </div>
 
-        <div class="section-lbl">About</div>
+        <div class="section-lbl" data-i18n="modal.about">About</div>
         <div class="m-desc" id="mDesc"></div>
 
-        <div class="section-lbl">Details</div>
+        <div class="section-lbl" data-i18n="modal.details">Details</div>
         <div class="meta-grid" id="mMeta"></div>
 
-        <div class="section-lbl" id="watchLbl" style="display:none">Where to Watch</div>
+        <div class="section-lbl" id="watchLbl" data-i18n="modal.whereToWatch" style="display:none">Where to Watch</div>
         <div id="watchProviders" style="margin-bottom:22px"></div>
 
-        <div class="section-lbl">Awards &amp; Recognition</div>
+        <div class="section-lbl" data-i18n="modal.awards">Awards &amp; Recognition</div>
         <div class="awards" id="mAwards"></div>
       </div>
 
       <div class="m-right">
-        <div class="section-lbl">Your Review</div>
+        <div class="section-lbl" data-i18n="modal.yourReview">Your Review</div>
         <div class="review-compose" id="reviewCompose">
           <div class="review-stars" id="reviewStars">
             <button class="rev-star" data-s="1" aria-label="1 star"><svg viewBox="0 0 24 24"><path d="M12 2l2.939 6.326L22 9.354l-5.5 5.667 1.299 7.979L12 19.25l-5.799 3.75L7.5 15.021 2 9.354l7.061-1.028Z"/></svg></button>
@@ -1299,11 +1355,11 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
             <button class="rev-star" data-s="4" aria-label="4 stars"><svg viewBox="0 0 24 24"><path d="M12 2l2.939 6.326L22 9.354l-5.5 5.667 1.299 7.979L12 19.25l-5.799 3.75L7.5 15.021 2 9.354l7.061-1.028Z"/></svg></button>
             <button class="rev-star" data-s="5" aria-label="5 stars"><svg viewBox="0 0 24 24"><path d="M12 2l2.939 6.326L22 9.354l-5.5 5.667 1.299 7.979L12 19.25l-5.799 3.75L7.5 15.021 2 9.354l7.061-1.028Z"/></svg></button>
           </div>
-          <textarea class="review-text" id="reviewText" placeholder="What did you think? (optional)" maxlength="200"></textarea>
-          <button class="review-submit" id="reviewSubmit" onclick="submitReview()">Post Review</button>
+          <textarea class="review-text" id="reviewText" data-i18n-placeholder="modal.reviewPlaceholder" placeholder="What did you think? (optional)" maxlength="200"></textarea>
+          <button class="review-submit" id="reviewSubmit" onclick="submitReview()" data-i18n="modal.postReview">Post Review</button>
         </div>
 
-        <div class="section-lbl">Reviews</div>
+        <div class="section-lbl" data-i18n="modal.reviews">Reviews</div>
         <div class="reviews-list" id="mReviews"></div>
       </div>
     </div>
@@ -1313,10 +1369,10 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 <!-- ════════════ SHARE PANEL ════════════ -->
 <div class="share-panel" id="sharePanel">
   <button class="share-close" onclick="closeShare()">✕</button>
-  <div class="share-head">Share This Film</div>
+  <div class="share-head" data-i18n="share.title">Share This Film</div>
   <div class="share-grid" id="shareGrid"></div>
-  <button class="share-native" id="shareNative" onclick="nativeShare()">📤 Share via Device</button>
-  <button class="share-copy"   id="shareCopy"   onclick="copyLink()">🔗 Copy Link</button>
+  <button class="share-native" id="shareNative" onclick="nativeShare()">📤 <span data-i18n="share.device">Share via Device</span></button>
+  <button class="share-copy"   id="shareCopy"   onclick="copyLink()">🔗 <span data-i18n="share.copyLink">Copy Link</span></button>
 </div>
 
 <!-- ════════════ FAB RANDOM (mobile) ════════════ -->
@@ -1370,6 +1426,288 @@ const COUNTRY_NAME = {
   CH:'Switzerland',CZ:'Czech Rep.',HU:'Hungary',RO:'Romania',PT:'Portugal',
   GR:'Greece',ZA:'South Africa',NG:'Nigeria',
 };
+
+/* ═══════════════════════════════════
+   i18n — TRANSLATIONS + ENGINE
+═══════════════════════════════════ */
+const TRANSLATIONS = {
+  en: {
+    'nav.movies':           'Movies',
+    'nav.tvShows':          'TV Shows',
+    'filter.all':           'All',
+    'filter.country':       'Country',
+    'filter.allCountries':  'All Countries',
+    'filter.minRating':     'Min Rating',
+    'filter.any':           'Any',
+    'filter.sort':          'Sort',
+    'hero.subtitle':        'We aggregate scores from IMDb, Rotten Tomatoes, and Metacritic into one weighted rating.',
+    'hero.aiPowered':       'AI Powered Search',
+    'hero.films':           'films',
+    'hero.shows':           'shows',
+    'hero.sources':         'sources',
+    'hero.rating':          'rating',
+    'grid.showing':         'Showing:',
+    'grid.of':              'of',
+    'grid.aiResults':       'AI Results',
+    'grid.loadMore':        'Load More',
+    'grid.noResults':       'No results found',
+    'grid.noResultsSub':    'Try different filters or search terms',
+    'grid.failedLoad':      'Failed to load',
+    'grid.noMatches':       'No matches for this AI search',
+    'card.viewDetails':     'View Details',
+    'modal.about':          'About',
+    'modal.details':        'Details',
+    'modal.whereToWatch':   'Where to Watch',
+    'modal.awards':         'Awards & Recognition',
+    'modal.yourReview':     'Your Review',
+    'modal.postReview':     'Post Review',
+    'modal.reviews':        'Reviews',
+    'modal.smartMatch':     'Smart Match',
+    'modal.reviewPlaceholder': 'What did you think? (optional)',
+    'modal.noReviews':      'No reviews yet. Be the first!',
+    'modal.loading':        'Loading…',
+    'modal.noAwards':       'No award data available.',
+    'modal.genre':          'Genre',
+    'modal.country':        'Country',
+    'modal.year':           'Year',
+    'modal.firstAired':     'First Aired',
+    'modal.director':       'Director',
+    'modal.creator':        'Creator',
+    'modal.trailer':        '▶ Trailer',
+    'modal.hideTrailer':    '▼ Hide Trailer',
+    'modal.share':          '↗ Share',
+    'share.title':          'Share This Film',
+    'share.device':         'Share via Device',
+    'share.copyLink':       'Copy Link',
+    'share.copied':         '✓ Copied!',
+    'ai.searching':         '✦ Searching for "{q}"…',
+    'ai.found':             '✦ AI found {n} match for "{q}"',
+    'ai.foundPlural':       '✦ AI found {n} matches for "{q}"',
+    'search.placeholder':   'Try: dark thriller with a twist…',
+    'search.mobileTitle':   'Search movies',
+    'search.tryAsking':     'Try asking:',
+    'search.chips.darkThriller': 'Dark thriller',
+    'search.chips.romCom':       'Rom-com',
+    'search.chips.scifi':        'Epic sci-fi',
+    'search.chips.family':       'Family film',
+    'search.chips.trueStory':    'True story',
+    'search.chips.action':       'Action',
+    'lang.en': 'English',
+    'lang.es': 'Español',
+    'lang.uk': 'Українська',
+  },
+  es: {
+    'nav.movies':           'Películas',
+    'nav.tvShows':          'Series',
+    'filter.all':           'Todo',
+    'filter.country':       'País',
+    'filter.allCountries':  'Todos los países',
+    'filter.minRating':     'Nota mínima',
+    'filter.any':           'Cualquiera',
+    'filter.sort':          'Ordenar',
+    'hero.subtitle':        'Agregamos puntuaciones de IMDb, Rotten Tomatoes y Metacritic en una calificación ponderada.',
+    'hero.aiPowered':       'Búsqueda con IA',
+    'hero.films':           'películas',
+    'hero.shows':           'series',
+    'hero.sources':         'fuentes',
+    'hero.rating':          'calificación',
+    'grid.showing':         'Viendo:',
+    'grid.of':              'de',
+    'grid.aiResults':       'Resultados IA',
+    'grid.loadMore':        'Cargar más',
+    'grid.noResults':       'Sin resultados',
+    'grid.noResultsSub':    'Prueba otros filtros o términos de búsqueda',
+    'grid.failedLoad':      'Error al cargar',
+    'grid.noMatches':       'Sin coincidencias para esta búsqueda IA',
+    'card.viewDetails':     'Ver detalles',
+    'modal.about':          'Sobre la película',
+    'modal.details':        'Detalles',
+    'modal.whereToWatch':   'Dónde ver',
+    'modal.awards':         'Premios y reconocimientos',
+    'modal.yourReview':     'Tu reseña',
+    'modal.postReview':     'Publicar reseña',
+    'modal.reviews':        'Reseñas',
+    'modal.smartMatch':     'Coincidencia IA',
+    'modal.reviewPlaceholder': '¿Qué te pareció? (opcional)',
+    'modal.noReviews':      'Sin reseñas aún. ¡Sé el primero!',
+    'modal.loading':        'Cargando…',
+    'modal.noAwards':       'Sin datos de premios.',
+    'modal.genre':          'Género',
+    'modal.country':        'País',
+    'modal.year':           'Año',
+    'modal.firstAired':     'Primera emisión',
+    'modal.director':       'Director',
+    'modal.creator':        'Creador',
+    'modal.trailer':        '▶ Tráiler',
+    'modal.hideTrailer':    '▼ Ocultar tráiler',
+    'modal.share':          '↗ Compartir',
+    'share.title':          'Compartir película',
+    'share.device':         'Compartir por dispositivo',
+    'share.copyLink':       'Copiar enlace',
+    'share.copied':         '✓ ¡Copiado!',
+    'ai.searching':         '✦ Buscando "{q}"…',
+    'ai.found':             '✦ La IA encontró {n} resultado para "{q}"',
+    'ai.foundPlural':       '✦ La IA encontró {n} resultados para "{q}"',
+    'search.placeholder':   'Prueba: thriller oscuro con giro final…',
+    'search.mobileTitle':   'Buscar películas',
+    'search.tryAsking':     'Prueba preguntar:',
+    'search.chips.darkThriller': 'Thriller oscuro',
+    'search.chips.romCom':       'Comedia romántica',
+    'search.chips.scifi':        'Ciencia ficción',
+    'search.chips.family':       'Película familiar',
+    'search.chips.trueStory':    'Historia real',
+    'search.chips.action':       'Acción',
+    'lang.en': 'English',
+    'lang.es': 'Español',
+    'lang.uk': 'Українська',
+  },
+  uk: {
+    'nav.movies':           'Фільми',
+    'nav.tvShows':          'Серіали',
+    'filter.all':           'Всі',
+    'filter.country':       'Країна',
+    'filter.allCountries':  'Всі країни',
+    'filter.minRating':     'Мін. рейтинг',
+    'filter.any':           'Будь-який',
+    'filter.sort':          'Сортування',
+    'hero.subtitle':        'Ми агрегуємо оцінки IMDb, Rotten Tomatoes та Metacritic в єдиний зважений рейтинг.',
+    'hero.aiPowered':       'Пошук на основі ШІ',
+    'hero.films':           'фільмів',
+    'hero.shows':           'серіалів',
+    'hero.sources':         'джерела',
+    'hero.rating':          'рейтинг',
+    'grid.showing':         'Показано:',
+    'grid.of':              'з',
+    'grid.aiResults':       'Результати ШІ',
+    'grid.loadMore':        'Завантажити ще',
+    'grid.noResults':       'Нічого не знайдено',
+    'grid.noResultsSub':    'Спробуйте інші фільтри або ключові слова',
+    'grid.failedLoad':      'Помилка завантаження',
+    'grid.noMatches':       'Немає збігів для цього ШІ-пошуку',
+    'card.viewDetails':     'Детальніше',
+    'modal.about':          'Про фільм',
+    'modal.details':        'Деталі',
+    'modal.whereToWatch':   'Де дивитися',
+    'modal.awards':         'Нагороди та визнання',
+    'modal.yourReview':     'Ваш відгук',
+    'modal.postReview':     'Опублікувати',
+    'modal.reviews':        'Відгуки',
+    'modal.smartMatch':     'Збіг ШІ',
+    'modal.reviewPlaceholder': 'Що ви думаєте? (необов\'язково)',
+    'modal.noReviews':      'Відгуків ще немає. Будьте першим!',
+    'modal.loading':        'Завантаження…',
+    'modal.noAwards':       'Дані про нагороди відсутні.',
+    'modal.genre':          'Жанр',
+    'modal.country':        'Країна',
+    'modal.year':           'Рік',
+    'modal.firstAired':     'Перший ефір',
+    'modal.director':       'Режисер',
+    'modal.creator':        'Творець',
+    'modal.trailer':        '▶ Трейлер',
+    'modal.hideTrailer':    '▼ Сховати трейлер',
+    'modal.share':          '↗ Поділитися',
+    'share.title':          'Поділитися фільмом',
+    'share.device':         'Поділитися через пристрій',
+    'share.copyLink':       'Скопіювати посилання',
+    'share.copied':         '✓ Скопійовано!',
+    'ai.searching':         '✦ Пошук "{q}"…',
+    'ai.found':             '✦ ШІ знайшов {n} результат для "{q}"',
+    'ai.foundPlural':       '✦ ШІ знайшов {n} результати для "{q}"',
+    'search.placeholder':   'Спробуй: темний трилер з несподіваним фіналом…',
+    'search.mobileTitle':   'Пошук фільмів',
+    'search.tryAsking':     'Спробуй запитати:',
+    'search.chips.darkThriller': 'Темний трилер',
+    'search.chips.romCom':       'Ромком',
+    'search.chips.scifi':        'Фантастика',
+    'search.chips.family':       'Сімейне кіно',
+    'search.chips.trueStory':    'Реальна історія',
+    'search.chips.action':       'Бойовик',
+    'lang.en': 'English',
+    'lang.es': 'Español',
+    'lang.uk': 'Українська',
+  },
+};
+
+let CURRENT_LANG = 'en';
+
+function t(key, vars = {}) {
+  const map = TRANSLATIONS[CURRENT_LANG] || TRANSLATIONS.en;
+  let str = map[key] ?? TRANSLATIONS.en[key] ?? key;
+  for (const [k, v] of Object.entries(vars)) {
+    str = str.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
+  }
+  return str;
+}
+
+function applyTranslations() {
+  // Text content
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  // Placeholder attributes
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+  // Update lang switcher button
+  const flags = { en: '🇺🇸', es: '🇪🇸', uk: '🇺🇦' };
+  const codes  = { en: 'EN',  es: 'ES',  uk: 'UK' };
+  const flagEl = document.getElementById('langBtnFlag');
+  const codeEl = document.getElementById('langBtnCode');
+  if (flagEl) flagEl.textContent = flags[CURRENT_LANG] || '🌐';
+  if (codeEl) codeEl.textContent = codes[CURRENT_LANG] || 'EN';
+  // Active state on lang options
+  document.querySelectorAll('.lang-option').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === CURRENT_LANG);
+  });
+  // Trailer button (if open)
+  const btnTrailer = document.getElementById('btnTrailer');
+  if (btnTrailer && btnTrailer.style.display !== 'none') {
+    btnTrailer.textContent = TRAILER_OPEN ? t('modal.hideTrailer') : t('modal.trailer');
+  }
+}
+
+function switchLang(code) {
+  if (!TRANSLATIONS[code]) return;
+  CURRENT_LANG = code;
+  localStorage.setItem('rk_lang', code);
+  applyTranslations();
+  closeLangMenu();
+}
+
+async function detectLang() {
+  const saved = localStorage.getItem('rk_lang');
+  if (saved && TRANSLATIONS[saved]) {
+    CURRENT_LANG = saved;
+    applyTranslations();
+    return;
+  }
+  try {
+    const res  = await fetch('/api/geo-lang');
+    const data = await res.json();
+    if (data.lang && TRANSLATIONS[data.lang]) {
+      CURRENT_LANG = data.lang;
+    }
+  } catch {
+    // fallback: use browser language
+    const nav = (navigator.language || 'en').split('-')[0].toLowerCase();
+    if (TRANSLATIONS[nav]) CURRENT_LANG = nav;
+  }
+  applyTranslations();
+}
+
+function toggleLangMenu(e) {
+  e.stopPropagation();
+  document.getElementById('langMenu').classList.toggle('open');
+}
+
+function closeLangMenu() {
+  document.getElementById('langMenu')?.classList.remove('open');
+}
+
+// Close lang menu when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#langSwitch')) closeLangMenu();
+});
 
 /* ═══════════════════════════════════
    STATE
@@ -1463,7 +1801,7 @@ async function loadGenres() {
     const data = await tmdbGet(endpoint, { language: 'en-US' });
     GENRES = {};
     const wrap = document.getElementById('genrePills');
-    wrap.innerHTML = '<button class="gpill active" id="pill-all" onclick="setGenre(\'\')">All</button>';
+    wrap.innerHTML = `<button class="gpill active" id="pill-all" onclick="setGenre('')" data-i18n="filter.all">${t('filter.all')}</button>`;
     for (const g of (data.genres || [])) {
       GENRES[g.id] = g.name;
       const btn = document.createElement('button');
@@ -1495,9 +1833,9 @@ function setContentType(type) {
   // Update hero
   const heroTitle = document.getElementById('heroTitle');
   if (type === 'tv') {
-    heroTitle.innerHTML = '<span class="c-p">150,000</span> shows.<br><span class="c-o">3</span> sources. <span class="c-y">1</span> rating.';
+    heroTitle.innerHTML = `<span class="c-p">150,000</span> ${t('hero.shows')}.<br><span class="c-o">3</span> ${t('hero.sources')}. <span class="c-y">1</span> ${t('hero.rating')}.`;
   } else {
-    heroTitle.innerHTML = '<span class="c-p">240,000</span> films.<br><span class="c-o">3</span> sources. <span class="c-y">1</span> rating.';
+    heroTitle.innerHTML = `<span class="c-p">240,000</span> ${t('hero.films')}.<br><span class="c-o">3</span> ${t('hero.sources')}. <span class="c-y">1</span> ${t('hero.rating')}.`;
   }
   // Flush state
   MOVIES       = [];
@@ -1707,7 +2045,7 @@ function renderCardHTML(m) {
     <div class="movie-poster">
       ${poster}
       <div class="poster-ratings">${tvBadge}${badgesHTML(m)}</div>
-      <div class="card-hover-overlay"><span>View Details</span></div>
+      <div class="card-hover-overlay"><span>${t('card.viewDetails')}</span></div>
     </div>
     <div class="movie-info">
       <div class="movie-title">${esc(m.title)}</div>
@@ -1889,7 +2227,7 @@ async function loadMovies(page = 1, append = false) {
       document.getElementById('movieGrid').innerHTML = '';
       const empty = document.getElementById('emptyState');
       empty.classList.add('show');
-      document.getElementById('emptySub').textContent = 'Failed to load — check your API key';
+      document.getElementById('emptySub').textContent = t('grid.failedLoad');
     }
   } finally {
     IS_LOADING = false;
@@ -1975,8 +2313,7 @@ function keywordFilterCache(query) {
   TOTAL_COUNT = CACHE_MOVIES.length;
   renderGrid(results, false);
   if (!results.length) {
-    document.getElementById('emptySub').textContent =
-      'No matches in the current catalog. Try a different description.';
+    document.getElementById('emptySub').textContent = t('grid.noMatches');
   }
 }
 
@@ -1985,7 +2322,7 @@ async function aiSearch(query) {
   AI_SEARCH_ACTIVE = true;
   document.getElementById('searchWrap').classList.add('ai-active');
   showSkeletons(12);
-  showAIBanner(`Searching with AI for "${query}"…`, true);
+  showAIBanner(t('ai.searching', { q: query }), true);
 
   try {
     const controller = new AbortController();
@@ -2017,7 +2354,7 @@ async function aiSearch(query) {
       showAIBanner(`✦ ${message}`);
     } else {
       const n = results.length;
-      showAIBanner(`Found ${n} match${n !== 1 ? 'es' : ''} for "${query}"`);
+      showAIBanner(n === 1 ? t('ai.found', { n, q: query }) : t('ai.foundPlural', { n, q: query }));
     }
 
     renderGrid(results, false);
@@ -2205,7 +2542,7 @@ function populateModal(m) {
 
   const tBtn = document.getElementById('btnTrailer');
   tBtn.style.display = m.trailer ? '' : 'none';
-  tBtn.textContent = '▶ Trailer';
+  tBtn.textContent = t('modal.trailer');
   document.getElementById('trailerWrap').classList.remove('active');
   document.getElementById('trailerFrame').src = '';
 
@@ -2217,7 +2554,7 @@ function populateModal(m) {
 function refreshModalRatings(m) {
   const rows = [];
   if (!m.enriched) {
-    rows.push(`<div class="mr loading"><div class="val" style="font-size:12px">Loading…</div><div class="src">Ratings</div></div>`);
+    rows.push(`<div class="mr loading"><div class="val" style="font-size:12px">${t('modal.loading')}</div><div class="src">Ratings</div></div>`);
   } else if (!m.imdb && !m.rt && !m.mc) {
     if (m.tmdbScore) rows.push(`<div class="mr avg"><div class="val">★ ${m.tmdbScore.toFixed(1)}</div><div class="src">Score</div></div>`);
   } else {
@@ -2232,19 +2569,19 @@ function refreshModalRatings(m) {
 function refreshModalDetails(m) {
   document.getElementById('mDesc').textContent = m.desc || '—';
   const countryDisplay = COUNTRY_NAME[m.country] || m.country || '—';
-  const roleLabel = m.isTV ? 'Creator' : 'Director';
+  const roleLabel = m.isTV ? t('modal.creator') : t('modal.director');
   document.getElementById('mMeta').innerHTML = `
-    <div class="meta-item"><label>Genre</label><span>${esc(m.genres?.join(', ') || m.genre || '—')}</span></div>
-    <div class="meta-item"><label>Country</label><span>${esc(countryDisplay)}</span></div>
-    <div class="meta-item"><label>${roleLabel}</label><span>${esc(m.director || (m.enriched ? '—' : 'Loading…'))}</span></div>
-    <div class="meta-item"><label>${m.isTV ? 'First Aired' : 'Year'}</label><span>${m.year || '—'}</span></div>
+    <div class="meta-item"><label>${t('modal.genre')}</label><span>${esc(m.genres?.join(', ') || m.genre || '—')}</span></div>
+    <div class="meta-item"><label>${t('modal.country')}</label><span>${esc(countryDisplay)}</span></div>
+    <div class="meta-item"><label>${roleLabel}</label><span>${esc(m.director || (m.enriched ? '—' : t('modal.loading')))}</span></div>
+    <div class="meta-item"><label>${m.isTV ? t('modal.firstAired') : t('modal.year')}</label><span>${m.year || '—'}</span></div>
     ${m.actors?.length ? `<div class="meta-item" style="grid-column:1/-1"><label>Cast</label><span>${esc(m.actors.join(', '))}</span></div>` : ''}
   `;
   const awardsEl = document.getElementById('mAwards');
   if (m.awards?.length) {
     awardsEl.innerHTML = m.awards.slice(0,5).map(a => `<span class="award">${esc(a)}</span>`).join('');
   } else {
-    awardsEl.innerHTML = `<span style="color:var(--muted);font-size:12px">${m.enriched ? 'No award data' : 'Loading…'}</span>`;
+    awardsEl.innerHTML = `<span style="color:var(--muted);font-size:12px">${m.enriched ? t('modal.noAwards') : t('modal.loading')}</span>`;
   }
   // Trailer btn
   document.getElementById('btnTrailer').style.display = m.trailer ? '' : 'none';
@@ -2363,11 +2700,11 @@ function toggleTrailer() {
   if (TRAILER_OPEN) {
     frame.src = ACTIVE_MOVIE.trailer + '?autoplay=1';
     wrap.classList.add('active');
-    document.getElementById('btnTrailer').textContent = '⏹ Hide';
+    document.getElementById('btnTrailer').textContent = t('modal.hideTrailer');
   } else {
     frame.src = '';
     wrap.classList.remove('active');
-    document.getElementById('btnTrailer').textContent = '▶ Trailer';
+    document.getElementById('btnTrailer').textContent = t('modal.trailer');
   }
 }
 
@@ -2387,7 +2724,7 @@ function renderReviews(tmdbId) {
   const reviews = getReviews(tmdbId);
   const el = document.getElementById('mReviews');
   if (!reviews.length) {
-    el.innerHTML = '<div class="no-reviews">No reviews yet.<br>Be the first to rate this!</div>';
+    el.innerHTML = `<div class="no-reviews">${t('modal.noReviews')}</div>`;
     return;
   }
   el.innerHTML = reviews.slice().reverse().map(r => `
@@ -2487,9 +2824,9 @@ function copyLink() {
   const url = window.location.href; // already contains ?movie=id
   const btn = document.getElementById('shareCopy');
   const confirm = () => {
-    btn.textContent = '✓ Link Copied!';
+    btn.textContent = t('share.copied');
     btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = '🔗 Copy Link'; btn.classList.remove('copied'); }, 2500);
+    setTimeout(() => { btn.textContent = `🔗 ${t('share.copyLink')}`; btn.classList.remove('copied'); }, 2500);
   };
   if (navigator.clipboard?.writeText) {
     navigator.clipboard.writeText(url).then(confirm).catch(() => { legacyCopy(url); confirm(); });
@@ -2620,6 +2957,7 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
    INIT
 ═══════════════════════════════════ */
 async function init() {
+  await detectLang();
   await loadGenres();
   await loadMovies(1, false);
 
