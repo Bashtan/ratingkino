@@ -1670,6 +1670,19 @@ async function openMovie(tmdbId) {
       refreshModalDetails(m);
       refreshWatchProviders(m);
     }
+  } else if (m.imdbId && m.rt === null && m.mc === null) {
+    // Cached movies are pre-enriched by sync-worker (TMDB only, no OMDb).
+    // Fetch OMDb ratings now so RT + Metacritic show in the modal.
+    omdbGet(m.imdbId).then(od => {
+      if (!od || ACTIVE_MOVIE?.id !== tmdbId) return;
+      const imdbVal = parseFloat(od.imdbRating);
+      if (!isNaN(imdbVal) && imdbVal > 0) { m.imdb = imdbVal; m.imdbV = parseInt((od.imdbVotes||'0').replace(/,/g,'')) || 1000; }
+      const rtEntry = (od.Ratings||[]).find(r => r.Source === 'Rotten Tomatoes');
+      if (rtEntry) { const v = parseInt(rtEntry.Value); if (!isNaN(v) && v > 0) { m.rt = v; m.rtV = 1000; } }
+      const mcVal = parseInt(od.Metascore);
+      if (!isNaN(mcVal) && mcVal > 0) { m.mc = mcVal; m.mcV = 1000; }
+      refreshModalRatings(m);
+    });
   }
 }
 
