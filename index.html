@@ -1011,6 +1011,51 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   .movie-grid    { gap: 7px; }
   .gpill         { height: 36px; padding: 0 11px; font-size: 12px; }
 }
+
+/* ─── AI BADGES ──────────────────────────────── */
+/* Hero band "✦ AI Powered" chip */
+.ai-powered-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 50px; width: fit-content;
+  background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(6,182,212,0.08));
+  border: 1px solid rgba(99,102,241,0.3);
+  color: rgba(167,139,250,0.85);
+  font-size: 10px; font-weight: 700;
+  font-family: 'Montserrat', sans-serif; letter-spacing: 0.8px;
+  margin-top: 9px;
+  animation: chipGlow 4s ease-in-out infinite;
+}
+.ai-powered-chip svg { flex-shrink: 0; }
+@keyframes chipGlow {
+  0%, 100% { border-color: rgba(99,102,241,0.3); box-shadow: none; }
+  50%       { border-color: rgba(6,182,212,0.55); box-shadow: 0 0 12px rgba(99,102,241,0.18); }
+}
+
+/* Count row "✦ AI Results" badge (shown during AI search) */
+.ai-results-badge {
+  display: none; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 50px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(6,182,212,0.12));
+  border: 1px solid rgba(99,102,241,0.42);
+  color: rgba(167,139,250,0.95);
+  font-size: 10px; font-weight: 700;
+  font-family: 'Montserrat', sans-serif; letter-spacing: 0.5px;
+  animation: chipGlow 3s ease-in-out infinite;
+}
+.ai-results-badge.show { display: inline-flex; }
+
+/* Modal "✦ Smart Match" pill (shown when movie came from AI search) */
+.ai-match-pill {
+  display: none; align-items: center; gap: 5px;
+  padding: 4px 11px; border-radius: 50px; width: fit-content;
+  background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(6,182,212,0.12));
+  border: 1px solid rgba(99,102,241,0.45);
+  color: rgba(167,139,250,0.95);
+  font-size: 10px; font-weight: 700;
+  font-family: 'Montserrat', sans-serif; letter-spacing: 0.6px;
+  margin-bottom: 12px;
+}
+.ai-match-pill.show { display: inline-flex; }
 </style>
 </head>
 <body>
@@ -1148,6 +1193,10 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
       <span class="c-o">3</span> sources. <span class="c-y">1</span> rating.
     </div>
     <div class="hero-sub">We aggregate scores from IMDb, Rotten Tomatoes, and Metacritic into one weighted rating.</div>
+    <div class="ai-powered-chip">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+      AI Powered Search
+    </div>
   </div>
   <div class="source-badges">
     <div class="sbadge imd">⭐ IMDb</div>
@@ -1160,6 +1209,10 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 <main>
   <div class="count-row">
     <span class="count-text">Showing: <strong id="countShown">—</strong> of <strong id="countTotal">—</strong></span>
+    <span class="ai-results-badge" id="aiResultsBadge">
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+      AI Results
+    </span>
   </div>
 
   <!-- AI search result banner -->
@@ -1201,6 +1254,10 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
       <div class="m-meta-col">
         <div class="m-title" id="mTitle"></div>
         <div class="m-orig" id="mOrig"></div>
+        <span class="ai-match-pill" id="aiMatchPill">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+          Smart Match
+        </span>
         <div class="m-ratings-row" id="mRatings"></div>
         <div class="m-actions">
           <button class="btn-trailer" id="btnTrailer" onclick="toggleTrailer()" style="display:none">▶ Trailer</button>
@@ -1875,10 +1932,12 @@ function showAIBanner(text, isLoading = false) {
   document.getElementById('aiBannerText').textContent = text;
   banner.classList.toggle('loading', isLoading);
   banner.classList.add('show');
+  document.getElementById('aiResultsBadge')?.classList.add('show');
 }
 
 function hideAIBanner() {
   document.getElementById('aiBanner').classList.remove('show', 'loading');
+  document.getElementById('aiResultsBadge')?.classList.remove('show');
 }
 
 /* Reset to full catalog */
@@ -2133,6 +2192,8 @@ function populateModal(m) {
   document.getElementById('mTitle').textContent = m.title;
   const origLine = (m.titleOrig && m.titleOrig !== m.title ? m.titleOrig + ' · ' : '') + (m.year || '');
   document.getElementById('mOrig').textContent = origLine;
+  // Show "Smart Match" badge when movie was surfaced by AI search
+  document.getElementById('aiMatchPill').classList.toggle('show', AI_SEARCH_ACTIVE);
 
   refreshModalRatings(m);
   refreshModalDetails(m);
