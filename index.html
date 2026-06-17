@@ -1501,7 +1501,9 @@ function fromCache(m) {
     poster:       m.poster     || null,
     backdrop:     m.backdrop   || null,
     imdbId:       m.imdbId     || null,
-    trailer:      m.trailer    || null,
+    trailer:      m.trailer
+                    ? (m.trailer.startsWith('http') ? m.trailer : `https://www.youtube.com/embed/${m.trailer}`)
+                    : null,
     watchProviders: m.watchProviders || { free: [], flatrate: [], rent: [] },
     wpLink:       m.wpLink     || null,
     enriched:     m.enriched   || false,

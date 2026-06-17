@@ -207,8 +207,9 @@ async function enrichOne(raw, env) {
     const imdbId      = detail.external_ids?.imdb_id || null;
     const director    = (detail.credits?.crew || []).find(c => c.job === 'Director')?.name || null;
     const actors      = (detail.credits?.cast || []).slice(0, 5).map(c => c.name);
-    const trailer     = (detail.videos?.results || [])
+    const trailerKey  = (detail.videos?.results || [])
                           .find(v => v.type === 'Trailer' && v.site === 'YouTube')?.key || null;
+    const trailer     = trailerKey ? `https://www.youtube.com/embed/${trailerKey}` : null;
     const usProviders = detail['watch/providers']?.results?.US || {};
     const genres      = (detail.genres || []).map(g => g.name);
 
