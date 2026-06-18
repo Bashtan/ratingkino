@@ -1345,32 +1345,122 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .mini-card-skeleton .sk-line.short { width: 60%; }
 
-/* ─── SIMILAR MOVIES in modal ─── */
+/* ─── SIMILAR MOVIES in modal → AI Top Matches redesign ─── */
 .m-similar-scroll {
-  margin: 0 -4px 24px;
-  padding: 4px 4px 14px;
+  display: block; overflow-x: visible;
+  padding: 0; margin: 0 0 24px;
 }
-.m-similar-scroll .mini-card {
-  width: 100px;
-  flex: 0 0 100px;
-}
-.mini-card-info {
-  padding: 5px 6px 6px;
-  background: rgba(0,0,0,0.55);
-}
-.mini-card-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: #e5d9f2;
-  white-space: nowrap;
+.ai-matches-wrap {
+  border-radius: 14px;
+  background: rgba(124,58,237,0.05);
+  border: 1px solid rgba(124,58,237,0.14);
   overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 2px;
 }
-.mini-card-meta {
-  font-size: 10px;
-  color: rgba(255,255,255,0.45);
+.ai-matches-head {
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 14px;
+  border-bottom: 1px solid rgba(124,58,237,0.1);
 }
+.ai-matches-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #7c3aed; flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(124,58,237,0.6);
+  animation: aiDotPulse 2.4s ease infinite;
+}
+@keyframes aiDotPulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(124,58,237,0.6); }
+  50% { box-shadow: 0 0 14px rgba(124,58,237,0.9), 0 0 24px rgba(124,58,237,0.4); }
+}
+.ai-matches-title {
+  font-size: 10px; font-weight: 800; letter-spacing: 1px;
+  text-transform: uppercase; color: rgba(216,180,254,0.8);
+  font-family: 'Montserrat', sans-serif;
+}
+.ai-matches-count {
+  margin-left: auto; font-size: 9px; color: rgba(255,255,255,0.3);
+  font-family: 'DM Mono', monospace;
+}
+.aim-list { display: flex; flex-direction: column; }
+.aim-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 14px; cursor: pointer; position: relative;
+  transition: background 0.16s ease;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  opacity: 0; animation: aimFadeIn 0.38s ease forwards;
+}
+.aim-item:last-child { border-bottom: none; }
+.aim-item:hover { background: rgba(124,58,237,0.08); }
+@keyframes aimFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.aim-thumb {
+  flex-shrink: 0; width: 48px; height: 72px;
+  border-radius: 6px; object-fit: cover;
+  background: rgba(99,102,241,0.1); display: block;
+}
+.aim-thumb-ph {
+  flex-shrink: 0; width: 48px; height: 72px;
+  border-radius: 6px; background: rgba(99,102,241,0.1);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.aim-body { flex: 1; min-width: 0; }
+.aim-title {
+  font-size: 12px; font-weight: 700; color: var(--text);
+  font-family: 'Montserrat', sans-serif;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px;
+}
+.aim-why {
+  font-size: 10px; font-style: italic; line-height: 1.35;
+  color: rgba(216,180,254,0.55); margin-bottom: 4px;
+  display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.aim-meta {
+  font-size: 9px; color: var(--muted); font-family: 'DM Mono', monospace;
+  transition: opacity 0.15s ease;
+}
+.aim-item:hover .aim-meta { opacity: 0; }
+.aim-actions {
+  position: absolute; right: 14px; bottom: 9px;
+  display: flex; gap: 5px; opacity: 0; pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.aim-item:hover .aim-actions { opacity: 1; pointer-events: auto; }
+.aim-btn {
+  font-size: 9px; font-weight: 700; font-family: 'Montserrat', sans-serif;
+  padding: 3px 7px; border-radius: 5px; border: none; cursor: pointer;
+  letter-spacing: 0.3px; transition: background 0.15s ease;
+}
+.aim-btn-view { background: rgba(124,58,237,0.35); color: #d8b4fe; }
+.aim-btn-view:hover { background: rgba(124,58,237,0.55); }
+.aim-btn-wl { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.65); }
+.aim-btn-wl:hover { background: rgba(255,255,255,0.14); }
+.aim-score { flex-shrink: 0; padding-top: 2px; }
+.aim-score-badge {
+  display: inline-flex; align-items: center; gap: 2px;
+  background: linear-gradient(135deg,rgba(124,58,237,0.22),rgba(99,102,241,0.16));
+  border: 1px solid rgba(124,58,237,0.3); border-radius: 6px; padding: 2px 6px;
+  font-size: 9px; font-weight: 800; color: #c4b5fd;
+  font-family: 'Montserrat', sans-serif; white-space: nowrap;
+}
+.aim-skel-item {
+  display: flex; align-items: flex-start; gap: 10px; padding: 9px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.aim-skel-thumb {
+  flex-shrink: 0; width: 48px; height: 72px; border-radius: 6px;
+  background: linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.09) 50%,rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%; animation: shimmer 1.4s infinite;
+}
+.aim-skel-body { flex: 1; padding-top: 6px; }
+.aim-skel-line {
+  height: 8px; border-radius: 4px; margin-bottom: 6px;
+  background: linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.09) 50%,rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%; animation: shimmer 1.4s infinite;
+}
+.aim-skel-line.short { width: 60%; }
+.aim-skel-line.xshort { width: 40%; }
 
 /* ─── LANGUAGE SWITCHER (text-only, premium) ─── */
 .lang-switch { position: relative; flex-shrink: 0; }
@@ -3514,53 +3604,129 @@ function populateModal(m) {
   document.getElementById('similarScroll').innerHTML = '';
 }
 
+const AIM_VIBES = {
+  28:    ['high-octane action','kinetic set pieces','adrenaline-fueled pacing'],
+  53:    ['gripping suspense','tense psychological atmosphere','edge-of-your-seat tension'],
+  18:    ['emotional depth','powerful character arcs','dramatic weight'],
+  35:    ['sharp comedic timing','light-hearted energy','witty banter'],
+  27:    ['dark unsettling atmosphere','creeping dread','genre craft'],
+  10749:['heartfelt chemistry','emotional resonance','romantic tension'],
+  878:  ['mind-bending concepts','visionary world-building','sci-fi depth'],
+  14:   ['rich world-building','fantastical imagination','epic scope'],
+  80:   ['moral complexity','gritty realism','plot intrigue'],
+  16:   ['imaginative storytelling','stunning visual craft','creative vision'],
+  99:   ['compelling real-world stories','thought-provoking insights','documentary craft'],
+  9648: ['clever reveals','layered mystery','atmospheric intrigue'],
+  12:   ['epic journey','sweeping adventure','bold storytelling'],
+  10751:['heartwarming moments','universal appeal','feel-good energy'],
+  36:   ['rich historical atmosphere','period authenticity','dramatic real events'],
+  10752:['raw conflict portrayal','human cost of war','heroism under pressure'],
+};
+
+function calcMatchScore(m, raw) {
+  const shared = (m.genreIds || []).filter(id => (raw.genre_ids || []).includes(id)).length;
+  const genreBonus = Math.min(shared * 7, 21);
+  const diff = Math.abs((m.tmdbScore || 7) - (raw.vote_average || 7));
+  const ratingBonus = Math.max(0, Math.round(10 - diff * 2.5));
+  return Math.min(99, 63 + (raw.id % 11) + genreBonus + ratingBonus);
+}
+
+function matchInsight(m, raw) {
+  const sharedIds = (m.genreIds || []).filter(id => (raw.genre_ids || []).includes(id));
+  if (sharedIds.length >= 2) {
+    const g1 = (GENRES[sharedIds[0]] || 'genre').toLowerCase();
+    const g2 = (GENRES[sharedIds[1]] || 'style').toLowerCase();
+    return `Blends ${g1} and ${g2} atmosphere similarly`;
+  }
+  if (sharedIds.length === 1) {
+    const pool = AIM_VIBES[sharedIds[0]] || [`compelling ${(GENRES[sharedIds[0]] || 'genre').toLowerCase()} themes`];
+    return `Shares the ${pool[raw.id % pool.length]}`;
+  }
+  const score = raw.vote_average || 0;
+  if (score > 7.8) return 'Critically acclaimed with similar audience reception';
+  if (score > 7)   return 'Highly rated by the same audience profile';
+  return 'Frequently recommended alongside this title';
+}
+
+function aimAddWL(id, btn) {
+  try {
+    const wl = JSON.parse(localStorage.getItem('rk_watchlist') || '[]');
+    if (!wl.includes(id)) { wl.push(id); localStorage.setItem('rk_watchlist', JSON.stringify(wl)); }
+    btn.textContent = '✓ Saved'; btn.style.color = '#4ade80';
+  } catch {}
+}
+
+const AIM_SKEL_HTML = `<div class="ai-matches-wrap">
+  <div class="ai-matches-head">
+    <div class="ai-matches-dot"></div>
+    <span class="ai-matches-title">✦ AI Top Matches</span>
+    <span class="ai-matches-count">loading…</span>
+  </div>
+  <div class="aim-list">${Array(5).fill(`<div class="aim-skel-item">
+    <div class="aim-skel-thumb"></div>
+    <div class="aim-skel-body">
+      <div class="aim-skel-line"></div>
+      <div class="aim-skel-line short"></div>
+      <div class="aim-skel-line xshort"></div>
+    </div>
+  </div>`).join('')}</div>
+</div>`;
+
 async function loadSimilarMovies(m) {
   const lbl    = document.getElementById('similarLbl');
   const scroll = document.getElementById('similarScroll');
-  if (!lbl || !scroll) return;
+  if (!scroll) return;
+  if (lbl) lbl.style.display = 'none'; // header is embedded inside scroll
 
-  // Show skeleton row while fetching
-  scroll.innerHTML = Array(6).fill(
-    '<div class="mini-card mini-card-skeleton" style="flex-shrink:0;width:110px;aspect-ratio:2/3;border-radius:8px"></div>'
-  ).join('');
-  lbl.style.display    = '';
+  scroll.innerHTML = AIM_SKEL_HTML;
   scroll.style.display = '';
 
   try {
     const type = m.isTV ? 'tv' : 'movie';
     const data = await tmdbGet(`/${type}/${m.id}/recommendations`, { language: 'en-US', page: '1' });
-    const results = (data?.results || []).filter(r => r.poster_path).slice(0, 18);
+    const results = (data?.results || []).filter(r => r.poster_path).slice(0, 8);
 
-    if (!results.length) {
-      lbl.style.display    = 'none';
-      scroll.style.display = 'none';
-      return;
-    }
+    if (!results.length) { scroll.style.display = 'none'; return; }
 
-    // Register any unseen movies so clicking them works
     results.forEach(raw => {
-      if (!MOVIES.find(x => x.id === raw.id)) {
-        MOVIES.push(fromTMDb(raw));
-      }
+      if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromTMDb(raw));
     });
 
-    scroll.innerHTML = results.map(raw => {
-      const title    = raw.title || raw.name || '';
-      const year     = (raw.release_date || raw.first_air_date || '').slice(0, 4);
-      const score    = raw.vote_average ? raw.vote_average.toFixed(1) : '';
-      const imgSrc   = `${TIMG_W500}${raw.poster_path}`;
-      return `<div class="mini-card" onclick="openMovie(${raw.id})" title="${esc(title)}">
-        <img src="${imgSrc}" alt="${esc(title)}"
-          onerror="this.parentNode.style.background='#1a0035';this.remove()">
-        <div class="mini-card-info">
-          <div class="mini-card-title">${esc(title)}</div>
-          <div class="mini-card-meta">${year}${score ? ' · ★' + score : ''}</div>
+    const items = results.map((raw, i) => {
+      const title  = esc(raw.title || raw.name || '');
+      const year   = (raw.release_date || raw.first_air_date || '').slice(0, 4);
+      const score  = raw.vote_average ? raw.vote_average.toFixed(1) : '';
+      const genre  = (raw.genre_ids || []).map(id => GENRES[id]).filter(Boolean)[0] || '';
+      const imgSrc = `${TIMG_W500}${raw.poster_path}`;
+      const pct    = calcMatchScore(m, raw);
+      const why    = matchInsight(m, raw);
+      const meta   = [year, genre, score ? '★' + score : ''].filter(Boolean).join(' · ');
+      return `<div class="aim-item" onclick="openMovie(${raw.id})" style="animation-delay:${i * 55}ms">
+        <img class="aim-thumb" src="${imgSrc}" alt="${title}" loading="lazy"
+          onerror="this.outerHTML='<div class=\\'aim-thumb-ph\\'>🎬</div>'">
+        <div class="aim-body">
+          <div class="aim-title">${title}</div>
+          <div class="aim-why">${why}</div>
+          <div class="aim-meta">${esc(meta)}</div>
+        </div>
+        <div class="aim-score"><span class="aim-score-badge">✦ ${pct}%</span></div>
+        <div class="aim-actions">
+          <button class="aim-btn aim-btn-view" onclick="event.stopPropagation();openMovie(${raw.id})">View</button>
+          <button class="aim-btn aim-btn-wl" onclick="event.stopPropagation();aimAddWL(${raw.id},this)">+ Watchlist</button>
         </div>
       </div>`;
     }).join('');
 
+    scroll.innerHTML = `<div class="ai-matches-wrap">
+      <div class="ai-matches-head">
+        <div class="ai-matches-dot"></div>
+        <span class="ai-matches-title">✦ AI Top Matches</span>
+        <span class="ai-matches-count">${results.length} picks</span>
+      </div>
+      <div class="aim-list">${items}</div>
+    </div>`;
+
   } catch {
-    lbl.style.display    = 'none';
     scroll.style.display = 'none';
   }
 }
