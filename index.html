@@ -1167,6 +1167,33 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .mini-card-skeleton .sk-line.short { width: 60%; }
 
+/* ─── SIMILAR MOVIES in modal ─── */
+.m-similar-scroll {
+  margin: 0 -4px 24px;
+  padding: 4px 4px 14px;
+}
+.m-similar-scroll .mini-card {
+  width: 100px;
+  flex: 0 0 100px;
+}
+.mini-card-info {
+  padding: 5px 6px 6px;
+  background: rgba(0,0,0,0.55);
+}
+.mini-card-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #e5d9f2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+.mini-card-meta {
+  font-size: 10px;
+  color: rgba(255,255,255,0.45);
+}
+
 /* ─── LANGUAGE SWITCHER (text-only, premium) ─── */
 .lang-switch { position: relative; flex-shrink: 0; }
 
@@ -1567,6 +1594,9 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 
         <div class="section-lbl" data-i18n="modal.awards">Awards &amp; Recognition</div>
         <div class="awards" id="mAwards"></div>
+
+        <div class="section-lbl m-similar-lbl" id="similarLbl" data-i18n="modal.similar" style="display:none">You Might Also Like</div>
+        <div class="feed-scroll m-similar-scroll" id="similarScroll" style="display:none"></div>
       </div>
 
       <div class="m-right">
@@ -1639,6 +1669,7 @@ const PROXY_BASE = '/api';
 const TMDB_BASE  = PROXY_BASE + '/tmdb';
 const TIMG_W500  = 'https://image.tmdb.org/t/p/w500';
 const TIMG_W780  = 'https://image.tmdb.org/t/p/w780';
+const TIMG_W1280 = 'https://image.tmdb.org/t/p/w1280';
 const TIMG_W45   = 'https://image.tmdb.org/t/p/w45';
 const OMDB_BASE  = PROXY_BASE + '/omdb';
 
@@ -1685,6 +1716,7 @@ const TRANSLATIONS = {
     'modal.details':        'Details',
     'modal.whereToWatch':   'Where to Watch',
     'modal.awards':         'Awards & Recognition',
+    'modal.similar':        'You Might Also Like',
     'modal.yourReview':     'Your Review',
     'modal.postReview':     'Post Review',
     'modal.reviews':        'Reviews',
@@ -1748,6 +1780,7 @@ const TRANSLATIONS = {
     'modal.details':        'Detalles',
     'modal.whereToWatch':   'Dónde ver',
     'modal.awards':         'Premios y reconocimientos',
+    'modal.similar':        'También te puede gustar',
     'modal.yourReview':     'Tu reseña',
     'modal.postReview':     'Publicar reseña',
     'modal.reviews':        'Reseñas',
@@ -1811,6 +1844,7 @@ const TRANSLATIONS = {
     'modal.details':        'Détails',
     'modal.whereToWatch':   'Où regarder',
     'modal.awards':         'Prix et distinctions',
+    'modal.similar':        'Vous aimerez peut-être aussi',
     'modal.yourReview':     'Votre avis',
     'modal.postReview':     "Publier l'avis",
     'modal.reviews':        'Avis',
@@ -1874,6 +1908,7 @@ const TRANSLATIONS = {
     'modal.details':        '详情',
     'modal.whereToWatch':   '在哪里观看',
     'modal.awards':         '奖项与荣誉',
+    'modal.similar':        '你可能也喜欢',
     'modal.yourReview':     '您的评价',
     'modal.postReview':     '发布评价',
     'modal.reviews':        '评价',
@@ -1937,6 +1972,7 @@ const TRANSLATIONS = {
     'modal.details':        'تفاصيل',
     'modal.whereToWatch':   'أين تشاهد',
     'modal.awards':         'الجوائز والتقدير',
+    'modal.similar':        'قد يعجبك أيضاً',
     'modal.yourReview':     'مراجعتك',
     'modal.postReview':     'نشر المراجعة',
     'modal.reviews':        'المراجعات',
@@ -2000,6 +2036,7 @@ const TRANSLATIONS = {
     'modal.details':        'Деталі',
     'modal.whereToWatch':   'Де дивитися',
     'modal.awards':         'Нагороди та визнання',
+    'modal.similar':        'Вам також може сподобатись',
     'modal.yourReview':     'Ваш відгук',
     'modal.postReview':     'Опублікувати',
     'modal.reviews':        'Відгуки',
@@ -2107,6 +2144,7 @@ async function detectLang() {
     const res  = await fetch('/api/geo-lang');
     const data = await res.json();
     if (data.lang && TRANSLATIONS[data.lang]) CURRENT_LANG = data.lang;
+    if (data.country) DETECTED_COUNTRY = data.country;
   } catch {
     // Fallback: browser language → first two chars → match supported lang
     const nav = (navigator.language || 'en').split('-')[0].toLowerCase();
@@ -2259,6 +2297,7 @@ let IS_LOADING   = false;
 let SETTINGS_REQ = false;
 let PENDING_STARS = 0;         // stars selected in compose
 let RANDOM_POOL  = [];         // cached 500-movie roulette pool (daily sync)
+let DETECTED_COUNTRY = 'US';  // ISO-3166-1 from /api/geo-lang; used for watch providers
 
 // ── AI search state ──────────────────────────────────────────
 let CACHE_MOVIES      = [];    // snapshot of the 119 KV movies for AI search
@@ -2564,78 +2603,96 @@ function pumpEnrich() {
   }
 }
 
+/**
+ * mergeMovieData — clean utility that applies TMDB detail + OMDb response
+ * onto a movie object in-place. Returns the mutated movie.
+ *
+ * @param {object} movie   - existing movie object (from fromTMDb / fromKV)
+ * @param {object} det     - raw TMDB /movie/{id} response (with appended credits, videos, etc.)
+ * @param {object|null} od - raw OMDb response (or null if unavailable)
+ * @param {string} country - ISO-3166-1 country code for watch providers (default DETECTED_COUNTRY)
+ */
+function mergeMovieData(movie, det, od, country = DETECTED_COUNTRY) {
+  // ── TMDB fields ──────────────────────────────────────────────
+  movie.imdbId = det.imdb_id || det.external_ids?.imdb_id || movie.imdbId || null;
+  movie.desc   = det.overview || movie.desc;
+  movie.genres = (det.genres || []).map(g => g.name);
+  movie.genre  = movie.genres[0] || movie.genre;
+
+  // High-res images (prefer original backdrop, w500 poster)
+  if (det.backdrop_path) movie.backdrop = det.backdrop_path;
+  if (det.poster_path)   movie.poster   = det.poster_path;
+
+  // Production country
+  if (movie.isTV) {
+    movie.country = (det.origin_country || [])[0] || movie.country || null;
+  } else {
+    movie.country = det.production_countries?.[0]?.iso_3166_1 || movie.country || null;
+  }
+
+  // Director / Creator
+  const crew = det.credits?.crew || [];
+  const cast = det.credits?.cast || [];
+  movie.director = movie.isTV
+    ? ((det.created_by || []).map(p => p.name).join(', ') || null)
+    : (crew.find(p => p.job === 'Director')?.name || null);
+  movie.actors = cast.slice(0, 6).map(a => a.name);
+
+  // Trailer — prefer official Trailer, fallback to any YouTube video
+  const vids = det.videos?.results || [];
+  const trl  = vids.find(v => v.site === 'YouTube' && v.type === 'Trailer')
+             || vids.find(v => v.site === 'YouTube');
+  movie.trailer = trl ? `https://www.youtube.com/embed/${trl.key}` : movie.trailer || null;
+
+  // Watch providers — use visitor's country, fallback to US
+  const wpResults = det['watch/providers']?.results || {};
+  const wp = wpResults[country] || wpResults['US'] || null;
+  if (wp) {
+    movie.watchProviders = {
+      free:     (wp.free     || []).slice(0, 4),
+      flatrate: (wp.flatrate || []).slice(0, 4),
+      rent:     (wp.rent     || []).slice(0, 3),
+    };
+    movie.wpLink = wp.link || null;
+  }
+
+  // ── OMDb fields ───────────────────────────────────────────────
+  if (od) {
+    const imdbVal = parseFloat(od.imdbRating);
+    if (!isNaN(imdbVal) && imdbVal > 0) {
+      movie.imdb  = imdbVal;
+      movie.imdbV = parseInt((od.imdbVotes || '0').replace(/,/g, '')) || 1000;
+    }
+    const rtEntry = (od.Ratings || []).find(r => r.Source === 'Rotten Tomatoes');
+    if (rtEntry) {
+      const rtVal = parseInt(rtEntry.Value);
+      if (!isNaN(rtVal) && rtVal > 0) { movie.rt = rtVal; movie.rtV = 1000; }
+    }
+    const mcVal = parseInt(od.Metascore);
+    if (!isNaN(mcVal) && mcVal > 0) { movie.mc = mcVal; movie.mcV = 1000; }
+    if (od.Awards && od.Awards !== 'N/A') {
+      movie.awards = od.Awards.split('. ').filter(Boolean).map(a => '🏆 ' + a);
+    }
+  }
+
+  return movie;
+}
+
 async function doEnrich(tmdbId) {
   const movie = MOVIES.find(m => m.id === tmdbId);
   if (!movie) return;
   try {
     const type = movie.isTV ? 'tv' : 'movie';
-    // Step 1: full details from TMDb
+    // Step 1: full TMDB details
     const det = await tmdbGet(`/${type}/${tmdbId}`, {
       append_to_response: 'credits,videos,external_ids,watch/providers',
       language: 'en-US',
     });
+    // Step 2: OMDb — IMDb + RT + MC (parallel-safe, null if unavailable)
+    const imdbId = det.imdb_id || det.external_ids?.imdb_id || null;
+    const od = imdbId ? await omdbGet(imdbId) : null;
 
-    movie.imdbId = det.imdb_id || det.external_ids?.imdb_id || null;
-    movie.desc   = det.overview || movie.desc;
-    movie.genres = (det.genres || []).map(g => g.name);
-    movie.genre  = movie.genres[0] || movie.genre;
-
-    // Country
-    if (movie.isTV) {
-      const oc = det.origin_country || [];
-      movie.country = oc[0] || null;
-    } else {
-      movie.country = det.production_countries?.[0]?.iso_3166_1 || null;
-    }
-
-    // Director / Creator
-    const crew = det.credits?.crew || [];
-    const cast = det.credits?.cast || [];
-    if (movie.isTV) {
-      movie.director = (det.created_by || []).map(p => p.name).join(', ') || null;
-    } else {
-      movie.director = crew.find(p => p.job === 'Director')?.name || null;
-    }
-    movie.actors = cast.slice(0, 6).map(a => a.name);
-
-    // Trailer
-    const vids = det.videos?.results || [];
-    const trl  = vids.find(v => v.site === 'YouTube' && v.type === 'Trailer') || vids.find(v => v.site === 'YouTube');
-    movie.trailer = trl ? `https://www.youtube.com/embed/${trl.key}` : null;
-
-    // Watch providers (US region)
-    const wp = det['watch/providers']?.results?.US;
-    if (wp) {
-      movie.watchProviders = {
-        free:     (wp.free     || []).slice(0, 4),
-        flatrate: (wp.flatrate || []).slice(0, 4),
-        rent:     (wp.rent     || []).slice(0, 3),
-      };
-      movie.wpLink = wp.link || null; // JustWatch URL for this specific movie
-    }
-
-    // Step 2: OMDb — IMDb + RT + MC
-    if (movie.imdbId) {
-      const od = await omdbGet(movie.imdbId);
-      if (od) {
-        const imdbVal = parseFloat(od.imdbRating);
-        if (!isNaN(imdbVal) && imdbVal > 0) {
-          movie.imdb  = imdbVal;
-          movie.imdbV = parseInt((od.imdbVotes||'0').replace(/,/g,'')) || 1000;
-        }
-        const rtEntry = (od.Ratings||[]).find(r => r.Source === 'Rotten Tomatoes');
-        if (rtEntry) {
-          const rtVal = parseInt(rtEntry.Value);
-          if (!isNaN(rtVal) && rtVal > 0) { movie.rt = rtVal; movie.rtV = 1000; }
-        }
-        const mcVal = parseInt(od.Metascore);
-        if (!isNaN(mcVal) && mcVal > 0) { movie.mc = mcVal; movie.mcV = 1000; }
-        if (od.Awards && od.Awards !== 'N/A') {
-          movie.awards = od.Awards.split('. ').filter(Boolean).map(a => '🏆 ' + a);
-        }
-      }
-    }
-
+    mergeMovieData(movie, det, od);
     movie.enriched = true;
     updateCardInGrid(tmdbId);
   } catch(e) {
@@ -3117,6 +3174,7 @@ async function openMovie(tmdbId) {
   PENDING_STARS = 0;
   recordInteraction(m); // taste tracking
   populateModal(m);
+  loadSimilarMovies(m); // async — renders after modal opens
   document.getElementById('overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
   // Push history state so the mobile back gesture closes the modal
@@ -3140,12 +3198,7 @@ async function openMovie(tmdbId) {
     // Fetch OMDb ratings now so RT + Metacritic show in the modal.
     omdbGet(m.imdbId).then(od => {
       if (!od || ACTIVE_MOVIE?.id !== tmdbId) return;
-      const imdbVal = parseFloat(od.imdbRating);
-      if (!isNaN(imdbVal) && imdbVal > 0) { m.imdb = imdbVal; m.imdbV = parseInt((od.imdbVotes||'0').replace(/,/g,'')) || 1000; }
-      const rtEntry = (od.Ratings||[]).find(r => r.Source === 'Rotten Tomatoes');
-      if (rtEntry) { const v = parseInt(rtEntry.Value); if (!isNaN(v) && v > 0) { m.rt = v; m.rtV = 1000; } }
-      const mcVal = parseInt(od.Metascore);
-      if (!isNaN(mcVal) && mcVal > 0) { m.mc = mcVal; m.mcV = 1000; }
+      mergeMovieData(m, { genres: [], 'watch/providers': {} }, od);
       refreshModalRatings(m);
     });
   }
@@ -3155,8 +3208,8 @@ function populateModal(m) {
   // Backdrop
   const bd = document.getElementById('mBackdrop');
   if (m.backdrop) {
-    bd.innerHTML = `<img class="m-backdrop-img" src="${TIMG_W780}${m.backdrop}" alt=""
-      onerror="this.parentNode.innerHTML='<div class=\\'m-backdrop-fill\\' style=\\'background:${m.grad}\\'>${m.emoji}</div><div class=\\'m-backdrop-grad\\'></div>'">
+    bd.innerHTML = `<img class="m-backdrop-img" src="${TIMG_W1280}${m.backdrop}" alt=""
+      onerror="this.src='${TIMG_W780}${m.backdrop}'">
       <div class="m-backdrop-grad"></div>`;
   } else if (m.poster) {
     bd.innerHTML = `<img class="m-backdrop-img" src="${TIMG_W500}${m.poster}" alt=""
@@ -3195,6 +3248,62 @@ function populateModal(m) {
   // Reviews
   renderReviews(m.id);
   resetReviewCompose();
+
+  // Similar movies — reset section; async load kicks off separately
+  document.getElementById('similarLbl').style.display = 'none';
+  document.getElementById('similarScroll').style.display = 'none';
+  document.getElementById('similarScroll').innerHTML = '';
+}
+
+async function loadSimilarMovies(m) {
+  const lbl    = document.getElementById('similarLbl');
+  const scroll = document.getElementById('similarScroll');
+  if (!lbl || !scroll) return;
+
+  // Show skeleton row while fetching
+  scroll.innerHTML = Array(6).fill(
+    '<div class="mini-card mini-card-skeleton" style="flex-shrink:0;width:110px;aspect-ratio:2/3;border-radius:8px"></div>'
+  ).join('');
+  lbl.style.display    = '';
+  scroll.style.display = '';
+
+  try {
+    const type = m.isTV ? 'tv' : 'movie';
+    const data = await tmdbGet(`/${type}/${m.id}/recommendations`, { language: 'en-US', page: '1' });
+    const results = (data?.results || []).filter(r => r.poster_path).slice(0, 18);
+
+    if (!results.length) {
+      lbl.style.display    = 'none';
+      scroll.style.display = 'none';
+      return;
+    }
+
+    // Register any unseen movies so clicking them works
+    results.forEach(raw => {
+      if (!MOVIES.find(x => x.id === raw.id)) {
+        MOVIES.push(fromTMDb(raw));
+      }
+    });
+
+    scroll.innerHTML = results.map(raw => {
+      const title    = raw.title || raw.name || '';
+      const year     = (raw.release_date || raw.first_air_date || '').slice(0, 4);
+      const score    = raw.vote_average ? raw.vote_average.toFixed(1) : '';
+      const imgSrc   = `${TIMG_W500}${raw.poster_path}`;
+      return `<div class="mini-card" onclick="openMovie(${raw.id})" title="${esc(title)}">
+        <img src="${imgSrc}" alt="${esc(title)}"
+          onerror="this.parentNode.style.background='#1a0035';this.remove()">
+        <div class="mini-card-info">
+          <div class="mini-card-title">${esc(title)}</div>
+          <div class="mini-card-meta">${year}${score ? ' · ★' + score : ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+  } catch {
+    lbl.style.display    = 'none';
+    scroll.style.display = 'none';
+  }
 }
 
 function refreshModalRatings(m) {
