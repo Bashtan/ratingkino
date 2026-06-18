@@ -448,11 +448,11 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   line-height: 1.4; white-space: nowrap;
 }
 .cr.imdb-v  { background: rgba(245,197,24,0.12); color: #F5C518; }
+.cr.tmdb-v  { background: rgba(1,180,228,0.1);  color: #01b4e4; }
 .cr.rt-v    { background: rgba(250,80,10,0.12);  color: #ff7055; }
 .cr.mc-good { background: rgba(74,222,128,0.12); color: #4ade80; }
 .cr.mc-mid  { background: rgba(251,191,36,0.12); color: #fbbf24; }
 .cr.mc-bad  { background: rgba(248,113,113,0.12); color: #f87171; }
-.cr.na      { color: rgba(255,255,255,0.18); font-size: 8px; letter-spacing: 0.2px; }
 .card-hover-overlay {
   position: absolute; inset: 0;
   background: rgba(90,20,160,0.80);
@@ -983,10 +983,12 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   background: rgba(124,58,237,0.08);
   border: 1.5px solid rgba(124,58,237,0.2);
   border-radius: 10px; color: var(--muted);
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; display: none; /* hidden until speech support confirmed */
+  align-items: center; justify-content: center;
   -webkit-tap-highlight-color: transparent;
   transition: all 0.2s;
 }
+.speech-ok .mob-ai-mic { display: flex; }
 .mob-ai-mic:active { background: rgba(124,58,237,0.2); color: var(--text); }
 .mob-ai-mic.listening {
   color: #ef4444; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.35);
@@ -2972,20 +2974,21 @@ function avgBadgeHTML(m) {
 
 // Always-visible ratings row below card title
 function cardRatingsHTML(m) {
-  const imdb = m.imdb
-    ? `<span class="cr imdb-v">⭐ ${m.imdb}</span>`
-    : `<span class="cr na">IMDb —</span>`;
-  const rt = m.rt
-    ? `<span class="cr rt-v">🍅 ${m.rt}%</span>`
-    : `<span class="cr na">RT —</span>`;
-  let mc;
+  let parts = '';
+  // IMDb — fall back to TMDB score when OMDb hasn't enriched this movie
+  if (m.imdb) {
+    parts += `<span class="cr imdb-v">⭐ ${m.imdb}</span>`;
+  } else if (m.tmdbScore) {
+    parts += `<span class="cr tmdb-v">TMDB ${(+m.tmdbScore).toFixed(1)}</span>`;
+  }
+  // Rotten Tomatoes — only show when present
+  if (m.rt) parts += `<span class="cr rt-v">🍅 ${m.rt}%</span>`;
+  // Metacritic — color-coded by score, only show when present
   if (m.mc) {
     const cls = m.mc >= 61 ? 'mc-good' : m.mc >= 40 ? 'mc-mid' : 'mc-bad';
-    mc = `<span class="cr ${cls}">MC ${m.mc}</span>`;
-  } else {
-    mc = `<span class="cr na">MC —</span>`;
+    parts += `<span class="cr ${cls}">MC ${m.mc}</span>`;
   }
-  return `<div class="card-ratings">${imdb}${rt}${mc}</div>`;
+  return parts ? `<div class="card-ratings">${parts}</div>` : '';
 }
 
 function renderCardHTML(m) {
@@ -4003,15 +4006,30 @@ function stopMobPlaceholder() {
 
 // ─── VOICE SEARCH ──────────────────────────────────
 let _recognition = null, _isListening = false;
+
+// Detect speech support once; show mic button only if supported
+(function detectSpeech() {
+  if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+    document.getElementById('mobSearchOverlay').classList.add('speech-ok');
+  }
+})();
+
+function _stopListening() {
+  _isListening = false;
+  document.getElementById('mobAiInputWrap').classList.remove('listening');
+  document.getElementById('mobAiMic').classList.remove('listening');
+}
+
 function toggleVoiceSearch() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { document.getElementById('mobSearchInput').focus(); return; }
   if (_isListening) { _recognition.stop(); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
 
   _recognition = new SR();
-  _recognition.lang = document.documentElement.lang || navigator.language || 'en-US';
+  _recognition.lang = navigator.language || 'en-US';
   _recognition.interimResults = true;
   _recognition.maxAlternatives = 1;
+  _recognition.continuous = false;
 
   _recognition.onstart = () => {
     _isListening = true;
@@ -4021,29 +4039,37 @@ function toggleVoiceSearch() {
     stopMobPlaceholder();
   };
   _recognition.onresult = e => {
-    const t = Array.from(e.results).map(r => r[0].transcript).join('');
+    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
     const inp = document.getElementById('mobSearchInput');
-    inp.value = t;
-    document.getElementById('mobAiInputWrap').classList.toggle('has-value', !!t);
+    inp.value = transcript;
+    document.getElementById('mobAiInputWrap').classList.toggle('has-value', !!transcript);
   };
   _recognition.onend = () => {
-    _isListening = false;
-    document.getElementById('mobAiInputWrap').classList.remove('listening');
-    document.getElementById('mobAiMic').classList.remove('listening');
+    _stopListening();
     const inp = document.getElementById('mobSearchInput');
     if (inp.value.trim()) {
-      setTimeout(submitMobSearch, 200); // slight delay so user sees the transcript
+      setTimeout(submitMobSearch, 300);
     } else {
       startMobPlaceholder();
     }
   };
-  _recognition.onerror = () => {
-    _isListening = false;
-    document.getElementById('mobAiInputWrap').classList.remove('listening');
-    document.getElementById('mobAiMic').classList.remove('listening');
-    startMobPlaceholder();
+  _recognition.onerror = e => {
+    _stopListening();
+    const inp = document.getElementById('mobSearchInput');
+    if (e.error === 'not-allowed') {
+      inp.placeholder = 'Mic permission denied — type your search';
+      setTimeout(startMobPlaceholder, 2500);
+    } else {
+      startMobPlaceholder();
+    }
   };
-  _recognition.start();
+
+  try {
+    _recognition.start();
+  } catch(e) {
+    _stopListening();
+    startMobPlaceholder();
+  }
 }
 
 // ─── MOOD MODIFIER ─────────────────────────────────
