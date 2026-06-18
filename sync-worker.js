@@ -35,6 +35,13 @@ const NR_PAGES           = 6;   // 6 × 20 = 120 ≥ 119 (release_date.desc)
 const NR_DAYS            = 180; // look-back window (6 months ensures enough titles)
 const PHASE_BATCH        = 40;  // movies per phase (40 TMDB calls ≤ 50 subreq limit)
 
+// Phase 0 — popular + random-pool (lightweight discover, no per-movie enrichment)
+// Budget: POPULAR_PAGES + RANDOM_POOL_PAGES = 5 + 25 = 30 subreqs ≤ 50 ✓
+const POPULAR_COUNT      = 100;
+const POPULAR_PAGES      = 5;   // 5 × 20 = 100 popular movies
+const RANDOM_POOL_COUNT  = 500;
+const RANDOM_POOL_PAGES  = 25;  // 25 × 20 = 500 movies for roulette
+
 const BATCH_SIZE         = 3;   // concurrent enrichments within a phase
 const BATCH_DELAY_MS     = 400; // ms between batches (TMDB asks ≤ 50 req/10 s)
 const RETRY_DELAY_MS     = 5000;// ms to wait after a retryable error
@@ -44,18 +51,22 @@ const KV_TEMP_TTL_SEC    = 86400;  // 24 h (temp keys between phases)
 export default {
   async scheduled(event, env, ctx) {
     const cron = event.cron;
-    if      (cron === '0 0 * * *')  ctx.waitUntil(syncPhase1(env));
-    else if (cron === '5 0 * * *')  ctx.waitUntil(syncPhase2(env));
-    else if (cron === '10 0 * * *') ctx.waitUntil(syncPhase3(env));
+    if      (cron === '55 23 * * *') ctx.waitUntil(syncPhase0(env));
+    else if (cron === '0 0 * * *')   ctx.waitUntil(syncPhase1(env));
+    else if (cron === '5 0 * * *')   ctx.waitUntil(syncPhase2(env));
+    else if (cron === '10 0 * * *')  ctx.waitUntil(syncPhase3(env));
   },
 
-  // Manual trigger: GET /sync-now?phase=0|1|2
+  // Manual trigger: GET /sync-now?phase=popular|0|1|2
   // Each phase returns immediately; poll /api/cache/status to track progress.
   async fetch(request, env, ctx) {
     const url   = new URL(request.url);
-    const phase = parseInt(url.searchParams.get('phase') ?? '0', 10);
+    const phase = url.searchParams.get('phase') ?? '0';
     if (url.pathname === '/sync-now') {
-      const fn = [syncPhase1, syncPhase2, syncPhase3][phase] ?? syncPhase1;
+      const fn = phase === 'popular' ? syncPhase0
+               : phase === '1'       ? syncPhase2
+               : phase === '2'       ? syncPhase3
+               :                       syncPhase1;
       ctx.waitUntil(fn(env));
       const prev = await env.MOVIES_CACHE.get('last-sync').catch(() => null);
       return new Response(JSON.stringify({
@@ -150,7 +161,63 @@ async function syncPhase3(env) {
   console.log('[phase3] Done —', meta);
 }
 
+/* ─── Phase 0: popular + random-pool ──────────────────────── */
+// Runs at 23:55 UTC — 5 min before Phase 1 kicks off.
+// Uses lightweight discover data only (no per-movie enrichment).
+// Budget: 5 popular pages + 25 random-pool pages = 30 subreqs ≤ 50 ✓
+
+async function syncPhase0(env) {
+  console.log('[phase0] Starting at', new Date().toISOString());
+  await Promise.all([
+    syncPopular(env),
+    syncRandomPool(env),
+  ]);
+  console.log('[phase0] Done');
+}
+
+async function syncPopular(env) {
+  const movies = await fetchDiscoverPages(env, {
+    sort_by:         'popularity.desc',
+    'vote_count.gte': '100',
+    include_adult:   'false',
+    language:        'en-US',
+  }, POPULAR_PAGES);
+
+  const mapped = movies.slice(0, POPULAR_COUNT).map(basicMovie);
+  await env.MOVIES_CACHE.put('popular', JSON.stringify(mapped), { expirationTtl: KV_TTL_SEC });
+  console.log(`[phase0] popular: ${mapped.length} movies written`);
+}
+
+async function syncRandomPool(env) {
+  const movies = await fetchDiscoverPages(env, {
+    sort_by:         'vote_average.desc',
+    'vote_count.gte': '500',
+    include_adult:   'false',
+    language:        'en-US',
+  }, RANDOM_POOL_PAGES);
+
+  const mapped = movies.slice(0, RANDOM_POOL_COUNT).map(basicMovie);
+  await env.MOVIES_CACHE.put('random-pool', JSON.stringify(mapped), { expirationTtl: KV_TTL_SEC });
+  console.log(`[phase0] random-pool: ${mapped.length} movies written`);
+}
+
 /* ─── TMDB fetcher ────────────────────────────────────────── */
+
+// Generic multi-page discover fetcher (no enrichment — discover data only)
+async function fetchDiscoverPages(env, params, maxPages) {
+  const results = [];
+  for (let page = 1; page <= maxPages; page++) {
+    const url = tmdbUrl(env, '/discover/movie', { ...params, page: String(page) });
+    const res = await fetchJSON(url);
+    if (!res?.results?.length) break;
+    results.push(...res.results);
+    if (results.length >= maxPages * 20) break;
+    if (page >= (res.total_pages || 1)) break;
+  }
+  // Deduplicate by id
+  const seen = new Set();
+  return results.filter(m => seen.has(m.id) ? false : (seen.add(m.id), true));
+}
 
 async function fetchNewReleasesPool(env) {
   const today  = isoDate(new Date());
