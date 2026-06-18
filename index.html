@@ -834,65 +834,120 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .mob-search-overlay {
   display: none; /* shown only on mobile via @media */
   position: fixed; inset: 0; z-index: 500;
-  background: rgba(8,0,26,0.98);
-  backdrop-filter: blur(24px);
+  background: rgba(8,0,26,0.97);
+  backdrop-filter: blur(28px);
   flex-direction: column;
   padding: 0;
   opacity: 0; pointer-events: none;
-  transition: opacity 0.22s ease;
+  transition: opacity 0.25s ease;
 }
 .mob-search-overlay.open {
   opacity: 1; pointer-events: all;
 }
 .mob-search-inner {
-  padding: 14px 20px 36px;
-  display: flex; flex-direction: column; gap: 18px;
-  transform: translateY(24px);
+  padding: 20px 20px 40px;
+  display: flex; flex-direction: column; gap: 24px;
+  transform: translateY(20px);
   transition: transform 0.38s cubic-bezier(0.34,1.56,0.64,1);
 }
 .mob-search-overlay.open .mob-search-inner { transform: translateY(0); }
 .mob-search-top {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
 }
+.mob-search-head { display: flex; flex-direction: column; gap: 5px; }
 .mob-search-title {
-  font-size: 20px; font-weight: 800;
-  color: var(--text); letter-spacing: -0.3px;
+  font-size: 26px; font-weight: 800;
+  color: var(--text); letter-spacing: -0.5px; line-height: 1.1;
   font-family: 'Montserrat', sans-serif;
 }
+.mob-search-hint {
+  font-size: 12px; color: rgba(167,139,250,0.5);
+  font-family: 'Inter', sans-serif;
+}
 .mob-search-close {
-  width: 40px; height: 40px;
+  flex-shrink: 0;
+  width: 44px; height: 44px;
   background: rgba(124,58,237,0.12);
   border: 1.5px solid var(--border);
-  border-radius: 10px; color: var(--muted); font-size: 16px;
+  border-radius: 12px; color: var(--muted); font-size: 16px;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   -webkit-tap-highlight-color: transparent;
-  transition: border-color 0.2s, color 0.2s;
+  transition: border-color 0.2s, background 0.2s;
 }
-.mob-search-close:active { border-color: var(--purple); color: var(--text); }
-/* The mob overlay input reuses .search-wrap + .search-input fully */
-.mob-search-wrap { max-width: none !important; width: 100%; }
-.mob-search-chips { display: flex; flex-direction: column; gap: 11px; }
+.mob-search-close:active { border-color: var(--purple); background: rgba(124,58,237,0.2); }
+
+/* ─── AI INPUT BAR ────────────────────────────── */
+.mob-ai-input-wrap {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid rgba(124,58,237,0.3);
+  border-radius: 16px;
+  padding: 4px 4px 4px 14px;
+  transition: border-color 0.22s, box-shadow 0.22s;
+}
+.mob-ai-input-wrap:focus-within {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.15), 0 0 24px rgba(124,58,237,0.08);
+}
+.mob-ai-sparkle {
+  flex-shrink: 0; font-size: 18px; line-height: 1;
+  pointer-events: none; color: var(--purple);
+}
+.mob-ai-input {
+  flex: 1; border: none; background: transparent;
+  color: var(--text); font-size: 15px; line-height: 1.4;
+  font-family: 'Inter', sans-serif; font-weight: 400;
+  outline: none; padding: 10px 0; min-width: 0;
+  caret-color: var(--purple);
+}
+.mob-ai-input::placeholder { color: rgba(167,139,250,0.35); }
+.mob-ai-clear {
+  flex-shrink: 0; display: none;
+  width: 28px; height: 28px;
+  background: rgba(255,255,255,0.06); border: none;
+  border-radius: 8px; color: var(--muted); font-size: 12px;
+  cursor: pointer; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.mob-ai-clear:active { background: rgba(255,255,255,0.14); color: var(--text); }
+.mob-ai-input-wrap.has-value .mob-ai-clear { display: flex; }
+.mob-ai-send {
+  flex-shrink: 0;
+  height: 44px; padding: 0 18px;
+  background: var(--purple); border: none;
+  border-radius: 12px; color: #fff;
+  font-size: 13px; font-weight: 700;
+  font-family: 'Montserrat', sans-serif; letter-spacing: 0.3px;
+  cursor: pointer; display: flex; align-items: center; gap: 6px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s, transform 0.12s;
+}
+.mob-ai-send:active { background: var(--purple-mid); transform: scale(0.96); }
+
+/* ─── CHIPS ───────────────────────────────────── */
+.mob-search-chips { display: flex; flex-direction: column; gap: 10px; }
 .mob-chips-label {
-  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px;
-  color: rgba(167,139,250,0.45); font-family: 'Montserrat', sans-serif;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+  color: rgba(167,139,250,0.4); font-family: 'Montserrat', sans-serif;
 }
 .mob-chips-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .mob-chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 9px 14px;
-  background: rgba(99,102,241,0.1);
-  border: 1.5px solid rgba(99,102,241,0.22);
-  border-radius: 50px; color: rgba(167,139,250,0.85);
-  font-size: 12px; font-family: 'Montserrat', sans-serif; font-weight: 600;
-  cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 14px;
+  background: rgba(99,102,241,0.08);
+  border: 1.5px solid rgba(99,102,241,0.2);
+  border-radius: 50px; color: rgba(167,139,250,0.8);
+  font-size: 12px; font-family: 'Inter', sans-serif; font-weight: 500;
+  cursor: pointer; text-align: left;
   transition: all 0.18s;
   -webkit-tap-highlight-color: transparent;
 }
 .mob-chip:active {
-  background: rgba(99,102,241,0.25);
-  border-color: var(--indigo);
+  background: rgba(99,102,241,0.22);
+  border-color: rgba(124,58,237,0.5);
   color: #fff;
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
 
 /* ─── TOUCH: strip hover states ──────────────── */
@@ -1378,29 +1433,34 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 <div class="mob-search-overlay" id="mobSearchOverlay">
   <div class="mob-search-inner">
     <div class="mob-search-top">
-      <span class="mob-search-title" data-i18n="search.mobileTitle">Search movies</span>
+      <div class="mob-search-head">
+        <span class="mob-search-title" data-i18n="search.mobileTitle">Search movies</span>
+        <span class="mob-search-hint" data-i18n="search.mobileHint">Describe a mood, plot, or vibe</span>
+      </div>
       <button class="mob-search-close" onclick="closeMobSearch()" aria-label="Close">✕</button>
     </div>
-    <div class="search-wrap mob-search-wrap" id="mobSearchWrap">
-      <span class="ai-icon" id="mobAiIcon" title="AI semantic search">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
-        </svg>
-      </span>
-      <input class="search-input" id="mobSearchInput" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="search.placeholder" placeholder="Try: dark thriller with a twist…">
-      <svg class="search-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-      </svg>
+
+    <div class="mob-ai-input-wrap" id="mobAiInputWrap">
+      <span class="mob-ai-sparkle">✦</span>
+      <input class="mob-ai-input" id="mobSearchInput" type="text"
+        autocomplete="off" spellcheck="false"
+        placeholder="Describe a mood, plot, or vibe…">
+      <button class="mob-ai-clear" id="mobAiClear" onclick="clearMobSearch()" aria-label="Clear">✕</button>
+      <button class="mob-ai-send" onclick="submitMobSearch()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span data-i18n="search.sendBtn">Search</span>
+      </button>
     </div>
+
     <div class="mob-search-chips">
       <div class="mob-chips-label" data-i18n="search.tryAsking">Try asking:</div>
       <div class="mob-chips-row">
-        <button class="mob-chip" onclick="mobSearchChip('dark psychological thriller with twist ending')">🌀 <span data-i18n="search.chips.darkThriller">Dark thriller</span></button>
-        <button class="mob-chip" onclick="mobSearchChip('romantic comedy set in Europe')">💕 <span data-i18n="search.chips.romCom">Rom-com</span></button>
-        <button class="mob-chip" onclick="mobSearchChip('mind-bending sci-fi with stunning visuals')">🚀 <span data-i18n="search.chips.scifi">Epic sci-fi</span></button>
-        <button class="mob-chip" onclick="mobSearchChip('feel-good family animated adventure')">🎠 <span data-i18n="search.chips.family">Family film</span></button>
-        <button class="mob-chip" onclick="mobSearchChip('based on true story inspiring drama')">🏆 <span data-i18n="search.chips.trueStory">True story</span></button>
-        <button class="mob-chip" onclick="mobSearchChip('fast-paced action with great fight scenes')">💥 <span data-i18n="search.chips.action">Action</span></button>
+        <button class="mob-chip" onclick="mobSearchChip('dark psychological thriller with a shocking twist ending')">🌀 Dark psychological thriller</button>
+        <button class="mob-chip" onclick="mobSearchChip('cozy feel-good romance set in a European city')">💕 Cozy feel-good romance</button>
+        <button class="mob-chip" onclick="mobSearchChip('mind-bending sci-fi with breathtaking visuals')">🚀 Mind-bending sci-fi</button>
+        <button class="mob-chip" onclick="mobSearchChip('heartwarming animated adventure for the whole family')">🎠 Family animated adventure</button>
+        <button class="mob-chip" onclick="mobSearchChip('inspiring true story about overcoming the impossible')">🏆 Inspiring true story</button>
+        <button class="mob-chip" onclick="mobSearchChip('non-stop action with incredible car chases and stunts')">💥 Non-stop action</button>
       </div>
     </div>
   </div>
@@ -1740,6 +1800,8 @@ const TRANSLATIONS = {
     'ai.foundPlural':       '✦ AI found {n} matches for "{q}"',
     'search.placeholder':   'Try: dark thriller with a twist…',
     'search.mobileTitle':   'Search movies',
+    'search.mobileHint':    'Describe a mood, plot, or vibe',
+    'search.sendBtn':       'Search',
     'search.tryAsking':     'Try asking:',
     'search.chips.darkThriller': 'Dark thriller',
     'search.chips.romCom':       'Rom-com',
@@ -1804,6 +1866,8 @@ const TRANSLATIONS = {
     'ai.foundPlural':       '✦ La IA encontró {n} resultados para "{q}"',
     'search.placeholder':   'Prueba: thriller oscuro con giro final…',
     'search.mobileTitle':   'Buscar películas',
+    'search.mobileHint':    'Describe un ambiente, trama o sensación',
+    'search.sendBtn':       'Buscar',
     'search.tryAsking':     'Prueba preguntar:',
     'search.chips.darkThriller': 'Thriller oscuro',
     'search.chips.romCom':       'Comedia romántica',
@@ -1868,6 +1932,8 @@ const TRANSLATIONS = {
     'ai.foundPlural':       '✦ L\'IA a trouvé {n} résultats pour "{q}"',
     'search.placeholder':   'Essayez : thriller sombre avec une fin surprenante…',
     'search.mobileTitle':   'Rechercher des films',
+    'search.mobileHint':    'Décrivez une ambiance, une intrigue ou une atmosphère',
+    'search.sendBtn':       'Rechercher',
     'search.tryAsking':     'Essayez de demander :',
     'search.chips.darkThriller': 'Thriller sombre',
     'search.chips.romCom':       'Comédie romantique',
@@ -1932,6 +1998,8 @@ const TRANSLATIONS = {
     'ai.foundPlural':       '✦ AI 为「{q}」找到 {n} 个结果',
     'search.placeholder':   '试试：带有反转结局的黑暗惊悚片…',
     'search.mobileTitle':   '搜索电影',
+    'search.mobileHint':    '描述一种情绪、情节或氛围',
+    'search.sendBtn':       '搜索',
     'search.tryAsking':     '试着问一问：',
     'search.chips.darkThriller': '黑暗惊悚',
     'search.chips.romCom':       '浪漫喜剧',
@@ -1996,6 +2064,8 @@ const TRANSLATIONS = {
     'ai.foundPlural':       '✦ وجد الذكاء الاصطناعي {n} نتائج لـ "{q}"',
     'search.placeholder':   'جرب: إثارة مظلمة بنهاية مفاجئة…',
     'search.mobileTitle':   'بحث عن أفلام',
+    'search.mobileHint':    'صف مزاجاً أو حبكة أو أجواءً',
+    'search.sendBtn':       'بحث',
     'search.tryAsking':     'جرب السؤال عن:',
     'search.chips.darkThriller': 'إثارة مظلمة',
     'search.chips.romCom':       'كوميديا رومانسية',
@@ -2060,6 +2130,8 @@ const TRANSLATIONS = {
     'ai.foundPlural':       '✦ ШІ знайшов {n} результати для "{q}"',
     'search.placeholder':   'Спробуй: темний трилер з несподіваним фіналом…',
     'search.mobileTitle':   'Пошук фільмів',
+    'search.mobileHint':    'Опиши настрій, сюжет або атмосферу',
+    'search.sendBtn':       'Пошук',
     'search.tryAsking':     'Спробуй запитати:',
     'search.chips.darkThriller': 'Темний трилер',
     'search.chips.romCom':       'Ромком',
@@ -3648,7 +3720,11 @@ function toggleSearch() {
     // Full-screen overlay on mobile
     const overlay = document.getElementById('mobSearchOverlay');
     overlay.classList.add('open');
-    setTimeout(() => document.getElementById('mobSearchInput').focus(), 80);
+    setTimeout(() => {
+      const inp = document.getElementById('mobSearchInput');
+      inp.focus();
+      if (!inp.value) startMobPlaceholder();
+    }, 80);
     return;
   }
   // Desktop inline (fallback)
@@ -3666,36 +3742,74 @@ function closeSearch() {
 
 function closeMobSearch() {
   document.getElementById('mobSearchOverlay').classList.remove('open');
+  stopMobPlaceholder();
+}
+
+function submitMobSearch() {
+  const q = document.getElementById('mobSearchInput').value.trim();
+  document.getElementById('searchInput').value = q;
+  closeMobSearch();
+  if (q) applyFilters();
+}
+
+function clearMobSearch() {
+  const inp = document.getElementById('mobSearchInput');
+  inp.value = '';
+  document.getElementById('mobAiInputWrap').classList.remove('has-value');
+  inp.focus();
+  startMobPlaceholder();
 }
 
 function mobSearchChip(query) {
-  // Prefill overlay input for visual feedback
-  document.getElementById('mobSearchInput').value = query;
-  // Sync to main search input and trigger search
-  document.getElementById('searchInput').value = query;
-  closeMobSearch();
-  applyFilters();
+  // Fill the input — user reviews before tapping Search
+  const inp = document.getElementById('mobSearchInput');
+  inp.value = query;
+  document.getElementById('mobAiInputWrap').classList.add('has-value');
+  stopMobPlaceholder();
+  inp.focus();
+}
+
+// Rotating placeholder animation
+const MOB_PLACEHOLDERS = [
+  'Describe a mood, plot, or vibe…',
+  'Try: "A movie that makes you cry at the end"',
+  'Try: "Something like Parasite but set in America"',
+  'Try: "Slow-burn romance in a rainy European city"',
+  'Try: "80s adventure with kids on bikes"',
+  'Try: "Documentary about a heist gone wrong"',
+];
+let _mobPhIdx = 0, _mobPhTimer = null;
+function startMobPlaceholder() {
+  const inp = document.getElementById('mobSearchInput');
+  if (!inp || inp.value) return;
+  _mobPhIdx = 0;
+  inp.placeholder = MOB_PLACEHOLDERS[0];
+  _mobPhTimer = setInterval(() => {
+    if (inp.value) { stopMobPlaceholder(); return; }
+    _mobPhIdx = (_mobPhIdx + 1) % MOB_PLACEHOLDERS.length;
+    inp.placeholder = MOB_PLACEHOLDERS[_mobPhIdx];
+  }, 2800);
+}
+function stopMobPlaceholder() {
+  clearInterval(_mobPhTimer);
+  _mobPhTimer = null;
 }
 
 // Mob overlay: submit on Enter, close on Escape
 document.getElementById('mobSearchInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    const q = e.target.value.trim();
-    document.getElementById('searchInput').value = q;
-    closeMobSearch();
-    if (q) applyFilters();
-  }
+  if (e.key === 'Enter') submitMobSearch();
   if (e.key === 'Escape') closeMobSearch();
 });
 
-// Mob overlay input: live AI-active state (mirrors main icon)
+// Mob overlay input: toggle has-value class for clear button
 document.getElementById('mobSearchInput').addEventListener('input', e => {
-  const wrap = document.getElementById('mobSearchWrap');
-  const icon = document.getElementById('mobAiIcon');
-  if (e.target.value.trim() && CACHE_MOVIES.length) {
-    wrap.classList.add('ai-active');
+  const wrap = document.getElementById('mobAiInputWrap');
+  if (e.target.value) {
+    wrap.classList.add('has-value');
+    stopMobPlaceholder();
   } else {
-    wrap.classList.remove('ai-active');
+    wrap.classList.remove('has-value');
+    startMobPlaceholder();
   }
 });
 
