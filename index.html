@@ -840,13 +840,14 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   padding: 0;
   opacity: 0; pointer-events: none;
   transition: opacity 0.25s ease;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 .mob-search-overlay.open {
   opacity: 1; pointer-events: all;
 }
 .mob-search-inner {
-  padding: 20px 20px 40px;
-  display: flex; flex-direction: column; gap: 24px;
+  padding: 20px 20px 36px;
+  display: flex; flex-direction: column; gap: 18px;
   transform: translateY(20px);
   transition: transform 0.38s cubic-bezier(0.34,1.56,0.64,1);
 }
@@ -888,6 +889,15 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .mob-ai-input-wrap:focus-within {
   border-color: var(--purple);
   box-shadow: 0 0 0 3px rgba(124,58,237,0.15), 0 0 24px rgba(124,58,237,0.08);
+}
+.mob-ai-input-wrap.listening {
+  border-color: rgba(239,68,68,0.45);
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.1);
+  animation: listenGlow 2s ease infinite;
+}
+@keyframes listenGlow {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(239,68,68,0.1); }
+  50%       { box-shadow: 0 0 0 5px rgba(239,68,68,0.04); }
 }
 .mob-ai-sparkle {
   flex-shrink: 0; font-size: 18px; line-height: 1;
@@ -948,6 +958,100 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   border-color: rgba(124,58,237,0.5);
   color: #fff;
   transform: scale(0.97);
+}
+
+/* ─── MIC BUTTON ─────────────────────────────── */
+.mob-ai-mic {
+  flex-shrink: 0; width: 36px; height: 36px;
+  background: rgba(124,58,237,0.08);
+  border: 1.5px solid rgba(124,58,237,0.2);
+  border-radius: 10px; color: var(--muted);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.2s;
+}
+.mob-ai-mic:active { background: rgba(124,58,237,0.2); color: var(--text); }
+.mob-ai-mic.listening {
+  color: #ef4444; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.35);
+  animation: micPulse 1.4s ease-out infinite;
+}
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.35); }
+  60%       { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+}
+
+/* ─── VOICE WAVE BAR ──────────────────────────── */
+.mob-voice-bar {
+  display: none; align-items: center; gap: 10px;
+  padding: 9px 14px; border-radius: 12px;
+  background: rgba(124,58,237,0.06);
+  border: 1px solid rgba(124,58,237,0.16);
+}
+.mob-ai-input-wrap.listening ~ .mob-voice-bar { display: flex; }
+.mob-voice-wave { display: flex; align-items: center; gap: 3px; height: 22px; }
+.mob-voice-wave span {
+  width: 3px; height: 18px; border-radius: 3px;
+  background: var(--purple); transform-origin: center;
+  animation: waveBeat 0.75s ease-in-out infinite;
+  will-change: transform;
+}
+.mob-voice-wave span:nth-child(1) { animation-delay: 0s;    opacity: 0.4; }
+.mob-voice-wave span:nth-child(2) { animation-delay: 0.12s; opacity: 0.65; }
+.mob-voice-wave span:nth-child(3) { animation-delay: 0.24s; opacity: 1;   }
+.mob-voice-wave span:nth-child(4) { animation-delay: 0.12s; opacity: 0.65; }
+.mob-voice-wave span:nth-child(5) { animation-delay: 0s;    opacity: 0.4; }
+@keyframes waveBeat {
+  0%, 100% { transform: scaleY(0.22); }
+  50%       { transform: scaleY(1);   }
+}
+.mob-voice-label {
+  font-size: 12px; color: rgba(167,139,250,0.65); font-style: italic;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ─── MOOD SELECTOR ROW ───────────────────────── */
+.mob-mood-section { display: flex; flex-direction: column; gap: 8px; }
+.mob-mood-scroll {
+  display: flex; gap: 7px; overflow-x: auto; padding-bottom: 3px;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.mob-mood-scroll::-webkit-scrollbar { display: none; }
+.mob-mood-chip {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 8px 13px;
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  border-radius: 50px; color: rgba(210,195,230,0.7);
+  font-size: 12px; font-family: 'Inter', sans-serif; font-weight: 500;
+  cursor: pointer; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.18s;
+}
+.mob-mood-chip.active {
+  background: rgba(124,58,237,0.2); border-color: rgba(124,58,237,0.5);
+  color: #d8b4fe; box-shadow: 0 0 14px rgba(124,58,237,0.18);
+}
+.mob-mood-chip:active { transform: scale(0.95); }
+
+/* ─── REFINEMENT CHIPS ────────────────────────── */
+.mob-refine-section { display: flex; flex-direction: column; gap: 8px; }
+.mob-refine-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.mob-refine-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 8px 13px;
+  background: rgba(249,115,22,0.07);
+  border: 1.5px solid rgba(249,115,22,0.22);
+  border-radius: 50px; color: rgba(251,191,36,0.85);
+  font-size: 12px; font-family: 'Inter', sans-serif; font-weight: 500;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  animation: chipPop 0.28s cubic-bezier(0.34,1.56,0.64,1) both;
+  transition: background 0.15s;
+}
+.mob-refine-chip:active { background: rgba(249,115,22,0.2); transform: scale(0.96); }
+@keyframes chipPop {
+  from { opacity: 0; transform: scale(0.65); }
+  to   { opacity: 1; transform: scale(1);    }
 }
 
 /* ─── TOUCH: strip hover states ──────────────── */
@@ -1432,26 +1536,65 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 <!-- ════════════ MOBILE SEARCH OVERLAY ════════════ -->
 <div class="mob-search-overlay" id="mobSearchOverlay">
   <div class="mob-search-inner">
+
+    <!-- Header -->
     <div class="mob-search-top">
       <div class="mob-search-head">
         <span class="mob-search-title" data-i18n="search.mobileTitle">Search movies</span>
-        <span class="mob-search-hint" data-i18n="search.mobileHint">Describe a mood, plot, or vibe</span>
+        <span class="mob-search-hint" id="mobSearchHint" data-i18n="search.mobileHint">Describe a mood, plot, or vibe</span>
       </div>
       <button class="mob-search-close" onclick="closeMobSearch()" aria-label="Close">✕</button>
     </div>
 
+    <!-- AI Input Bar -->
     <div class="mob-ai-input-wrap" id="mobAiInputWrap">
       <span class="mob-ai-sparkle">✦</span>
       <input class="mob-ai-input" id="mobSearchInput" type="text"
         autocomplete="off" spellcheck="false"
         placeholder="Describe a mood, plot, or vibe…">
       <button class="mob-ai-clear" id="mobAiClear" onclick="clearMobSearch()" aria-label="Clear">✕</button>
+      <button class="mob-ai-mic" id="mobAiMic" onclick="toggleVoiceSearch()" aria-label="Voice search">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="9" y="2" width="6" height="12" rx="3"/>
+          <path d="M5 11a7 7 0 0 0 14 0M12 19v3M9 22h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+        </svg>
+      </button>
       <button class="mob-ai-send" onclick="submitMobSearch()">
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <span data-i18n="search.sendBtn">Search</span>
       </button>
     </div>
 
+    <!-- Voice wave (siblings with input bar — shown via CSS when .listening) -->
+    <div class="mob-voice-bar" id="mobVoiceBar">
+      <div class="mob-voice-wave">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <span class="mob-voice-label">Listening…</span>
+    </div>
+
+    <!-- Refinement chips (context-sensitive, shown when query is a broad term) -->
+    <div class="mob-refine-section" id="mobRefineSection" style="display:none">
+      <div class="mob-chips-label">Narrow it down:</div>
+      <div class="mob-refine-chips" id="mobRefineChips"></div>
+    </div>
+
+    <!-- Mood selector row -->
+    <div class="mob-mood-section">
+      <div class="mob-chips-label" data-i18n="search.mood">Mood</div>
+      <div class="mob-mood-scroll">
+        <button class="mob-mood-chip" data-modifier="mind-bending with an unexpected plot twist" onclick="setMood(this)">🤯 Mind-bending</button>
+        <button class="mob-mood-chip" data-modifier="emotionally powerful and moving, makes you cry" onclick="setMood(this)">😢 Need to cry</button>
+        <button class="mob-mood-chip" data-modifier="fun and easy to watch, crowd-pleasing entertainment" onclick="setMood(this)">🍿 Brain-off fun</button>
+        <button class="mob-mood-chip" data-modifier="tense and suspenseful, keeps you on the edge of your seat" onclick="setMood(this)">😱 Keep me awake</button>
+        <button class="mob-mood-chip" data-modifier="uplifting and feel-good, leaves you smiling" onclick="setMood(this)">❤️ Feel good</button>
+        <button class="mob-mood-chip" data-modifier="thought-provoking and philosophical, makes you reflect" onclick="setMood(this)">🧠 Deep thought</button>
+        <button class="mob-mood-chip" data-modifier="hilarious, non-stop laughs, pure comedy" onclick="setMood(this)">😂 Just laugh</button>
+        <button class="mob-mood-chip" data-modifier="world cinema or foreign language gem, international" onclick="setMood(this)">🌍 World cinema</button>
+      </div>
+    </div>
+
+    <!-- Try Asking suggestions -->
     <div class="mob-search-chips">
       <div class="mob-chips-label" data-i18n="search.tryAsking">Try asking:</div>
       <div class="mob-chips-row">
@@ -1463,6 +1606,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
         <button class="mob-chip" onclick="mobSearchChip('non-stop action with incredible car chases and stunts')">💥 Non-stop action</button>
       </div>
     </div>
+
   </div>
 </div>
 
@@ -1802,6 +1946,7 @@ const TRANSLATIONS = {
     'search.mobileTitle':   'Search movies',
     'search.mobileHint':    'Describe a mood, plot, or vibe',
     'search.sendBtn':       'Search',
+    'search.mood':          'Mood',
     'search.tryAsking':     'Try asking:',
     'search.chips.darkThriller': 'Dark thriller',
     'search.chips.romCom':       'Rom-com',
@@ -1868,6 +2013,7 @@ const TRANSLATIONS = {
     'search.mobileTitle':   'Buscar películas',
     'search.mobileHint':    'Describe un ambiente, trama o sensación',
     'search.sendBtn':       'Buscar',
+    'search.mood':          'Estado de ánimo',
     'search.tryAsking':     'Prueba preguntar:',
     'search.chips.darkThriller': 'Thriller oscuro',
     'search.chips.romCom':       'Comedia romántica',
@@ -1934,6 +2080,7 @@ const TRANSLATIONS = {
     'search.mobileTitle':   'Rechercher des films',
     'search.mobileHint':    'Décrivez une ambiance, une intrigue ou une atmosphère',
     'search.sendBtn':       'Rechercher',
+    'search.mood':          'Ambiance',
     'search.tryAsking':     'Essayez de demander :',
     'search.chips.darkThriller': 'Thriller sombre',
     'search.chips.romCom':       'Comédie romantique',
@@ -2000,6 +2147,7 @@ const TRANSLATIONS = {
     'search.mobileTitle':   '搜索电影',
     'search.mobileHint':    '描述一种情绪、情节或氛围',
     'search.sendBtn':       '搜索',
+    'search.mood':          '心情',
     'search.tryAsking':     '试着问一问：',
     'search.chips.darkThriller': '黑暗惊悚',
     'search.chips.romCom':       '浪漫喜剧',
@@ -2066,6 +2214,7 @@ const TRANSLATIONS = {
     'search.mobileTitle':   'بحث عن أفلام',
     'search.mobileHint':    'صف مزاجاً أو حبكة أو أجواءً',
     'search.sendBtn':       'بحث',
+    'search.mood':          'المزاج',
     'search.tryAsking':     'جرب السؤال عن:',
     'search.chips.darkThriller': 'إثارة مظلمة',
     'search.chips.romCom':       'كوميديا رومانسية',
@@ -2132,6 +2281,7 @@ const TRANSLATIONS = {
     'search.mobileTitle':   'Пошук фільмів',
     'search.mobileHint':    'Опиши настрій, сюжет або атмосферу',
     'search.sendBtn':       'Пошук',
+    'search.mood':          'Настрій',
     'search.tryAsking':     'Спробуй запитати:',
     'search.chips.darkThriller': 'Темний трилер',
     'search.chips.romCom':       'Ромком',
@@ -3741,58 +3891,176 @@ function closeSearch() {
 }
 
 function closeMobSearch() {
+  if (_isListening && _recognition) _recognition.stop();
   document.getElementById('mobSearchOverlay').classList.remove('open');
   stopMobPlaceholder();
 }
 
 function submitMobSearch() {
-  const q = document.getElementById('mobSearchInput').value.trim();
-  document.getElementById('searchInput').value = q;
+  const rawQ = document.getElementById('mobSearchInput').value.trim();
+  const mood  = _activeMoodEl ? _activeMoodEl.dataset.modifier : null;
+  const finalQ = rawQ && mood ? `${rawQ} — ${mood}` : rawQ || mood || '';
+  document.getElementById('searchInput').value = finalQ;
   closeMobSearch();
-  if (q) applyFilters();
+  if (finalQ) applyFilters();
 }
 
 function clearMobSearch() {
   const inp = document.getElementById('mobSearchInput');
   inp.value = '';
   document.getElementById('mobAiInputWrap').classList.remove('has-value');
+  document.getElementById('mobRefineSection').style.display = 'none';
   inp.focus();
   startMobPlaceholder();
 }
 
 function mobSearchChip(query) {
-  // Fill the input — user reviews before tapping Search
   const inp = document.getElementById('mobSearchInput');
   inp.value = query;
   document.getElementById('mobAiInputWrap').classList.add('has-value');
+  document.getElementById('mobRefineSection').style.display = 'none';
   stopMobPlaceholder();
   inp.focus();
 }
 
-// Rotating placeholder animation
-const MOB_PLACEHOLDERS = [
-  'Describe a mood, plot, or vibe…',
-  'Try: "A movie that makes you cry at the end"',
-  'Try: "Something like Parasite but set in America"',
-  'Try: "Slow-burn romance in a rainy European city"',
-  'Try: "80s adventure with kids on bikes"',
-  'Try: "Documentary about a heist gone wrong"',
-];
+// ─── CONTEXT-AWARE PLACEHOLDER ────────────────────
+function getContextualPlaceholders() {
+  const h = new Date().getHours(), day = new Date().getDay();
+  let taste = {};
+  try { taste = JSON.parse(localStorage.getItem('rk_taste_v1') || '{}'); } catch {}
+  const topGenre = taste.genres
+    ? (Object.entries(taste.genres).sort((a,b)=>b[1]-a[1])[0]||[])[0]
+    : null;
+
+  const list = ['Describe a mood, plot, or vibe…'];
+  if      (h >= 0  && h < 5)  list.push('🌙 Looking for a midnight thriller?', 'Can\'t sleep? Try a gripping mystery…');
+  else if (h >= 5  && h < 10) list.push('☀️ Start the day with an inspiring story…');
+  else if (h >= 10 && h < 14) list.push('Afternoon mood — something light and fun?');
+  else if (h >= 14 && h < 17) list.push('Perfect time for a slow-burn thriller…');
+  else if (h >= 17 && h < 20 && (day === 5 || day === 6))
+    list.push('🎉 Need a blockbuster for the weekend?', '🍿 Friday night — what\'s the vibe?');
+  else if (h >= 20) list.push('🌆 Evening pick: what\'s the mood tonight?');
+  if (topGenre) list.push(`More ${topGenre.toLowerCase()} films you\'d love…`);
+  return list;
+}
+
 let _mobPhIdx = 0, _mobPhTimer = null;
 function startMobPlaceholder() {
   const inp = document.getElementById('mobSearchInput');
   if (!inp || inp.value) return;
+  stopMobPlaceholder();
+  const list = getContextualPlaceholders();
   _mobPhIdx = 0;
-  inp.placeholder = MOB_PLACEHOLDERS[0];
+  inp.placeholder = list[0];
   _mobPhTimer = setInterval(() => {
     if (inp.value) { stopMobPlaceholder(); return; }
-    _mobPhIdx = (_mobPhIdx + 1) % MOB_PLACEHOLDERS.length;
-    inp.placeholder = MOB_PLACEHOLDERS[_mobPhIdx];
+    _mobPhIdx = (_mobPhIdx + 1) % list.length;
+    inp.placeholder = list[_mobPhIdx];
   }, 2800);
 }
 function stopMobPlaceholder() {
   clearInterval(_mobPhTimer);
   _mobPhTimer = null;
+}
+
+// ─── VOICE SEARCH ──────────────────────────────────
+let _recognition = null, _isListening = false;
+function toggleVoiceSearch() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { document.getElementById('mobSearchInput').focus(); return; }
+  if (_isListening) { _recognition.stop(); return; }
+
+  _recognition = new SR();
+  _recognition.lang = document.documentElement.lang || navigator.language || 'en-US';
+  _recognition.interimResults = true;
+  _recognition.maxAlternatives = 1;
+
+  _recognition.onstart = () => {
+    _isListening = true;
+    document.getElementById('mobAiInputWrap').classList.add('listening');
+    document.getElementById('mobAiMic').classList.add('listening');
+    document.getElementById('mobSearchInput').placeholder = 'Listening…';
+    stopMobPlaceholder();
+  };
+  _recognition.onresult = e => {
+    const t = Array.from(e.results).map(r => r[0].transcript).join('');
+    const inp = document.getElementById('mobSearchInput');
+    inp.value = t;
+    document.getElementById('mobAiInputWrap').classList.toggle('has-value', !!t);
+  };
+  _recognition.onend = () => {
+    _isListening = false;
+    document.getElementById('mobAiInputWrap').classList.remove('listening');
+    document.getElementById('mobAiMic').classList.remove('listening');
+    const inp = document.getElementById('mobSearchInput');
+    if (inp.value.trim()) {
+      setTimeout(submitMobSearch, 200); // slight delay so user sees the transcript
+    } else {
+      startMobPlaceholder();
+    }
+  };
+  _recognition.onerror = () => {
+    _isListening = false;
+    document.getElementById('mobAiInputWrap').classList.remove('listening');
+    document.getElementById('mobAiMic').classList.remove('listening');
+    startMobPlaceholder();
+  };
+  _recognition.start();
+}
+
+// ─── MOOD MODIFIER ─────────────────────────────────
+let _activeMoodEl = null;
+function setMood(btn) {
+  if (_activeMoodEl === btn) {
+    btn.classList.remove('active');
+    _activeMoodEl = null;
+  } else {
+    if (_activeMoodEl) _activeMoodEl.classList.remove('active');
+    btn.classList.add('active');
+    _activeMoodEl = btn;
+  }
+}
+
+// ─── REFINEMENT CHIPS ──────────────────────────────
+const REFINEMENTS = {
+  comedy:      [['😂 Dark comedy','dark comedy with sharp biting wit'],['💕 Romantic comedy','charming feel-good romantic comedy'],['👨‍👩‍👧 Family friendly','family friendly comedy everyone can enjoy'],['🌙 Black comedy','black comedy with dark satirical humor']],
+  action:      [['💥 Non-stop action','non-stop action with incredible stunts'],['🥊 Martial arts','martial arts action film'],['🚗 Car chases','action thriller with explosive car chases'],['🕵️ Spy thriller','spy action thriller with plot twists']],
+  horror:      [['👻 Supernatural','supernatural horror film'],['🔪 Slasher','classic slasher horror movie'],['🧠 Psychological','psychological horror that messes with your mind'],['😱 Slow-burn dread','slow-burn atmospheric dread horror']],
+  romance:     [['💕 Feel-good love story','uplifting feel-good romance'],['💔 Heartbreaking','emotionally devastating love story'],['😂 Romantic comedy','sweet charming romantic comedy'],['🌍 Cross-cultural','international cross-cultural romance']],
+  drama:       [['👨‍👩‍👧 Family drama','powerful family drama'],['🏛️ Historical epic','sweeping historical period drama'],['⚖️ Courtroom','tense courtroom legal drama'],['🎭 Character study','intimate slow-burn character study']],
+  thriller:    [['🔍 Mystery thriller','gripping mystery thriller'],['🧠 Psychological','psychological thriller with mind games'],['🌀 Conspiracy','conspiracy thriller with shocking twists'],['💼 Crime thriller','crime thriller with layered plot']],
+  scifi:       [['🤖 AI & robots','sci-fi about artificial intelligence and robots'],['🌌 Space opera','epic space opera adventure'],['⏰ Time travel','time travel paradox sci-fi movie'],['👽 Alien invasion','alien invasion sci-fi thriller']],
+  documentary: [['🌿 Nature','breathtaking nature documentary'],['📜 Historical','fascinating historical documentary'],['🎵 Music','music or musician documentary'],['🔍 True crime','gripping true crime documentary']],
+  animation:   [['🎠 Family fun','heartwarming family animated film'],['🏆 Award-winning','award-winning prestige animation'],['🗡️ Dark animation','dark mature animated film for adults'],['🌸 Studio Ghibli style','beautiful hand-drawn japanese animation']],
+  fantasy:     [['⚔️ Epic quest','epic fantasy quest adventure'],['🧙 Magic & wizards','magic and wizards fantasy film'],['🐉 Creatures','dragons and mythical creatures fantasy'],['🌑 Dark fantasy','dark gritty fantasy world']],
+  western:     [['🤠 Classic western','classic american western film'],['💀 Spaghetti western','stylish spaghetti western'],['⚔️ Revisionist western','modern revisionist western drama'],['🌵 Neo-western','contemporary neo-western thriller']],
+};
+let _refineTimer = null;
+function checkRefinements(val) {
+  clearTimeout(_refineTimer);
+  _refineTimer = setTimeout(() => {
+    const section = document.getElementById('mobRefineSection');
+    const chips   = document.getElementById('mobRefineChips');
+    const term    = val.trim().toLowerCase().replace(/[^a-z\s]/g,'');
+    if (!term || term.length > 18 || term.split(' ').length > 2) {
+      section.style.display = 'none'; return;
+    }
+    const opts = REFINEMENTS[term] ||
+      REFINEMENTS[Object.keys(REFINEMENTS).find(k => term === k || term.startsWith(k) || k.startsWith(term))];
+    if (!opts) { section.style.display = 'none'; return; }
+    chips.innerHTML = opts.map(([lbl, q], i) =>
+      `<button class="mob-refine-chip" style="animation-delay:${i*0.06}s" onclick="applyRefinement(${JSON.stringify(q)})">${lbl}</button>`
+    ).join('');
+    section.style.display = '';
+  }, 380);
+}
+function applyRefinement(query) {
+  const inp = document.getElementById('mobSearchInput');
+  inp.value = query;
+  document.getElementById('mobAiInputWrap').classList.add('has-value');
+  document.getElementById('mobRefineSection').style.display = 'none';
+  stopMobPlaceholder();
+  inp.focus();
 }
 
 // Mob overlay: submit on Enter, close on Escape
@@ -3801,7 +4069,7 @@ document.getElementById('mobSearchInput').addEventListener('keydown', e => {
   if (e.key === 'Escape') closeMobSearch();
 });
 
-// Mob overlay input: toggle has-value class for clear button
+// Mob overlay input: toggle has-value, trigger refinements
 document.getElementById('mobSearchInput').addEventListener('input', e => {
   const wrap = document.getElementById('mobAiInputWrap');
   if (e.target.value) {
@@ -3810,7 +4078,9 @@ document.getElementById('mobSearchInput').addEventListener('input', e => {
   } else {
     wrap.classList.remove('has-value');
     startMobPlaceholder();
+    document.getElementById('mobRefineSection').style.display = 'none';
   }
+  checkRefinements(e.target.value);
 });
 
 // Close search when user submits (hits enter / blur on mobile)
