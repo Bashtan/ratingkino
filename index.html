@@ -272,7 +272,7 @@ header {
 /* Row 1: content type toggle + genre pills */
 .filter-row-1 {
   display: flex; align-items: center;
-  padding: 10px 24px 0;
+  padding: 5px 24px 0;
   max-width: 1600px; margin: 0 auto;
   gap: 8px;
 }
@@ -308,11 +308,11 @@ header {
 .genre-pills-wrap::-webkit-scrollbar { display: none; }
 
 .gpill {
-  height: 30px; padding: 0 14px; flex-shrink: 0;
+  height: 26px; padding: 0 11px; flex-shrink: 0;
   border: 1.5px solid var(--border);
   border-radius: 20px;
   background: transparent;
-  color: var(--muted); font-size: 12px; font-weight: 600;
+  color: var(--muted); font-size: 11px; font-weight: 600;
   cursor: pointer; transition: all 0.18s; white-space: nowrap;
   font-family: 'Inter', sans-serif;
 }
@@ -322,7 +322,7 @@ header {
 /* Row 2: secondary filters + sort */
 .filter-row-2 {
   display: flex; align-items: center; gap: 8px;
-  padding: 8px 24px 10px;
+  padding: 3px 24px 7px;
   max-width: 1600px; margin: 0 auto;
 }
 .filter-lbl {
@@ -364,17 +364,17 @@ header {
 
 /* ─── HERO BAND ───────────────────────────────── */
 .hero-band {
-  padding: 28px 24px 18px;
+  padding: 10px 24px 8px;
   max-width: 1600px; margin: 0 auto;
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
 }
 .hero-title {
-  font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 34px; line-height: 1.1;
+  font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 20px; line-height: 1.15;
 }
 .c-p { color: var(--purple); }
 .c-o { color: var(--orange); }
 .c-y { color: var(--yellow); }
-.hero-sub { margin-top: 5px; font-size: 13px; color: var(--muted); }
+.hero-sub { margin-top: 2px; font-size: 12px; color: var(--muted); }
 .source-badges { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .sbadge {
   display: flex; align-items: center; gap: 5px;
@@ -1470,10 +1470,6 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
       <span class="c-o">3</span> sources. <span class="c-y">1</span> rating.
     </div>
     <div class="hero-sub" data-i18n="hero.subtitle">We aggregate scores from IMDb, Rotten Tomatoes, and Metacritic into one weighted rating.</div>
-    <div class="ai-powered-chip">
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
-      <span data-i18n="hero.aiPowered">AI Powered Search</span>
-    </div>
   </div>
   <div class="source-badges">
     <div class="sbadge imd">⭐ IMDb</div>
