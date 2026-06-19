@@ -1,0 +1,17 @@
+# FindFilm.ai — Redirect Worker for ratingkino.com
+# Deployed separately from the Pages project.
+# Deploy with: npx wrangler deploy --config redirect-worker/wrangler.toml
+
+name                = "ratingkino-redirect"
+main                = "redirect-worker/worker.js"
+compatibility_date  = "2024-11-01"
+
+# Bind this Worker to all traffic on ratingkino.com
+# (Both bare domain and www subdomain)
+[[routes]]
+pattern = "ratingkino.com/*"
+zone_name = "ratingkino.com"
+
+[[routes]]
+pattern = "www.ratingkino.com/*"
+zone_name = "ratingkino.com"

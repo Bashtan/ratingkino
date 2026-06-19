@@ -1,5 +1,5 @@
 /**
- * RatingKino — Daily Sync Worker (3-Phase)
+ * FindFilm.ai — Daily Sync Worker (3-Phase)
  *
  * Cloudflare Workers free plan limits each invocation to 50 subrequests.
  * Enriching 119 movies needs 119 TMDB detail calls, so we split across
@@ -74,7 +74,7 @@ export default {
         previous: prev ? JSON.parse(prev) : null,
       }), { headers: { 'Content-Type': 'application/json' } });
     }
-    return new Response('RatingKino Sync Worker', { status: 200 });
+    return new Response('FindFilm.ai Sync Worker', { status: 200 });
   },
 };
 
@@ -357,7 +357,7 @@ function tmdbUrl(env, path, params = {}) {
 async function fetchJSON(url, retries = 3) {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      const r = await fetch(url, { headers: { 'User-Agent': 'RatingKino-Sync/1.0' } });
+      const r = await fetch(url, { headers: { 'User-Agent': 'FindFilm.ai-Sync/1.0' } });
       if (r.ok) return r.json();
       if (attempt === 0) console.error(`[fetch] HTTP ${r.status}`);
       const retryable = r.status === 429 || r.status >= 500;
