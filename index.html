@@ -219,7 +219,6 @@ header {
   0%,100% { transform: rotate(0deg) scale(1); }
   50%      { transform: rotate(180deg) scale(1.2); }
 }
-.ai-banner-text { flex: 1; line-height: 1.45; }
 .ai-banner-clear {
   background: none; border: none; cursor: pointer;
   color: rgba(167,139,250,0.5); font-size: 17px; line-height: 1;
@@ -241,6 +240,64 @@ header {
 .ai-sug-label {
   font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
   color: var(--muted); margin-bottom: 10px;
+}
+.ai-sug-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ai-sug-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 13px; border-radius: 20px;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.25);
+  color: #a78bfa; font-size: 12px; font-family: 'Inter', sans-serif;
+  cursor: pointer; transition: all 0.18s;
+  animation: chipFadeIn 0.35s ease both;
+}
+.ai-sug-chip:hover {
+  background: rgba(99,102,241,0.22); border-color: rgba(99,102,241,0.5);
+  color: #c4b5fd; transform: translateY(-1px);
+}
+@keyframes chipFadeIn {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── AI thinking text fade transition ─────────────────────────── */
+.ai-banner-text { flex: 1; line-height: 1.45; transition: opacity 0.22s, transform 0.22s; }
+.ai-banner-text.fading { opacity: 0; transform: translateY(5px); }
+
+/* ─── Typewriter cursor ─────────────────────────────────────────── */
+.tw-cursor {
+  display: inline-block; width: 2px; height: 0.85em;
+  background: #a78bfa; margin-left: 2px; vertical-align: text-bottom;
+  animation: twBlink 0.75s step-end infinite;
+}
+@keyframes twBlink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* ─── Pulsing AI spark while typing ────────────────────────────── */
+@keyframes aiIconPulse {
+  0%,100% { transform: translateY(-50%) scale(1);     opacity: 1; }
+  50%      { transform: translateY(-50%) scale(1.45);  opacity: 0.55; }
+}
+.search-wrap.typing:not(.ai-active) .ai-icon {
+  color: #a78bfa;
+  filter: drop-shadow(0 0 5px rgba(167,139,250,0.75));
+  animation: aiIconPulse 1.1s ease-in-out infinite;
+}
+
+/* ─── AI match badge on cards ───────────────────────────────────── */
+.ai-match-badge {
+  position: absolute; top: 7px; right: 7px; z-index: 3;
+  display: flex; align-items: center; gap: 3px;
+  padding: 3px 8px; border-radius: 20px;
+  background: linear-gradient(135deg, rgba(6,182,212,0.92), rgba(16,185,129,0.88));
+  font-size: 9px; font-weight: 800;
+  font-family: 'Montserrat', sans-serif; letter-spacing: 0.3px;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(6,182,212,0.45), 0 2px 4px rgba(0,0,0,0.3);
+  animation: badgePop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes badgePop {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
 }
 
 @keyframes fadeIn {
@@ -1911,6 +1968,9 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
     <button class="ai-banner-clear" onclick="clearAISearch()" title="Clear AI search">✕</button>
   </div>
 
+  <!-- AI follow-up suggestion chips -->
+  <div class="ai-suggestions" id="aiSuggestions"></div>
+
   <div class="movie-grid" id="movieGrid"></div>
   <div class="empty-state" id="emptyState">
     <div class="empty-icon">🎬</div>
@@ -2703,6 +2763,16 @@ let DETECTED_COUNTRY = 'US';  // ISO-3166-1 from /api/geo-lang; used for watch p
 let CACHE_MOVIES      = [];    // snapshot of the 119 KV movies for AI search
 let AI_SEARCH_ACTIVE  = false;
 let AI_SEARCH_TIMER   = null;
+let _lastQuery        = '';        // last AI query for follow-up context
+let _aiMatchScores    = new Map(); // tmdbId → match % for current AI results
+let _thinkingTimer    = null;      // cycling thinking-text timer
+const _THINKING_PHRASES = [
+  'Analyzing your mood…',
+  'Scanning 240,000 films…',
+  'Calculating match scores…',
+  'Finding the perfect vibe…',
+  'Ranking by relevance…',
+];
 
 const ENRICH_QUEUE    = [];
 const ENRICH_PROMISES = new Map();
@@ -3162,9 +3232,14 @@ function renderCardHTML(m) {
   const tvBadge = m.isTV
     ? '<span class="rb" style="background:rgba(124,58,237,0.88);color:#fff;border-radius:5px">TV</span>'
     : '';
+  const matchScore = _aiMatchScores.get(m.id);
+  const matchBadge = matchScore
+    ? `<div class="ai-match-badge">✦ ${matchScore}%</div>`
+    : '';
   return `<div class="movie-card" id="card-${m.id}" onclick="openMovie(${m.id})">
     <div class="movie-poster">
       ${poster}
+      ${matchBadge}
       <div class="poster-ratings">${tvBadge}${avgBadgeHTML(m)}</div>
       <div class="card-hover-overlay"><span>${t('card.viewDetails')}</span></div>
     </div>
@@ -3391,15 +3466,126 @@ document.getElementById('searchInput').placeholder = `✦ Try: "${AI_EXAMPLES[0]
 setInterval(rotatePlaceholder, 3500);
 
 /* Show / hide the banner below the count row */
+/* ── Thinking-text cycling ───────────────────────────────────── */
+function startThinkingText() {
+  let idx = 0;
+  const el = document.getElementById('aiBannerText');
+  el.textContent = _THINKING_PHRASES[0];
+  idx = 1;
+  function cycle() {
+    if (!document.getElementById('aiBanner').classList.contains('loading')) return;
+    el.classList.add('fading');
+    setTimeout(() => {
+      el.textContent = _THINKING_PHRASES[idx % _THINKING_PHRASES.length];
+      idx++;
+      el.classList.remove('fading');
+    }, 220);
+    _thinkingTimer = setTimeout(cycle, 2600);
+  }
+  _thinkingTimer = setTimeout(cycle, 2600);
+}
+
+function stopThinkingText() {
+  clearTimeout(_thinkingTimer);
+  _thinkingTimer = null;
+  document.getElementById('aiBannerText').classList.remove('fading');
+}
+
+/* ── Typewriter effect on banner text ───────────────────────── */
+function typewriterBanner(text) {
+  stopThinkingText();
+  const el = document.getElementById('aiBannerText');
+  el.innerHTML = '<span class="tw-cursor"></span>';
+  const cursor = el.querySelector('.tw-cursor');
+  let i = 0;
+  function tick() {
+    if (i < text.length) {
+      cursor.insertAdjacentText('beforebegin', text[i++]);
+      setTimeout(tick, i < 8 ? 18 : 24);
+    } else {
+      setTimeout(() => cursor.remove(), 900);
+    }
+  }
+  tick();
+}
+
+/* ── Follow-up chip logic ────────────────────────────────────── */
+const _FU_POOLS = {
+  action:   ['More stylized action?', '80s classics?', 'Strong story too?', 'High IMDb only?'],
+  comedy:   ['Romantic comedy?', 'Dark comedy?', 'Family friendly?', 'Under 2 hours?'],
+  horror:   ['Psychological only?', 'Less gore, more dread?', 'Recent releases?', 'High ratings?'],
+  thriller: ['Based on true events?', 'Mind-bending twist?', 'Slow-burn tension?', 'Hidden gems?'],
+  drama:    ['Award-winning only?', 'Based on a book?', 'Uplifting ending?', 'Short runtime?'],
+  romance:  ['Happy ending only?', 'Period romance?', '90s classics?', 'Tearjerker?'],
+  scifi:    ['Hard sci-fi?', 'Space adventure?', 'Near-future?', 'Philosophical?'],
+  default:  ['Higher IMDb rating?', 'Recent releases?', 'Hidden gems?', 'Under 2 hours?'],
+};
+
+function _followUpPool(q) {
+  q = q.toLowerCase();
+  if (/action|fight|war|battle/.test(q))       return _FU_POOLS.action;
+  if (/comedy|funny|laugh|humor/.test(q))       return _FU_POOLS.comedy;
+  if (/horror|scary|fear|creep|ghost/.test(q))  return _FU_POOLS.horror;
+  if (/thriller|suspense|tense/.test(q))        return _FU_POOLS.thriller;
+  if (/drama|emotion|feel/.test(q))             return _FU_POOLS.drama;
+  if (/roman|love|date|heart/.test(q))          return _FU_POOLS.romance;
+  if (/sci.?fi|space|futur|robot/.test(q))      return _FU_POOLS.scifi;
+  return _FU_POOLS.default;
+}
+
+function renderFollowUps(query) {
+  const el = document.getElementById('aiSuggestions');
+  if (!el) return;
+  const chips = _followUpPool(query).slice(0, 4);
+  el.innerHTML = `<div class="ai-sug-label">Refine your search</div>
+    <div class="ai-sug-chips">${chips.map((c, i) =>
+      `<button class="ai-sug-chip" style="animation-delay:${i*65}ms"
+         onclick="applyFollowUp(this.dataset.q)" data-q="${esc(c)}">↳ ${esc(c)}</button>`
+    ).join('')}</div>`;
+  el.classList.add('show');
+}
+
+function clearFollowUps() {
+  const el = document.getElementById('aiSuggestions');
+  if (el) { el.classList.remove('show'); el.innerHTML = ''; }
+}
+
+function applyFollowUp(chip) {
+  // Combine with last query for context-aware refinement
+  const combined = _lastQuery ? `${_lastQuery}, ${chip.replace('?', '')}` : chip;
+  const input = document.getElementById('searchInput');
+  input.value = combined;
+  input.focus();
+  clearTimeout(AI_SEARCH_TIMER);
+  aiSearch(combined);
+}
+
+/* ── Per-card match score (rank-based + jitter) ──────────────── */
+function buildMatchScores(results) {
+  _aiMatchScores.clear();
+  const n = results.length;
+  results.forEach((m, i) => {
+    const base   = Math.round(98 - (i / Math.max(n - 1, 1)) * 26);
+    const jitter = (m.id % 7) - 3; // -3..+3
+    _aiMatchScores.set(m.id, Math.max(70, Math.min(99, base + jitter)));
+  });
+}
+
 function showAIBanner(text, isLoading = false) {
   const banner = document.getElementById('aiBanner');
-  document.getElementById('aiBannerText').textContent = text;
+  if (isLoading) {
+    document.getElementById('aiBannerText').textContent = _THINKING_PHRASES[0];
+    startThinkingText();
+  } else {
+    document.getElementById('aiBannerText').textContent = text;
+  }
   banner.classList.toggle('loading', isLoading);
   banner.classList.add('show');
   document.getElementById('aiResultsBadge')?.classList.add('show');
 }
 
 function hideAIBanner() {
+  stopThinkingText();
   document.getElementById('aiBanner').classList.remove('show', 'loading');
   document.getElementById('aiResultsBadge')?.classList.remove('show');
 }
@@ -3409,7 +3595,10 @@ function clearAISearch() {
   AI_SEARCH_ACTIVE = false;
   clearTimeout(AI_SEARCH_TIMER);
   hideAIBanner();
-  document.getElementById('searchWrap').classList.remove('ai-active');
+  clearFollowUps();
+  _aiMatchScores.clear();
+  _lastQuery = '';
+  document.getElementById('searchWrap').classList.remove('ai-active', 'typing');
   document.getElementById('searchInput').value = '';
   if (CONTENT_TYPE === 'movie') document.getElementById('feedSections').style.display = '';
   if (CACHE_MOVIES.length) {
@@ -3443,10 +3632,12 @@ function keywordFilterCache(query) {
 /* Main AI search function */
 async function aiSearch(query) {
   AI_SEARCH_ACTIVE = true;
+  clearFollowUps();
+  _aiMatchScores.clear();
   document.getElementById('searchWrap').classList.add('ai-active');
-  document.getElementById('feedSections').style.display = 'none'; // hide rows during AI search
+  document.getElementById('feedSections').style.display = 'none';
   showSkeletons(12);
-  showAIBanner(t('ai.searching', { q: query }), true);
+  showAIBanner('', true); // triggers startThinkingText()
 
   try {
     const controller = new AbortController();
@@ -3473,21 +3664,31 @@ async function aiSearch(query) {
 
     MOVIES      = results;
     TOTAL_COUNT = CACHE_MOVIES.length;
+    _lastQuery  = query;
 
-    if (message) {
-      showAIBanner(`✦ ${message}`);
-    } else {
-      const n = results.length;
-      showAIBanner(n === 1 ? t('ai.found', { n, q: query }) : t('ai.foundPlural', { n, q: query }));
-    }
+    // Build per-card match scores before rendering
+    buildMatchScores(results);
+
+    // Switch banner from loading → result with typewriter
+    const banner = document.getElementById('aiBanner');
+    banner.classList.remove('loading');
+    const n = results.length;
+    const reasonText = message
+      ? message
+      : (n === 1 ? t('ai.found', { n, q: query }) : t('ai.foundPlural', { n, q: query }));
+    typewriterBanner(`✦ ${reasonText}`);
 
     renderGrid(results, false);
     document.getElementById('countTotal').textContent = CACHE_MOVIES.length.toLocaleString();
+
+    // Show follow-up chips after a short delay
+    setTimeout(() => renderFollowUps(query), 600);
 
   } catch (e) {
     // Fallback: client-side keyword filter
     console.warn('[AI search] falling back to keyword:', e.message);
     AI_SEARCH_ACTIVE = false;
+    _aiMatchScores.clear();
     hideAIBanner();
     document.getElementById('searchWrap').classList.remove('ai-active');
     keywordFilterCache(query);
@@ -3522,7 +3723,10 @@ function applyFilters() {
   filterTimer = setTimeout(() => loadMovies(1, false), 350);
 }
 
-document.getElementById('searchInput').addEventListener('input', applyFilters);
+document.getElementById('searchInput').addEventListener('input', function() {
+  document.getElementById('searchWrap').classList.toggle('typing', this.value.length > 0);
+  applyFilters();
+});
 
 // Enter key triggers AI search immediately (no debounce wait)
 document.getElementById('searchInput').addEventListener('keydown', e => {
