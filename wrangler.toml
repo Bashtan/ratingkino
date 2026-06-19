@@ -1,4 +1,4 @@
-# Cloudflare Pages — RatingKino
+# Cloudflare Pages — FindFilm.ai (findfilm.ai)
 # This file adds KV binding to Pages Functions (functions/api/[[path]].js).
 # The same MOVIES_CACHE KV namespace is written by the sync Worker
 # and read by the Pages Function at /api/cache/*.

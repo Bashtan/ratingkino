@@ -119,7 +119,7 @@ export async function onRequest({ request, env, params }) {
   }
 
   const upstream = await fetch(upstreamUrl, {
-    headers: { 'User-Agent': 'RatingKino/1.0' },
+    headers: { 'User-Agent': 'FindFilm.ai/1.0' },
   });
 
   const body = await upstream.text();

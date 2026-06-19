@@ -12,7 +12,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name='impact-site-verification' value='ce4807f1-c27d-4143-9a9d-4452962ff8bd'>
-<title>RatingKino — find your movie</title>
+<title>FindFilm.ai — Find your movie using AI</title>
+<meta name="description" content="Find your movie using AI. 240,000 films with aggregated scores from IMDb, Rotten Tomatoes &amp; Metacritic into one weighted rating.">
+<link rel="canonical" href="https://findfilm.ai/">
 
 <!-- Favicons -->
 <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png">
@@ -20,19 +22,36 @@
 
 <!-- Open Graph -->
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://ratingkino.com/">
-<meta property="og:title" content="RatingKino — find your movie">
-<meta property="og:description" content="240,000 films. Scores from IMDb, Rotten Tomatoes & Metacritic combined into one weighted rating.">
-<meta property="og:image" content="https://ratingkino.com/assets/og-image.jpg">
+<meta property="og:url" content="https://findfilm.ai/">
+<meta property="og:title" content="FindFilm.ai — Find your movie using AI">
+<meta property="og:description" content="Find your movie using AI. 240,000 films with aggregated scores from IMDb, Rotten Tomatoes &amp; Metacritic into one weighted rating.">
+<meta property="og:image" content="https://findfilm.ai/assets/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="RatingKino — find your movie">
+<meta property="og:image:alt" content="FindFilm.ai — Find your movie using AI">
+<meta property="og:site_name" content="FindFilm.ai">
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="RatingKino — find your movie">
-<meta name="twitter:description" content="240,000 films. Scores from IMDb, Rotten Tomatoes & Metacritic combined into one weighted rating.">
-<meta name="twitter:image" content="https://ratingkino.com/assets/og-image.jpg">
+<meta name="twitter:title" content="FindFilm.ai — Find your movie using AI">
+<meta name="twitter:description" content="Find your movie using AI. 240,000 films with aggregated scores from IMDb, Rotten Tomatoes &amp; Metacritic.">
+<meta name="twitter:image" content="https://findfilm.ai/assets/og-image.jpg">
+
+<!-- Schema.org JSON-LD -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "FindFilm.ai",
+  "url": "https://findfilm.ai",
+  "description": "Find your movie using AI. 240,000 films with aggregated scores from IMDb, Rotten Tomatoes and Metacritic.",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": { "@type": "EntryPoint", "urlTemplate": "https://findfilm.ai/?q={search_term_string}" },
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -87,15 +106,20 @@ header {
   height: 64px; padding: 0 24px;
 }
 
-.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; transition: opacity 0.2s; }
+.logo { display: flex; align-items: center; gap: 9px; text-decoration: none; flex-shrink: 0; transition: opacity 0.2s; }
 .logo:hover { opacity: 0.85; }
-.logo:hover .logo-icon { filter: drop-shadow(0 0 8px rgba(124,58,237,0.7)) drop-shadow(0 0 16px rgba(249,115,22,0.4)); }
-.logo-icon { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; transition: filter 0.25s; }
+.logo:hover .logo-icon { filter: drop-shadow(0 0 8px rgba(139,92,246,0.75)) drop-shadow(0 0 18px rgba(6,182,212,0.45)); }
+.logo-icon { width: 36px; height: 36px; flex-shrink: 0; transition: filter 0.25s; }
+.logo-text { display: flex; flex-direction: column; gap: 0; }
 .logo-name {
-  font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 20px;
-  background: linear-gradient(90deg, var(--purple) 0%, var(--orange) 55%, var(--yellow) 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  letter-spacing: -0.5px;
+  font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 18px;
+  color: #fff; letter-spacing: -0.5px; line-height: 1.1;
+}
+.logo-ai { color: #06B6D4; }
+.logo-motto {
+  font-family: 'Montserrat', sans-serif; font-weight: 400; font-size: 7.5px;
+  letter-spacing: 1.8px; text-transform: uppercase;
+  color: rgba(255,255,255,0.3); line-height: 1; margin-top: 2px;
 }
 
 /* ─── SEARCH BAR ─────────────────────────────── */
@@ -1184,8 +1208,9 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 /* ─── 375px (standard iPhone) ──────────────── */
 @media (max-width: 375px) {
   .header-inner  { padding: 0 12px; }
-  .logo-name     { font-size: 16px; }
-  .logo-icon     { width: 30px; height: 30px; }
+  .logo-name     { font-size: 15px; }
+  .logo-icon     { width: 28px; height: 28px; }
+  .logo-motto    { display: none; }
   .hero-band     { padding: 8px 12px 6px; }
   .hero-title    { font-size: 16px; }
   main           { padding: 0 10px 90px; }
@@ -1588,9 +1613,27 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
     <!-- Mobile: back arrow shown when search is expanded -->
     <button class="btn-search-back" onclick="closeSearch()" aria-label="Close search">←</button>
 
-    <a class="logo" href="/">
-      <img class="logo-icon" src="/assets/logo-icon.webp" alt="RatingKino logo" width="38" height="38">
-      <span class="logo-name">RatingKino</span>
+    <a class="logo" href="/" aria-label="FindFilm.ai — Find your movie using AI">
+      <svg class="logo-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="ffG" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#8B5CF6"/>
+            <stop offset="100%" stop-color="#06B6D4"/>
+          </linearGradient>
+          <filter id="ffGl" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="1.4" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <rect width="36" height="36" rx="9" fill="url(#ffG)" opacity="0.13"/>
+        <path d="M7 6 L7 30 M7 6 L24 6 M7 17 L19 17"
+              stroke="url(#ffG)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#ffGl)"/>
+        <path d="M19 20.5 L30 25.5 L19 30.5 Z" fill="url(#ffG)" filter="url(#ffGl)"/>
+      </svg>
+      <div class="logo-text">
+        <div class="logo-name">FindFilm<span class="logo-ai">.ai</span></div>
+        <div class="logo-motto">find your movie using AI</div>
+      </div>
     </a>
 
     <div class="search-wrap" id="searchWrap">
@@ -2006,7 +2049,7 @@ const TRANSLATIONS = {
     'filter.minRating':     'Min Rating',
     'filter.any':           'Any',
     'filter.sort':          'Sort',
-    'hero.subtitle':        'We aggregate scores from IMDb, Rotten Tomatoes, and Metacritic into one weighted rating.',
+    'hero.subtitle':        'Find your movie using AI — scores from IMDb, Rotten Tomatoes &amp; Metacritic in one rating.',
     'hero.aiPowered':       'AI Powered Search',
     'hero.films':           'films',
     'hero.shows':           'shows',
@@ -3965,7 +4008,7 @@ function openShare() {
   if (!ACTIVE_MOVIE) return;
   const m = ACTIVE_MOVIE;
   const url   = encodeURIComponent(window.location.href);
-  const title = encodeURIComponent(m.title + ' — RatingKino');
+  const title = encodeURIComponent(m.title + ' — FindFilm.ai');
   document.getElementById('shareGrid').innerHTML = [
     { icon:'📘', label:'Facebook',  href:`https://www.facebook.com/sharer/sharer.php?u=${url}` },
     { icon:'🐦', label:'X / Twitter', href:`https://twitter.com/intent/tweet?url=${url}&text=${title}` },
@@ -3987,7 +4030,7 @@ function openShare() {
 function closeShare() { document.getElementById('sharePanel').classList.remove('open'); }
 function nativeShare() {
   if (!ACTIVE_MOVIE || !navigator.share) return;
-  navigator.share({ title: ACTIVE_MOVIE.title + ' — RatingKino', url: window.location.href });
+  navigator.share({ title: ACTIVE_MOVIE.title + ' — FindFilm.ai', url: window.location.href });
 }
 
 function legacyCopy(text) {
