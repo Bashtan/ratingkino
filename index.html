@@ -736,21 +736,20 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   color: var(--text); -webkit-text-fill-color: var(--text);
   font-size: 12.5px; font-family: 'Inter', sans-serif;
   padding: 9px 11px; outline: none; resize: none;
-  transition: border-color 0.2s; height: 70px; display: none;
+  transition: border-color 0.2s; height: 70px;
 }
 .review-text::placeholder { color: var(--muted); -webkit-text-fill-color: var(--muted); }
 .review-text:focus { border-color: var(--purple); }
-.review-text.show { display: block; }
 .review-submit {
   width: 100%; height: 34px; margin-top: 8px;
   background: linear-gradient(135deg, var(--purple-mid), var(--orange-dark));
   border: none; border-radius: 7px;
   color: #fff; font-weight: 800; font-size: 11px;
   font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 1px;
-  cursor: pointer; display: none; transition: all 0.2s;
+  cursor: pointer; transition: all 0.2s;
 }
-.review-submit.show { display: block; }
-.review-submit:hover { transform: translateY(-1px); }
+.review-submit:disabled { opacity: 0.38; cursor: not-allowed; }
+.review-submit:not(:disabled):hover { transform: translateY(-1px); }
 .rev-success {
   display: none; text-align: center; padding: 7px 0 2px;
   font-size: 12px; font-weight: 700; color: #4ade80;
@@ -765,7 +764,14 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .mr.ff-local .src { color: #67e8f9; opacity: 1; }
 
-.reviews-list { display: flex; flex-direction: column; gap: 9px; }
+.reviews-list {
+  display: flex; flex-direction: column; gap: 9px;
+  max-height: 400px; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: rgba(124,58,237,0.4) transparent;
+}
+.reviews-list::-webkit-scrollbar { width: 4px; }
+.reviews-list::-webkit-scrollbar-track { background: transparent; }
+.reviews-list::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.4); border-radius: 2px; }
 .rev-card {
   background: rgba(124,58,237,0.06);
   border: 1px solid var(--border);
@@ -1984,8 +1990,8 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
             <button class="rev-star" data-s="4" aria-label="4 stars"><svg viewBox="0 0 24 24"><path d="M12 2l2.939 6.326L22 9.354l-5.5 5.667 1.299 7.979L12 19.25l-5.799 3.75L7.5 15.021 2 9.354l7.061-1.028Z"/></svg></button>
             <button class="rev-star" data-s="5" aria-label="5 stars"><svg viewBox="0 0 24 24"><path d="M12 2l2.939 6.326L22 9.354l-5.5 5.667 1.299 7.979L12 19.25l-5.799 3.75L7.5 15.021 2 9.354l7.061-1.028Z"/></svg></button>
           </div>
-          <textarea class="review-text" id="reviewText" data-i18n-placeholder="modal.reviewPlaceholder" placeholder="What did you think? (optional)" maxlength="200"></textarea>
-          <button class="review-submit" id="reviewSubmit" onclick="submitReview()" data-i18n="modal.postReview">Post Review</button>
+          <textarea class="review-text" id="reviewText" data-i18n-placeholder="modal.reviewPlaceholder" placeholder="Write your review..." maxlength="200"></textarea>
+          <button class="review-submit" id="reviewSubmit" onclick="submitReview()" data-i18n="modal.postReview" disabled>Post Review</button>
           <div class="rev-success" id="reviewSuccess"></div>
         </div>
 
@@ -3980,6 +3986,22 @@ function calcLocalRating(tmdbId) {
   return { avg: (sum / reviews.length).toFixed(1), count: reviews.length };
 }
 
+function timeAgo(isoStr) {
+  if (!isoStr) return '';
+  const diff = Date.now() - new Date(isoStr).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60)  return 'just now';
+  const m = Math.floor(s / 60);
+  if (m < 60)  return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24)  return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 30)  return `${d} day${d===1?'':'s'} ago`;
+  const mo = Math.floor(d / 30);
+  if (mo < 12) return `${mo} mo ago`;
+  return `${Math.floor(mo/12)}y ago`;
+}
+
 function renderReviews(tmdbId) {
   const reviews = getReviews(tmdbId);
   const el = document.getElementById('mReviews');
@@ -3989,9 +4011,7 @@ function renderReviews(tmdbId) {
   }
   el.innerHTML = reviews.slice().reverse().map(r => {
     const author  = r.userName?.trim() || 'Anonymous';
-    const dateStr = r.createdAt
-      ? new Date(r.createdAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
-      : (r.date || '');
+    const dateStr = r.createdAt ? timeAgo(r.createdAt) : (r.date || '');
     return `<div class="rev-card">
       <div class="rev-head">
         <span class="rev-stars-display">${'★'.repeat(r.stars)}${'☆'.repeat(5-r.stars)}</span>
@@ -4009,8 +4029,7 @@ function resetReviewCompose() {
   const nameEl = document.getElementById('reviewName');
   if (nameEl) nameEl.value = '';
   document.getElementById('reviewText').value = '';
-  document.getElementById('reviewText').classList.remove('show');
-  document.getElementById('reviewSubmit').classList.remove('show');
+  document.getElementById('reviewSubmit').disabled = true;
   const suc = document.getElementById('reviewSuccess');
   if (suc) { suc.classList.remove('show'); suc.textContent = ''; }
 }
@@ -4030,8 +4049,7 @@ document.getElementById('reviewStars').addEventListener('click', e => {
   if (!star) return;
   PENDING_STARS = parseInt(star.dataset.s);
   document.querySelectorAll('.rev-star').forEach((s,i) => s.classList.toggle('lit', i < PENDING_STARS));
-  document.getElementById('reviewText').classList.add('show');
-  document.getElementById('reviewSubmit').classList.add('show');
+  document.getElementById('reviewSubmit').disabled = false;
 });
 
 function submitReview() {
@@ -4051,7 +4069,7 @@ function submitReview() {
   renderReviews(ACTIVE_MOVIE.id);
   refreshModalRatings(ACTIVE_MOVIE); // refresh to show updated FindFilm rating badge
   const suc = document.getElementById('reviewSuccess');
-  document.getElementById('reviewSubmit').classList.remove('show');
+  document.getElementById('reviewSubmit').disabled = true;
   suc.textContent = '✓ Review posted — thank you!';
   suc.classList.add('show');
   setTimeout(resetReviewCompose, 2200);
