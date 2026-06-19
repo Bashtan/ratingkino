@@ -683,6 +683,17 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   cursor: pointer; transition: all 0.18s;
 }
 .btn-trailer:hover { background: var(--orange-dark); }
+.btn-amazon {
+  display: flex; align-items: center; gap: 6px;
+  height: 38px; padding: 0 16px;
+  background: rgba(255,153,0,0.1); border: 1.5px solid #FF9900;
+  border-radius: 8px; color: #FF9900;
+  font-weight: 700; font-size: 12px; font-family: 'Montserrat', sans-serif;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  cursor: pointer; text-decoration: none;
+  transition: background 0.18s, color 0.18s;
+}
+.btn-amazon:hover { background: rgba(255,153,0,0.22); color: #FFB84D; }
 .btn-shr {
   display: flex; align-items: center; gap: 6px;
   height: 38px; padding: 0 16px;
@@ -1275,7 +1286,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   .m-right     { padding: 14px 16px; }
   .meta-grid   { grid-template-columns: 1fr 1fr; gap: 9px; }
   .m-info-strip { flex-direction: row; }
-  .btn-trailer, .btn-shr { height: 44px; }
+  .btn-trailer, .btn-shr, .btn-amazon { height: 44px; }
 
   /* Share panel: full width */
   .share-panel { width: 100%; border-radius: 16px 16px 0 0; }
@@ -1693,6 +1704,23 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   letter-spacing: 0.5px;
 }
 .m-desc:not(.translating) { opacity: 1; transition: opacity 0.3s; }
+/* ── Site Footer ──────────────────────────────── */
+.site-footer {
+  text-align: center;
+  padding: 18px 16px 22px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.28);
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.2px;
+  line-height: 1.6;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  margin-top: 32px;
+}
+.site-footer a {
+  color: rgba(255,255,255,0.38);
+  text-decoration: none;
+}
+.site-footer a:hover { color: rgba(255,255,255,0.6); text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -2016,6 +2044,10 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
         <div class="m-ratings-row" id="mRatings"></div>
         <div class="m-actions">
           <button class="btn-trailer" id="btnTrailer" onclick="toggleTrailer()" style="display:none" data-i18n="modal.trailer">▶ Trailer</button>
+          <a class="btn-amazon" id="btnAmazon" href="#" target="_blank" rel="noopener noreferrer">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Prime
+          </a>
           <button class="btn-shr" onclick="openShare()" data-i18n="modal.share">↗ Share</button>
         </div>
       </div>
@@ -4054,6 +4086,11 @@ function refreshModalDetails(m) {
   }
   // Trailer btn
   document.getElementById('btnTrailer').style.display = m.trailer ? '' : 'none';
+  // Amazon btn
+  const amazonBtn = document.getElementById('btnAmazon');
+  if (amazonBtn) {
+    amazonBtn.href = `https://www.amazon.com/s?k=${encodeURIComponent(m.title)}&i=instant-video&tag=findfilm-20`;
+  }
 }
 
 /* ── Provider URL map ─────────────────────────────────────────
@@ -4688,5 +4725,9 @@ init();
 </script>
 <!-- Skimlinks affiliate tracking — loads after all app JS -->
 <script type="text/javascript" src="https://s.skimresources.com/js/304950X1793141.skimlinks.js" async></script>
+<footer class="site-footer">
+  As an Amazon Associate, FindFilm.ai earns from qualifying purchases. &nbsp;·&nbsp;
+  <a href="https://www.amazon.com" target="_blank" rel="noopener noreferrer">Amazon.com</a>
+</footer>
 </body>
 </html>
