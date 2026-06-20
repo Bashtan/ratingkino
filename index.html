@@ -108,30 +108,30 @@ header {
 }
 .header-inner {
   max-width: 1600px; margin: 0 auto;
-  display: flex; align-items: center; gap: 16px;
-  height: 64px; padding: 0 24px;
+  display: flex; align-items: center; gap: 12px;
+  height: 64px; padding: 0 20px;
 }
 
-.logo { display: flex; align-items: center; gap: 9px; text-decoration: none; flex-shrink: 0; transition: opacity 0.2s; }
+.logo { display: flex; align-items: center; gap: 7px; text-decoration: none; flex-shrink: 0; transition: opacity 0.2s; }
 .logo:hover { opacity: 0.85; }
 .logo:hover .logo-icon { filter: drop-shadow(0 0 8px rgba(139,92,246,0.75)) drop-shadow(0 0 18px rgba(6,182,212,0.45)); }
-.logo-icon { width: 36px; height: 36px; flex-shrink: 0; transition: filter 0.25s; }
+.logo-icon { width: 28px; height: 28px; flex-shrink: 0; transition: filter 0.25s; }
 .logo-text { display: flex; flex-direction: column; gap: 0; }
 .logo-name {
-  font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 18px;
+  font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 15px;
   color: #fff; letter-spacing: -0.5px; line-height: 1.1;
 }
 .logo-ai { color: #06B6D4; }
 .logo-motto {
-  font-family: 'Montserrat', sans-serif; font-weight: 400; font-size: 7.5px;
-  letter-spacing: 1.8px; text-transform: uppercase;
-  color: rgba(255,255,255,0.3); line-height: 1; margin-top: 2px;
+  font-family: 'Montserrat', sans-serif; font-weight: 400; font-size: 6.5px;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: rgba(255,255,255,0.28); line-height: 1; margin-top: 1px;
 }
 
 /* ─── SEARCH BAR ─────────────────────────────── */
 /* Gradient ring: visible on focus / AI active */
 .search-wrap {
-  flex: 1; max-width: 540px;
+  flex: 1; max-width: 780px;
   position: relative; z-index: 1;
 }
 /* animated gradient ring behind the input */
@@ -337,6 +337,11 @@ header {
   50%       { opacity: 0.7;  transform: scale(1.06); }
 }
 .btn-random:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 6px 24px rgba(249,115,22,0.55); }
+@keyframes randomSpin {
+  from { transform: rotate(0deg) scale(1.3); }
+  to   { transform: rotate(360deg) scale(1.3); }
+}
+.btn-random.spinning .rnd-spark { animation: randomSpin 0.6s cubic-bezier(0.34,1.56,0.64,1); }
 .btn-settings {
   width: 38px; height: 38px;
   background: rgba(124,58,237,0.08);
@@ -863,30 +868,83 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   position: fixed; bottom: 0; left: 50%;
   transform: translateX(-50%) translateY(110%);
   z-index: 300;
-  background: #130030; border: 1px solid var(--border);
-  border-radius: 16px 16px 0 0;
-  padding: 18px 22px 28px; width: 360px;
-  box-shadow: 0 -20px 60px rgba(0,0,0,0.9);
-  transition: transform 0.3s cubic-bezier(.16,1,.3,1);
+  background: rgba(10,0,26,0.82);
+  backdrop-filter: blur(28px) saturate(1.6);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  border: 1px solid rgba(124,58,237,0.3);
+  border-bottom: none;
+  border-radius: 20px 20px 0 0;
+  padding: 20px 22px 30px; width: 380px;
+  box-shadow: 0 -24px 80px rgba(0,0,0,0.75), 0 0 0 1px rgba(124,58,237,0.1), inset 0 1px 0 rgba(255,255,255,0.06);
+  transition: transform 0.35s cubic-bezier(.16,1,.3,1);
+}
+.share-panel::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent 5%, rgba(139,92,246,0.6) 40%, rgba(6,182,212,0.5) 60%, transparent 95%);
+  border-radius: 20px 20px 0 0;
 }
 .share-panel.open { transform: translateX(-50%) translateY(0); }
-.share-head { text-align: center; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+.share-drag-handle {
+  width: 36px; height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,0.15);
+  margin: 0 auto 16px;
+}
+.share-head {
+  text-align: center; font-size: 10px; letter-spacing: 3px;
+  text-transform: uppercase; color: rgba(167,139,250,0.6);
+  margin-bottom: 14px;
+}
 .share-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .shr-btn {
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 10px 6px;
-  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-  border-radius: 8px; color: var(--text); font-size: 10px;
-  text-decoration: none; cursor: pointer; transition: all 0.18s;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 11px 6px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(124,58,237,0.2);
+  border-radius: 12px; color: var(--text); font-size: 10px;
+  text-decoration: none; cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, transform 0.18s, box-shadow 0.18s;
 }
-.shr-btn:hover { background: rgba(124,58,237,0.2); border-color: var(--purple); }
-.shr-icon { font-size: 18px; }
-.share-close { position: absolute; top: 11px; right: 12px; background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; }
-.share-native { width: 100%; margin-top: 9px; height: 38px; background: linear-gradient(135deg,var(--purple-mid),var(--orange-dark)); border: none; border-radius: 8px; color: #fff; font-size: 12px; font-weight: 700; font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; display: none; }
+.shr-btn:hover {
+  background: rgba(124,58,237,0.18);
+  border-color: rgba(124,58,237,0.55);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(124,58,237,0.25);
+}
+.shr-icon { font-size: 20px; }
+.share-close {
+  position: absolute; top: 14px; right: 14px;
+  background: rgba(255,255,255,0.06); border: none;
+  color: var(--muted); font-size: 14px; cursor: pointer;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.share-close:hover { background: rgba(255,255,255,0.12); color: var(--text); }
+.share-native { width: 100%; margin-top: 10px; height: 40px; background: linear-gradient(135deg,var(--purple-mid),var(--orange-dark)); border: none; border-radius: 10px; color: #fff; font-size: 12px; font-weight: 700; font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; display: none; transition: opacity 0.2s, transform 0.2s; }
 .share-native.show { display: block; }
-.share-copy { width: 100%; margin-top: 8px; height: 38px; background: rgba(124,58,237,0.12); border: 1.5px solid var(--purple); border-radius: 8px; color: var(--text); font-size: 12px; font-weight: 700; font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; display: none; transition: background 0.2s, border-color 0.2s, color 0.2s; }
+.share-native:hover { opacity: 0.88; transform: translateY(-1px); }
+.share-copy { width: 100%; margin-top: 8px; height: 40px; background: rgba(124,58,237,0.1); border: 1.5px solid rgba(124,58,237,0.35); border-radius: 10px; color: var(--text); font-size: 12px; font-weight: 700; font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; display: none; transition: background 0.2s, border-color 0.2s, color 0.2s; }
 .share-copy.show   { display: block; }
 .share-copy.copied { background: rgba(6,182,212,0.18); border-color: var(--cyan); color: var(--cyan); }
+/* Cast to TV button */
+.share-cast {
+  width: 100%; margin-top: 8px; height: 40px;
+  background: rgba(6,182,212,0.08);
+  border: 1.5px solid rgba(6,182,212,0.3);
+  border-radius: 10px; color: var(--cyan);
+  font-size: 12px; font-weight: 700;
+  font-family: 'Montserrat', sans-serif;
+  text-transform: uppercase; letter-spacing: 1px;
+  cursor: pointer; display: none;
+  align-items: center; justify-content: center; gap: 7px;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+.share-cast.show { display: flex; }
+.share-cast:hover { background: rgba(6,182,212,0.18); border-color: var(--cyan); }
+.share-cast.looking { color: rgba(167,139,250,0.8); border-color: rgba(167,139,250,0.3); animation: castPulse 1.2s ease-in-out infinite; }
+.share-cast.connected { background: rgba(6,182,212,0.2); border-color: var(--cyan); color: var(--cyan); }
+@keyframes castPulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
 
 /* ─── EMPTY STATE ─────────────────────────────── */
 .empty-state { text-align: center; padding: 80px 20px; display: none; }
@@ -1774,7 +1832,10 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
       </button>
-      <button class="btn-random" onclick="randomMovie()">🎲 Random</button>
+      <button class="btn-random" onclick="randomMovie()" data-i18n="btn.random">
+        <svg class="rnd-spark" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+        Random
+      </button>
       <div class="lang-switch" id="langSwitch">
         <button class="lang-btn" id="langBtn" onclick="toggleLangMenu(event)"
                 aria-haspopup="listbox" aria-expanded="false" aria-label="Switch language">
@@ -2102,15 +2163,22 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 
 <!-- ════════════ SHARE PANEL ════════════ -->
 <div class="share-panel" id="sharePanel">
+  <div class="share-drag-handle"></div>
   <button class="share-close" onclick="closeShare()">✕</button>
   <div class="share-head" data-i18n="share.title">Share This Film</div>
   <div class="share-grid" id="shareGrid"></div>
   <button class="share-native" id="shareNative" onclick="nativeShare()">📤 <span data-i18n="share.device">Share via Device</span></button>
   <button class="share-copy"   id="shareCopy"   onclick="copyLink()">🔗 <span data-i18n="share.copyLink">Copy Link</span></button>
+  <button class="share-cast"   id="shareCast"   onclick="castToTV()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
+    <span id="castBtnText" data-i18n="share.cast">Cast to TV</span>
+  </button>
 </div>
 
 <!-- ════════════ FAB RANDOM (mobile) ════════════ -->
-<button class="fab-random" onclick="randomMovie()" aria-label="Random movie">🎲</button>
+<button class="fab-random" onclick="randomMovie()" aria-label="Random movie">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+</button>
 
 <!-- ════════════ SETTINGS OVERLAY ════════════ -->
 <div class="overlay" id="settingsOv">
@@ -2219,6 +2287,11 @@ const TRANSLATIONS = {
     'share.device':         'Share via Device',
     'share.copyLink':       'Copy Link',
     'share.copied':         '✓ Copied!',
+    'share.cast':           'Cast to TV',
+    'share.lookingDevices': 'Looking for devices…',
+    'share.castConnected':  'Connected to TV',
+    'share.castNone':       'No devices found',
+    'btn.random':           'Random',
     'ai.searching':         '✦ Searching for "{q}"…',
     'ai.found':             '✦ AI found {n} match for "{q}"',
     'ai.foundPlural':       '✦ AI found {n} matches for "{q}"',
@@ -2286,6 +2359,11 @@ const TRANSLATIONS = {
     'share.device':         'Compartir por dispositivo',
     'share.copyLink':       'Copiar enlace',
     'share.copied':         '✓ ¡Copiado!',
+    'share.cast':           'Conectar al TV',
+    'share.lookingDevices': 'Buscando dispositivos…',
+    'share.castConnected':  'Conectado al TV',
+    'share.castNone':       'No se encontraron dispositivos',
+    'btn.random':           'Aleatorio',
     'ai.searching':         '✦ Buscando "{q}"…',
     'ai.found':             '✦ La IA encontró {n} resultado para "{q}"',
     'ai.foundPlural':       '✦ La IA encontró {n} resultados para "{q}"',
@@ -2353,6 +2431,11 @@ const TRANSLATIONS = {
     'share.device':         "Partager via l'appareil",
     'share.copyLink':       'Copier le lien',
     'share.copied':         '✓ Copié !',
+    'share.cast':           'Diffuser sur TV',
+    'share.lookingDevices': 'Recherche de dispositifs…',
+    'share.castConnected':  'Connecté à la TV',
+    'share.castNone':       'Aucun dispositif trouvé',
+    'btn.random':           'Aléatoire',
     'ai.searching':         '✦ Recherche de "{q}"…',
     'ai.found':             '✦ L\'IA a trouvé {n} résultat pour "{q}"',
     'ai.foundPlural':       '✦ L\'IA a trouvé {n} résultats pour "{q}"',
@@ -2420,6 +2503,11 @@ const TRANSLATIONS = {
     'share.device':         '通过设备分享',
     'share.copyLink':       '复制链接',
     'share.copied':         '✓ 已复制！',
+    'share.cast':           '投射到电视',
+    'share.lookingDevices': '正在搜索设备…',
+    'share.castConnected':  '已连接到电视',
+    'share.castNone':       '未找到设备',
+    'btn.random':           '随机',
     'ai.searching':         '✦ 正在搜索「{q}」…',
     'ai.found':             '✦ AI 为「{q}」找到 {n} 个结果',
     'ai.foundPlural':       '✦ AI 为「{q}」找到 {n} 个结果',
@@ -2487,6 +2575,11 @@ const TRANSLATIONS = {
     'share.device':         'المشاركة عبر الجهاز',
     'share.copyLink':       'نسخ الرابط',
     'share.copied':         '✓ تم النسخ!',
+    'share.cast':           'بث على التلفاز',
+    'share.lookingDevices': 'جارٍ البحث عن أجهزة…',
+    'share.castConnected':  'متصل بالتلفاز',
+    'share.castNone':       'لم يتم العثور على أجهزة',
+    'btn.random':           'عشوائي',
     'ai.searching':         '✦ جاري البحث عن "{q}"…',
     'ai.found':             '✦ وجد الذكاء الاصطناعي {n} نتيجة لـ "{q}"',
     'ai.foundPlural':       '✦ وجد الذكاء الاصطناعي {n} نتائج لـ "{q}"',
@@ -2554,6 +2647,11 @@ const TRANSLATIONS = {
     'share.device':         'Поділитися через пристрій',
     'share.copyLink':       'Скопіювати посилання',
     'share.copied':         '✓ Скопійовано!',
+    'share.cast':           'Трансляція на TV',
+    'share.lookingDevices': 'Пошук пристроїв…',
+    'share.castConnected':  'Підключено до TV',
+    'share.castNone':       'Пристроїв не знайдено',
+    'btn.random':           'Випадковий',
     'ai.searching':         '✦ Пошук "{q}"…',
     'ai.found':             '✦ ШІ знайшов {n} результат для "{q}"',
     'ai.foundPlural':       '✦ ШІ знайшов {n} результати для "{q}"',
@@ -2629,6 +2727,8 @@ function switchLang(code) {
   localStorage.setItem('rk_lang', code);
   applyTranslations();
   closeLangMenu();
+  // Reload genre pills in the new language
+  loadGenres();
 }
 
 async function detectLang() {
@@ -2985,7 +3085,8 @@ async function omdbGet(imdbId) {
 async function loadGenres() {
   try {
     const endpoint = CONTENT_TYPE === 'tv' ? '/genre/tv/list' : '/genre/movie/list';
-    const data = await tmdbGet(endpoint, { language: 'en-US' });
+    const _TMDB_LANG = { en:'en-US', es:'es-ES', fr:'fr-FR', zh:'zh-CN', ar:'ar-SA', uk:'uk-UA' };
+    const data = await tmdbGet(endpoint, { language: _TMDB_LANG[CURRENT_LANG] || 'en-US' });
     GENRES = {};
     const wrap = document.getElementById('genrePills');
     wrap.innerHTML = `<button class="gpill active" id="pill-all" onclick="setGenre('')" data-i18n="filter.all">${t('filter.all')}</button>`;
@@ -3799,6 +3900,11 @@ function toggleSrc(src) {
    RANDOM
 ═══════════════════════════════════ */
 async function randomMovie() {
+  // Visual feedback: spin the spark icon
+  const btnEl = document.querySelector('.btn-random');
+  if (btnEl) btnEl.classList.add('spinning');
+  setTimeout(() => { if (btnEl) btnEl.classList.remove('spinning'); }, 700);
+
   // Lazily load the cached random pool (500 movies) on first use
   if (!RANDOM_POOL.length) {
     try {
@@ -3813,13 +3919,50 @@ async function randomMovie() {
   const source = RANDOM_POOL.length ? RANDOM_POOL : MOVIES;
   if (!source.length) return;
 
-  const pick = source[Math.floor(Math.random() * source.length)];
+  // ── Read currently active filters ──────────────────────────────
+  const activeGenre  = ACTIVE_GENRE || '';
+  const minRating    = parseFloat(document.getElementById('fMinRating')?.value || '0') || 0;
+  const activeCountry = document.getElementById('fCountry')?.value || '';
+
+  // Build a filtered subset if any filter is active
+  let pool = source;
+  if (activeGenre || minRating || activeCountry) {
+    pool = source.filter(m => {
+      // Genre: match genreIds array (lightweight pool) or genres array
+      if (activeGenre) {
+        const ids = m.genreIds || m.genre_ids || [];
+        const names = m.genres || [];
+        const genreStr = activeGenre.toString();
+        const matchId   = ids.map(String).includes(genreStr);
+        const matchName = names.some(n => {
+          const mapped = Object.entries(GENRES).find(([, v]) => v === n);
+          return mapped && mapped[0] === genreStr;
+        });
+        if (!matchId && !matchName) return false;
+      }
+      // Min rating: check avg, imdb, or vote_average
+      if (minRating) {
+        const score = m.avg ?? m.imdb ?? m.vote_average ?? 0;
+        if (score < minRating) return false;
+      }
+      // Country: match origin_country or production_countries
+      if (activeCountry) {
+        const countries = m.origin_country || m.countries || [];
+        if (!countries.includes(activeCountry)) return false;
+      }
+      return true;
+    });
+    // If filters leave nothing, silently fall back to full pool
+    if (!pool.length) pool = source;
+  }
+
+  const pick = pool[Math.floor(Math.random() * pool.length)];
 
   // If the picked movie isn't in MOVIES yet, add a stub so openMovie() can find it
   if (!MOVIES.find(m => m.id === pick.id)) {
     const stub = fromCache({
       ...pick,
-      genres: (pick.genreIds || []).map(id => GENRES[id]).filter(Boolean),
+      genres: (pick.genreIds || pick.genre_ids || []).map(id => GENRES[id]).filter(Boolean),
     });
     MOVIES.push(stub);
   }
@@ -4332,23 +4475,94 @@ function openShare() {
   const title = encodeURIComponent(m.title + ' — FindFilm.ai');
   document.getElementById('shareGrid').innerHTML = [
     { icon:'📘', label:'Facebook',  href:`https://www.facebook.com/sharer/sharer.php?u=${url}` },
-    { icon:'🐦', label:'X / Twitter', href:`https://twitter.com/intent/tweet?url=${url}&text=${title}` },
+    { icon:'𝕏',  label:'X / Twitter', href:`https://twitter.com/intent/tweet?url=${url}&text=${title}` },
     { icon:'📌', label:'Pinterest', href:`https://pinterest.com/pin/create/button/?url=${url}&description=${title}` },
-    { icon:'📓', label:'Tumblr',    href:`https://www.tumblr.com/share/link?url=${url}&name=${title}` },
     { icon:'💬', label:'Telegram',  href:`https://t.me/share/url?url=${url}&text=${title}` },
+    { icon:'📓', label:'Tumblr',    href:`https://www.tumblr.com/share/link?url=${url}&name=${title}` },
     { icon:'✉️', label:'Email',     href:`mailto:?subject=${title}&body=${url}` },
   ].map(s => `<a class="shr-btn" href="${s.href}" target="_blank" rel="noopener">
     <span class="shr-icon">${s.icon}</span>${s.label}</a>`).join('');
   const nativeBtn = document.getElementById('shareNative');
   navigator.share ? nativeBtn.classList.add('show') : nativeBtn.classList.remove('show');
-  // Show "Copy Link" on desktop (no native share) or always as a fallback
   const copyBtn = document.getElementById('shareCopy');
   copyBtn.classList.toggle('show', !navigator.share);
   copyBtn.classList.remove('copied');
-  copyBtn.textContent = '🔗 Copy Link';
+  copyBtn.querySelector ? (copyBtn.innerHTML = `🔗 <span data-i18n="share.copyLink">${t('share.copyLink')}</span>`) : (copyBtn.textContent = `🔗 ${t('share.copyLink')}`);
+  // Cast to TV — show if Remote Playback API or presentation API is supported
+  const castBtn = document.getElementById('shareCast');
+  const castSupported = 'remote' in (document.createElement('video')) || 'presentation' in navigator;
+  castBtn.classList.toggle('show', castSupported);
+  castBtn.classList.remove('looking', 'connected');
+  document.getElementById('castBtnText').textContent = t('share.cast');
   document.getElementById('sharePanel').classList.add('open');
 }
 function closeShare() { document.getElementById('sharePanel').classList.remove('open'); }
+
+let _castVideo = null;
+async function castToTV() {
+  if (!ACTIVE_MOVIE) return;
+  const btn  = document.getElementById('shareCast');
+  const lbl  = document.getElementById('castBtnText');
+
+  // Already connected — disconnect
+  if (btn.classList.contains('connected')) {
+    if (_castVideo) { try { _castVideo.remote?.cancelWatchAvailability(); } catch {} _castVideo = null; }
+    btn.classList.remove('connected');
+    lbl.textContent = t('share.cast');
+    return;
+  }
+
+  // Remote Playback API path
+  const SR = window.SpeechRecognition; // just ensure scope; we use video.remote below
+  const videoEl = document.createElement('video');
+  videoEl.crossOrigin = 'anonymous';
+  // Use the trailer YouTube embed or fallback to a silent placeholder
+  if (ACTIVE_MOVIE.trailer) {
+    videoEl.src = `https://www.youtube.com/embed/${ACTIVE_MOVIE.trailer}`;
+  }
+  _castVideo = videoEl;
+
+  if ('remote' in videoEl) {
+    btn.classList.add('looking');
+    lbl.textContent = t('share.lookingDevices');
+    try {
+      await videoEl.remote.watchAvailability(available => {
+        if (available) {
+          btn.classList.remove('looking');
+          btn.classList.add('connected');
+          lbl.textContent = t('share.castConnected');
+        } else {
+          btn.classList.remove('looking', 'connected');
+          lbl.textContent = t('share.castNone');
+        }
+      });
+      await videoEl.remote.prompt();
+    } catch(e) {
+      btn.classList.remove('looking', 'connected');
+      lbl.textContent = t('share.castNone');
+      setTimeout(() => { lbl.textContent = t('share.cast'); }, 2500);
+    }
+  } else if ('presentation' in navigator) {
+    // Presentation API fallback: open movie page on second screen
+    btn.classList.add('looking');
+    lbl.textContent = t('share.lookingDevices');
+    try {
+      const req = new PresentationRequest([window.location.href]);
+      req.start().then(() => {
+        btn.classList.remove('looking'); btn.classList.add('connected');
+        lbl.textContent = t('share.castConnected');
+      }).catch(() => {
+        btn.classList.remove('looking');
+        lbl.textContent = t('share.castNone');
+        setTimeout(() => { lbl.textContent = t('share.cast'); }, 2500);
+      });
+    } catch {
+      btn.classList.remove('looking');
+      lbl.textContent = t('share.castNone');
+      setTimeout(() => { lbl.textContent = t('share.cast'); }, 2500);
+    }
+  }
+}
 function nativeShare() {
   if (!ACTIVE_MOVIE || !navigator.share) return;
   navigator.share({ title: ACTIVE_MOVIE.title + ' — FindFilm.ai', url: window.location.href });
@@ -4555,8 +4769,9 @@ function toggleVoiceSearch() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return;
 
+  const _LANG_BCP47 = { en:'en-US', es:'es-ES', fr:'fr-FR', zh:'zh-CN', ar:'ar-SA', uk:'uk-UA' };
   _recognition = new SR();
-  _recognition.lang = navigator.language || 'en-US';
+  _recognition.lang = _LANG_BCP47[CURRENT_LANG] || navigator.language || 'en-US';
   _recognition.interimResults = true;
   _recognition.maxAlternatives = 1;
   _recognition.continuous = false;
