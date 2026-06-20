@@ -315,9 +315,11 @@ header {
 .btn-random {
   display: flex; align-items: center; gap: 6px;
   height: 38px; padding: 0 16px;
-  background: linear-gradient(135deg, var(--orange), var(--yellow));
+  background: linear-gradient(90deg, #7C3AED 0%, #22D3EE 50%, #7C3AED 100%);
+  background-size: 200% 100%;
+  animation: randomShimmer 2.4s linear infinite;
   border: none; border-radius: 9px;
-  color: #1a0000; font-weight: 800; font-size: 11px;
+  color: #fff; font-weight: 800; font-size: 11px;
   letter-spacing: 1px; text-transform: uppercase;
   font-family: 'Montserrat', sans-serif; cursor: pointer;
   transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s;
@@ -327,7 +329,7 @@ header {
   content: '';
   position: absolute; inset: -5px;
   border-radius: 14px;
-  background: linear-gradient(135deg, rgba(249,115,22,0.7), rgba(250,204,21,0.5), rgba(6,182,212,0.4));
+  background: linear-gradient(135deg, rgba(124,58,237,0.7), rgba(34,211,238,0.5));
   filter: blur(10px);
   animation: aiAuraPulse 3s ease-in-out infinite;
   z-index: -1;
@@ -336,7 +338,11 @@ header {
   0%, 100% { opacity: 0.35; transform: scale(0.98); }
   50%       { opacity: 0.7;  transform: scale(1.06); }
 }
-.btn-random:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 6px 24px rgba(249,115,22,0.55); }
+@keyframes randomShimmer {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.btn-random:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 6px 24px rgba(124,58,237,0.55); }
 @keyframes randomSpin {
   from { transform: rotate(0deg) scale(1.3); }
   to   { transform: rotate(360deg) scale(1.3); }
@@ -1779,6 +1785,68 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   text-decoration: none;
 }
 .site-footer a:hover { color: rgba(255,255,255,0.6); text-decoration: underline; }
+
+/* ─── Desktop voice search mic ──────────────────────── */
+.search-mic-btn {
+  position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
+  width: 26px; height: 26px;
+  background: none; border: none; cursor: pointer;
+  color: rgba(167,139,250,0.5);
+  display: none; align-items: center; justify-content: center;
+  border-radius: 6px; z-index: 2;
+  transition: color 0.2s, background 0.2s;
+}
+.search-mic-btn:hover { color: #a78bfa; background: rgba(124,58,237,0.12); }
+.search-mic-btn.listening { color: #ef4444; animation: micPulse 1s ease-in-out infinite; }
+@keyframes micPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+.search-wrap.has-mic .search-icon { right: 42px; }
+.search-wrap.has-mic .search-input { padding-right: 70px; }
+
+/* ─── First-visit AI intro overlay ──────────────────── */
+.fv-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(5,0,20,0.97);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; opacity: 1; transition: opacity 0.6s ease;
+}
+.fv-overlay.hidden { opacity: 0; pointer-events: none; }
+.fv-content {
+  display: flex; flex-direction: column; align-items: center; gap: 28px;
+  text-align: center; padding: 24px;
+}
+.fv-logo-mark {
+  animation: fvLogoIn 0.8s cubic-bezier(0.34,1.56,0.64,1) both;
+  filter: drop-shadow(0 0 28px rgba(124,58,237,0.75));
+}
+@keyframes fvLogoIn {
+  from { opacity: 0; transform: scale(0.4) rotate(-12deg); }
+  to   { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+.fv-text {
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(20px, 5vw, 40px);
+  font-weight: 900; letter-spacing: -1px;
+  background: linear-gradient(90deg, #7C3AED, #22D3EE, #7C3AED);
+  background-size: 200% 100%;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: fvGradShift 3s linear infinite;
+  min-height: 1.3em; min-width: 2ch;
+}
+@keyframes fvGradShift { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+.fv-cursor {
+  display: inline-block;
+  -webkit-text-fill-color: rgba(167,139,250,0.9);
+  animation: fvBlink 0.75s step-end infinite;
+}
+@keyframes fvBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.fv-dismiss {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; letter-spacing: 2px;
+  color: rgba(255,255,255,0.28); text-transform: uppercase;
+  animation: fvDismissIn 0.5s ease 2.8s both;
+}
+@keyframes fvDismissIn { from { opacity: 0; } to { opacity: 1; } }
 </style>
 </head>
 <body>
@@ -1808,7 +1876,6 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
       </svg>
       <div class="logo-text">
         <div class="logo-name">FindFilm<span class="logo-ai">.ai</span></div>
-        <div class="logo-motto">find your movie using AI</div>
       </div>
     </a>
 
@@ -1823,6 +1890,12 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
       <svg class="search-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
       </svg>
+      <button class="search-mic-btn" id="searchMicBtn" onclick="toggleDesktopVoice()" aria-label="Voice search">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="9" y="2" width="6" height="12" rx="3"/>
+          <path d="M5 11a7 7 0 0 0 14 0M12 19v3M9 22h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+        </svg>
+      </button>
     </div>
 
     <div class="header-btns">
@@ -1834,7 +1907,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
       </button>
       <button class="btn-random" onclick="randomMovie()">
         <svg class="rnd-spark" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
-        <span data-i18n="btn.random">Random</span>
+        <span data-i18n="btn.random">RandomAI</span>
       </button>
       <div class="lang-switch" id="langSwitch">
         <button class="lang-btn" id="langBtn" onclick="toggleLangMenu(event)"
@@ -1863,6 +1936,29 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
     </div>
   </div>
 </header>
+
+<!-- ════════════ FIRST-VISIT AI INTRO ════════════ -->
+<div class="fv-overlay" id="fvOverlay">
+  <div class="fv-content">
+    <div class="fv-logo-mark">
+      <svg width="72" height="72" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="fvLogoG" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#7C3AED"/>
+            <stop offset="100%" stop-color="#22D3EE"/>
+          </linearGradient>
+        </defs>
+        <path d="M7 6 L7 30 M7 6 L24 6 M7 17 L19 17"
+              stroke="url(#fvLogoG)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M19 20.5 L30 25.5 L19 30.5 Z" fill="url(#fvLogoG)"/>
+      </svg>
+    </div>
+    <div class="fv-text">
+      <span id="fvTyped"></span><span class="fv-cursor">|</span>
+    </div>
+    <div class="fv-dismiss" data-i18n="fv.skip">Tap anywhere to continue</div>
+  </div>
+</div>
 
 <!-- ════════════ MOBILE SEARCH OVERLAY ════════════ -->
 <div class="mob-search-overlay" id="mobSearchOverlay">
@@ -2291,7 +2387,7 @@ const TRANSLATIONS = {
     'share.lookingDevices': 'Looking for devices…',
     'share.castConnected':  'Connected to TV',
     'share.castNone':       'No devices found',
-    'btn.random':           'Random',
+    'btn.random':           'RandomAI',
     'ai.searching':         '✦ Searching for "{q}"…',
     'ai.found':             '✦ AI found {n} match for "{q}"',
     'ai.foundPlural':       '✦ AI found {n} matches for "{q}"',
@@ -2307,6 +2403,14 @@ const TRANSLATIONS = {
     'search.chips.family':       'Family film',
     'search.chips.trueStory':    'True story',
     'search.chips.action':       'Action',
+    'modal.reviewSuccess': '✓ Review posted!',
+    'time.justNow':        'just now',
+    'time.minsAgo':        '{n}m ago',
+    'time.hoursAgo':       '{n}h ago',
+    'time.daysAgo':        '{n}d ago',
+    'time.monthsAgo':      '{n}mo ago',
+    'time.yearsAgo':       '{n}y ago',
+    'fv.skip':             'Tap anywhere to continue',
   },
   es: {
     'nav.movies':           'Películas',
@@ -2363,7 +2467,7 @@ const TRANSLATIONS = {
     'share.lookingDevices': 'Buscando dispositivos…',
     'share.castConnected':  'Conectado al TV',
     'share.castNone':       'No se encontraron dispositivos',
-    'btn.random':           'Aleatorio',
+    'btn.random':           'RandomAI',
     'ai.searching':         '✦ Buscando "{q}"…',
     'ai.found':             '✦ La IA encontró {n} resultado para "{q}"',
     'ai.foundPlural':       '✦ La IA encontró {n} resultados para "{q}"',
@@ -2379,6 +2483,14 @@ const TRANSLATIONS = {
     'search.chips.family':       'Película familiar',
     'search.chips.trueStory':    'Historia real',
     'search.chips.action':       'Acción',
+    'modal.reviewSuccess': '✓ ¡Reseña publicada!',
+    'time.justNow':        'ahora mismo',
+    'time.minsAgo':        'hace {n}m',
+    'time.hoursAgo':       'hace {n}h',
+    'time.daysAgo':        'hace {n}d',
+    'time.monthsAgo':      'hace {n}mes',
+    'time.yearsAgo':       'hace {n}año',
+    'fv.skip':             'Toca para continuar',
   },
   fr: {
     'nav.movies':           'Films',
@@ -2435,7 +2547,7 @@ const TRANSLATIONS = {
     'share.lookingDevices': 'Recherche de dispositifs…',
     'share.castConnected':  'Connecté à la TV',
     'share.castNone':       'Aucun dispositif trouvé',
-    'btn.random':           'Aléatoire',
+    'btn.random':           'RandomAI',
     'ai.searching':         '✦ Recherche de "{q}"…',
     'ai.found':             '✦ L\'IA a trouvé {n} résultat pour "{q}"',
     'ai.foundPlural':       '✦ L\'IA a trouvé {n} résultats pour "{q}"',
@@ -2451,6 +2563,14 @@ const TRANSLATIONS = {
     'search.chips.family':       'Film familial',
     'search.chips.trueStory':    'Histoire vraie',
     'search.chips.action':       'Action',
+    'modal.reviewSuccess': '✓ Avis publié !',
+    'time.justNow':        'à l\'instant',
+    'time.minsAgo':        'il y a {n}min',
+    'time.hoursAgo':       'il y a {n}h',
+    'time.daysAgo':        'il y a {n}j',
+    'time.monthsAgo':      'il y a {n}mois',
+    'time.yearsAgo':       'il y a {n}ans',
+    'fv.skip':             'Appuyez pour continuer',
   },
   zh: {
     'nav.movies':           '电影',
@@ -2507,7 +2627,7 @@ const TRANSLATIONS = {
     'share.lookingDevices': '正在搜索设备…',
     'share.castConnected':  '已连接到电视',
     'share.castNone':       '未找到设备',
-    'btn.random':           '随机',
+    'btn.random':           'RandomAI',
     'ai.searching':         '✦ 正在搜索「{q}」…',
     'ai.found':             '✦ AI 为「{q}」找到 {n} 个结果',
     'ai.foundPlural':       '✦ AI 为「{q}」找到 {n} 个结果',
@@ -2523,6 +2643,14 @@ const TRANSLATIONS = {
     'search.chips.family':       '家庭影片',
     'search.chips.trueStory':    '真实故事',
     'search.chips.action':       '动作片',
+    'modal.reviewSuccess': '✓ 评价已发布！',
+    'time.justNow':        '刚刚',
+    'time.minsAgo':        '{n}分钟前',
+    'time.hoursAgo':       '{n}小时前',
+    'time.daysAgo':        '{n}天前',
+    'time.monthsAgo':      '{n}月前',
+    'time.yearsAgo':       '{n}年前',
+    'fv.skip':             '点击继续',
   },
   ar: {
     'nav.movies':           'أفلام',
@@ -2579,7 +2707,7 @@ const TRANSLATIONS = {
     'share.lookingDevices': 'جارٍ البحث عن أجهزة…',
     'share.castConnected':  'متصل بالتلفاز',
     'share.castNone':       'لم يتم العثور على أجهزة',
-    'btn.random':           'عشوائي',
+    'btn.random':           'RandomAI',
     'ai.searching':         '✦ جاري البحث عن "{q}"…',
     'ai.found':             '✦ وجد الذكاء الاصطناعي {n} نتيجة لـ "{q}"',
     'ai.foundPlural':       '✦ وجد الذكاء الاصطناعي {n} نتائج لـ "{q}"',
@@ -2595,6 +2723,14 @@ const TRANSLATIONS = {
     'search.chips.family':       'فيلم عائلي',
     'search.chips.trueStory':    'قصة حقيقية',
     'search.chips.action':       'أكشن',
+    'modal.reviewSuccess': '✓ تم نشر المراجعة!',
+    'time.justNow':        'الآن',
+    'time.minsAgo':        'منذ {n}د',
+    'time.hoursAgo':       'منذ {n}س',
+    'time.daysAgo':        'منذ {n}أيام',
+    'time.monthsAgo':      'منذ {n}أشهر',
+    'time.yearsAgo':       'منذ {n}سنة',
+    'fv.skip':             'انقر للمتابعة',
   },
   uk: {
     'nav.movies':           'Фільми',
@@ -2651,7 +2787,7 @@ const TRANSLATIONS = {
     'share.lookingDevices': 'Пошук пристроїв…',
     'share.castConnected':  'Підключено до TV',
     'share.castNone':       'Пристроїв не знайдено',
-    'btn.random':           'Випадковий',
+    'btn.random':           'RandomAI',
     'ai.searching':         '✦ Пошук "{q}"…',
     'ai.found':             '✦ ШІ знайшов {n} результат для "{q}"',
     'ai.foundPlural':       '✦ ШІ знайшов {n} результати для "{q}"',
@@ -2667,6 +2803,14 @@ const TRANSLATIONS = {
     'search.chips.family':       'Сімейне кіно',
     'search.chips.trueStory':    'Реальна історія',
     'search.chips.action':       'Бойовик',
+    'modal.reviewSuccess': '✓ Відгук опубліковано!',
+    'time.justNow':        'щойно',
+    'time.minsAgo':        '{n}хв тому',
+    'time.hoursAgo':       '{n}год тому',
+    'time.daysAgo':        '{n}д тому',
+    'time.monthsAgo':      '{n}міс тому',
+    'time.yearsAgo':       '{n}р тому',
+    'fv.skip':             'Натисніть будь-де',
   },
 };
 
@@ -2719,6 +2863,14 @@ function applyTranslations() {
   if (typeof ACTIVE_MOVIE !== 'undefined' && ACTIVE_MOVIE?.desc) {
     refreshDescTranslation(ACTIVE_MOVIE);
   }
+  // Localize country filter options using Intl.DisplayNames
+  try {
+    const _i18nLocale = { en:'en', es:'es', fr:'fr', zh:'zh', ar:'ar', uk:'uk' };
+    const dn = new Intl.DisplayNames([_i18nLocale[CURRENT_LANG] || 'en'], { type: 'region' });
+    document.querySelectorAll('#fCountry option[value]').forEach(opt => {
+      if (opt.value) { try { opt.textContent = dn.of(opt.value) || opt.textContent; } catch {} }
+    });
+  } catch {}
 }
 
 function switchLang(code) {
@@ -4366,7 +4518,11 @@ function getReviews(tmdbId) {
   } catch { return []; }
 }
 function saveReviews(tmdbId, reviews) {
-  localStorage.setItem(`rk_rev_${tmdbId}`, JSON.stringify(reviews));
+  try {
+    localStorage.setItem(`rk_rev_${tmdbId}`, JSON.stringify(reviews));
+  } catch (e) {
+    console.warn('[reviews] localStorage write failed:', e.message);
+  }
 }
 
 function calcLocalRating(tmdbId) {
@@ -4380,16 +4536,16 @@ function timeAgo(isoStr) {
   if (!isoStr) return '';
   const diff = Date.now() - new Date(isoStr).getTime();
   const s = Math.floor(diff / 1000);
-  if (s < 60)  return 'just now';
+  if (s < 60)  return t('time.justNow');
   const m = Math.floor(s / 60);
-  if (m < 60)  return `${m}m ago`;
+  if (m < 60)  return t('time.minsAgo',   { n: m });
   const h = Math.floor(m / 60);
-  if (h < 24)  return `${h}h ago`;
+  if (h < 24)  return t('time.hoursAgo',  { n: h });
   const d = Math.floor(h / 24);
-  if (d < 30)  return `${d} day${d===1?'':'s'} ago`;
+  if (d < 30)  return t('time.daysAgo',   { n: d });
   const mo = Math.floor(d / 30);
-  if (mo < 12) return `${mo} mo ago`;
-  return `${Math.floor(mo/12)}y ago`;
+  if (mo < 12) return t('time.monthsAgo', { n: mo });
+  return t('time.yearsAgo', { n: Math.floor(mo / 12) });
 }
 
 function renderReviews(tmdbId) {
@@ -4460,7 +4616,7 @@ function submitReview() {
   refreshModalRatings(ACTIVE_MOVIE); // refresh to show updated FindFilm rating badge
   const suc = document.getElementById('reviewSuccess');
   document.getElementById('reviewSubmit').disabled = true;
-  suc.textContent = '✓ Review posted — thank you!';
+  suc.textContent = t('modal.reviewSuccess');
   suc.classList.add('show');
   setTimeout(resetReviewCompose, 2200);
 }
@@ -4751,10 +4907,14 @@ function stopMobPlaceholder() {
 // ─── VOICE SEARCH ──────────────────────────────────
 let _recognition = null, _isListening = false;
 
-// Detect speech support once; show mic button only if supported
+// Detect speech support once; show mic buttons only if supported
 (function detectSpeech() {
   if (window.SpeechRecognition || window.webkitSpeechRecognition) {
     document.getElementById('mobSearchOverlay').classList.add('speech-ok');
+    const sw = document.getElementById('searchWrap');
+    if (sw) sw.classList.add('has-mic');
+    const dm = document.getElementById('searchMicBtn');
+    if (dm) dm.style.display = 'flex';
   }
 })();
 
@@ -4814,6 +4974,56 @@ function toggleVoiceSearch() {
   } catch(e) {
     _stopListening();
     startMobPlaceholder();
+  }
+}
+
+function toggleDesktopVoice() {
+  if (_isListening) { if (_recognition) _recognition.stop(); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+
+  const _LANG_BCP47 = { en:'en-US', es:'es-ES', fr:'fr-FR', zh:'zh-CN', ar:'ar-SA', uk:'uk-UA' };
+  _recognition = new SR();
+  _recognition.lang = _LANG_BCP47[CURRENT_LANG] || navigator.language || 'en-US';
+  _recognition.interimResults = true;
+  _recognition.maxAlternatives = 1;
+  _recognition.continuous = false;
+
+  const micBtn = document.getElementById('searchMicBtn');
+  const inp    = document.getElementById('searchInput');
+
+  _recognition.onstart = () => {
+    _isListening = true;
+    if (micBtn) micBtn.classList.add('listening');
+    if (inp)    inp.placeholder = 'Listening…';
+  };
+  _recognition.onresult = e => {
+    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+    if (inp) {
+      inp.value = transcript;
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  };
+  _recognition.onend = () => {
+    _isListening = false;
+    if (micBtn) micBtn.classList.remove('listening');
+    if (inp && !inp.value.trim()) {
+      inp.placeholder = t('search.placeholder');
+    }
+  };
+  _recognition.onerror = e => {
+    _isListening = false;
+    if (micBtn) micBtn.classList.remove('listening');
+    if (inp) {
+      inp.placeholder = e.error === 'not-allowed'
+        ? 'Mic permission denied — type instead'
+        : t('search.placeholder');
+    }
+  };
+
+  try { _recognition.start(); } catch(e) {
+    _isListening = false;
+    if (micBtn) micBtn.classList.remove('listening');
   }
 }
 
@@ -4898,6 +5108,38 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
 });
 
 /* ═══════════════════════════════════
+   FIRST-VISIT AI INTRO
+═══════════════════════════════════ */
+function initFirstVisit() {
+  const overlay = document.getElementById('fvOverlay');
+  if (!overlay) return;
+  if (localStorage.getItem('rk_visited')) {
+    overlay.remove();
+    return;
+  }
+  // Typewriter animation for the tagline
+  const text  = 'find your movie using AI';
+  const typed = document.getElementById('fvTyped');
+  let i = 0;
+  const type = () => {
+    if (!typed) return;
+    typed.textContent = text.slice(0, i);
+    i++;
+    if (i <= text.length) setTimeout(type, 62);
+  };
+  setTimeout(type, 650); // slight delay after logo animation
+  overlay.addEventListener('click', dismissFirstVisit);
+}
+
+function dismissFirstVisit() {
+  localStorage.setItem('rk_visited', '1');
+  const overlay = document.getElementById('fvOverlay');
+  if (!overlay) return;
+  overlay.classList.add('hidden');
+  setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 700);
+}
+
+/* ═══════════════════════════════════
    INIT
 ═══════════════════════════════════ */
 async function init() {
@@ -4937,6 +5179,7 @@ async function init() {
   }
 }
 init();
+initFirstVisit();
 </script>
 <!-- Skimlinks affiliate tracking — loads after all app JS -->
 <script type="text/javascript" src="https://s.skimresources.com/js/304950X1793141.skimlinks.js" async></script>
