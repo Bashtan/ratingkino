@@ -1282,27 +1282,39 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 
 /* ─── RESPONSIVE — 768px (tablets / large phones) */
 @media (max-width: 768px) {
-  /* Compact header */
-  header { height: 56px; }
-  .header-inner { height: 56px; padding: 0 14px; }
+  /* Two-row header: [logo · btns] / [search — full width] */
+  header { height: auto; }
+  .header-inner {
+    flex-wrap: wrap;
+    height: auto;
+    align-items: center;
+    padding: 8px 14px;
+    gap: 8px 12px;
+  }
 
-  /* Hide desktop search + RANDOM in header */
-  .search-wrap { display: none; }
-  .btn-random  { display: none; }
+  /* Search bar: always visible, pushed to its own second row */
+  .search-wrap {
+    display: flex;
+    order: 10;
+    width: 100%;
+    max-width: none;
+    flex: 0 0 100%;
+    margin: 0;
+  }
 
-  /* Show mobile controls */
-  .btn-search-toggle    { display: flex; }
-  .fab-random           { display: flex; }
-  .mob-search-overlay   { display: flex; } /* full-screen search overlay */
+  /* Ensure search input fills the full width of its row */
+  .search-input { width: 100%; }
 
-  /* Search-open mode (legacy inline — desktop fallback kept for safety) */
-  .header-inner.search-open .logo               { display: none; }
-  .header-inner.search-open .search-wrap        { display: flex; max-width: none; flex: 1; }
-  .header-inner.search-open .btn-search-toggle  { display: none; }
-  .header-inner.search-open .btn-search-back    { display: flex; }
+  /* Hide header RandomAI (FAB handles it on mobile) and overlay toggle */
+  .btn-random         { display: none; }
+  .btn-search-toggle  { display: none; }
+  .mob-search-overlay { display: none; }
 
-  /* Shift sticky filter bar */
-  .filters-bar { top: 56px; }
+  /* Keep floating random button */
+  .fab-random { display: flex; }
+
+  /* Shift sticky filter bar to clear the taller two-row header (~112px) */
+  .filters-bar { top: 112px; }
 
   /* Larger touch targets for pills / selects / sort */
   .gpill      { height: 38px; padding: 0 14px; font-size: 13px; }
@@ -1365,6 +1377,8 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 
 /* ─── 430px (Plus / Max phones) ────────────── */
 @media (max-width: 430px) {
+  /* Hide language label — globe icon + chevron is enough on small row-1 */
+  .lang-btn-name { display: none; }
   .hero-title   { font-size: 18px; }
   .movie-grid   { gap: 8px; }
   .filter-row-1 { padding: 7px 12px 0; }
@@ -1374,7 +1388,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 
 /* ─── 375px (standard iPhone) ──────────────── */
 @media (max-width: 375px) {
-  .header-inner  { padding: 0 12px; }
+  .header-inner  { padding: 8px 12px; }  /* preserve vertical padding from 2-row layout */
   .logo-name     { font-size: 15px; }
   .logo-icon     { width: 28px; height: 28px; }
   .logo-motto    { display: none; }
