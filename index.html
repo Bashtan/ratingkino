@@ -1788,6 +1788,199 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .site-footer a:hover { color: rgba(255,255,255,0.6); text-decoration: underline; }
 
+/* ─── Watchlist header button ──────────────────────── */
+.btn-watchlist {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  background: rgba(124,58,237,0.1);
+  border: 1.5px solid rgba(124,58,237,0.25);
+  border-radius: 9px;
+  color: rgba(167,139,250,0.7);
+  cursor: pointer; flex-shrink: 0;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.btn-watchlist:hover {
+  background: rgba(124,58,237,0.22); color: #c4b5fd;
+  border-color: rgba(124,58,237,0.5);
+}
+.wl-badge {
+  position: absolute; top: -5px; right: -5px;
+  min-width: 16px; height: 16px;
+  background: linear-gradient(135deg, #7C3AED, #22D3EE);
+  border-radius: 8px; padding: 0 4px;
+  font-size: 9px; font-weight: 800; font-family: 'Montserrat',sans-serif;
+  color: #fff; display: none; align-items: center; justify-content: center;
+  box-shadow: 0 0 8px rgba(124,58,237,0.55);
+}
+.wl-badge.has-items { display: flex; }
+
+/* ─── Card bookmark button ──────────────────────────── */
+.card-wl-btn {
+  position: absolute; top: 7px; left: 7px; z-index: 3;
+  width: 28px; height: 28px;
+  background: rgba(10,0,26,0.72);
+  border: 1px solid rgba(124,58,237,0.3);
+  border-radius: 7px;
+  color: rgba(167,139,250,0.55);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  backdrop-filter: blur(6px);
+  transition: opacity 0.18s, color 0.18s, background 0.18s, transform 0.2s;
+}
+.movie-card:hover .card-wl-btn { opacity: 1; }
+.card-wl-btn.saved {
+  opacity: 1; color: #a78bfa;
+  background: rgba(124,58,237,0.28);
+  border-color: rgba(124,58,237,0.6);
+}
+@keyframes wlPulse {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.38); }
+  100% { transform: scale(1); }
+}
+.card-wl-btn.pulse { animation: wlPulse 0.38s cubic-bezier(0.34,1.56,0.64,1); }
+
+/* ─── Modal watchlist button ────────────────────────── */
+.btn-wl-modal {
+  display: flex; align-items: center; gap: 6px;
+  height: 38px; padding: 0 14px;
+  background: rgba(124,58,237,0.1);
+  border: 1.5px solid rgba(124,58,237,0.3);
+  border-radius: 9px; cursor: pointer;
+  color: rgba(167,139,250,0.85);
+  font-weight: 700; font-size: 12px; font-family: 'Montserrat',sans-serif;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.btn-wl-modal:hover { background: rgba(124,58,237,0.22); color: #c4b5fd; border-color: rgba(124,58,237,0.55); }
+.btn-wl-modal.saved { background: rgba(124,58,237,0.22); color: #a78bfa; border-color: rgba(124,58,237,0.55); }
+
+/* ─── Watchlist Backdrop ────────────────────────────── */
+.wl-backdrop {
+  position: fixed; inset: 0; z-index: 9700;
+  background: rgba(0,0,8,0.55);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.wl-backdrop.open { opacity: 1; pointer-events: auto; }
+
+/* ─── Watchlist Drawer ──────────────────────────────── */
+.wl-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 9800;
+  width: min(400px, 92vw);
+  background: rgba(10,0,28,0.9);
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  border-left: 1px solid rgba(124,58,237,0.35);
+  box-shadow: -8px 0 48px rgba(124,58,237,0.14);
+  display: flex; flex-direction: column;
+  transform: translateX(110%);
+  transition: transform 0.38s cubic-bezier(0.34,1.1,0.64,1);
+}
+.wl-drawer.open { transform: translateX(0); }
+
+.wl-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid rgba(124,58,237,0.18);
+  flex-shrink: 0;
+}
+.wl-header-icon {
+  width: 32px; height: 32px; flex-shrink: 0;
+  background: linear-gradient(135deg,#7C3AED,#22D3EE);
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+}
+.wl-title {
+  font-family: 'Montserrat',sans-serif; font-weight: 800;
+  font-size: 15px; color: #fff; flex: 1; letter-spacing: -0.3px;
+}
+.wl-count-chip {
+  font-family: 'DM Mono',monospace; font-size: 10px; font-weight: 600;
+  background: rgba(124,58,237,0.18);
+  border: 1px solid rgba(124,58,237,0.32);
+  border-radius: 20px; padding: 3px 9px; color: #a78bfa;
+}
+.wl-close {
+  width: 28px; height: 28px; flex-shrink: 0;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 50%; cursor: pointer;
+  color: rgba(255,255,255,0.4);
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+.wl-close:hover { background: rgba(255,255,255,0.14); color: #fff; }
+
+.wl-body {
+  flex: 1; overflow-y: auto; padding: 8px 0;
+  scrollbar-width: thin; scrollbar-color: rgba(124,58,237,0.28) transparent;
+}
+.wl-body::-webkit-scrollbar { width: 4px; }
+.wl-body::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.28); border-radius: 2px; }
+
+.wl-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 16px; padding: 64px 24px; text-align: center;
+}
+.wl-empty-icon {
+  width: 64px; height: 64px;
+  background: rgba(124,58,237,0.1);
+  border: 1px solid rgba(124,58,237,0.2);
+  border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(124,58,237,0.5);
+}
+.wl-empty-title { font-family:'Montserrat',sans-serif; font-weight:800; font-size:15px; color:#fff; }
+.wl-empty-sub { font-size:12.5px; color:rgba(255,255,255,0.42); line-height:1.7; max-width:220px; }
+
+.wl-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px; cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.15s;
+  animation: wlItemIn 0.3s ease both;
+}
+@keyframes wlItemIn { from { opacity:0; transform:translateX(14px); } to { opacity:1; transform:none; } }
+.wl-item:hover { background: rgba(124,58,237,0.08); }
+.wl-poster {
+  width: 44px; height: 62px; border-radius: 6px;
+  overflow: hidden; flex-shrink: 0;
+  background: rgba(124,58,237,0.12);
+}
+.wl-poster img { width:100%; height:100%; object-fit:cover; }
+.wl-poster-ph { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:22px; }
+.wl-item-body { flex:1; min-width:0; }
+.wl-item-title { font-weight:700; font-size:13px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.wl-item-meta { font-size:11px; color:rgba(255,255,255,0.4); margin-top:3px; }
+.wl-item-remove {
+  width:26px; height:26px; flex-shrink:0;
+  background:none; border:none; cursor:pointer;
+  color:rgba(255,255,255,0.22);
+  display:flex; align-items:center; justify-content:center;
+  border-radius:6px;
+  transition: background 0.2s, color 0.2s;
+}
+.wl-item-remove:hover { background:rgba(239,68,68,0.15); color:#f87171; }
+
+.wl-footer {
+  padding: 14px 16px; flex-shrink: 0;
+  border-top: 1px solid rgba(124,58,237,0.14);
+}
+.wl-clear-btn {
+  width:100%; height:36px;
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 8px; cursor: pointer;
+  color: rgba(248,113,113,0.65);
+  font-size:12px; font-weight:600; font-family:'Montserrat',sans-serif;
+  transition: background 0.2s, color 0.2s;
+}
+.wl-clear-btn:hover { background: rgba(239,68,68,0.18); color: #f87171; }
+
 /* ─── Desktop voice search mic ──────────────────────── */
 .search-mic-btn {
   position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
@@ -1954,6 +2147,12 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
       <button class="btn-random" onclick="randomMovie()">
         <svg class="rnd-spark" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
         <span data-i18n="btn.random">RandomAI</span>
+      </button>
+      <button class="btn-watchlist" onclick="openWatchlist()" aria-label="AI Watchlist">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span class="wl-badge" id="wlBadge"></span>
       </button>
       <div class="lang-switch" id="langSwitch">
         <button class="lang-btn" id="langBtn" onclick="toggleLangMenu(event)"
@@ -2252,6 +2451,10 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
             Prime
           </a>
           <button class="btn-shr" onclick="openShare()" data-i18n="modal.share">↗ Share</button>
+          <button class="btn-wl-modal" id="btnWatchlist" onclick="toggleWatchlistModal()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            <span id="btnWatchlistText" data-i18n="modal.watchlist">+ Watchlist</span>
+          </button>
         </div>
       </div>
     </div>
@@ -2425,6 +2628,8 @@ const TRANSLATIONS = {
     'modal.trailer':        '▶ Trailer',
     'modal.hideTrailer':    '▼ Hide Trailer',
     'modal.share':          '↗ Share',
+    'modal.watchlist':      '+ Watchlist',
+    'wl.clear':             'Clear all',
     'share.title':          'Share This Film',
     'share.device':         'Share via Device',
     'share.copyLink':       'Copy Link',
@@ -2505,6 +2710,8 @@ const TRANSLATIONS = {
     'modal.trailer':        '▶ Tráiler',
     'modal.hideTrailer':    '▼ Ocultar tráiler',
     'modal.share':          '↗ Compartir',
+    'modal.watchlist':      '+ Lista de espera',
+    'wl.clear':             'Borrar todo',
     'share.title':          'Compartir película',
     'share.device':         'Compartir por dispositivo',
     'share.copyLink':       'Copiar enlace',
@@ -2585,6 +2792,8 @@ const TRANSLATIONS = {
     'modal.trailer':        '▶ Bande-annonce',
     'modal.hideTrailer':    '▼ Cacher la bande-annonce',
     'modal.share':          '↗ Partager',
+    'modal.watchlist':      '+ À voir',
+    'wl.clear':             'Tout effacer',
     'share.title':          'Partager ce film',
     'share.device':         "Partager via l'appareil",
     'share.copyLink':       'Copier le lien',
@@ -2665,6 +2874,8 @@ const TRANSLATIONS = {
     'modal.trailer':        '▶ 预告片',
     'modal.hideTrailer':    '▼ 隐藏预告片',
     'modal.share':          '↗ 分享',
+    'modal.watchlist':      '+ 观看列表',
+    'wl.clear':             '清空',
     'share.title':          '分享这部影片',
     'share.device':         '通过设备分享',
     'share.copyLink':       '复制链接',
@@ -2745,6 +2956,8 @@ const TRANSLATIONS = {
     'modal.trailer':        '▶ إعلان',
     'modal.hideTrailer':    '▼ إخفاء الإعلان',
     'modal.share':          '↗ مشاركة',
+    'modal.watchlist':      '+ قائمة المشاهدة',
+    'wl.clear':             'مسح الكل',
     'share.title':          'شارك هذا الفيلم',
     'share.device':         'المشاركة عبر الجهاز',
     'share.copyLink':       'نسخ الرابط',
@@ -2825,6 +3038,8 @@ const TRANSLATIONS = {
     'modal.trailer':        '▶ Трейлер',
     'modal.hideTrailer':    '▼ Сховати трейлер',
     'modal.share':          '↗ Поділитися',
+    'modal.watchlist':      '+ Список перегляду',
+    'wl.clear':             'Очистити',
     'share.title':          'Поділитися фільмом',
     'share.device':         'Поділитися через пристрій',
     'share.copyLink':       'Скопіювати посилання',
@@ -3577,6 +3792,9 @@ function renderCardHTML(m) {
     <div class="movie-poster">
       ${poster}
       ${matchBadge}
+      <button class="card-wl-btn${isWatchlisted(m.id) ? ' saved' : ''}" data-id="${m.id}" onclick="event.stopPropagation();toggleWatchlist(${m.id},this)" aria-label="Add to Watchlist">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      </button>
       <div class="poster-ratings">${tvBadge}${avgBadgeHTML(m)}</div>
       <div class="card-hover-overlay"><span>${t('card.viewDetails')}</span></div>
     </div>
@@ -4304,12 +4522,120 @@ function matchInsight(m, raw) {
   return 'Frequently recommended alongside this title';
 }
 
+// ── AI Watchlist ────────────────────────────────────────────────────────────
+let WATCHLIST = [];
+
+function initWatchlist() {
+  try { WATCHLIST = JSON.parse(localStorage.getItem('rk_watchlist') || '[]'); } catch { WATCHLIST = []; }
+  _updateWLBadge();
+}
+
+function isWatchlisted(id) { return WATCHLIST.includes(id); }
+
+function toggleWatchlist(id, btnEl) {
+  const idx = WATCHLIST.indexOf(id);
+  if (idx === -1) {
+    WATCHLIST.push(id);
+    if (btnEl) { btnEl.classList.add('saved', 'pulse'); setTimeout(() => btnEl && btnEl.classList.remove('pulse'), 500); }
+  } else {
+    WATCHLIST.splice(idx, 1);
+    if (btnEl) btnEl.classList.remove('saved', 'pulse');
+  }
+  try { localStorage.setItem('rk_watchlist', JSON.stringify(WATCHLIST)); } catch {}
+  _updateWLBadge();
+  _updateCardWLBtn(id, idx === -1);
+  _updateModalWLBtn();
+  if (document.getElementById('wlDrawer')?.classList.contains('open')) renderWatchlistDrawer();
+}
+
+function toggleWatchlistModal() {
+  if (!ACTIVE_MOVIE) return;
+  const cardBtn = document.querySelector(`.card-wl-btn[data-id="${ACTIVE_MOVIE.id}"]`);
+  toggleWatchlist(ACTIVE_MOVIE.id, cardBtn);
+}
+
+function _updateWLBadge() {
+  const badge = document.getElementById('wlBadge');
+  if (!badge) return;
+  const n = WATCHLIST.length;
+  badge.textContent = n > 0 ? n : '';
+  badge.closest('.btn-watchlist')?.classList.toggle('has-items', n > 0);
+}
+
+function _updateCardWLBtn(id, saved) {
+  document.querySelectorAll(`.card-wl-btn[data-id="${id}"]`).forEach(btn => btn.classList.toggle('saved', saved));
+}
+
+function _updateModalWLBtn() {
+  const btn = document.getElementById('btnWatchlist');
+  const txt = document.getElementById('btnWatchlistText');
+  if (!btn || !ACTIVE_MOVIE) return;
+  const saved = isWatchlisted(ACTIVE_MOVIE.id);
+  btn.classList.toggle('saved', saved);
+  if (txt) txt.textContent = saved ? '✓ Saved' : t('modal.watchlist');
+}
+
+function openWatchlist() {
+  renderWatchlistDrawer();
+  document.getElementById('wlDrawer')?.classList.add('open');
+  document.getElementById('wlBackdrop')?.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeWatchlist() {
+  document.getElementById('wlDrawer')?.classList.remove('open');
+  document.getElementById('wlBackdrop')?.classList.remove('open');
+  if (!document.getElementById('overlay')?.classList.contains('open')) {
+    document.body.style.overflow = '';
+  }
+}
+
+function renderWatchlistDrawer() {
+  const body = document.getElementById('wlBody');
+  const chip = document.getElementById('wlCountChip');
+  if (!body) return;
+  if (chip) chip.textContent = WATCHLIST.length;
+  if (WATCHLIST.length === 0) {
+    body.innerHTML = `<div class="wl-empty">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.35"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      <p>Your watchlist is empty</p>
+      <span>Tap the bookmark on any movie to save it here</span>
+    </div>`;
+    return;
+  }
+  body.innerHTML = WATCHLIST.map(id => {
+    const m = MOVIES.find(x => x.id === id);
+    if (!m) return '';
+    const posterSrc = m.poster ? `${TIMG_W500}${m.poster}` : '';
+    const poster = posterSrc
+      ? `<img src="${posterSrc}" alt="${esc(m.title)}" style="width:44px;height:66px;object-fit:cover;border-radius:6px" onerror="this.outerHTML='<div style=\\'width:44px;height:66px;background:${m.grad};display:flex;align-items:center;justify-content:center;font-size:1.4rem;border-radius:6px\\'>${m.emoji}</div>'">`
+      : `<div style="width:44px;height:66px;background:${m.grad};display:flex;align-items:center;justify-content:center;font-size:1.4rem;border-radius:6px">${m.emoji}</div>`;
+    return `<div class="wl-item" data-id="${id}" onclick="closeWatchlist();openMovie(${id})">
+      <div class="wl-poster">${poster}</div>
+      <div class="wl-item-info">
+        <div class="wl-item-title">${esc(m.title)}</div>
+        <div class="wl-item-meta">${m.year || ''} · ${esc(m.genre)}</div>
+      </div>
+      <button class="wl-item-remove" onclick="event.stopPropagation();toggleWatchlist(${id},null)" aria-label="Remove">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>`;
+  }).filter(Boolean).join('');
+}
+
+function clearWatchlist() {
+  WATCHLIST.forEach(id => _updateCardWLBtn(id, false));
+  WATCHLIST = [];
+  try { localStorage.setItem('rk_watchlist', '[]'); } catch {}
+  _updateWLBadge();
+  _updateModalWLBtn();
+  renderWatchlistDrawer();
+}
+
+// Backward compat for AIM "save" buttons
 function aimAddWL(id, btn) {
-  try {
-    const wl = JSON.parse(localStorage.getItem('rk_watchlist') || '[]');
-    if (!wl.includes(id)) { wl.push(id); localStorage.setItem('rk_watchlist', JSON.stringify(wl)); }
-    btn.textContent = '✓ Saved'; btn.style.color = '#4ade80';
-  } catch {}
+  toggleWatchlist(id, null);
+  if (btn) { btn.textContent = '✓ Saved'; btn.style.color = '#4ade80'; }
 }
 
 const AIM_SKEL_HTML = `<div class="ai-matches-wrap">
@@ -4432,6 +4758,7 @@ function refreshModalDetails(m) {
   if (amazonBtn) {
     amazonBtn.href = `https://www.amazon.com/s?k=${encodeURIComponent(m.title)}&i=instant-video&tag=findfilm-20`;
   }
+  _updateModalWLBtn();
 }
 
 /* ── Provider URL map ─────────────────────────────────────────
@@ -5264,6 +5591,7 @@ async function init() {
   }
 }
 init();
+initWatchlist();
 initFirstVisit();
 initIOSPrompt();
 </script>
@@ -5321,6 +5649,23 @@ initIOSPrompt();
         <line x1="8" y1="12" x2="16" y2="12"/>
       </svg>
     </div>
+  </div>
+</div>
+
+<!-- AI Watchlist Drawer -->
+<div class="wl-backdrop" id="wlBackdrop" onclick="closeWatchlist()"></div>
+<div class="wl-drawer" id="wlDrawer" role="dialog" aria-label="AI Watchlist">
+  <div class="wl-header">
+    <div class="wl-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      AI Watchlist
+      <span class="wl-count-chip" id="wlCountChip">0</span>
+    </div>
+    <button class="wl-close" onclick="closeWatchlist()" aria-label="Close">✕</button>
+  </div>
+  <div class="wl-body" id="wlBody"></div>
+  <div class="wl-footer">
+    <button class="wl-clear-btn" onclick="clearWatchlist()" data-i18n="wl.clear">Clear all</button>
   </div>
 </div>
 </body>
