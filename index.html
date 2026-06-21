@@ -1847,6 +1847,50 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   animation: fvDismissIn 0.5s ease 2.8s both;
 }
 @keyframes fvDismissIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ─── iOS PWA Install Prompt ─────────────────────── */
+.ios-pwa-prompt {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  z-index: 9500;
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 48px 22px 18px;
+  background: rgba(10,0,26,0.9);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border-top: 1px solid rgba(124,58,237,0.45);
+  box-shadow: 0 -6px 36px rgba(124,58,237,0.18), 0 -1px 0 rgba(124,58,237,0.28);
+  transform: translateY(110%);
+  transition: transform 0.42s cubic-bezier(0.34,1.56,0.64,1);
+}
+.ios-pwa-prompt.visible { transform: translateY(0); }
+.ios-pwa-close {
+  position: absolute; top: 12px; right: 14px;
+  width: 26px; height: 26px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.11);
+  border-radius: 50%;
+  color: rgba(255,255,255,0.45);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s, color 0.2s;
+}
+.ios-pwa-close:hover { background: rgba(255,255,255,0.15); color: #fff; }
+.ios-pwa-icon { flex-shrink: 0; }
+.ios-pwa-body { flex: 1; min-width: 0; }
+.ios-pwa-title {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 800; font-size: 14px; letter-spacing: -0.3px;
+  color: #fff; margin-bottom: 6px;
+}
+.ios-pwa-title span { color: #a78bfa; }
+.ios-pwa-steps {
+  font-size: 12.5px; color: rgba(255,255,255,0.62);
+  display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
+  line-height: 1.5;
+}
+.ios-pwa-steps strong { color: rgba(255,255,255,0.9); font-weight: 600; }
+.ios-pwa-share-icon { color: #22D3EE; flex-shrink: 0; }
+.ios-pwa-add-icon   { color: #a78bfa; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -5108,6 +5152,45 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
 });
 
 /* ═══════════════════════════════════
+   iOS PWA INSTALL PROMPT
+═══════════════════════════════════ */
+function initIOSPrompt() {
+  // Must be iOS (iPhone / iPad / iPod)
+  const ua = navigator.userAgent || '';
+  const isIOS = /iphone|ipad|ipod/i.test(ua);
+  if (!isIOS) return;
+
+  // Must be Safari — exclude Chrome iOS, Firefox iOS, Edge iOS, etc.
+  const isSafari = /safari/i.test(ua) && !/crios|fxios|opios|edgios|gsa/i.test(ua);
+  if (!isSafari) return;
+
+  // Already running as installed PWA — don't prompt
+  const isStandalone = (navigator.standalone === true) ||
+    window.matchMedia('(display-mode: standalone)').matches;
+  if (isStandalone) return;
+
+  // Dismissed recently? (21-day cooldown)
+  const COOLDOWN_MS = 21 * 24 * 60 * 60 * 1000;
+  const dismissed = localStorage.getItem('rk_ios_pwa_dismissed');
+  if (dismissed && (Date.now() - parseInt(dismissed, 10)) < COOLDOWN_MS) return;
+
+  const prompt = document.getElementById('iosPwaPrompt');
+  const closeBtn = document.getElementById('iosPwaClose');
+  if (!prompt || !closeBtn) return;
+
+  // Show after page has settled
+  setTimeout(() => prompt.classList.add('visible'), 3000);
+
+  const dismiss = () => {
+    localStorage.setItem('rk_ios_pwa_dismissed', Date.now().toString());
+    prompt.classList.remove('visible');
+    setTimeout(() => { if (prompt.parentNode) prompt.remove(); }, 500);
+  };
+
+  closeBtn.addEventListener('click', dismiss);
+}
+
+/* ═══════════════════════════════════
    FIRST-VISIT AI INTRO
 ═══════════════════════════════════ */
 function initFirstVisit() {
@@ -5180,6 +5263,7 @@ async function init() {
 }
 init();
 initFirstVisit();
+initIOSPrompt();
 </script>
 <!-- Skimlinks affiliate tracking — loads after all app JS -->
 <script type="text/javascript" src="https://s.skimresources.com/js/304950X1793141.skimlinks.js" async></script>
@@ -5187,5 +5271,55 @@ initFirstVisit();
   As an Amazon Associate, FindFilm.ai earns from qualifying purchases. &nbsp;·&nbsp;
   <a href="https://www.amazon.com" target="_blank" rel="noopener noreferrer">Amazon.com</a>
 </footer>
+
+<!-- ════════════ iOS PWA INSTALL PROMPT ════════════ -->
+<div class="ios-pwa-prompt" id="iosPwaPrompt" role="dialog" aria-labelledby="iosPwaTitle" aria-live="polite">
+  <button class="ios-pwa-close" id="iosPwaClose" aria-label="Dismiss">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+      <path d="M18 6L6 18M6 6l12 12"/>
+    </svg>
+  </button>
+
+  <!-- App icon -->
+  <div class="ios-pwa-icon">
+    <svg width="40" height="40" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="iosG" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#7C3AED"/>
+          <stop offset="100%" stop-color="#22D3EE"/>
+        </linearGradient>
+      </defs>
+      <rect width="36" height="36" rx="9" fill="rgba(124,58,237,0.18)"/>
+      <path d="M7 6L7 30M7 6L24 6M7 17L19 17"
+            stroke="url(#iosG)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M19 20.5L30 25.5L19 30.5Z" fill="url(#iosG)"/>
+    </svg>
+  </div>
+
+  <!-- Body text -->
+  <div class="ios-pwa-body">
+    <div class="ios-pwa-title" id="iosPwaTitle">
+      Install FindFilm<span>.ai</span>
+    </div>
+    <div class="ios-pwa-steps">
+      <span>Tap</span>
+      <!-- Apple Share icon: square with upward arrow -->
+      <svg class="ios-pwa-share-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+        <polyline points="16 6 12 2 8 6"/>
+        <line x1="12" y1="2" x2="12" y2="15"/>
+      </svg>
+      <span>below, then <strong>Add to Home Screen</strong></span>
+      <!-- Apple Add icon: plus in rounded square -->
+      <svg class="ios-pwa-add-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="4"/>
+        <line x1="12" y1="8" x2="12" y2="16"/>
+        <line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+    </div>
+  </div>
+</div>
 </body>
 </html>
