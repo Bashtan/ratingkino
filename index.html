@@ -2060,7 +2060,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 /* ─── iOS PWA Install Prompt ─────────────────────── */
 .ios-pwa-prompt {
   position: fixed; bottom: 0; left: 0; right: 0;
-  z-index: 9500;
+  z-index: 10500;
   display: flex; align-items: center; gap: 14px;
   padding: 16px 48px 22px 18px;
   background: rgba(10,0,26,0.9);
@@ -5577,25 +5577,10 @@ function initIOSPrompt() {
   closeBtn.addEventListener('click', dismiss);
   if (notNow) notNow.addEventListener('click', dismiss);
 
-  // ── 6. Timing: coordinate with fvOverlay ──────────────────────────────────
+  // ── 6. Timing ─────────────────────────────────────────────────────────────
+  // Prompt z-index (10500) is above fvOverlay (10000) so it's always visible.
   const show = () => prompt.classList.add('visible');
-
-  if (debugMode) {
-    // Instant in debug mode
-    setTimeout(show, 400);
-  } else if (localStorage.getItem('rk_visited')) {
-    // Returning visitor: fvOverlay already gone, show after 2.5 s
-    setTimeout(show, 2500);
-  } else {
-    // First visit: fvOverlay (z-index 10000) covers prompt (z-index 9500).
-    // Wait for the ff:fv-dismissed event fired by dismissFirstVisit(),
-    // then show 1.2 s later (after the overlay fade-out completes).
-    // Hard fallback: show after 12 s regardless.
-    let shown = false;
-    const doShow = () => { if (!shown) { shown = true; setTimeout(show, 1200); } };
-    document.addEventListener('ff:fv-dismissed', doShow, { once: true });
-    setTimeout(doShow, 12000);
-  }
+  setTimeout(show, debugMode ? 500 : 3500);
 }
 
 /* ═══════════════════════════════════
