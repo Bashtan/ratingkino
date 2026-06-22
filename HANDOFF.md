@@ -1,16 +1,17 @@
 # RatingKino — Handoff
 
 ## Live Site
-- **Production:** https://ratingkino.com
+- **Production:** https://findfilm.ai (custom domain) — also https://ratingkino.com
 - **Cloudflare Pages fallback:** https://ratingkino.pages.dev
 - **Cloudflare account:** `e8eeb644ca96a2d4cb2a9674ea599e79`
 - **Pages project:** `ratingkino`
+- **GitHub repo:** https://github.com/Bashtan/ratingkino
 
 ---
 
 ## What This Is
 
-Single-file movie discovery platform — one `index.html` (~3700 lines) plus a Cloudflare Pages Function and a daily sync Worker. No build step, no framework, no dependencies.
+Single-file movie discovery platform — one `index.html` (~4000 lines) plus a Cloudflare Pages Function and a daily sync Worker. No build step, no framework, no dependencies.
 
 Users browse movies fetched from KV (pre-enriched nightly) or live TMDB/OMDb, filter by genre/year, search with AI semantic search, open a modal with ratings + trailer + watch providers, and share deep links.
 
@@ -20,13 +21,18 @@ Users browse movies fetched from KV (pre-enriched nightly) or live TMDB/OMDb, fi
 
 ```
 ratingkino/
-├── index.html            ← entire site: CSS + JS + HTML (~3700 lines)
+├── index.html            ← entire site: CSS + JS + HTML (~4000 lines)
+├── sw.js                 ← Service Worker (PWA offline cache + install prompt trigger)
 ├── functions/
 │   └── api/[[path]].js   ← Cloudflare Pages Function (API proxy + KV reader + AI)
 ├── sync-worker.js        ← Cloudflare Worker — nightly data sync (deployed separately)
 ├── sync-worker.toml      ← wrangler config for sync Worker
 ├── wrangler.toml         ← wrangler config for Pages (KV + AI bindings)
-├── assets/               ← static assets (posters cache, icons)
+├── assets/               ← static assets (icons, webmanifest, og-image)
+│   ├── site.webmanifest  ← PWA manifest (display: standalone, start_url: /)
+│   ├── icon-192.png      ← PWA icon 192×192
+│   ├── icon-512.png      ← PWA icon 512×512
+│   └── apple-touch-icon.png  ← 180×180 for iOS home screen
 ├── HANDOFF.md            ← this file
 └── .claude/
     └── launch.json       ← local dev: python3 http.server port 8282
@@ -47,15 +53,53 @@ npx wrangler pages dev . --port 8282   # reads wrangler.toml bindings
 
 The `workerd` process (Cloudflare's local runtime) runs at port 8282 — if it's already running, the Pages Function routes (`/api/*`) will work locally.
 
+To test PWA install prompt debug mode: open `http://localhost:8282#pwa-debug` — bypasses standalone/cooldown guards, shows iOS prompt after 500ms.
+
+---
+
+## Deployment
+
+**Automatic:** git push to `main` triggers a Cloudflare Pages build automatically.
+
+```bash
+git push origin main   # triggers auto-deploy via Cloudflare Pages git integration
+```
+
+**Manual (if git integration is down):**
+```bash
+npx wrangler pages deploy . --project-name ratingkino
+```
+
+**Deploy / update sync Worker:**
+```bash
+npx wrangler deploy --config sync-worker.toml
+```
+
+**Secrets:**
+```bash
+# Pages
+npx wrangler pages secret put TMDB_KEY --project-name ratingkino
+npx wrangler pages secret put OMDB_KEY --project-name ratingkino
+
+# Sync Worker
+npx wrangler secret put TMDB_KEY --name ratingkino-sync
+npx wrangler secret put OMDB_KEY --name ratingkino-sync
+```
+
+**Clean up old deployments after a manual deploy spree:**
+```bash
+npx wrangler pages deployment list --project-name ratingkino
+npx wrangler pages deployment delete <id> --project-name=ratingkino --force
+```
+
 ---
 
 ## Infrastructure
 
 ### Cloudflare Pages — `ratingkino`
-- Deploys automatically on every push to `main`
 - Serves `index.html` + runs `functions/api/[[path]].js`
 - Bindings (wrangler.toml): `MOVIES_CACHE` (KV) + `AI` (Workers AI)
-- Secrets (set via CLI): `TMDB_KEY`, `OMDB_KEY`
+- Secrets: `TMDB_KEY`, `OMDB_KEY`
 
 ### Cloudflare Worker — `ratingkino-sync`
 - Deployed separately: `npx wrangler deploy --config sync-worker.toml`
@@ -66,7 +110,6 @@ The `workerd` process (Cloudflare's local runtime) runs at port 8282 — if it's
 ### KV Namespace — `MOVIES_CACHE`
 - ID: `9b1ddd3fe25446c390304fd3a460606e`
 - Keys: `popular` (100 movies), `new-releases` (~100), `random-pool` (500 lightweight), `last-sync` (timestamp)
-- Populated nightly by `ratingkino-sync`; read by Pages Function at `/api/cache/*`
 
 ---
 
@@ -83,6 +126,57 @@ The `workerd` process (Cloudflare's local runtime) runs at port 8282 — if it's
 | `POST /api/ai-search` | POST | Semantic search via `@cf/meta/llama-3.3-70b-instruct-fp8-fast`; body: `{query}` |
 | `GET /api/tmdb/*` | GET | Proxy to `api.themoviedb.org/3/*` (injects `TMDB_KEY`) |
 | `GET /api/omdb` | GET | Proxy to `www.omdbapi.com` (injects `OMDB_KEY`) |
+
+---
+
+## PWA (Progressive Web App)
+
+The site is fully installable as a PWA on all platforms.
+
+### Architecture
+- **`sw.js`** at origin root — registered in `<head>` with scope `/`
+  - Navigation requests → network-first, cache fallback
+  - Static assets (icons, fonts, manifest) → stale-while-revalidate
+  - External API calls → network-only (never cached)
+- **`assets/site.webmanifest`** — `display: "standalone"`, `start_url: "/"`
+- **Apple meta tags** (required for iOS standalone mode):
+  ```html
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FindFilm">
+  ```
+
+### Install UX
+
+**Mobile (≤768px) — `#mobileInstallBanner`**
+- Full-width top banner above `<header>`, in document flow (not sticky)
+- Dark glass aesthetic: `rgba(13,0,32,0.97)` + `backdrop-filter: blur(20px)` + purple gradient border
+- iOS: banner appears after 1.2s; Install button opens `#iosPwaPrompt` (bottom-sheet with Share instructions)
+- Android: banner appears on `beforeinstallprompt` event; Install button triggers native OS dialog
+- X dismiss: collapses with max-height animation, saves `rk_install_banner_dismissed` timestamp
+- **7-day cooldown**: banner stays hidden until 604,800,000ms after last dismiss
+- Standalone guard: if already installed, banner never shows
+
+**Desktop (>768px) — `#btnInstall` (header button)**
+- Glassmorphism gradient-border button in header nav
+- Gradient text ("Install App"), desktop only — icon-only was removed on mobile
+- Android/Desktop: captured `beforeinstallprompt` stored in `_deferredInstallPrompt`
+- iOS desktop: routes to iOS prompt (unlikely use case but handled)
+- Hidden via `appinstalled` event
+
+**iOS bottom-sheet — `#iosPwaPrompt`**
+- Slide-up panel with step-by-step "Share → Add to Home Screen" instructions
+- Auto-shows after 3.5s on iOS Safari (15-day cooldown: `rk_ios_pwa_dismissed`)
+- Also triggered by: mobile banner Install button, header Install button
+- `z-index: 10500` — above first-visit overlay (z:10000)
+- `#pwa-debug` URL hash bypasses all guards, shows after 500ms (dev tool)
+
+### Key JS functions
+- `initIOSPrompt()` — sets up iOS bottom-sheet, auto-show timer
+- `showIosPwaPrompt()` — global, called from banner + header button
+- `initInstallButton()` — desktop header button; captures `_deferredInstallPrompt`
+- `initMobileInstallBanner()` — mobile banner with 7-day cooldown logic
+- `syncFiltersTop()` — measures header height, sets `filters-bar.style.top` dynamically
 
 ---
 
@@ -159,8 +253,12 @@ avg = Σ(v*w) / Σ(w)   → displayed as ★ X.X
 | `rk_lang` | Current language code (`en`, `es`, `fr`, `zh`, `ar`, `uk`) |
 | `rk_taste_v1` | Taste profile: `{genres:{}, directors:{}, total:0}` |
 | `rk_filters_v1` | Last-used filter state |
+| `rk_visited` | Set to `'1'` after first-visit overlay is dismissed |
+| `rk_watchlist_v1` | AI Watchlist: array of movie objects |
+| `rk_ios_pwa_dismissed` | Timestamp of last iOS PWA bottom-sheet dismiss (15-day cooldown) |
+| `rk_install_banner_dismissed` | Timestamp of last mobile install banner dismiss (7-day cooldown) |
 
-Session storage keys: `rk_tr_{movieId}_{lang}` — cached translated descriptions.
+Session storage: `rk_tr_{movieId}_{lang}` — cached translated descriptions.
 
 ---
 
@@ -180,33 +278,6 @@ Session storage keys: `rk_tr_{movieId}_{lang}` — cached translated description
 
 ---
 
-## Deployment Commands
-
-```bash
-# Pages deploys automatically on git push to main
-git push origin main
-
-# Manual Pages deploy (if needed)
-npx wrangler pages deploy . --project-name ratingkino
-
-# Deploy / update sync Worker
-npx wrangler deploy --config sync-worker.toml
-
-# Set secrets on Pages
-npx wrangler pages secret put TMDB_KEY --project-name ratingkino
-npx wrangler pages secret put OMDB_KEY --project-name ratingkino
-
-# Set secrets on sync Worker
-npx wrangler secret put TMDB_KEY --name ratingkino-sync
-npx wrangler secret put OMDB_KEY --name ratingkino-sync
-
-# Clean up old deployments (run after push, keep only the latest)
-npx wrangler pages deployment list   # find old IDs
-npx wrangler pages deployment delete <id> --project-name=ratingkino --force
-```
-
----
-
 ## Pending / Known Issues
 
 - [ ] **AI description translation quality** — m2m100-1.2b is decent but not GPT-quality. Consider switching to `@cf/meta/llama-3.3-70b-instruct-fp8-fast` for translation if quality is unsatisfactory.
@@ -216,4 +287,6 @@ npx wrangler pages deployment delete <id> --project-name=ratingkino --force
 - [ ] **OMDb rate limit** — free tier is 1000 req/day. Heavy live-browsing traffic will exhaust it. KV cache mitigates this for pre-loaded movies.
 - [ ] **SEO** — `<meta name="description">`, Open Graph tags, and `<link rel="canonical">` are minimal. Expand before a marketing push.
 - [ ] **Sync Worker monitoring** — no alerting if the nightly cron fails. Add a Cloudflare Worker Cron alert or check `/api/cache/status` in a health-check script.
-- [ ] **`www.ratingkino.com` redirect** — add a Cloudflare Redirect Rule for `www` → apex if not already done.
+- [ ] **`www.findfilm.ai` redirect** — verify Cloudflare Redirect Rule for `www` → apex is active.
+- [ ] **Android install banner timing** — `beforeinstallprompt` only fires if the Service Worker is registered and the site meets installability criteria. If the event never fires (e.g. SW install failed), the banner never shows on Android. Monitor via DevTools → Application → Manifest.
+- [ ] **Mobile reviews panel** — on very short viewports the iOS PWA bottom-sheet may clip. Consider reducing content or adding scroll within the sheet.
