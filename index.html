@@ -2100,6 +2100,22 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .ios-pwa-steps strong { color: rgba(255,255,255,0.9); font-weight: 600; }
 .ios-pwa-share-icon { color: #22D3EE; flex-shrink: 0; }
 .ios-pwa-add-icon   { color: #a78bfa; flex-shrink: 0; }
+.ios-pwa-browser-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-family: 'DM Mono', monospace; font-weight: 600;
+  padding: 2px 6px; border-radius: 5px; letter-spacing: 0.4px;
+  background: rgba(124,58,237,0.18);
+  border: 1px solid rgba(124,58,237,0.32);
+  color: #a78bfa; vertical-align: middle; margin-left: 5px;
+}
+.ios-pwa-not-now {
+  display: inline-block; margin-top: 9px;
+  font-size: 11.5px; color: rgba(255,255,255,0.3);
+  background: none; border: none; padding: 0; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 2px;
+  font-family: inherit; transition: color 0.2s;
+}
+.ios-pwa-not-now:hover { color: rgba(255,255,255,0.6); }
 </style>
 </head>
 <body>
@@ -5498,30 +5514,66 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
    iOS PWA INSTALL PROMPT
 ═══════════════════════════════════ */
 function initIOSPrompt() {
-  // Must be iOS (iPhone / iPad / iPod)
   const ua = navigator.userAgent || '';
-  const isIOS = /iphone|ipad|ipod/i.test(ua);
+
+  // ── 1. iOS device check ───────────────────────────────────────────────────
+  const isIOS = /iphone|ipad|ipod/i.test(ua) ||
+    // iPad OS 13+ reports as MacIntel but has touch
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   if (!isIOS) return;
 
-  // Must be Safari — exclude Chrome iOS, Firefox iOS, Edge iOS, etc.
-  const isSafari = /safari/i.test(ua) && !/crios|fxios|opios|edgios|gsa/i.test(ua);
-  if (!isSafari) return;
+  // ── 2. Browser differentiation ────────────────────────────────────────────
+  const isChromeIOS = /crios/i.test(ua);
+  const isSafari    = /safari/i.test(ua) && !/crios|fxios|opios|edgios|gsa/i.test(ua);
+  // Support Safari and Chrome iOS; skip Firefox iOS, Edge iOS, in-app WebViews
+  if (!isSafari && !isChromeIOS) return;
 
-  // Already running as installed PWA — don't prompt
+  // ── 3. Already installed as standalone PWA — never prompt ─────────────────
   const isStandalone = (navigator.standalone === true) ||
     window.matchMedia('(display-mode: standalone)').matches;
   if (isStandalone) return;
 
-  // Dismissed recently? (21-day cooldown)
-  const COOLDOWN_MS = 21 * 24 * 60 * 60 * 1000;
+  // ── 4. 15-day cooldown after dismissal ────────────────────────────────────
+  const COOLDOWN_MS = 15 * 24 * 60 * 60 * 1000;
   const dismissed = localStorage.getItem('rk_ios_pwa_dismissed');
   if (dismissed && (Date.now() - parseInt(dismissed, 10)) < COOLDOWN_MS) return;
 
-  const prompt = document.getElementById('iosPwaPrompt');
+  const prompt   = document.getElementById('iosPwaPrompt');
   const closeBtn = document.getElementById('iosPwaClose');
-  if (!prompt || !closeBtn) return;
+  const stepsEl  = document.getElementById('iosPwaSteps');
+  const notNow   = document.getElementById('iosPwaNotNow');
+  if (!prompt || !closeBtn || !stepsEl) return;
 
-  // Show after page has settled
+  // ── 5. Dynamic instructions per browser ───────────────────────────────────
+  // Shared SVG pieces
+  const shareIcon = `<svg class="ios-pwa-share-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+    <polyline points="16 6 12 2 8 6"/>
+    <line x1="12" y1="2" x2="12" y2="15"/>
+  </svg>`;
+  const addIcon = `<svg class="ios-pwa-add-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="4"/>
+    <line x1="12" y1="8" x2="12" y2="16"/>
+    <line x1="8" y1="12" x2="16" y2="12"/>
+  </svg>`;
+
+  if (isChromeIOS) {
+    // Chrome iOS: share icon lives in the address bar at the top
+    prompt.setAttribute('data-browser', 'chrome');
+    stepsEl.innerHTML =
+      `<span>Tap</span>${shareIcon}` +
+      `<span>in the address bar, then select <strong>Add to Home Screen</strong></span>${addIcon}`;
+  } else {
+    // Safari: share icon is in the bottom toolbar
+    prompt.setAttribute('data-browser', 'safari');
+    stepsEl.innerHTML =
+      `<span>Tap</span>${shareIcon}` +
+      `<span>below, then select <strong>Add to Home Screen</strong></span>${addIcon}`;
+  }
+
+  // ── 6. Show after page settles (3 s) ─────────────────────────────────────
   setTimeout(() => prompt.classList.add('visible'), 3000);
 
   const dismiss = () => {
@@ -5531,6 +5583,7 @@ function initIOSPrompt() {
   };
 
   closeBtn.addEventListener('click', dismiss);
+  if (notNow) notNow.addEventListener('click', dismiss);
 }
 
 /* ═══════════════════════════════════
@@ -5640,29 +5693,13 @@ initIOSPrompt();
     </svg>
   </div>
 
-  <!-- Body text -->
+  <!-- Body text — steps injected dynamically by initIOSPrompt() -->
   <div class="ios-pwa-body">
     <div class="ios-pwa-title" id="iosPwaTitle">
       Install FindFilm<span>.ai</span>
     </div>
-    <div class="ios-pwa-steps">
-      <span>Tap</span>
-      <!-- Apple Share icon: square with upward arrow -->
-      <svg class="ios-pwa-share-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-        <polyline points="16 6 12 2 8 6"/>
-        <line x1="12" y1="2" x2="12" y2="15"/>
-      </svg>
-      <span>below, then <strong>Add to Home Screen</strong></span>
-      <!-- Apple Add icon: plus in rounded square -->
-      <svg class="ios-pwa-add-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="4"/>
-        <line x1="12" y1="8" x2="12" y2="16"/>
-        <line x1="8" y1="12" x2="16" y2="12"/>
-      </svg>
-    </div>
+    <div class="ios-pwa-steps" id="iosPwaSteps"></div>
+    <button class="ios-pwa-not-now" id="iosPwaNotNow">Not now</button>
   </div>
 </div>
 
