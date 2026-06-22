@@ -108,9 +108,9 @@ body {
 /* ─── HEADER ─────────────────────────────────── */
 header {
   position: sticky; top: 0; z-index: 100;
-  background: rgba(13,0,32,0.95);
+  background: rgba(13,0,32,0.97);
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
+  /* no border-bottom: merges visually with .filters-bar into one unified block */
   height: 64px;
 }
 .header-inner {
@@ -149,7 +149,7 @@ header {
   background: linear-gradient(135deg, #7c3aed 0%, #6366f1 45%, #06b6d4 100%);
   background-size: 200% 200%;
   z-index: 0;
-  opacity: 0;
+  opacity: 0.18; /* faint resting ring — makes bar pop even when unfocused */
   transition: opacity 0.35s ease;
   animation: searchRingShift 5s ease-in-out infinite;
 }
@@ -157,26 +157,35 @@ header {
   0%,100% { background-position: 0% 50%; }
   50%      { background-position: 100% 50%; }
 }
+@keyframes installBreath {
+  0%,100% { box-shadow: 0 0 8px rgba(124,58,237,0.5),  0 0 20px rgba(124,58,237,0.25); }
+  50%     { box-shadow: 0 0 18px rgba(6,182,212,0.65), 0 0 36px rgba(6,182,212,0.3); }
+}
 .search-wrap:focus-within::before { opacity: 1; }
 .search-wrap.ai-active::before    { opacity: 0.7; }
 
 .search-input {
   position: relative; z-index: 1;
   width: 100%; height: 44px;
-  background: rgba(13,0,32,0.92);
+  background: rgba(20,5,42,0.88); /* slightly lighter glass vs surrounding dark */
   border: none;
   border-radius: 12px;
   color: var(--text);
   -webkit-text-fill-color: var(--text);
   font-size: 14px; font-family: 'Inter', sans-serif;
   padding: 0 44px 0 40px; outline: none;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05),
+              0 0 0 1px rgba(124,58,237,0.18),
+              0 0 22px rgba(124,58,237,0.12);
   transition: background 0.25s, box-shadow 0.25s;
 }
 .search-input::placeholder { color: rgba(167,139,250,0.55); -webkit-text-fill-color: rgba(167,139,250,0.55); }
 .search-input:focus {
-  background: rgba(13,0,32,0.96);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 32px rgba(99,102,241,0.12);
+  background: rgba(22,6,48,0.96);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08),
+              0 0 0 1px rgba(99,102,241,0.45),
+              0 0 40px rgba(99,102,241,0.28),
+              0 0 80px rgba(6,182,212,0.12);
 }
 .search-input:-webkit-autofill,
 .search-input:-webkit-autofill:hover,
@@ -370,8 +379,8 @@ header {
 .filters-bar {
   position: sticky; top: 64px; z-index: 99;
   background: rgba(13,0,32,0.97);
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border); /* bottom edge of the unified search+filter block */
 }
 
 /* Row 1: content type toggle + genre pills */
@@ -1374,8 +1383,14 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   /* Share panel: full width */
   .share-panel { width: 100%; border-radius: 16px 16px 0 0; }
 
-  /* Install button: icon-only on mobile (text hidden to save row-1 space) */
-  .btn-install.available { padding: 0; width: 38px; height: 38px; justify-content: center; }
+  /* Install button: solid vibrant fill + breathing glow so it reads as "tap me" */
+  .btn-install.available {
+    padding: 0; width: 38px; height: 38px; justify-content: center;
+    background: linear-gradient(135deg, #7C3AED, #06B6D4);
+    border: none;
+    animation: installBreath 2.8s ease-in-out infinite;
+  }
+  .btn-install.available svg path { stroke: #fff; }
   .btn-install-text { display: none; }
 
   /* No tap flash */
