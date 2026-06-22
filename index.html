@@ -2174,6 +2174,15 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .ios-pwa-not-now:hover { color: rgba(255,255,255,0.6); }
 </style>
+<!-- Service Worker registration — scope / covers entire origin -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .catch(() => {}); // silent fail — SW is an enhancement, not a requirement
+  });
+}
+</script>
 </head>
 <body>
 
