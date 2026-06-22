@@ -2094,12 +2094,13 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .ios-pwa-title span { color: #a78bfa; }
 .ios-pwa-steps {
   font-size: 12.5px; color: rgba(255,255,255,0.62);
-  display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
-  line-height: 1.5;
+  line-height: 1.9;
 }
 .ios-pwa-steps strong { color: rgba(255,255,255,0.9); font-weight: 600; }
-.ios-pwa-share-icon { color: #22D3EE; flex-shrink: 0; }
-.ios-pwa-add-icon   { color: #a78bfa; flex-shrink: 0; }
+.ios-pwa-share-icon,
+.ios-pwa-add-icon { display: inline-block; vertical-align: middle; margin: 0 3px; }
+.ios-pwa-share-icon { color: #22D3EE; }
+.ios-pwa-add-icon   { color: #a78bfa; }
 .ios-pwa-browser-tag {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 10px; font-family: 'DM Mono', monospace; font-weight: 600;
@@ -5562,19 +5563,18 @@ function initIOSPrompt() {
   if (isChromeIOS) {
     // Chrome iOS: share icon lives in the address bar at the top
     prompt.setAttribute('data-browser', 'chrome');
-    stepsEl.innerHTML =
-      `<span>Tap</span>${shareIcon}` +
-      `<span>in the address bar, then select <strong>Add to Home Screen</strong></span>${addIcon}`;
+    stepsEl.innerHTML = `Tap ${shareIcon} in the address bar, then select <strong>Add to Home Screen</strong> ${addIcon}`;
   } else {
     // Safari: share icon is in the bottom toolbar
     prompt.setAttribute('data-browser', 'safari');
-    stepsEl.innerHTML =
-      `<span>Tap</span>${shareIcon}` +
-      `<span>below, then select <strong>Add to Home Screen</strong></span>${addIcon}`;
+    stepsEl.innerHTML = `Tap ${shareIcon} below, then select <strong>Add to Home Screen</strong> ${addIcon}`;
   }
 
-  // ── 6. Show after page settles (3 s) ─────────────────────────────────────
-  setTimeout(() => prompt.classList.add('visible'), 3000);
+  // ── 6. Smart delay — wait for fvOverlay on first visit ───────────────────
+  // fvOverlay (z-index 10000) covers the prompt (z-index 9500) on first visit.
+  // 8 s on first visit lets the user interact with the overlay first.
+  const delay = localStorage.getItem('rk_visited') ? 2500 : 8000;
+  setTimeout(() => prompt.classList.add('visible'), delay);
 
   const dismiss = () => {
     localStorage.setItem('rk_ios_pwa_dismissed', Date.now().toString());
