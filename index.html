@@ -5517,27 +5517,29 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
 function initIOSPrompt() {
   const ua = navigator.userAgent || '';
 
+  // ── #pwa-debug hash: bypass ALL guards, show immediately (for testing) ────
+  const debugMode = location.hash === '#pwa-debug';
+
   // ── 1. iOS device check ───────────────────────────────────────────────────
   const isIOS = /iphone|ipad|ipod/i.test(ua) ||
     // iPad OS 13+ reports as MacIntel but has touch
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  if (!isIOS) return;
+  if (!isIOS && !debugMode) return;
 
   // ── 2. Browser differentiation ────────────────────────────────────────────
   const isChromeIOS = /crios/i.test(ua);
   const isSafari    = /safari/i.test(ua) && !/crios|fxios|opios|edgios|gsa/i.test(ua);
-  // Support Safari and Chrome iOS; skip Firefox iOS, Edge iOS, in-app WebViews
-  if (!isSafari && !isChromeIOS) return;
+  if (!isSafari && !isChromeIOS && !debugMode) return;
 
   // ── 3. Already installed as standalone PWA — never prompt ─────────────────
   const isStandalone = (navigator.standalone === true) ||
     window.matchMedia('(display-mode: standalone)').matches;
-  if (isStandalone) return;
+  if (isStandalone && !debugMode) return;
 
   // ── 4. 15-day cooldown after dismissal ────────────────────────────────────
   const COOLDOWN_MS = 15 * 24 * 60 * 60 * 1000;
   const dismissed = localStorage.getItem('rk_ios_pwa_dismissed');
-  if (dismissed && (Date.now() - parseInt(dismissed, 10)) < COOLDOWN_MS) return;
+  if (!debugMode && dismissed && (Date.now() - parseInt(dismissed, 10)) < COOLDOWN_MS) return;
 
   const prompt   = document.getElementById('iosPwaPrompt');
   const closeBtn = document.getElementById('iosPwaClose');
@@ -5546,7 +5548,6 @@ function initIOSPrompt() {
   if (!prompt || !closeBtn || !stepsEl) return;
 
   // ── 5. Dynamic instructions per browser ───────────────────────────────────
-  // Shared SVG pieces
   const shareIcon = `<svg class="ios-pwa-share-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
     <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
@@ -5561,29 +5562,40 @@ function initIOSPrompt() {
   </svg>`;
 
   if (isChromeIOS) {
-    // Chrome iOS: share icon lives in the address bar at the top
     prompt.setAttribute('data-browser', 'chrome');
     stepsEl.innerHTML = `Tap ${shareIcon} in the address bar, then select <strong>Add to Home Screen</strong> ${addIcon}`;
   } else {
-    // Safari: share icon is in the bottom toolbar
     prompt.setAttribute('data-browser', 'safari');
     stepsEl.innerHTML = `Tap ${shareIcon} below, then select <strong>Add to Home Screen</strong> ${addIcon}`;
   }
-
-  // ── 6. Smart delay — wait for fvOverlay on first visit ───────────────────
-  // fvOverlay (z-index 10000) covers the prompt (z-index 9500) on first visit.
-  // 8 s on first visit lets the user interact with the overlay first.
-  const delay = localStorage.getItem('rk_visited') ? 2500 : 8000;
-  setTimeout(() => prompt.classList.add('visible'), delay);
 
   const dismiss = () => {
     localStorage.setItem('rk_ios_pwa_dismissed', Date.now().toString());
     prompt.classList.remove('visible');
     setTimeout(() => { if (prompt.parentNode) prompt.remove(); }, 500);
   };
-
   closeBtn.addEventListener('click', dismiss);
   if (notNow) notNow.addEventListener('click', dismiss);
+
+  // ── 6. Timing: coordinate with fvOverlay ──────────────────────────────────
+  const show = () => prompt.classList.add('visible');
+
+  if (debugMode) {
+    // Instant in debug mode
+    setTimeout(show, 400);
+  } else if (localStorage.getItem('rk_visited')) {
+    // Returning visitor: fvOverlay already gone, show after 2.5 s
+    setTimeout(show, 2500);
+  } else {
+    // First visit: fvOverlay (z-index 10000) covers prompt (z-index 9500).
+    // Wait for the ff:fv-dismissed event fired by dismissFirstVisit(),
+    // then show 1.2 s later (after the overlay fade-out completes).
+    // Hard fallback: show after 12 s regardless.
+    let shown = false;
+    const doShow = () => { if (!shown) { shown = true; setTimeout(show, 1200); } };
+    document.addEventListener('ff:fv-dismissed', doShow, { once: true });
+    setTimeout(doShow, 12000);
+  }
 }
 
 /* ═══════════════════════════════════
@@ -5616,6 +5628,7 @@ function dismissFirstVisit() {
   if (!overlay) return;
   overlay.classList.add('hidden');
   setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 700);
+  document.dispatchEvent(new CustomEvent('ff:fv-dismissed'));
 }
 
 /* ═══════════════════════════════════
