@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "ratingkino-dev",
+      "name": "ratingkino",
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "8282"],
       "port": 8282
