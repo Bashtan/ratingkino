@@ -1374,6 +1374,10 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   /* Share panel: full width */
   .share-panel { width: 100%; border-radius: 16px 16px 0 0; }
 
+  /* Install button: icon-only on mobile (text hidden to save row-1 space) */
+  .btn-install.available { padding: 0; width: 38px; height: 38px; justify-content: center; }
+  .btn-install-text { display: none; }
+
   /* No tap flash */
   .movie-card, .gpill, .ct-btn, .src-btn, .fab-random, .btn-search-toggle {
     -webkit-tap-highlight-color: transparent;
@@ -1834,6 +1838,38 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .wl-badge.has-items { display: flex; }
 
+/* ─── Install App header button ─────────────────────── */
+.btn-install {
+  display: none; /* hidden until JS adds .available */
+  align-items: center; gap: 7px;
+  padding: 7px 13px 7px 10px;
+  border-radius: 9px;
+  /* gradient border via padding-box / border-box trick */
+  background:
+    linear-gradient(rgba(13,0,32,0.72), rgba(13,0,32,0.72)) padding-box,
+    linear-gradient(110deg, rgba(124,58,237,0.9), rgba(6,182,212,0.9)) border-box;
+  border: 1px solid transparent;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: pointer; flex-shrink: 0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12.5px; font-weight: 700; letter-spacing: 0.15px;
+  transition: box-shadow 0.22s, transform 0.15s;
+  white-space: nowrap;
+}
+.btn-install.available { display: flex; }
+.btn-install:hover {
+  box-shadow: 0 0 18px rgba(124,58,237,0.45), 0 0 8px rgba(6,182,212,0.2);
+  transform: translateY(-1px);
+}
+.btn-install:active { transform: translateY(0); }
+.btn-install-text {
+  background: linear-gradient(90deg, #a78bfa, #22d3ee);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 /* ─── Card bookmark button ──────────────────────────── */
 .card-wl-btn {
   position: absolute; top: 7px; left: 7px; z-index: 3;
@@ -2183,6 +2219,18 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
       <button class="btn-random" onclick="randomMovie()">
         <svg class="rnd-spark" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
         <span data-i18n="btn.random">RandomAI</span>
+      </button>
+      <button class="btn-install" id="btnInstall" aria-label="Install App">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <defs>
+            <linearGradient id="instG" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#a78bfa"/>
+              <stop offset="100%" stop-color="#22d3ee"/>
+            </linearGradient>
+          </defs>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="url(#instG)" stroke-width="2.2"/>
+        </svg>
+        <span class="btn-install-text" data-i18n="btn.install">Install App</span>
       </button>
       <button class="btn-watchlist" onclick="openWatchlist()" aria-label="AI Watchlist">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2675,6 +2723,7 @@ const TRANSLATIONS = {
     'share.castConnected':  'Connected to TV',
     'share.castNone':       'No devices found',
     'btn.random':           'RandomAI',
+    'btn.install':          'Install App',
     'ai.searching':         '✦ Searching for "{q}"…',
     'ai.found':             '✦ AI found {n} match for "{q}"',
     'ai.foundPlural':       '✦ AI found {n} matches for "{q}"',
@@ -2757,6 +2806,7 @@ const TRANSLATIONS = {
     'share.castConnected':  'Conectado al TV',
     'share.castNone':       'No se encontraron dispositivos',
     'btn.random':           'RandomAI',
+    'btn.install':          'Instalar',
     'ai.searching':         '✦ Buscando "{q}"…',
     'ai.found':             '✦ La IA encontró {n} resultado para "{q}"',
     'ai.foundPlural':       '✦ La IA encontró {n} resultados para "{q}"',
@@ -2839,6 +2889,7 @@ const TRANSLATIONS = {
     'share.castConnected':  'Connecté à la TV',
     'share.castNone':       'Aucun dispositif trouvé',
     'btn.random':           'RandomAI',
+    'btn.install':          'Installer',
     'ai.searching':         '✦ Recherche de "{q}"…',
     'ai.found':             '✦ L\'IA a trouvé {n} résultat pour "{q}"',
     'ai.foundPlural':       '✦ L\'IA a trouvé {n} résultats pour "{q}"',
@@ -2921,6 +2972,7 @@ const TRANSLATIONS = {
     'share.castConnected':  '已连接到电视',
     'share.castNone':       '未找到设备',
     'btn.random':           'RandomAI',
+    'btn.install':          '安装应用',
     'ai.searching':         '✦ 正在搜索「{q}」…',
     'ai.found':             '✦ AI 为「{q}」找到 {n} 个结果',
     'ai.foundPlural':       '✦ AI 为「{q}」找到 {n} 个结果',
@@ -3003,6 +3055,7 @@ const TRANSLATIONS = {
     'share.castConnected':  'متصل بالتلفاز',
     'share.castNone':       'لم يتم العثور على أجهزة',
     'btn.random':           'RandomAI',
+    'btn.install':          'تثبيت',
     'ai.searching':         '✦ جاري البحث عن "{q}"…',
     'ai.found':             '✦ وجد الذكاء الاصطناعي {n} نتيجة لـ "{q}"',
     'ai.foundPlural':       '✦ وجد الذكاء الاصطناعي {n} نتائج لـ "{q}"',
@@ -3085,6 +3138,7 @@ const TRANSLATIONS = {
     'share.castConnected':  'Підключено до TV',
     'share.castNone':       'Пристроїв не знайдено',
     'btn.random':           'RandomAI',
+    'btn.install':          'Встановити',
     'ai.searching':         '✦ Пошук "{q}"…',
     'ai.found':             '✦ ШІ знайшов {n} результат для "{q}"',
     'ai.foundPlural':       '✦ ШІ знайшов {n} результати для "{q}"',
@@ -4561,6 +4615,9 @@ function matchInsight(m, raw) {
 // ── AI Watchlist ────────────────────────────────────────────────────────────
 let WATCHLIST = [];
 
+// ── Install prompt (Android/Desktop beforeinstallprompt) ─────────────────────
+let _deferredInstallPrompt = null;
+
 function initWatchlist() {
   try { WATCHLIST = JSON.parse(localStorage.getItem('rk_watchlist') || '[]'); } catch { WATCHLIST = []; }
   _updateWLBadge();
@@ -5519,15 +5576,20 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
 /* ═══════════════════════════════════
    iOS PWA INSTALL PROMPT
 ═══════════════════════════════════ */
+// Show the iOS install bottom-bar from anywhere (header button or auto-timer)
+function showIosPwaPrompt() {
+  const p = document.getElementById('iosPwaPrompt');
+  if (p) p.classList.add('visible');
+}
+
 function initIOSPrompt() {
   const ua = navigator.userAgent || '';
 
-  // ── #pwa-debug hash: bypass ALL guards, show immediately (for testing) ────
+  // ── #pwa-debug hash: bypass ALL guards (for testing) ─────────────────────
   const debugMode = location.hash === '#pwa-debug';
 
   // ── 1. iOS device check ───────────────────────────────────────────────────
   const isIOS = /iphone|ipad|ipod/i.test(ua) ||
-    // iPad OS 13+ reports as MacIntel but has touch
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   if (!isIOS && !debugMode) return;
 
@@ -5541,11 +5603,7 @@ function initIOSPrompt() {
     window.matchMedia('(display-mode: standalone)').matches;
   if (isStandalone && !debugMode) return;
 
-  // ── 4. 15-day cooldown after dismissal ────────────────────────────────────
-  const COOLDOWN_MS = 15 * 24 * 60 * 60 * 1000;
-  const dismissed = localStorage.getItem('rk_ios_pwa_dismissed');
-  if (!debugMode && dismissed && (Date.now() - parseInt(dismissed, 10)) < COOLDOWN_MS) return;
-
+  // ── 4. DOM elements ────────────────────────────────────────────────────────
   const prompt   = document.getElementById('iosPwaPrompt');
   const closeBtn = document.getElementById('iosPwaClose');
   const stepsEl  = document.getElementById('iosPwaSteps');
@@ -5553,6 +5611,7 @@ function initIOSPrompt() {
   if (!prompt || !closeBtn || !stepsEl) return;
 
   // ── 5. Dynamic instructions per browser ───────────────────────────────────
+  //    Always inject so header-button triggered show() always has content
   const shareIcon = `<svg class="ios-pwa-share-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
     <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
@@ -5574,18 +5633,67 @@ function initIOSPrompt() {
     stepsEl.innerHTML = `Tap ${shareIcon} below, then select <strong>Add to Home Screen</strong> ${addIcon}`;
   }
 
+  // ── 6. Dismiss handler — keep element in DOM so header button can re-show ─
   const dismiss = () => {
     localStorage.setItem('rk_ios_pwa_dismissed', Date.now().toString());
     prompt.classList.remove('visible');
-    setTimeout(() => { if (prompt.parentNode) prompt.remove(); }, 500);
   };
   closeBtn.addEventListener('click', dismiss);
   if (notNow) notNow.addEventListener('click', dismiss);
 
-  // ── 6. Timing ─────────────────────────────────────────────────────────────
-  // Prompt z-index (10500) is above fvOverlay (10000) so it's always visible.
-  const show = () => prompt.classList.add('visible');
-  setTimeout(show, debugMode ? 500 : 3500);
+  // ── 7. 15-day cooldown blocks auto-show only (header button ignores this) ─
+  const COOLDOWN_MS = 15 * 24 * 60 * 60 * 1000;
+  const dismissed = localStorage.getItem('rk_ios_pwa_dismissed');
+  if (!debugMode && dismissed && (Date.now() - parseInt(dismissed, 10)) < COOLDOWN_MS) return;
+
+  // ── 8. Auto-show after delay ───────────────────────────────────────────────
+  setTimeout(showIosPwaPrompt, debugMode ? 500 : 3500);
+}
+
+/* ═══════════════════════════════════
+   INSTALL BUTTON (header)
+═══════════════════════════════════ */
+function initInstallButton() {
+  const btn = document.getElementById('btnInstall');
+  if (!btn) return;
+
+  // Never show if already running as PWA
+  const isStandalone = (navigator.standalone === true) ||
+    window.matchMedia('(display-mode: standalone)').matches;
+  if (isStandalone) return;
+
+  const ua  = navigator.userAgent || '';
+  const isIOS = /iphone|ipad|ipod/i.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (isIOS) {
+    // Show button; click opens the iOS install bottom-bar
+    btn.classList.add('available');
+    btn.addEventListener('click', showIosPwaPrompt);
+  } else {
+    // Android / Desktop: capture the browser's native install prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      _deferredInstallPrompt = e;
+      btn.classList.add('available');
+    });
+
+    btn.addEventListener('click', async () => {
+      if (!_deferredInstallPrompt) return;
+      _deferredInstallPrompt.prompt();
+      const { outcome } = await _deferredInstallPrompt.userChoice;
+      if (outcome === 'accepted') {
+        btn.classList.remove('available');
+        _deferredInstallPrompt = null;
+      }
+    });
+
+    // Hide once installed
+    window.addEventListener('appinstalled', () => {
+      btn.classList.remove('available');
+      _deferredInstallPrompt = null;
+    });
+  }
 }
 
 /* ═══════════════════════════════════
@@ -5664,6 +5772,7 @@ init();
 initWatchlist();
 initFirstVisit();
 initIOSPrompt();
+initInstallButton();
 </script>
 <!-- Skimlinks affiliate tracking — loads after all app JS -->
 <script type="text/javascript" src="https://s.skimresources.com/js/304950X1793141.skimlinks.js" async></script>
