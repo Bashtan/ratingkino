@@ -2945,7 +2945,7 @@ const TRANSLATIONS = {
     'ai.searching':         '✦ Searching for "{q}"…',
     'ai.found':             '✦ AI found {n} match for "{q}"',
     'ai.foundPlural':       '✦ AI found {n} matches for "{q}"',
-    'search.placeholder':   'Try: dark thriller with a twist…',
+    'search.placeholder':   'Search 240,000 films by title… or ↵ for AI',
     'search.mobileTitle':   'Search movies',
     'search.mobileHint':    'Describe a mood, plot, or vibe',
     'search.sendBtn':       'Search',
@@ -3029,7 +3029,7 @@ const TRANSLATIONS = {
     'ai.searching':         '✦ Buscando "{q}"…',
     'ai.found':             '✦ La IA encontró {n} resultado para "{q}"',
     'ai.foundPlural':       '✦ La IA encontró {n} resultados para "{q}"',
-    'search.placeholder':   'Prueba: thriller oscuro con giro final…',
+    'search.placeholder':   'Buscar 240.000 películas por título… o ↵ para IA',
     'search.mobileTitle':   'Buscar películas',
     'search.mobileHint':    'Describe un ambiente, trama o sensación',
     'search.sendBtn':       'Buscar',
@@ -3113,7 +3113,7 @@ const TRANSLATIONS = {
     'ai.searching':         '✦ Recherche de "{q}"…',
     'ai.found':             '✦ L\'IA a trouvé {n} résultat pour "{q}"',
     'ai.foundPlural':       '✦ L\'IA a trouvé {n} résultats pour "{q}"',
-    'search.placeholder':   'Essayez : thriller sombre avec une fin surprenante…',
+    'search.placeholder':   'Chercher parmi 240 000 films… ou ↵ pour l\'IA',
     'search.mobileTitle':   'Rechercher des films',
     'search.mobileHint':    'Décrivez une ambiance, une intrigue ou une atmosphère',
     'search.sendBtn':       'Rechercher',
@@ -3197,7 +3197,7 @@ const TRANSLATIONS = {
     'ai.searching':         '✦ 正在搜索「{q}」…',
     'ai.found':             '✦ AI 为「{q}」找到 {n} 个结果',
     'ai.foundPlural':       '✦ AI 为「{q}」找到 {n} 个结果',
-    'search.placeholder':   '试试：带有反转结局的黑暗惊悚片…',
+    'search.placeholder':   '搜索24万部电影… 或按↵进行AI搜索',
     'search.mobileTitle':   '搜索电影',
     'search.mobileHint':    '描述一种情绪、情节或氛围',
     'search.sendBtn':       '搜索',
@@ -3281,7 +3281,7 @@ const TRANSLATIONS = {
     'ai.searching':         '✦ جاري البحث عن "{q}"…',
     'ai.found':             '✦ وجد الذكاء الاصطناعي {n} نتيجة لـ "{q}"',
     'ai.foundPlural':       '✦ وجد الذكاء الاصطناعي {n} نتائج لـ "{q}"',
-    'search.placeholder':   'جرب: إثارة مظلمة بنهاية مفاجئة…',
+    'search.placeholder':   'ابحث في 240,000 فيلم بالعنوان… أو ↵ للذكاء الاصطناعي',
     'search.mobileTitle':   'بحث عن أفلام',
     'search.mobileHint':    'صف مزاجاً أو حبكة أو أجواءً',
     'search.sendBtn':       'بحث',
@@ -3365,7 +3365,7 @@ const TRANSLATIONS = {
     'ai.searching':         '✦ Пошук "{q}"…',
     'ai.found':             '✦ ШІ знайшов {n} результат для "{q}"',
     'ai.foundPlural':       '✦ ШІ знайшов {n} результати для "{q}"',
-    'search.placeholder':   'Спробуй: темний трилер з несподіваним фіналом…',
+    'search.placeholder':   'Пошук серед 240 000 фільмів… або ↵ для AI',
     'search.mobileTitle':   'Пошук фільмів',
     'search.mobileHint':    'Опиши настрій, сюжет або атмосферу',
     'search.sendBtn':       'Пошук',
@@ -4336,10 +4336,15 @@ function rotatePlaceholder() {
   const input = document.getElementById('searchInput');
   if (document.activeElement === input || input.value) return;
   aiPlaceholderIdx = (aiPlaceholderIdx + 1) % AI_EXAMPLES.length;
-  input.placeholder = `✦ Try: "${AI_EXAMPLES[aiPlaceholderIdx]}"…`;
+  // Alternate between title-search hint and AI-search hint
+  if (aiPlaceholderIdx % 2 === 0) {
+    input.placeholder = 'Search 240,000 films by title…';
+  } else {
+    input.placeholder = `↵ AI: "${AI_EXAMPLES[aiPlaceholderIdx]}"…`;
+  }
 }
-// Set initial AI placeholder then rotate every 3.5 s
-document.getElementById('searchInput').placeholder = `✦ Try: "${AI_EXAMPLES[0]}"…`;
+// Initial placeholder: title search (primary mode)
+document.getElementById('searchInput').placeholder = 'Search 240,000 films by title…';
 setInterval(rotatePlaceholder, 3500);
 
 /* Show / hide the banner below the count row */
@@ -4637,22 +4642,26 @@ function applyFilters() {
   clearTimeout(AI_SEARCH_TIMER);
   const q = document.getElementById('searchInput').value.trim();
 
-  // ── AI mode: cache is loaded and query is present ──
-  if (q && CACHE_MOVIES.length && CONTENT_TYPE === 'movie') {
-    // Debounce AI call; show icon active state immediately
-    document.getElementById('searchWrap').classList.add('ai-active');
-    AI_SEARCH_TIMER = setTimeout(() => aiSearch(q), 700);
-    return;
-  }
-
   // ── Clear search: restore full cached list ──
   if (!q && AI_SEARCH_ACTIVE) {
     clearAISearch();
     return;
   }
 
-  // ── Normal TMDB keyword search / no cache ──
-  document.getElementById('searchWrap').classList.remove('ai-active');
+  // ── Title search: all 240K TMDB movies ──
+  // Typing always searches the full TMDB database so no title is ever missing.
+  // titleBoostResults() (applied inside loadMovies) guarantees exact/prefix
+  // title matches surface above description/thematic hits.
+  // For semantic / "vibe" search, press Enter — that triggers AI search.
+  if (AI_SEARCH_ACTIVE) {
+    // User typed after an AI search — clear AI overlay, switch to title-search mode.
+    AI_SEARCH_ACTIVE = false;
+    hideAIBanner();
+    clearFollowUps();
+    _aiMatchScores.clear();
+    _lastQuery = '';
+    document.getElementById('searchWrap').classList.remove('ai-active');
+  }
   filterTimer = setTimeout(() => loadMovies(1, false), 350);
 }
 
