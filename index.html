@@ -4165,7 +4165,12 @@ async function fetchPage(page) {
   const type      = CONTENT_TYPE;
 
   if (q) {
-    return tmdbGet(`/search/${type}`, { query: q, page, language: 'en-US', include_adult: false });
+    // Route through /api/search: two-step title-first + AI semantic fallback.
+    // Returns a TMDB-compatible response so loadMovies() processes it unchanged.
+    const params = new URLSearchParams({ q, page: String(page), type });
+    const res = await fetch(`/api/search?${params}`);
+    if (!res.ok) throw new Error(`Search ${res.status}`);
+    return res.json();
   }
 
   const params = {
