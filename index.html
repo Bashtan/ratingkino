@@ -4281,7 +4281,14 @@ async function loadMovies(page = 1, append = false) {
     CUR_PAGE    = page;
     TOTAL_PAGES = Math.min(data.total_pages || 1, 500);
     TOTAL_COUNT = data.total_results || 0;
-    const newMovies = (data.results || []).map(fromTMDb);
+    let newMovies = (data.results || []).map(fromTMDb);
+    // Guarantee title matches surface first on TMDB search results.
+    // TMDB's own relevance is good but can let thematic matches slip above
+    // exact title hits when vote_count or popularity differs.
+    if (!append) {
+      const sq = document.getElementById('searchInput').value.trim();
+      if (sq) newMovies = titleBoostResults(newMovies, sq);
+    }
     if (append) MOVIES.push(...newMovies);
     else        MOVIES = newMovies;
     applySortOrder();
