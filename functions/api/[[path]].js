@@ -139,45 +139,59 @@ export async function onRequest({ request, env, params }) {
   });
 }
 
-/* ─── Two-step search handler ──────────────────────────────── */
+/* ─── 3-Tier waterfall search ──────────────────────────────── */
 /*
- * Step 1 — Always fetch TMDB /search/movie (or /tv) for the raw query.
- *   • lang param (BCP-47, e.g. "uk-UA") is forwarded to TMDB so:
- *       - Results come back with localised title/overview
- *       - TMDB searches BOTH original_title AND the localised translated title,
- *         so "Володар перснів" and "Lord of the Rings" both find the same film.
- *   • Server-side title-boost re-ranking is applied after the TMDB response.
+ * Strict rendering order returned to the client:
  *
- * Step 2 — AI KV semantic fallback (page 1, movies, descriptive queries only).
- *   • If lang is not English the query is first translated to English via
- *     m2m100-1.2b (the same model used for description translation elsewhere).
- *     This is needed because the KV catalog and Llama's training data are
- *     predominantly English — a raw Ukrainian/Spanish semantic query would
- *     confuse the model.
- *   • TMDB result data is still returned in the user's lang (from Step 1).
+ *   Tier 1 — Title match
+ *     query (lowercased) is a substring of title OR original_title.
+ *     Within Tier 1 a fine-grained score sub-sorts: exact > prefix >
+ *     all-words > any-word, so "Batman" ranks above "Batman v Superman"
+ *     for query "batman".
  *
- * Response shape is TMDB-compatible so loadMovies() needs no changes.
+ *   Tier 2 — Overview/description match
+ *     query is a substring of the TMDB overview field.
+ *     e.g. query "batman" → overview "...the caped crusader Batman fights..."
+ *
+ *   Tier 2b — TMDB other matches (cast, crew, keywords)
+ *     TMDB searched and returned these but neither title nor overview
+ *     contains the query string.  Kept between T2 and AI to preserve
+ *     TMDB relevance without burying it.
+ *
+ *   Tier 3 — AI KV semantic
+ *     Llama 3.3-70B thematic matches from the 119-movie KV catalog.
+ *     Only appended on page 1 when Tier 1 is thin (< 3 hits), meaning
+ *     the query is probably descriptive rather than a title.
+ *     Non-English queries are translated to English first (m2m100-1.2b)
+ *     because the KV catalog and model are English-centric.
+ *
+ * TMDB and the AI semantic search run concurrently via Promise.all.
+ * lang param flows through to TMDB so responses come back localised.
+ * Response shape is TMDB-compatible — loadMovies() needs no changes.
  */
 
-const _TITLE_MATCH_THRESHOLD = 3;  // min title hits before skipping semantic step
-const _SEMANTIC_WORD_MIN     = 3;  // query must have this many words to trigger semantic
+const _TITLE_MATCH_THRESHOLD = 3;  // below this T1 count, append T3 semantic
+const _SEMANTIC_WORD_MIN     = 3;  // query must have ≥ this many words for T3
 
-// Allowed TMDB language codes (client sends BCP-47; validate to prevent injection)
+// Validated BCP-47 language codes accepted from the client
 const _VALID_LANGS = new Set([
   'en-US','es-ES','fr-FR','zh-CN','ar-SA','uk-UA',
   'de-DE','it-IT','pt-BR','ja-JP','ko-KR','ru-RU','pl-PL','nl-NL',
 ]);
-// m2m100 source-language codes for languages we support
+// m2m100 source codes for the site's non-English languages
 const _M2M_LANG = { uk:'uk', es:'es', fr:'fr', zh:'zh', ar:'ar' };
 
+/* Fine-grained title score used for within-Tier-1 sub-sorting only.
+ * 8 = exact title, 7 = prefix, 6 = all words in title, 5 = all in either,
+ * 4 = any word in either. 0 = no title match. */
 function _serverTitleScore(movie, q, words) {
   const t1 = (movie.title          || '').toLowerCase();
   const t2 = (movie.original_title || '').toLowerCase();
-  if (t1 === q || t2 === q)                                    return 8; // exact
-  if (t1.startsWith(q) || t2.startsWith(q))                   return 7; // prefix
-  if (words.every(w => t1.includes(w)))                        return 6; // all words in title
-  if (words.every(w => t1.includes(w) || t2.includes(w)))     return 5; // all in either
-  if (words.some(w  => t1.includes(w) || t2.includes(w)))     return 4; // any word
+  if (t1 === q || t2 === q)                                return 8;
+  if (t1.startsWith(q) || t2.startsWith(q))               return 7;
+  if (words.every(w => t1.includes(w)))                    return 6;
+  if (words.every(w => t1.includes(w) || t2.includes(w))) return 5;
+  if (words.some(w  => t1.includes(w) || t2.includes(w))) return 4;
   return 0;
 }
 
@@ -188,75 +202,104 @@ async function handleSearch(request, env, cors) {
       headers: { 'Content-Type': 'application/json', ...cors },
     });
 
-  const url   = new URL(request.url);
-  const query = (url.searchParams.get('q') || '').trim().slice(0, 200);
-  const page  = Math.max(1, Math.min(500, parseInt(url.searchParams.get('page') || '1', 10)));
-  const type  = url.searchParams.get('type') === 'tv' ? 'tv' : 'movie';
-  // lang: validated BCP-47; falls back to en-US for unknown values
+  const url     = new URL(request.url);
+  const query   = (url.searchParams.get('q') || '').trim().slice(0, 200);
+  const page    = Math.max(1, Math.min(500, parseInt(url.searchParams.get('page') || '1', 10)));
+  const type    = url.searchParams.get('type') === 'tv' ? 'tv' : 'movie';
   const rawLang = (url.searchParams.get('lang') || 'en-US').trim();
   const lang    = _VALID_LANGS.has(rawLang) ? rawLang : 'en-US';
 
   if (!query) return json({ results: [], total_results: 0, total_pages: 0, page });
 
-  const q     = query.toLowerCase();
-  const words = q.split(/\s+/).filter(Boolean);
+  const q        = query.toLowerCase();
+  const words    = q.split(/\s+/).filter(Boolean);
+  const langCode = lang.split('-')[0]; // 'uk-UA' → 'uk'
 
-  // ── Step 1: TMDB /search/{type} with user's language ────────
-  // TMDB searches original_title + all translated titles regardless of lang,
-  // so "Батман" → "Batman" works.  lang affects what language the *response*
-  // fields (title, overview) come back in — keeping the UI consistent.
+  const mayNeedSemantic =
+    page === 1 && type === 'movie' &&
+    words.length >= _SEMANTIC_WORD_MIN &&
+    !!env.AI && !!env.MOVIES_CACHE;
+
+  // ── Fire TMDB fetch immediately (don't wait for translation) ──────────
   const tmdbUrl = new URL(`https://api.themoviedb.org/3/search/${type}`);
   tmdbUrl.searchParams.set('api_key',       env.TMDB_KEY);
   tmdbUrl.searchParams.set('query',         query);
   tmdbUrl.searchParams.set('page',          String(page));
-  tmdbUrl.searchParams.set('language',      lang);
+  tmdbUrl.searchParams.set('language',      lang);    // localised response titles/overviews
   tmdbUrl.searchParams.set('include_adult', 'false');
+  const tmdbPromise = fetch(tmdbUrl.toString(), { headers: { 'User-Agent': 'FindFilm.ai/1.0' } })
+    .then(r => { if (!r.ok) throw new Error(`TMDB ${r.status}`); return r.json(); });
 
-  let searchData;
+  // ── Translate query to English for semantic step (runs while TMDB is in flight) ──
+  // m2m100 is fast (~200 ms); by the time it finishes TMDB may still be pending.
+  const needsTranslation = langCode !== 'en' && !!_M2M_LANG[langCode] && !!env.AI;
+  const englishQuery = mayNeedSemantic && needsTranslation
+    ? await _translateToEnglish(query, _M2M_LANG[langCode], env)
+    : query;
+
+  // ── Start KV semantic search (still overlaps with TMDB network time) ────
+  // excludeIds are not known yet; we dedup against TMDB results after Promise.all.
+  const semanticPromise = mayNeedSemantic
+    ? runKVSemanticSearch(englishQuery, env, new Set())
+    : Promise.resolve([]);
+
+  // ── Await both concurrently ───────────────────────────────────────────
+  let searchData, semanticRaw;
   try {
-    const res = await fetch(tmdbUrl.toString(), { headers: { 'User-Agent': 'FindFilm.ai/1.0' } });
-    if (!res.ok) throw new Error(`TMDB ${res.status}`);
-    searchData = await res.json();
+    [searchData, semanticRaw] = await Promise.all([tmdbPromise, semanticPromise]);
   } catch (e) {
-    return json({ error: 'TMDB search failed', detail: e.message }, 502);
+    return json({ error: 'Search failed', detail: e.message }, 502);
   }
 
   const rawResults = searchData.results || [];
+  const seenIds    = new Set(rawResults.map(m => m.id));
 
-  // ── Apply title-boost re-ranking ─────────────────────────────
-  const scored    = rawResults.map((m, i) => ({ m, i, ts: _serverTitleScore(m, q, words) }));
-  const withTitle = scored.filter(x => x.ts > 0).sort((a, b) => b.ts - a.ts || a.i - b.i);
-  const noTitle   = scored.filter(x => x.ts === 0);
-  const reranked  = [...withTitle, ...noTitle].map(x => x.m);
+  // ── 3-Tier bucketing ─────────────────────────────────────────────────
+  //
+  // Tier 1: query is a substring of title or original_title (case-insensitive).
+  //         Sub-sorted by _serverTitleScore so exact matches beat prefix beats substring.
+  //
+  // Tier 2: query is a substring of the overview/description field.
+  //
+  // Tier 2b: TMDB results that matched by cast/crew/keywords (no text hit in title or overview).
+  //          Kept here rather than discarded — TMDB's relevance signal is still useful.
+  //
+  // Tier 3: AI KV semantic extras, deduplicated against TMDB results.
+  //         Only included when Tier 1 is thin (< _TITLE_MATCH_THRESHOLD), indicating
+  //         the query is descriptive rather than a title search.
 
-  // ── Step 2: AI KV semantic fallback ──────────────────────────
-  const needsSemantic =
-    page === 1 &&
-    type === 'movie' &&
-    words.length >= _SEMANTIC_WORD_MIN &&
-    withTitle.length < _TITLE_MATCH_THRESHOLD &&
-    env.AI &&
-    env.MOVIES_CACHE;
+  const tier1 = [], tier2 = [], tier2b = [];
 
-  let semanticExtras = [];
-  if (needsSemantic) {
-    const seenIds = new Set(rawResults.map(m => m.id));
-    // Translate non-English descriptive queries to English before the LLM step.
-    // The KV catalog and Llama are predominantly English; raw Ukrainian/Spanish
-    // descriptive queries produce poor semantic matches without translation.
-    const langCode   = lang.split('-')[0]; // 'uk-UA' → 'uk'
-    const englishQuery = (langCode !== 'en' && _M2M_LANG[langCode] && env.AI)
-      ? await _translateToEnglish(query, _M2M_LANG[langCode], env)
-      : query;
-    semanticExtras = await runKVSemanticSearch(englishQuery, env, seenIds);
+  for (const m of rawResults) {
+    const t1 = (m.title          || '').toLowerCase();
+    const t2 = (m.original_title || '').toLowerCase();
+    const ov = (m.overview       || '').toLowerCase();
+
+    if (t1.includes(q) || t2.includes(q)) {
+      tier1.push(m);
+    } else if (ov.includes(q)) {
+      tier2.push(m);
+    } else {
+      tier2b.push(m);
+    }
   }
 
+  // Sub-sort Tier 1 by match specificity (exact > prefix > all-words > any-word).
+  // Ties preserve TMDB's original (popularity-weighted) order.
+  tier1.sort((a, b) => _serverTitleScore(b, q, words) - _serverTitleScore(a, q, words));
+
+  // Tier 3: only when Tier 1 is thin (query is likely descriptive, not a title)
+  const tier3 = (tier1.length < _TITLE_MATCH_THRESHOLD)
+    ? semanticRaw.filter(m => !seenIds.has(m.id))
+    : [];
+
   return json({
-    results:           [...reranked, ...semanticExtras],
-    total_results:     searchData.total_results || reranked.length,
-    total_pages:       searchData.total_pages   || 1,
+    results:       [...tier1, ...tier2, ...tier2b, ...tier3],
+    total_results: searchData.total_results || rawResults.length,
+    total_pages:   searchData.total_pages   || 1,
     page,
-    semantic_appended: semanticExtras.length,
+    // debug fields — visible in network tab / wrangler tail logs
+    _tiers: { t1: tier1.length, t2: tier2.length, t2b: tier2b.length, t3: tier3.length },
   });
 }
 
