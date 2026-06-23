@@ -2861,6 +2861,9 @@ const CFG = {
 
 const PROXY_BASE = '/api';
 const TMDB_BASE  = PROXY_BASE + '/tmdb';
+// Maps the site's 6 language codes → TMDB BCP-47 locale strings.
+// Used by fetchPage (search lang param), loadGenres, and voice recognition.
+const TMDB_LANG  = { en:'en-US', es:'es-ES', fr:'fr-FR', zh:'zh-CN', ar:'ar-SA', uk:'uk-UA' };
 const TIMG_W500  = 'https://image.tmdb.org/t/p/w500';
 const TIMG_W780  = 'https://image.tmdb.org/t/p/w780';
 const TIMG_W1280 = 'https://image.tmdb.org/t/p/w1280';
@@ -3811,8 +3814,7 @@ async function omdbGet(imdbId) {
 async function loadGenres() {
   try {
     const endpoint = CONTENT_TYPE === 'tv' ? '/genre/tv/list' : '/genre/movie/list';
-    const _TMDB_LANG = { en:'en-US', es:'es-ES', fr:'fr-FR', zh:'zh-CN', ar:'ar-SA', uk:'uk-UA' };
-    const data = await tmdbGet(endpoint, { language: _TMDB_LANG[CURRENT_LANG] || 'en-US' });
+    const data = await tmdbGet(endpoint, { language: TMDB_LANG[CURRENT_LANG] || 'en-US' });
     GENRES = {};
     const wrap = document.getElementById('genrePills');
     wrap.innerHTML = `<button class="gpill active" id="pill-all" onclick="setGenre('')" data-i18n="filter.all">${t('filter.all')}</button>`;
@@ -4166,15 +4168,17 @@ async function fetchPage(page) {
 
   if (q) {
     // Route through /api/search: two-step title-first + AI semantic fallback.
-    // Returns a TMDB-compatible response so loadMovies() processes it unchanged.
-    const params = new URLSearchParams({ q, page: String(page), type });
+    // lang tells the Function which TMDB locale to request (localised titles/overviews)
+    // AND which BCP-47 tag to send to SpeechRecognition for voice input.
+    const lang = TMDB_LANG[CURRENT_LANG] || 'en-US';
+    const params = new URLSearchParams({ q, page: String(page), type, lang });
     const res = await fetch(`/api/search?${params}`);
     if (!res.ok) throw new Error(`Search ${res.status}`);
     return res.json();
   }
 
   const params = {
-    page, language: 'en-US',
+    page, language: TMDB_LANG[CURRENT_LANG] || 'en-US',
     sort_by: 'popularity.desc',
     include_adult: false,
     'vote_count.gte': 50,
@@ -5780,9 +5784,8 @@ function toggleVoiceSearch() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return;
 
-  const _LANG_BCP47 = { en:'en-US', es:'es-ES', fr:'fr-FR', zh:'zh-CN', ar:'ar-SA', uk:'uk-UA' };
   _recognition = new SR();
-  _recognition.lang = _LANG_BCP47[CURRENT_LANG] || navigator.language || 'en-US';
+  _recognition.lang = TMDB_LANG[CURRENT_LANG] || navigator.language || 'en-US';
   _recognition.interimResults = true;
   _recognition.maxAlternatives = 1;
   _recognition.continuous = false;
@@ -5833,9 +5836,8 @@ function toggleDesktopVoice() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return;
 
-  const _LANG_BCP47 = { en:'en-US', es:'es-ES', fr:'fr-FR', zh:'zh-CN', ar:'ar-SA', uk:'uk-UA' };
   _recognition = new SR();
-  _recognition.lang = _LANG_BCP47[CURRENT_LANG] || navigator.language || 'en-US';
+  _recognition.lang = TMDB_LANG[CURRENT_LANG] || navigator.language || 'en-US';
   _recognition.interimResults = true;
   _recognition.maxAlternatives = 1;
   _recognition.continuous = false;
