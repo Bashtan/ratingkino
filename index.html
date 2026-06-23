@@ -4392,16 +4392,68 @@ function clearAISearch() {
   }
 }
 
-/* Client-side keyword fallback when AI endpoint is unavailable */
+/* ── Title-match score for a single movie (higher = stronger title match) ── */
+function _titleMatchScore(m, q, words) {
+  const t1 = m.title.toLowerCase();
+  const t2 = (m.titleOrig || '').toLowerCase();
+  if (t1 === q || t2 === q)                          return 8; // exact
+  if (t1.startsWith(q) || t2.startsWith(q))          return 7; // prefix
+  if (words.every(w => t1.includes(w)))               return 6; // all words in title
+  if (words.every(w => t1.includes(w) || t2.includes(w))) return 5; // all words in either title
+  if (words.some(w => t1.includes(w) || t2.includes(w)))  return 4; // any word in title
+  return 0;
+}
+
+/* ── Re-rank AI results: guaranteed title matches bubble to front ────────── */
+/* LLM does a good job semantically but can under-rank obvious title hits.   */
+/* This is a stable sort: within each tier, original LLM order is preserved. */
+function titleBoostResults(results, query) {
+  const q     = query.toLowerCase().trim();
+  const words = q.split(/\s+/).filter(Boolean);
+  if (!q || !words.length) return results;
+
+  const scored = results.map((m, i) => ({
+    m, i,
+    ts: _titleMatchScore(m, q, words),
+  }));
+
+  const withTitle = scored.filter(x => x.ts > 0).sort((a, b) => b.ts - a.ts || a.i - b.i);
+  const noTitle   = scored.filter(x => x.ts === 0);    // already in LLM order
+
+  return [...withTitle, ...noTitle].map(x => x.m);
+}
+
+/* ── Keyword fallback: scored ranking (Title > Description > Genre/Person) ─ */
+/* Used when /api/ai-search is unavailable. Replaces the old boolean filter.  */
 function keywordFilterCache(query) {
-  const q = query.toLowerCase();
-  const results = CACHE_MOVIES.filter(m =>
-    m.title.toLowerCase().includes(q) ||
-    (m.director || '').toLowerCase().includes(q) ||
-    (m.actors || []).some(a => a.toLowerCase().includes(q)) ||
-    (m.desc || '').toLowerCase().includes(q) ||
-    (m.genres || []).some(g => g.toLowerCase().includes(q))
-  );
+  const q     = query.toLowerCase().trim();
+  const words = q.split(/\s+/).filter(Boolean);
+  if (!words.length) return;
+
+  function scoreMovie(m) {
+    const ts = _titleMatchScore(m, q, words);
+    if (ts > 0) return 500 + ts * 10;  // 540–580 — title tier
+
+    const desc   = (m.desc || '').toLowerCase();
+    const genres = (m.genres || []).join(' ').toLowerCase();
+    const dir    = (m.director || '').toLowerCase();
+    const actors = (m.actors  || []).join(' ').toLowerCase();
+
+    if (words.every(w => desc.includes(w)))  return 300; // all words in desc
+    if (words.some(w  => desc.includes(w)))  return 200; // any word in desc
+
+    // Plot / person / genre tier
+    if (words.some(w => genres.includes(w) || dir.includes(w) || actors.includes(w))) return 100;
+
+    return 0;
+  }
+
+  const results = CACHE_MOVIES
+    .map(m => ({ m, s: scoreMovie(m) }))
+    .filter(x => x.s > 0)
+    .sort((a, b) => b.s - a.s)
+    .map(x => x.m);
+
   MOVIES      = results;
   TOTAL_COUNT = CACHE_MOVIES.length;
   renderGrid(results, false);
@@ -4439,9 +4491,13 @@ async function aiSearch(query) {
 
     // Reorder CACHE_MOVIES to match AI ranking
     const idOrder = new Map(ids.map((id, i) => [id, i]));
-    const results = CACHE_MOVIES
+    const aiRanked = CACHE_MOVIES
       .filter(m => idOrder.has(m.id))
       .sort((a, b) => idOrder.get(a.id) - idOrder.get(b.id));
+
+    // Client-side title boost: guarantee title matches surface above desc/theme matches.
+    // Stable sort — within each tier, LLM order is preserved.
+    const results = titleBoostResults(aiRanked, query);
 
     MOVIES      = results;
     TOTAL_COUNT = CACHE_MOVIES.length;

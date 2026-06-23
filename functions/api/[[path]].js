@@ -207,30 +207,41 @@ async function handleAISearch(request, env, cors) {
   const movies = JSON.parse(cached);
 
   // Build a compact catalog string for the LLM
+  // Format: id|title/orig (year)|genres|Dir: name. description
   const catalog = movies.map(m => {
-    const genres = (m.genres || []).join(', ');
-    const desc   = (m.desc || '').slice(0, 140).replace(/[|\n]/g, ' ');
-    const dir    = m.director ? `Dir: ${m.director}. ` : '';
-    return `${m.id}|${m.title} (${m.year || '?'})|${genres}|${dir}${desc}`;
+    const genres    = (m.genres || []).join(', ');
+    const desc      = (m.desc || '').slice(0, 140).replace(/[|\n]/g, ' ');
+    const dir       = m.director ? `Dir: ${m.director}. ` : '';
+    // Include original title when it differs (helps with non-English title matches)
+    const titlePart = m.titleOrig && m.titleOrig !== m.title
+      ? `${m.title} / ${m.titleOrig}`
+      : m.title;
+    return `${m.id}|${titlePart} (${m.year || '?'})|${genres}|${dir}${desc}`;
   }).join('\n');
 
   const systemPrompt =
-    'You are a movie recommendation assistant. ' +
-    'Respond with valid JSON only — no markdown fences, no extra text.';
+    'You are a movie search engine. ' +
+    'Respond with valid JSON only — no markdown fences, no extra text. ' +
+    'Rank results by this strict priority: ' +
+    '(1) movies whose TITLE contains the query words — rank these FIRST; ' +
+    '(2) movies whose DESCRIPTION or TAGLINE matches — rank these SECOND; ' +
+    '(3) thematic, genre, or mood similarity — rank these LAST.';
 
   const userPrompt =
-    `User wants: "${query}"\n\n` +
-    `Pick the best matching movies from this catalog ` +
-    `(format: id|title (year)|genres|description):\n\n` +
+    `User query: "${query}"\n\n` +
+    `MANDATORY ranking order:\n` +
+    `  Tier 1 — title match: if any movie title contains the query words, it MUST appear before all others.\n` +
+    `  Tier 2 — description match: query words found in the description/overview.\n` +
+    `  Tier 3 — thematic/genre match: general similarity in mood, genre, or story.\n\n` +
+    `Catalog (format: id|title/orig (year)|genres|description):\n\n` +
     `${catalog}\n\n` +
     `Return JSON:\n` +
     `{\n` +
-    `  "ids": [array of integer movie IDs, best match first, max 20],\n` +
+    `  "ids": [integer movie IDs ordered best-match first, max 20],\n` +
     `  "message": null\n` +
     `}\n` +
-    `If no movie is a strong match, still return the 3 closest IDs and set ` +
-    `"message" to a short friendly explanation (e.g. "These recent releases are ` +
-    `the closest to your request — our catalog is updated daily with new films."). ` +
+    `If no movie is a close match, return the 3 nearest IDs and set "message" to a ` +
+    `short friendly note (e.g. "These are the closest recent releases to your request."). ` +
     `Never return an empty ids array.`;
 
   if (!env.AI) {
