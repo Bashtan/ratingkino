@@ -795,6 +795,87 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .provider-chip[href] { text-decoration: none; cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.12s; }
 .provider-chip[href]:hover { background: rgba(255,255,255,0.11); border-color: rgba(255,255,255,0.22); transform: translateY(-1px); }
 
+/* ─── VPN Monetization Banner ───────────────────── */
+.vpn-banner {
+  position: relative;
+  margin-top: 14px;
+  border-radius: 12px;
+  background: rgba(10, 0, 24, 0.88);
+  border: 1px solid rgba(229, 9, 20, 0.32);
+  box-shadow: 0 0 22px rgba(229, 9, 20, 0.07), inset 0 1px 0 rgba(255,255,255,0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 13px 14px 11px;
+  overflow: hidden;
+}
+/* subtle red ambient glow in corner */
+.vpn-banner::before {
+  content: '';
+  position: absolute;
+  top: -28px; left: -28px;
+  width: 110px; height: 110px;
+  background: radial-gradient(circle, rgba(229,9,20,0.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+.vpn-banner-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-right: 20px; /* room for dismiss button */
+}
+.vpn-banner-icon {
+  flex-shrink: 0;
+  width: 34px; height: 34px;
+  border-radius: 7px;
+  background: #E50914;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  color: #fff;
+}
+.vpn-banner-copy { flex: 1; min-width: 0; }
+.vpn-banner-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12.5px; font-weight: 700;
+  color: #fff; line-height: 1.38; margin-bottom: 3px;
+}
+.vpn-banner-sub {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px; color: rgba(255,255,255,0.5); line-height: 1.4;
+}
+.vpn-banner-cta {
+  display: block;
+  margin-top: 11px;
+  padding: 9px 0;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #7C3AED, #06B6D4);
+  border: none;
+  color: #fff;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12.5px; font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.18s;
+  -webkit-tap-highlight-color: transparent;
+}
+.vpn-banner-cta:hover { opacity: 0.88; }
+.vpn-banner-discount {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; color: rgba(255,255,255,0.38);
+  text-align: center; margin-top: 5px;
+}
+.vpn-banner-dismiss {
+  position: absolute; top: 8px; right: 8px;
+  width: 20px; height: 20px; border-radius: 50%;
+  border: none; background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.3); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; line-height: 1;
+  transition: background 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.vpn-banner-dismiss:hover { background: rgba(255,255,255,0.13); color: rgba(255,255,255,0.75); }
+
 /* ─── USER REVIEWS ────────────────────────────── */
 .review-compose {
   margin-bottom: 18px; padding: 14px;
@@ -2687,7 +2768,8 @@ if ('serviceWorker' in navigator) {
         <div class="meta-grid" id="mMeta"></div>
 
         <div class="section-lbl" id="watchLbl" data-i18n="modal.whereToWatch" style="display:none">Where to Watch</div>
-        <div id="watchProviders" style="margin-bottom:22px"></div>
+        <div id="watchProviders" style="margin-bottom:4px"></div>
+        <div id="vpnBanner" style="margin-bottom:18px"></div>
 
         <div class="section-lbl" data-i18n="modal.awards">Awards &amp; Recognition</div>
         <div class="awards" id="mAwards"></div>
@@ -3903,6 +3985,8 @@ function mergeMovieData(movie, det, od, country = DETECTED_COUNTRY) {
     };
     movie.wpLink = wp.link || null;
   }
+  // Preserve full cross-country map for geo-mismatch VPN banner logic
+  movie.wpAllCountries = wpResults;
 
   // ── OMDb fields ───────────────────────────────────────────────
   if (od) {
@@ -5074,6 +5158,86 @@ function providerUrl(p, title, wpLink) {
   return fn ? fn(title) : (wpLink || '#');
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   VPN MONETIZATION — Geo-mismatch Netflix banner
+   ─────────────────────────────────────────────────────────────────
+   Swap VPN_AFFILIATE to change the partner name, URL, and discount.
+   The affiliate URL must include your tracking ID.
+═══════════════════════════════════════════════════════════════════ */
+const VPN_AFFILIATE = {
+  name:     'NordVPN',
+  url:      'https://go.nordvpn.net/aff_c?offer_id=15&aff_id=REPLACE_YOUR_ID',
+  discount: 'Get 67% off + 3 months free',
+};
+
+const _NETFLIX_PROVIDER_ID  = 8;
+const _VPN_PRIORITY_REGIONS = ['US', 'GB', 'CA', 'AU', 'DE', 'FR', 'JP', 'BR'];
+const _VPN_REGION_NAMES     = { US:'USA', GB:'UK', CA:'Canada', AU:'Australia', DE:'Germany', FR:'France', JP:'Japan', BR:'Brazil' };
+const _VPN_REGION_FLAGS     = { US:'🇺🇸', GB:'🇬🇧', CA:'🇨🇦', AU:'🇦🇺', DE:'🇩🇪', FR:'🇫🇷', JP:'🇯🇵', BR:'🇧🇷' };
+
+/**
+ * Returns {region, regionName, flag} if:
+ *   - Netflix is NOT available in the user's detected country, AND
+ *   - Netflix IS available in at least one priority region.
+ * Returns null if user already has Netflix or it's nowhere major.
+ */
+function getVpnOpportunity(m) {
+  const allWp = m.wpAllCountries;
+  if (!allWp || !Object.keys(allWp).length) return null;
+
+  const userCountry = DETECTED_COUNTRY || 'US';
+
+  // User's country already has Netflix on subscription — nothing to do
+  const userFlatrate = allWp[userCountry]?.flatrate || [];
+  if (userFlatrate.some(p => p.provider_id === _NETFLIX_PROVIDER_ID)) return null;
+
+  // Scan priority regions for Netflix availability
+  for (const region of _VPN_PRIORITY_REGIONS) {
+    if (region === userCountry) continue;
+    const regionFlatrate = allWp[region]?.flatrate || [];
+    if (regionFlatrate.some(p => p.provider_id === _NETFLIX_PROVIDER_ID)) {
+      return {
+        region,
+        regionName: _VPN_REGION_NAMES[region] || region,
+        flag:       _VPN_REGION_FLAGS[region]  || '🌐',
+      };
+    }
+  }
+
+  return null; // Netflix not available in any major region — skip banner
+}
+
+function refreshVpnBanner(m) {
+  const el = document.getElementById('vpnBanner');
+  if (!el) return;
+
+  const opp = getVpnOpportunity(m);
+  if (!opp) { el.innerHTML = ''; return; }
+
+  const { regionName, flag } = opp;
+
+  el.innerHTML = `
+    <div class="vpn-banner">
+      <button class="vpn-banner-dismiss" aria-label="Dismiss"
+        onclick="this.closest('.vpn-banner').remove()">✕</button>
+      <div class="vpn-banner-header">
+        <div class="vpn-banner-icon">▶</div>
+        <div class="vpn-banner-copy">
+          <div class="vpn-banner-title">
+            Not on Netflix in your country — but streaming on Netflix ${esc(regionName)}! ${flag}
+          </div>
+          <div class="vpn-banner-sub">Use a VPN to unlock it in seconds.</div>
+        </div>
+      </div>
+      <a class="vpn-banner-cta"
+         href="${esc(VPN_AFFILIATE.url)}"
+         target="_blank" rel="noopener noreferrer sponsored">
+        Unlock with ${esc(VPN_AFFILIATE.name)}
+      </a>
+      <div class="vpn-banner-discount">${esc(VPN_AFFILIATE.discount)}</div>
+    </div>`;
+}
+
 function refreshWatchProviders(m) {
   const lbl = document.getElementById('watchLbl');
   const container = document.getElementById('watchProviders');
@@ -5113,6 +5277,9 @@ function refreshWatchProviders(m) {
     ${flatrate.map(p => chip(p, 'sub',  'Sub')).join('')}
     ${rent.map(p     => chip(p, 'rent', 'Rent', RENT_STYLE)).join('')}
   </div>`;
+
+  // VPN geo-mismatch banner: show if Netflix is available elsewhere but not here
+  refreshVpnBanner(m);
 }
 
 function overlayClick(e) {
