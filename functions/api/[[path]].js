@@ -173,6 +173,66 @@ export async function onRequest({ request, env, params }) {
 const _TITLE_MATCH_THRESHOLD = 3;  // below this T1 count, append T3 semantic
 const _SEMANTIC_WORD_MIN     = 3;  // query must have ≥ this many words for T3
 
+/**
+ * Strip conversational filler phrases from voice-dictated or typed queries.
+ *
+ * Patterns are applied in a loop until stable — this handles chained fillers:
+ *   "Umm, can you find me a movie about..." → "..."
+ *   "Знайди мені фільм про..." (UK) → "..."
+ *   "Busca una película sobre..." (ES) → "..."
+ *   "Cherche un film avec..." (FR) → "..."
+ *
+ * Returns the trimmed result, or the original query if stripping would leave
+ * fewer than 2 characters (safety: never produce an empty search).
+ *
+ * Zero latency — pure regex, no network call.
+ */
+function _stripFillers(raw) {
+  const PATTERNS = [
+    // ── English: hesitation sounds ─────────────────────────────────────
+    /^(umm*|uhh*|er+|hmm+)[,\s]+/i,
+    /^(ok|okay|alright|right|so|like|well|hey|yo)[,\s]+/i,
+    // ── English: polite openers ────────────────────────────────────────
+    /^(please\s+|can\s+you\s+|could\s+you\s+)/i,
+    // ── English: action verbs + article ───────────────────────────────
+    /^(find|show|search(\s+for)?|look\s+up|get|give\s+me|bring\s+up|pull\s+up)\s+(me\s+)?(a\s+|an\s+|the\s+|some\s+|that\s+)?/i,
+    // ── English: "I am looking/searching for..." ───────────────────────
+    /^i('m|\s+am)\s+(looking|searching)\s+for\s+(a\s+|an\s+|the\s+|that\s+)?/i,
+    // ── English: "I want to watch/see/find..." ─────────────────────────
+    /^i\s+(want|wanna|would\s+like)\s+(to\s+)?(watch|see|find)\s+(a\s+|an\s+|the\s+|that\s+)?/i,
+    // ── English: "that movie/film/show where/about/with..." ────────────
+    /^(that|the|a|an)\s+(movie|film|show|series|documentary)\s+(where|about|with|starring|called|named|that|when)\s+/i,
+    // ── English: "movie where..." without article ──────────────────────
+    /^(movie|film|show|series)\s+(where|about|with|starring|called|named)\s+/i,
+    // ── Ukrainian ──────────────────────────────────────────────────────
+    /^(знайди|покажи|відкрий|пошукай|запусти)\s+(мені\s+)?(фільм|серіал|кіно|шоу)\s*(про|де|з|який|яка|що|де\s+)?\s*/i,
+    /^(я\s+шукаю|я\s+хочу\s+(подивитися|побачити|знайти))\s+(фільм|серіал|кіно)?\s*(про|де|з)?\s*/i,
+    /^(можеш?\s+знайти|допоможи\s+знайти)\s+(мені\s+)?(фільм|серіал)?\s*/i,
+    // ── Spanish ────────────────────────────────────────────────────────
+    /^(busca|encuentra|muéstrame|dame|pon|ponme)\s+(me\s+)?(un[ao]?\s+|la\s+|el\s+)?(película|pelicula|serie|film)\s*(sobre|con|donde|que)?\s*/i,
+    /^(estoy\s+buscando|quiero\s+(ver|encontrar|buscar))\s+(un[ao]?\s+|la\s+|el\s+)?(película|pelicula|serie)?\s*(sobre|con|donde)?\s*/i,
+    // ── French ─────────────────────────────────────────────────────────
+    /^(cherche|trouve|montre[- ]moi|affiche|mets)\s+(moi\s+)?(un[e]?\s+|le\s+|la\s+|les\s+)?(film|série|documentaire)\s*(sur|avec|où|qui)?\s*/i,
+    /^(je\s+cherche|je\s+veux\s+(voir|trouver))\s+(un[e]?\s+|le\s+|la\s+)?(film|série)?\s*(sur|avec|où)?\s*/i,
+  ];
+
+  let q = raw.trim();
+  let changed = true;
+  // Loop so chained fillers ("Umm, can you find me a film about...") all get stripped.
+  while (changed) {
+    changed = false;
+    for (const p of PATTERNS) {
+      const next = q.replace(p, '').trim();
+      if (next !== q && next.length >= 2) {
+        q = next;
+        changed = true;
+        break; // restart from first pattern after each successful strip
+      }
+    }
+  }
+  return q;
+}
+
 // Validated BCP-47 language codes accepted from the client
 const _VALID_LANGS = new Set([
   'en-US','es-ES','fr-FR','zh-CN','ar-SA','uk-UA',
@@ -211,7 +271,14 @@ async function handleSearch(request, env, cors) {
 
   if (!query) return json({ results: [], total_results: 0, total_pages: 0, page });
 
-  const q        = query.toLowerCase();
+  // ── Strip voice-dictation and conversational filler phrases ───────────
+  // "Umm, find me a movie about..." → "..."   Zero latency — pure regex.
+  const effectiveQuery = _stripFillers(query);
+  if (effectiveQuery !== query) {
+    console.log(`[search:strip] "${query.slice(0, 80)}" → "${effectiveQuery.slice(0, 80)}"`);
+  }
+
+  const q        = effectiveQuery.toLowerCase();
   const words    = q.split(/\s+/).filter(Boolean);
   const langCode = lang.split('-')[0]; // 'uk-UA' → 'uk'
 
@@ -223,7 +290,7 @@ async function handleSearch(request, env, cors) {
   // ── Fire TMDB fetch immediately (don't wait for translation) ──────────
   const tmdbUrl = new URL(`https://api.themoviedb.org/3/search/${type}`);
   tmdbUrl.searchParams.set('api_key',       env.TMDB_KEY);
-  tmdbUrl.searchParams.set('query',         query);
+  tmdbUrl.searchParams.set('query',         effectiveQuery); // use cleaned query
   tmdbUrl.searchParams.set('page',          String(page));
   tmdbUrl.searchParams.set('language',      lang);    // localised response titles/overviews
   tmdbUrl.searchParams.set('include_adult', 'false');
@@ -233,10 +300,10 @@ async function handleSearch(request, env, cors) {
   // ── Translate query to English for semantic step (runs while TMDB is in flight) ──
   // m2m100 is fast (~200 ms); by the time it finishes TMDB may still be pending.
   const needsTranslation = langCode !== 'en' && !!_M2M_LANG[langCode] && !!env.AI;
-  let englishQuery = query;
+  let englishQuery = effectiveQuery;
   if (mayNeedSemantic && needsTranslation) {
-    englishQuery = await _translateToEnglish(query, _M2M_LANG[langCode], env);
-    console.log(`[search:translate] "${query.slice(0, 60)}" → "${englishQuery.slice(0, 60)}" (${langCode}→en)`);
+    englishQuery = await _translateToEnglish(effectiveQuery, _M2M_LANG[langCode], env);
+    console.log(`[search:translate] "${effectiveQuery.slice(0, 60)}" → "${englishQuery.slice(0, 60)}" (${langCode}→en)`);
   }
 
   // ── Start KV semantic search (still overlaps with TMDB network time) ────
@@ -310,8 +377,10 @@ async function handleSearch(request, env, cors) {
     : [];
 
   // ── Production log — visible in: wrangler pages deployment tail ──────
+  const stripped = effectiveQuery !== query;
   console.log(
-    `[search] q="${query.slice(0, 80)}" lang=${lang} page=${page} type=${type}` +
+    `[search] q="${effectiveQuery.slice(0, 80)}"${stripped ? ` (stripped from "${query.slice(0, 40)}")` : ''}` +
+    ` lang=${lang} page=${page} type=${type}` +
     ` | T1:${tier1.length} T2:${tier2.length} T2b:${tier2b.length} T3:${tier3.length}` +
     ` | semantic=${useSemantic} words=${words.length}` +
     ` | total=${tier1.length + tier2.length + tier2b.length + tier3.length}`
@@ -324,6 +393,7 @@ async function handleSearch(request, env, cors) {
     page,
     // Debug fields — visible in network tab and wrangler tail logs
     _tiers: { t1: tier1.length, t2: tier2.length, t2b: tier2b.length, t3: tier3.length },
+    _query: effectiveQuery !== query ? { raw: query, effective: effectiveQuery } : undefined,
   });
 }
 
