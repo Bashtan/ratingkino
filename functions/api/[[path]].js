@@ -521,23 +521,29 @@ async function handleSearch(request, env, cors, waitUntil) {
   // Fires AFTER the response is returned — zero latency impact on the user.
   // Guarded: silently skipped if AXIOM_API_TOKEN secret is not configured.
   if (waitUntil && env.AXIOM_API_TOKEN) {
+    const logPayload = {
+      event:             'search_executed',
+      raw_query:         query,
+      detected_language: langCode,
+      tier_resolved:     tierResolved,
+      results_count:     totalResults,
+      execution_time_ms: Math.round(performance.now() - t0),
+      llm_triggered:     llmTriggered,
+    };
     waitUntil(
-      fetch('https://us-east-1.aws.edge.axiom.co/v1/ingest/findfilm-logs', {
+      fetch('https://api.axiom.co/v1/datasets/findfilm-logs/ingest', {
         method:  'POST',
         headers: {
           'Authorization': `Bearer ${env.AXIOM_API_TOKEN}`,
           'Content-Type':  'application/json',
         },
-        body: JSON.stringify([{
-          event:             'search_executed',
-          raw_query:         query,
-          detected_language: langCode,
-          tier_resolved:     tierResolved,
-          results_count:     totalResults,
-          execution_time_ms: Math.round(performance.now() - t0),
-          llm_triggered:     llmTriggered,
-        }]),
-      }).catch(e => console.error(`[axiom] log failed: ${e.message}`))
+        body: JSON.stringify([logPayload]),
+      })
+        .then(res => {
+          console.log(`[axiom] status=${res.status}`);
+          if (!res.ok) return res.text().then(t => console.error(`[axiom] error: ${t}`));
+        })
+        .catch(e => console.error(`[axiom] fetch failed: ${e.message}`))
     );
   }
 
