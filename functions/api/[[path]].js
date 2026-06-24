@@ -173,7 +173,7 @@ export async function onRequest({ request, env, params }) {
 const _TITLE_MATCH_THRESHOLD = 3;  // below this T1 count, append T3 semantic
 const _SEMANTIC_WORD_MIN     = 3;  // query must have ≥ this many words for T3
 const _INTENT_WORD_MIN       = 4;  // invoke LLM intent only for ≥ 4-word queries
-const _INTENT_MODEL          = '@cf/meta/llama-3-8b-instruct'; // fast 8B for structured extraction
+const _INTENT_MODEL          = '@cf/meta/llama-3.2-1b-instruct'; // 1B model — fast, valid CF AI ID, sufficient for structured JSON extraction
 
 // TMDB genre name → numeric ID (for /discover/movie via LLM keyword hints)
 const _GENRE_MAP = {
@@ -468,11 +468,14 @@ async function handleSearch(request, env, cors) {
       tier3.push(m);
     });
 
-    // ── /discover/movie via genre IDs from LLM keywords ──────────────
-    // Only fires when KV semantic returned few results AND LLM gave mappable keywords.
-    // Appended to the very bottom — broadest, least precise fallback.
-    if (intent?.english_keywords && tier3.length < 3) {
-      const genreIds = _keywordsToGenreIds(intent.english_keywords);
+    // ── /discover/movie via genre IDs ────────────────────────────────
+    // Source of genre keywords (priority order):
+    //   1. LLM english_keywords (most accurate)
+    //   2. Raw effectiveQuery words (fallback if LLM failed or not triggered)
+    // Only fires when KV semantic returned < 3 results — broadest last-resort fallback.
+    if (tier3.length < 3) {
+      const keywordSource = intent?.english_keywords || effectiveQuery;
+      const genreIds = _keywordsToGenreIds(keywordSource);
       if (genreIds.length > 0) {
         try {
           const discoverUrl = new URL('https://api.themoviedb.org/3/discover/movie');
@@ -486,7 +489,7 @@ async function handleSearch(request, env, cors) {
           const discData = discR.ok ? await discR.json() : { results: [] };
           const discHits = (discData.results || []).filter(m => !seenIds.has(m.id)).slice(0, 5);
           discHits.forEach(m => { seenIds.add(m.id); tier3.push(m); });
-          console.log(`[intent] discover genres=[${genreIds}] kw="${intent.english_keywords.slice(0, 40)}" → +${discHits.length}`);
+          console.log(`[intent] discover genres=[${genreIds}] src="${keywordSource.slice(0, 40)}" → +${discHits.length}`);
         } catch (e) {
           // Non-fatal — KV semantic results still returned above.
           console.error(`[intent] discover failed: ${e.message}`);
