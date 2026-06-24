@@ -4263,6 +4263,17 @@ async function tryCache() {
 async function loadMovies(page = 1, append = false) {
   if (IS_LOADING) return;
   IS_LOADING = true;
+
+  // ── Show/hide discovery rows based on whether a search query is active ──
+  // feedSections holds "For You" and "Fresh Additions" rows.
+  // They are hidden whenever the user has typed a query so the viewport stays
+  // focused on search results.  Clearing the input (q='') restores them.
+  const sq = document.getElementById('searchInput').value.trim();
+  if (CONTENT_TYPE === 'movie') {
+    const feedEl = document.getElementById('feedSections');
+    if (feedEl) feedEl.style.display = sq ? 'none' : '';
+  }
+
   const moreBtn = document.getElementById('btnMore');
   moreBtn.disabled = true;
   if (!append) showSkeletons(20);
@@ -4302,6 +4313,11 @@ async function loadMovies(page = 1, append = false) {
     else        MOVIES = newMovies;
     applySortOrder();
     renderGrid(append ? newMovies : MOVIES, append);
+    // Scroll the results grid into view on the first page of a search so the
+    // user doesn't have to scroll past the filter bar manually.
+    if (!append && sq) {
+      document.getElementById('movieGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
     for (const m of newMovies) queueEnrich(m);
     document.getElementById('loadWrap').style.display = CUR_PAGE >= TOTAL_PAGES ? 'none' : '';
   } catch(e) {
