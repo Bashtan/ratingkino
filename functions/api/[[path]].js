@@ -172,6 +172,17 @@ export async function onRequest({ request, env, params }) {
 
 const _TITLE_MATCH_THRESHOLD = 3;  // below this T1 count, append T3 semantic
 const _SEMANTIC_WORD_MIN     = 3;  // query must have ≥ this many words for T3
+const _INTENT_WORD_MIN       = 4;  // invoke LLM intent only for ≥ 4-word queries
+const _INTENT_MODEL          = '@cf/meta/llama-3-8b-instruct'; // fast 8B for structured extraction
+
+// TMDB genre name → numeric ID (for /discover/movie via LLM keyword hints)
+const _GENRE_MAP = {
+  action: 28, adventure: 12, animation: 16, comedy: 35, crime: 80,
+  documentary: 99, drama: 18, family: 10751, fantasy: 14, history: 36,
+  horror: 27, music: 10402, mystery: 9648, romance: 10749,
+  'science fiction': 878, 'sci-fi': 878, scifi: 878, thriller: 53,
+  war: 10752, western: 37,
+};
 
 /**
  * Strip conversational filler phrases from voice-dictated or typed queries.
@@ -233,6 +244,74 @@ function _stripFillers(raw) {
   return q;
 }
 
+/**
+ * Call the 8B LLM to extract structured intent from the user's query.
+ *
+ * Returns a structured object or null on any failure.
+ * Callers MUST treat null as "no intent data" and fall back to raw behaviour.
+ *
+ * The model is asked to return ONLY a JSON object — no markdown, no explanation.
+ * If it hallucinates wrapping prose, the regex extracts the first {...} block.
+ *
+ * Runs concurrently with the initial TMDB fetch so it adds zero latency to
+ * the hot path. Only invoked for queries with ≥ _INTENT_WORD_MIN words.
+ */
+async function _parseIntent(query, env) {
+  try {
+    const system =
+      'You are a search query parser. Return ONLY a valid JSON object — no markdown, no extra text. ' +
+      'Fields: ' +
+      '"clean_title_guess": if the user is searching for a specific movie title (with possible typos or in another language), normalise it to English; otherwise empty string. ' +
+      '"english_keywords": core plot or vibe elements translated to English, 3-5 words max. ' +
+      '"intent": "title_search" if they want a specific movie, "vibe_search" if describing a theme or mood. ' +
+      '"user_language": ISO 639-1 code of the input language.';
+
+    const aiResp = await env.AI.run(_INTENT_MODEL, {
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user',   content: `Query: "${query.slice(0, 200)}"` },
+      ],
+      max_tokens:  150,
+      temperature: 0.1,
+      stream:      false,
+    });
+
+    let text = '';
+    if (aiResp?.choices?.[0]?.message?.content) text = aiResp.choices[0].message.content;
+    else if (typeof aiResp?.response === 'string') text = aiResp.response;
+
+    const match = text.match(/\{[\s\S]*?\}/);
+    if (!match) return null;
+
+    const parsed = JSON.parse(match[0]);
+    return {
+      clean_title_guess: String(parsed.clean_title_guess || '').trim(),
+      english_keywords:  String(parsed.english_keywords  || '').trim(),
+      intent:            parsed.intent === 'vibe_search' ? 'vibe_search' : 'title_search',
+      user_language:     String(parsed.user_language     || 'en').trim().slice(0, 10),
+    };
+  } catch (e) {
+    // Never break the search — null signals callers to use raw fallback.
+    console.error(`[intent:parse] failed: ${e.message}`);
+    return null;
+  }
+}
+
+/**
+ * Map a free-text keyword string to TMDB genre IDs using _GENRE_MAP.
+ * e.g. "action thriller space" → [28, 53]
+ * Returns an empty array if no genre matches — callers skip /discover in that case.
+ */
+function _keywordsToGenreIds(keywords) {
+  if (!keywords) return [];
+  const lower = keywords.toLowerCase();
+  return [...new Set(
+    Object.entries(_GENRE_MAP)
+      .filter(([name]) => lower.includes(name))
+      .map(([, id]) => id)
+  )];
+}
+
 // Validated BCP-47 language codes accepted from the client
 const _VALID_LANGS = new Set([
   'en-US','es-ES','fr-FR','zh-CN','ar-SA','uk-UA',
@@ -271,8 +350,9 @@ async function handleSearch(request, env, cors) {
 
   if (!query) return json({ results: [], total_results: 0, total_pages: 0, page });
 
-  // ── Strip voice-dictation and conversational filler phrases ───────────
-  // "Umm, find me a movie about..." → "..."   Zero latency — pure regex.
+  // ── Step 1 (~0ms): Regex filler stripping ────────────────────────────
+  // "Umm, find me a movie about..." → "..."
+  // Handles English, Ukrainian, Spanish, French. Pure regex — zero latency.
   const effectiveQuery = _stripFillers(query);
   if (effectiveQuery !== query) {
     console.log(`[search:strip] "${query.slice(0, 80)}" → "${effectiveQuery.slice(0, 80)}"`);
@@ -282,71 +362,40 @@ async function handleSearch(request, env, cors) {
   const words    = q.split(/\s+/).filter(Boolean);
   const langCode = lang.split('-')[0]; // 'uk-UA' → 'uk'
 
-  // Long queries (≥ 3 words) are potentially descriptive — enable semantic fallback.
-  const isLongQuery     = words.length >= _SEMANTIC_WORD_MIN;
-  const mayNeedSemantic =
-    page === 1 && type === 'movie' && isLongQuery && !!env.AI && !!env.MOVIES_CACHE;
+  // ── Step 2: TMDB /search/movie — fast, always fires ──────────────────
+  // TMDB's multilingual index searches all title translations regardless
+  // of the language param; language only controls the response locale.
+  const tmdbSearchUrl = new URL(`https://api.themoviedb.org/3/search/${type}`);
+  tmdbSearchUrl.searchParams.set('api_key',       env.TMDB_KEY);
+  tmdbSearchUrl.searchParams.set('query',         effectiveQuery);
+  tmdbSearchUrl.searchParams.set('page',          String(page));
+  tmdbSearchUrl.searchParams.set('language',      lang);
+  tmdbSearchUrl.searchParams.set('include_adult', 'false');
 
-  // ── Fire TMDB fetch immediately (don't wait for translation) ──────────
-  const tmdbUrl = new URL(`https://api.themoviedb.org/3/search/${type}`);
-  tmdbUrl.searchParams.set('api_key',       env.TMDB_KEY);
-  tmdbUrl.searchParams.set('query',         effectiveQuery); // use cleaned query
-  tmdbUrl.searchParams.set('page',          String(page));
-  tmdbUrl.searchParams.set('language',      lang);    // localised response titles/overviews
-  tmdbUrl.searchParams.set('include_adult', 'false');
-  const tmdbPromise = fetch(tmdbUrl.toString(), { headers: { 'User-Agent': 'FindFilm.ai/1.0' } })
-    .then(r => { if (!r.ok) throw new Error(`TMDB ${r.status}`); return r.json(); });
-
-  // ── Translate query to English for semantic step (runs while TMDB is in flight) ──
-  // m2m100 is fast (~200 ms); by the time it finishes TMDB may still be pending.
-  const needsTranslation = langCode !== 'en' && !!_M2M_LANG[langCode] && !!env.AI;
-  let englishQuery = effectiveQuery;
-  if (mayNeedSemantic && needsTranslation) {
-    englishQuery = await _translateToEnglish(effectiveQuery, _M2M_LANG[langCode], env);
-    console.log(`[search:translate] "${effectiveQuery.slice(0, 60)}" → "${englishQuery.slice(0, 60)}" (${langCode}→en)`);
-  }
-
-  // ── Start KV semantic search (still overlaps with TMDB network time) ────
-  // Dedup against TMDB results happens after Promise.all — excludeIds not yet known.
-  const semanticPromise = mayNeedSemantic
-    ? runKVSemanticSearch(englishQuery, env, new Set())
-    : Promise.resolve([]);
-
-  // ── Await both concurrently ───────────────────────────────────────────
-  let searchData, semanticRaw;
+  let searchData;
   try {
-    [searchData, semanticRaw] = await Promise.all([tmdbPromise, semanticPromise]);
+    const r = await fetch(tmdbSearchUrl.toString(), { headers: { 'User-Agent': 'FindFilm.ai/1.0' } });
+    if (!r.ok) throw new Error(`TMDB ${r.status}`);
+    searchData = await r.json();
   } catch (e) {
-    console.error(`[search:error] q="${query.slice(0, 80)}" ${e.message}`);
+    console.error(`[search:error] TMDB failed q="${query.slice(0, 80)}" ${e.message}`);
     return json({ error: 'Search failed', detail: e.message }, 502);
   }
 
-  // ── 3-Tier bucketing ─────────────────────────────────────────────────
+  // ── Step 3: Bucket T1 / T2 / T2b ─────────────────────────────────────
   //
-  // seenIds is built incrementally as each movie is placed into a tier.
-  // This guarantees strict dedup: a movie placed in Tier 1 is added to seenIds
-  // immediately and cannot appear in Tier 2, Tier 2b, or Tier 3.
-  // TMDB occasionally returns the same id twice on adjacent pages — the
-  // seenIds.has() guard at the top of the loop drops those silently.
+  // seenIds grows as each movie is placed — strict dedup across all tiers.
   //
-  // Tier 1:  query ⊂ title or original_title (case-insensitive substring).
+  // Tier 1:  effectiveQuery ⊂ title or original_title (case-insensitive).
   //          Sub-sorted by _serverTitleScore: exact > prefix > all-words > any-word.
-  //
-  // Tier 2:  query ⊂ overview/description field.
-  //
+  // Tier 2:  effectiveQuery ⊂ overview/description.
   // Tier 2b: TMDB cast/crew/keyword match — no text hit in title or overview.
-  //          Kept here (not discarded) — TMDB's relevance signal is still useful.
-  //
-  // Tier 3:  AI KV semantic extras. Only appended on page 1 when Tier 1 is thin
-  //          (< _TITLE_MATCH_THRESHOLD), indicating a descriptive rather than
-  //          title-based query. Strictly deduplicated against seenIds.
 
   const rawResults = searchData.results || [];
-  const seenIds    = new Set();   // grows as we assign movies to tiers
+  const seenIds    = new Set();
   const tier1 = [], tier2 = [], tier2b = [];
 
   for (const m of rawResults) {
-    // Drop duplicates — TMDB can return the same id on adjacent result pages.
     if (seenIds.has(m.id)) continue;
     seenIds.add(m.id);
 
@@ -363,23 +412,92 @@ async function handleSearch(request, env, cors) {
     }
   }
 
-  // Sub-sort Tier 1 by match specificity (exact > prefix > all-words > any-word).
-  // Ties preserve TMDB's original (popularity-weighted) order via a stable sort.
   tier1.sort((a, b) => _serverTitleScore(b, q, words) - _serverTitleScore(a, q, words));
 
-  // ── Tier 3: semantic fallback ─────────────────────────────────────────
-  // Only attach when Tier 1 is thin — that signals a descriptive/vibe query.
-  // If the query is short (<3 words), semanticRaw is [] so tier3 stays empty.
-  // Guard with || [] so a null/undefined semanticRaw never throws.
-  const useSemantic = tier1.length < _TITLE_MATCH_THRESHOLD;
-  const tier3 = useSemantic
-    ? (semanticRaw || []).filter(m => !seenIds.has(m.id))
-    : [];
+  // ── Step 4: Conditional Tier 3 — only when T1 is thin ────────────────
+  //
+  // LLM is NEVER invoked for rich-T1 queries (e.g. "batman", "inception").
+  // Two conditions must BOTH be true:
+  //   A) T1 < _TITLE_MATCH_THRESHOLD  →  TMDB found no clear title match
+  //   B) words >= _SEMANTIC_WORD_MIN  →  query is long enough to be descriptive
+  //
+  // When both are true, Tier 3 runs two sub-steps concurrently:
+  //   3a. KV + Llama 70B semantic search over 119 curated movies (thematic)
+  //   3b. LLM intent parse (8B) → genre IDs → TMDB /discover/movie (broad fallback)
+  //       Only fires if _INTENT_WORD_MIN (≥ 5 words) — very long/complex queries.
+
+  const useSemantic   = tier1.length < _TITLE_MATCH_THRESHOLD;
+  const isLongQuery   = words.length >= _SEMANTIC_WORD_MIN;   // ≥ 3 words
+  const isComplexQuery= words.length >= _INTENT_WORD_MIN;     // ≥ 5 words
+  const tier3         = [];
+
+  if (useSemantic && isLongQuery && page === 1 && type === 'movie') {
+    // ── 3a: KV semantic ──────────────────────────────────────────────
+    // Translate non-English queries to English first (m2m100).
+    let englishQuery = effectiveQuery;
+    if (env.AI && _M2M_LANG[langCode]) {
+      const needsTranslation = langCode !== 'en';
+      if (needsTranslation) {
+        englishQuery = await _translateToEnglish(effectiveQuery, _M2M_LANG[langCode], env);
+        console.log(`[search:translate] "${effectiveQuery.slice(0, 60)}" → "${englishQuery.slice(0, 60)}" (${langCode}→en)`);
+      }
+    }
+
+    // ── 3b: LLM intent (concurrent with KV) ──────────────────────────
+    // Only for complex queries (≥ 5 words) to extract genre hints for /discover.
+    const kvPromise     = (env.AI && env.MOVIES_CACHE)
+      ? runKVSemanticSearch(englishQuery, env, seenIds)
+      : Promise.resolve([]);
+    const intentPromise = (isComplexQuery && env.AI)
+      ? _parseIntent(effectiveQuery, env)
+      : Promise.resolve(null);
+
+    const [kvHits, intent] = await Promise.all([kvPromise, intentPromise]);
+
+    if (intent) {
+      console.log(
+        `[intent] intent=${intent.intent}` +
+        ` clean="${intent.clean_title_guess.slice(0, 40)}"` +
+        ` kw="${intent.english_keywords.slice(0, 60)}"`
+      );
+    }
+
+    // Add KV semantic hits (strictly deduplicated against T1/T2/T2b)
+    (kvHits || []).filter(m => !seenIds.has(m.id)).forEach(m => {
+      seenIds.add(m.id);
+      tier3.push(m);
+    });
+
+    // ── /discover/movie via genre IDs from LLM keywords ──────────────
+    // Only fires when KV semantic returned few results AND LLM gave mappable keywords.
+    // Appended to the very bottom — broadest, least precise fallback.
+    if (intent?.english_keywords && tier3.length < 3) {
+      const genreIds = _keywordsToGenreIds(intent.english_keywords);
+      if (genreIds.length > 0) {
+        try {
+          const discoverUrl = new URL('https://api.themoviedb.org/3/discover/movie');
+          discoverUrl.searchParams.set('api_key',       env.TMDB_KEY);
+          discoverUrl.searchParams.set('with_genres',   genreIds.join(','));
+          discoverUrl.searchParams.set('sort_by',       'popularity.desc');
+          discoverUrl.searchParams.set('language',      lang);
+          discoverUrl.searchParams.set('include_adult', 'false');
+          discoverUrl.searchParams.set('page',          '1');
+          const discR = await fetch(discoverUrl.toString(), { headers: { 'User-Agent': 'FindFilm.ai/1.0' } });
+          const discData = discR.ok ? await discR.json() : { results: [] };
+          const discHits = (discData.results || []).filter(m => !seenIds.has(m.id)).slice(0, 5);
+          discHits.forEach(m => { seenIds.add(m.id); tier3.push(m); });
+          console.log(`[intent] discover genres=[${genreIds}] kw="${intent.english_keywords.slice(0, 40)}" → +${discHits.length}`);
+        } catch (e) {
+          // Non-fatal — KV semantic results still returned above.
+          console.error(`[intent] discover failed: ${e.message}`);
+        }
+      }
+    }
+  }
 
   // ── Production log — visible in: wrangler pages deployment tail ──────
-  const stripped = effectiveQuery !== query;
   console.log(
-    `[search] q="${effectiveQuery.slice(0, 80)}"${stripped ? ` (stripped from "${query.slice(0, 40)}")` : ''}` +
+    `[search] q="${effectiveQuery.slice(0, 80)}"${effectiveQuery !== query ? ` (was "${query.slice(0, 40)}")` : ''}` +
     ` lang=${lang} page=${page} type=${type}` +
     ` | T1:${tier1.length} T2:${tier2.length} T2b:${tier2b.length} T3:${tier3.length}` +
     ` | semantic=${useSemantic} words=${words.length}` +
@@ -391,7 +509,6 @@ async function handleSearch(request, env, cors) {
     total_results: searchData.total_results || rawResults.length,
     total_pages:   searchData.total_pages   || 1,
     page,
-    // Debug fields — visible in network tab and wrangler tail logs
     _tiers: { t1: tier1.length, t2: tier2.length, t2b: tier2b.length, t3: tier3.length },
     _query: effectiveQuery !== query ? { raw: query, effective: effectiveQuery } : undefined,
   });
