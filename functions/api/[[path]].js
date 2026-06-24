@@ -14,7 +14,7 @@
  * API keys and KV are stored as Cloudflare Pages secrets/bindings —
  * never exposed in HTML source.
  */
-export async function onRequest({ request, env, params }) {
+export async function onRequest({ request, env, params, ctx }) {
   const url  = new URL(request.url);
   const path = '/' + (params.path || []).join('/');
 
@@ -35,7 +35,7 @@ export async function onRequest({ request, env, params }) {
 
   /* ── /api/search ── two-step: TMDB title search + AI semantic fallback ── */
   if (path === '/search') {
-    return handleSearch(request, env, cors);
+    return handleSearch(request, env, cors, ctx);
   }
 
   /* ── /api/ai-search ── semantic movie search via Cloudflare AI ── */
@@ -334,7 +334,8 @@ function _serverTitleScore(movie, q, words) {
   return 0;
 }
 
-async function handleSearch(request, env, cors) {
+async function handleSearch(request, env, cors, ctx) {
+  const t0 = performance.now();
   const json = (body, status = 200) =>
     new Response(JSON.stringify(body), {
       status,
@@ -430,6 +431,7 @@ async function handleSearch(request, env, cors) {
   const isLongQuery   = words.length >= _SEMANTIC_WORD_MIN;   // ≥ 3 words
   const isComplexQuery= words.length >= _INTENT_WORD_MIN;     // ≥ 5 words
   const tier3         = [];
+  let   llmTriggered  = false;
 
   if (useSemantic && isLongQuery && page === 1 && type === 'movie') {
     // ── 3a: KV semantic ──────────────────────────────────────────────
@@ -448,7 +450,8 @@ async function handleSearch(request, env, cors) {
     const kvPromise     = (env.AI && env.MOVIES_CACHE)
       ? runKVSemanticSearch(englishQuery, env, seenIds)
       : Promise.resolve([]);
-    const intentPromise = (isComplexQuery && env.AI)
+    llmTriggered = isComplexQuery && !!env.AI;
+    const intentPromise = llmTriggered
       ? _parseIntent(effectiveQuery, env)
       : Promise.resolve(null);
 
@@ -498,14 +501,45 @@ async function handleSearch(request, env, cors) {
     }
   }
 
+  const totalResults = tier1.length + tier2.length + tier2b.length + tier3.length;
+  const tierResolved = tier1.length  > 0 ? 'T1'
+                     : tier2.length  > 0 ? 'T2'
+                     : tier2b.length > 0 ? 'T2b'
+                     : tier3.length  > 0 ? 'T3'
+                     : 'none';
+
   // ── Production log — visible in: wrangler pages deployment tail ──────
   console.log(
     `[search] q="${effectiveQuery.slice(0, 80)}"${effectiveQuery !== query ? ` (was "${query.slice(0, 40)}")` : ''}` +
     ` lang=${lang} page=${page} type=${type}` +
     ` | T1:${tier1.length} T2:${tier2.length} T2b:${tier2b.length} T3:${tier3.length}` +
-    ` | semantic=${useSemantic} words=${words.length}` +
-    ` | total=${tier1.length + tier2.length + tier2b.length + tier3.length}`
+    ` | semantic=${useSemantic} words=${words.length} llm=${llmTriggered}` +
+    ` | total=${totalResults} tier=${tierResolved}`
   );
+
+  // ── Axiom non-blocking log ────────────────────────────────────────────
+  // Fires AFTER the response is returned — zero latency impact on the user.
+  // Guarded: silently skipped if AXIOM_API_TOKEN secret is not configured.
+  if (ctx && env.AXIOM_API_TOKEN) {
+    ctx.waitUntil(
+      fetch('https://us-east-1.aws.edge.axiom.co/v1/ingest/findfilm-logs', {
+        method:  'POST',
+        headers: {
+          'Authorization': `Bearer ${env.AXIOM_API_TOKEN}`,
+          'Content-Type':  'application/json',
+        },
+        body: JSON.stringify([{
+          event:             'search_executed',
+          raw_query:         query,
+          detected_language: langCode,
+          tier_resolved:     tierResolved,
+          results_count:     totalResults,
+          execution_time_ms: Math.round(performance.now() - t0),
+          llm_triggered:     llmTriggered,
+        }]),
+      }).catch(e => console.error(`[axiom] log failed: ${e.message}`))
+    );
+  }
 
   return json({
     results:       [...tier1, ...tier2, ...tier2b, ...tier3],
