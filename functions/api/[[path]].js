@@ -215,10 +215,10 @@ async function handleSearch(request, env, cors) {
   const words    = q.split(/\s+/).filter(Boolean);
   const langCode = lang.split('-')[0]; // 'uk-UA' → 'uk'
 
+  // Long queries (≥ 3 words) are potentially descriptive — enable semantic fallback.
+  const isLongQuery     = words.length >= _SEMANTIC_WORD_MIN;
   const mayNeedSemantic =
-    page === 1 && type === 'movie' &&
-    words.length >= _SEMANTIC_WORD_MIN &&
-    !!env.AI && !!env.MOVIES_CACHE;
+    page === 1 && type === 'movie' && isLongQuery && !!env.AI && !!env.MOVIES_CACHE;
 
   // ── Fire TMDB fetch immediately (don't wait for translation) ──────────
   const tmdbUrl = new URL(`https://api.themoviedb.org/3/search/${type}`);
@@ -233,12 +233,14 @@ async function handleSearch(request, env, cors) {
   // ── Translate query to English for semantic step (runs while TMDB is in flight) ──
   // m2m100 is fast (~200 ms); by the time it finishes TMDB may still be pending.
   const needsTranslation = langCode !== 'en' && !!_M2M_LANG[langCode] && !!env.AI;
-  const englishQuery = mayNeedSemantic && needsTranslation
-    ? await _translateToEnglish(query, _M2M_LANG[langCode], env)
-    : query;
+  let englishQuery = query;
+  if (mayNeedSemantic && needsTranslation) {
+    englishQuery = await _translateToEnglish(query, _M2M_LANG[langCode], env);
+    console.log(`[search:translate] "${query.slice(0, 60)}" → "${englishQuery.slice(0, 60)}" (${langCode}→en)`);
+  }
 
   // ── Start KV semantic search (still overlaps with TMDB network time) ────
-  // excludeIds are not known yet; we dedup against TMDB results after Promise.all.
+  // Dedup against TMDB results happens after Promise.all — excludeIds not yet known.
   const semanticPromise = mayNeedSemantic
     ? runKVSemanticSearch(englishQuery, env, new Set())
     : Promise.resolve([]);
@@ -248,29 +250,39 @@ async function handleSearch(request, env, cors) {
   try {
     [searchData, semanticRaw] = await Promise.all([tmdbPromise, semanticPromise]);
   } catch (e) {
+    console.error(`[search:error] q="${query.slice(0, 80)}" ${e.message}`);
     return json({ error: 'Search failed', detail: e.message }, 502);
   }
 
-  const rawResults = searchData.results || [];
-  const seenIds    = new Set(rawResults.map(m => m.id));
-
   // ── 3-Tier bucketing ─────────────────────────────────────────────────
   //
-  // Tier 1: query is a substring of title or original_title (case-insensitive).
-  //         Sub-sorted by _serverTitleScore so exact matches beat prefix beats substring.
+  // seenIds is built incrementally as each movie is placed into a tier.
+  // This guarantees strict dedup: a movie placed in Tier 1 is added to seenIds
+  // immediately and cannot appear in Tier 2, Tier 2b, or Tier 3.
+  // TMDB occasionally returns the same id twice on adjacent pages — the
+  // seenIds.has() guard at the top of the loop drops those silently.
   //
-  // Tier 2: query is a substring of the overview/description field.
+  // Tier 1:  query ⊂ title or original_title (case-insensitive substring).
+  //          Sub-sorted by _serverTitleScore: exact > prefix > all-words > any-word.
   //
-  // Tier 2b: TMDB results that matched by cast/crew/keywords (no text hit in title or overview).
-  //          Kept here rather than discarded — TMDB's relevance signal is still useful.
+  // Tier 2:  query ⊂ overview/description field.
   //
-  // Tier 3: AI KV semantic extras, deduplicated against TMDB results.
-  //         Only included when Tier 1 is thin (< _TITLE_MATCH_THRESHOLD), indicating
-  //         the query is descriptive rather than a title search.
+  // Tier 2b: TMDB cast/crew/keyword match — no text hit in title or overview.
+  //          Kept here (not discarded) — TMDB's relevance signal is still useful.
+  //
+  // Tier 3:  AI KV semantic extras. Only appended on page 1 when Tier 1 is thin
+  //          (< _TITLE_MATCH_THRESHOLD), indicating a descriptive rather than
+  //          title-based query. Strictly deduplicated against seenIds.
 
+  const rawResults = searchData.results || [];
+  const seenIds    = new Set();   // grows as we assign movies to tiers
   const tier1 = [], tier2 = [], tier2b = [];
 
   for (const m of rawResults) {
+    // Drop duplicates — TMDB can return the same id on adjacent result pages.
+    if (seenIds.has(m.id)) continue;
+    seenIds.add(m.id);
+
     const t1 = (m.title          || '').toLowerCase();
     const t2 = (m.original_title || '').toLowerCase();
     const ov = (m.overview       || '').toLowerCase();
@@ -285,20 +297,32 @@ async function handleSearch(request, env, cors) {
   }
 
   // Sub-sort Tier 1 by match specificity (exact > prefix > all-words > any-word).
-  // Ties preserve TMDB's original (popularity-weighted) order.
+  // Ties preserve TMDB's original (popularity-weighted) order via a stable sort.
   tier1.sort((a, b) => _serverTitleScore(b, q, words) - _serverTitleScore(a, q, words));
 
-  // Tier 3: only when Tier 1 is thin (query is likely descriptive, not a title)
-  const tier3 = (tier1.length < _TITLE_MATCH_THRESHOLD)
-    ? semanticRaw.filter(m => !seenIds.has(m.id))
+  // ── Tier 3: semantic fallback ─────────────────────────────────────────
+  // Only attach when Tier 1 is thin — that signals a descriptive/vibe query.
+  // If the query is short (<3 words), semanticRaw is [] so tier3 stays empty.
+  // Guard with || [] so a null/undefined semanticRaw never throws.
+  const useSemantic = tier1.length < _TITLE_MATCH_THRESHOLD;
+  const tier3 = useSemantic
+    ? (semanticRaw || []).filter(m => !seenIds.has(m.id))
     : [];
+
+  // ── Production log — visible in: wrangler pages deployment tail ──────
+  console.log(
+    `[search] q="${query.slice(0, 80)}" lang=${lang} page=${page} type=${type}` +
+    ` | T1:${tier1.length} T2:${tier2.length} T2b:${tier2b.length} T3:${tier3.length}` +
+    ` | semantic=${useSemantic} words=${words.length}` +
+    ` | total=${tier1.length + tier2.length + tier2b.length + tier3.length}`
+  );
 
   return json({
     results:       [...tier1, ...tier2, ...tier2b, ...tier3],
     total_results: searchData.total_results || rawResults.length,
     total_pages:   searchData.total_pages   || 1,
     page,
-    // debug fields — visible in network tab / wrangler tail logs
+    // Debug fields — visible in network tab and wrangler tail logs
     _tiers: { t1: tier1.length, t2: tier2.length, t2b: tier2b.length, t3: tier3.length },
   });
 }
@@ -324,11 +348,18 @@ async function _translateToEnglish(text, sourceLang, env) {
 async function runKVSemanticSearch(query, env, excludeIds) {
   try {
     const cached = await env.MOVIES_CACHE.get('new-releases');
-    if (!cached) return [];
+    if (!cached) {
+      console.log('[semantic] KV new-releases empty — returning []');
+      return [];
+    }
 
     const movies     = JSON.parse(cached);
     const candidates = movies.filter(m => !excludeIds.has(m.id));
-    if (!candidates.length) return [];
+    if (!candidates.length) {
+      console.log('[semantic] all candidates excluded — returning []');
+      return [];
+    }
+    console.log(`[semantic] q="${query.slice(0, 60)}" catalog=${candidates.length} movies`);
 
     const catalog = candidates.map(m => {
       const genres    = (m.genres || []).join(', ');
@@ -376,6 +407,7 @@ async function runKVSemanticSearch(query, env, excludeIds) {
       .slice(0, 5);
 
     // Convert KV movie shape → TMDB-compatible shape
+    console.log(`[semantic] LLM returned ${filtered.length} ids: [${filtered.join(', ')}]`);
     const byId = new Map(movies.map(m => [m.id, m]));
     return filtered.map(id => {
       const m = byId.get(id);
