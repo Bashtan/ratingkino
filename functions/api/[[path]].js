@@ -14,7 +14,7 @@
  * API keys and KV are stored as Cloudflare Pages secrets/bindings —
  * never exposed in HTML source.
  */
-export async function onRequest({ request, env, params, ctx }) {
+export async function onRequest({ request, env, params, waitUntil }) {
   const url  = new URL(request.url);
   const path = '/' + (params.path || []).join('/');
 
@@ -35,7 +35,7 @@ export async function onRequest({ request, env, params, ctx }) {
 
   /* ── /api/search ── two-step: TMDB title search + AI semantic fallback ── */
   if (path === '/search') {
-    return handleSearch(request, env, cors, ctx);
+    return handleSearch(request, env, cors, waitUntil);
   }
 
   /* ── /api/ai-search ── semantic movie search via Cloudflare AI ── */
@@ -334,7 +334,7 @@ function _serverTitleScore(movie, q, words) {
   return 0;
 }
 
-async function handleSearch(request, env, cors, ctx) {
+async function handleSearch(request, env, cors, waitUntil) {
   const t0 = performance.now();
   const json = (body, status = 200) =>
     new Response(JSON.stringify(body), {
@@ -520,8 +520,8 @@ async function handleSearch(request, env, cors, ctx) {
   // ── Axiom non-blocking log ────────────────────────────────────────────
   // Fires AFTER the response is returned — zero latency impact on the user.
   // Guarded: silently skipped if AXIOM_API_TOKEN secret is not configured.
-  if (ctx && env.AXIOM_API_TOKEN) {
-    ctx.waitUntil(
+  if (waitUntil && env.AXIOM_API_TOKEN) {
+    waitUntil(
       fetch('https://us-east-1.aws.edge.axiom.co/v1/ingest/findfilm-logs', {
         method:  'POST',
         headers: {
