@@ -10,7 +10,7 @@
   gtag('config', 'G-XF0GTFNRHX');
 </script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>FindFilm.ai — Find your movie using AI</title>
 <meta name="description" content="Find your movie using AI. 240,000 films with aggregated scores from IMDb, Rotten Tomatoes &amp; Metacritic into one weighted rating.">
 <link rel="canonical" href="https://findfilm.ai/">
@@ -979,7 +979,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   border: 1px solid rgba(124,58,237,0.3);
   border-bottom: none;
   border-radius: 20px 20px 0 0;
-  padding: 20px 22px 30px; width: 380px;
+  padding: 20px 22px max(30px, calc(env(safe-area-inset-bottom) + 18px)); width: 380px;
   box-shadow: 0 -24px 80px rgba(0,0,0,0.75), 0 0 0 1px rgba(124,58,237,0.1), inset 0 1px 0 rgba(255,255,255,0.06);
   transition: transform 0.35s cubic-bezier(.16,1,.3,1);
 }
@@ -1088,7 +1088,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 /* ─── FAB RANDOM (mobile) ────────────────────── */
 .fab-random {
   display: none;
-  position: fixed; bottom: 24px; right: 18px; z-index: 150;
+  position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 14px)); right: 18px; z-index: 150;
   width: 58px; height: 58px; border-radius: 50%;
   background: linear-gradient(135deg, var(--orange), var(--yellow));
   border: none; cursor: pointer; font-size: 26px;
@@ -2279,7 +2279,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   position: fixed; bottom: 0; left: 0; right: 0;
   z-index: 10500;
   display: flex; align-items: center; gap: 14px;
-  padding: 16px 48px 22px 18px;
+  padding: 16px 48px max(22px, calc(env(safe-area-inset-bottom) + 10px)) 18px;
   background: rgba(10,0,26,0.9);
   backdrop-filter: blur(24px) saturate(1.5);
   -webkit-backdrop-filter: blur(24px) saturate(1.5);
