@@ -5171,7 +5171,7 @@ function refreshModalDetails(m) {
   // Amazon btn
   const amazonBtn = document.getElementById('btnAmazon');
   if (amazonBtn) {
-    amazonBtn.href = `https://www.amazon.com/s?k=${encodeURIComponent(m.title)}&i=instant-video&tag=findfilm-20`;
+    amazonBtn.href = `https://www.amazon.com/gp/video/search?phrase=${encodeURIComponent(m.title)}&tag=findfilm-20`;
   }
   _updateModalWLBtn();
 }
@@ -5184,10 +5184,10 @@ const PROVIDER_SEARCH = {
   2:    t => `https://tv.apple.com/search?term=${encodeURIComponent(t)}`,                   // Apple iTunes
   3:    t => `https://play.google.com/store/search?q=${encodeURIComponent(t)}&c=movies`,    // Google Play Movies
   8:    t => `https://www.netflix.com/search?q=${encodeURIComponent(t)}`,                   // Netflix
-  9:    t => `https://www.amazon.com/s?k=${encodeURIComponent(t)}&i=instant-video`,        // Amazon Prime
-  10:   t => `https://www.amazon.com/s?k=${encodeURIComponent(t)}&i=instant-video`,        // Amazon Video
+  9:    t => `https://www.amazon.com/gp/video/search?phrase=${encodeURIComponent(t)}&tag=findfilm-20`, // Amazon Prime
+  10:   t => `https://www.amazon.com/gp/video/search?phrase=${encodeURIComponent(t)}&tag=findfilm-20`, // Amazon Video
   15:   t => `https://www.hulu.com/search?q=${encodeURIComponent(t)}`,                      // Hulu
-  119:  t => `https://www.amazon.com/s?k=${encodeURIComponent(t)}&i=instant-video`,        // Amazon Prime (alt)
+  119:  t => `https://www.amazon.com/gp/video/search?phrase=${encodeURIComponent(t)}&tag=findfilm-20`, // Amazon Prime (alt)
   191:  () => 'https://www.kanopy.com/',                                                     // Kanopy
   257:  () => 'https://www.fubo.tv/',                                                        // fuboTV
   337:  t => `https://www.disneyplus.com/search?q=${encodeURIComponent(t)}`,               // Disney+
@@ -6260,6 +6260,23 @@ initFirstVisit();
 initIOSPrompt();
 initInstallButton();
 initMobileInstallBanner();
+
+/* ── iOS PWA: Universal Link fix for Amazon / outbound links ─────────────────
+   In standalone (home-screen) PWA mode, WKWebView does NOT fire Universal Links
+   for <a target="_blank"> clicks — the link opens inside the PWA WebView instead
+   of bouncing to Safari, which means the Prime Video app is never triggered.
+   Intercepting with window.open() from a genuine click event passes the URL to
+   Safari, which handles Universal Links correctly and opens the Prime app.     */
+if (window.navigator.standalone) {
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[target="_blank"]');
+    if (!a || !a.href || a.href === '#') return;
+    // Only intercept external links (skip same-origin navigation)
+    try { if (new URL(a.href).origin === location.origin) return; } catch { return; }
+    e.preventDefault();
+    window.open(a.href, '_blank', 'noopener,noreferrer');
+  }, { capture: true });
+}
 
 /* ── Sync filters-bar top to actual header height ───────────────────────── */
 function syncFiltersTop() {
