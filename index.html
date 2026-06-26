@@ -1128,9 +1128,15 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 /* Zero-result query display */
 .empty-query-wrap { margin: 14px 0 6px; }
 .empty-query-text {
-  display: block; font-size: 22px; font-weight: 700;
+  display: block; font-size: 15px; font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  color: var(--muted); line-height: 1.6; margin-bottom: 8px;
+}
+/* The quoted query span — styled as a cinematic italic title */
+.empty-query-text span {
   font-family: 'Cormorant Garamond', serif; font-style: italic;
-  color: #fff; letter-spacing: -0.3px; margin-bottom: 8px;
+  font-size: 22px; font-weight: 700; color: #fff;
+  letter-spacing: -0.3px; display: inline;
 }
 .empty-recovery-hint {
   font-size: 12px; color: var(--muted);
@@ -1701,12 +1707,15 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   box-shadow: 0 12px 32px rgba(99,102,241,0.3);
 }
 /* Recommendation reason pill — shown on For You cards */
+/* Recommendation reason — hover tooltip on desktop, muted subtitle on mobile.
+   Positioned absolute (relative to .mini-card which has position:relative),
+   even though the element lives inside .mini-card-info in the DOM. */
 .mini-card-reason {
   position: absolute;
-  bottom: 48px; left: 6px; right: 6px;
-  background: rgba(79,70,229,0.78);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  bottom: 44px; left: 6px; right: 6px;
+  background: rgba(79,70,229,0.84);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: #fff;
   font-size: 8.5px; font-weight: 700;
   font-family: 'DM Mono', monospace;
@@ -1719,12 +1728,36 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   overflow: hidden;
   text-overflow: ellipsis;
   pointer-events: none;
-  opacity: 0.88;
-  transition: opacity 0.18s ease, transform 0.18s ease;
-  transform: translateY(0);
+  /* Hidden by default — smooth slide-up on card hover */
+  opacity: 0;
+  transform: translateY(5px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
 }
 .mini-card:hover .mini-card-reason {
   opacity: 1;
+  transform: translateY(0);
+}
+/* Mobile: static muted subtitle, always visible below title/meta */
+@media (max-width: 768px) {
+  .mini-card-reason {
+    position: static;
+    background: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    color: rgba(167,139,250,0.7);
+    font-size: 8px;
+    padding: 3px 0 0;
+    border-radius: 0;
+    text-align: left;
+    letter-spacing: 0.6px;
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .mini-card:hover .mini-card-reason {
+    opacity: 1;
+    transform: none;
+  }
 }
 /* Skeleton mini cards */
 .mini-card-skeleton {
@@ -2852,8 +2885,8 @@ if ('serviceWorker' in navigator) {
     <div class="empty-title" id="emptyTitle" data-i18n="grid.noResults">No results found</div>
     <!-- Shown only on zero-result searches to display the quoted query -->
     <div class="empty-query-wrap" id="emptyQueryWrap" style="display:none">
-      <span class="empty-query-text" id="emptyQueryText"></span>
-      <div class="empty-recovery-hint">Try a different title, or explore below.</div>
+      <div class="empty-query-text">No exact match found for <span id="emptyQueryText"></span></div>
+      <div class="empty-recovery-hint">Check out these titles instead.</div>
     </div>
     <div class="empty-sub" id="emptySub" data-i18n="grid.noResultsSub">Try different filters or search terms</div>
   </div>
@@ -3783,10 +3816,11 @@ function renderMiniCard(m, opts = {}) {
   const newBadge = opts.showNew ? `<div class="mini-card-new-badge">NEW</div>` : '';
   const reason   = opts.reason  ? `<div class="mini-card-reason">${esc(opts.reason)}</div>` : '';
   return `<div class="mini-card" onclick="openMovie(${m.id})" title="${esc(m.title)}">
-    ${img}${score}${newBadge}${reason}
+    ${img}${score}${newBadge}
     <div class="mini-card-info">
       <div class="mini-card-title">${esc(m.title)}</div>
       <div class="mini-card-meta">${m.year || ''}${m.genres?.[0] ? ' · ' + m.genres[0] : ''}</div>
+      ${reason}
     </div>
   </div>`;
 }
@@ -4522,22 +4556,26 @@ async function loadMovies(page = 1, append = false) {
     const fuzzyEl = document.getElementById('fuzzyHint');
     if (!append && sq) {
       if (TOTAL_COUNT === 0) {
-        // Cinematic "no matches" state — replace generic text with the quoted query
-        const qWrap = document.getElementById('emptyQueryWrap');
-        const qText = document.getElementById('emptyQueryText');
-        const sub   = document.getElementById('emptySub');
-        if (qText) qText.textContent = `"${sq}"`;
-        if (qWrap) qWrap.style.display = '';
-        if (sub)   sub.style.display   = 'none';
+        // Zero-result state: show "No exact match found for '[query]'" and restore feed rows
+        const qWrap   = document.getElementById('emptyQueryWrap');
+        const qText   = document.getElementById('emptyQueryText');
+        const sub     = document.getElementById('emptySub');
+        const titleEl = document.getElementById('emptyTitle');
+        if (qText)   qText.textContent  = `"${sq}"`;
+        if (qWrap)   qWrap.style.display = '';
+        if (sub)     sub.style.display   = 'none';
+        if (titleEl) titleEl.style.display = 'none'; // "No results found" is redundant
         // Restore For You / Fresh rows so the user has content to browse
         _restoreFeedSections();
         if (fuzzyEl) fuzzyEl.classList.remove('show');
       } else {
-        // Hide zero-result overrides
-        const qWrap = document.getElementById('emptyQueryWrap');
-        const sub   = document.getElementById('emptySub');
-        if (qWrap) qWrap.style.display = 'none';
-        if (sub)   sub.style.display   = '';
+        // Hide zero-result overrides, restore normal empty-state header
+        const qWrap   = document.getElementById('emptyQueryWrap');
+        const sub     = document.getElementById('emptySub');
+        const titleEl = document.getElementById('emptyTitle');
+        if (qWrap)   qWrap.style.display = 'none';
+        if (sub)     sub.style.display   = '';
+        if (titleEl) titleEl.style.display = '';
         // ── Fuzzy match hint ───────────────────────────────────
         // If the top result's title shares no words with the query, the user
         // likely has a typo or alternate title — surface a gentle hint.
@@ -4546,7 +4584,7 @@ async function loadMovies(page = 1, append = false) {
           const qWords   = sq.toLowerCase().split(/\s+/).filter(w => w.length > 2);
           const disjoint = qWords.length > 0 && !qWords.some(w => topTitle.includes(w));
           if (disjoint) {
-            fuzzyEl.innerHTML = `Showing closest results for <strong>"${esc(MOVIES[0].title)}"</strong>`;
+            fuzzyEl.innerHTML = `Showing results for: <strong>"${esc(MOVIES[0].title)}"</strong>`;
             fuzzyEl.classList.add('show');
           } else {
             fuzzyEl.classList.remove('show');
@@ -4557,10 +4595,12 @@ async function loadMovies(page = 1, append = false) {
       }
     } else if (fuzzyEl) {
       fuzzyEl.classList.remove('show');
-      const qWrap = document.getElementById('emptyQueryWrap');
-      const sub   = document.getElementById('emptySub');
-      if (qWrap) qWrap.style.display = 'none';
-      if (sub)   sub.style.display   = '';
+      const qWrap   = document.getElementById('emptyQueryWrap');
+      const sub     = document.getElementById('emptySub');
+      const titleEl = document.getElementById('emptyTitle');
+      if (qWrap)   qWrap.style.display   = 'none';
+      if (sub)     sub.style.display     = '';
+      if (titleEl) titleEl.style.display = '';
     }
     // ─────────────────────────────────────────────────────────
 
