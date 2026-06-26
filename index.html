@@ -1128,6 +1128,27 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .empty-icon { font-size: 60px; margin-bottom: 14px; }
 .empty-title { font-size: 20px; font-weight: 700; color: var(--muted); }
 .empty-sub { font-size: 13px; color: rgba(167,139,250,0.5); margin-top: 7px; }
+/* Zero-result query display */
+.empty-query-wrap { margin: 14px 0 6px; }
+.empty-query-text {
+  display: block; font-size: 22px; font-weight: 700;
+  font-family: 'Cormorant Garamond', serif; font-style: italic;
+  color: #fff; letter-spacing: -0.3px; margin-bottom: 8px;
+}
+.empty-recovery-hint {
+  font-size: 12px; color: var(--muted);
+  font-family: 'DM Mono', monospace; letter-spacing: 0.5px;
+}
+/* Fuzzy match hint banner above results */
+.fuzzy-hint {
+  display: none; font-size: 11px; font-family: 'DM Mono', monospace;
+  letter-spacing: 0.5px; color: var(--muted);
+  padding: 7px 14px; margin-bottom: 10px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 7px; border-left: 2px solid rgba(255,255,255,0.1);
+}
+.fuzzy-hint.show { display: block; }
+.fuzzy-hint strong { color: var(--text-sub); font-style: italic; font-weight: 600; }
 
 /* ─── SETTINGS ────────────────────────────────── */
 .settings-modal {
@@ -2811,10 +2832,18 @@ if ('serviceWorker' in navigator) {
   <!-- AI follow-up suggestion chips -->
   <div class="ai-suggestions" id="aiSuggestions"></div>
 
+  <!-- Fuzzy match hint: shown when top result title doesn't match query -->
+  <div id="fuzzyHint" class="fuzzy-hint"></div>
+
   <div class="movie-grid" id="movieGrid"></div>
   <div class="empty-state" id="emptyState">
-    <div class="empty-icon">🎬</div>
-    <div class="empty-title" data-i18n="grid.noResults">No results found</div>
+    <div class="empty-icon" id="emptyIcon">🎬</div>
+    <div class="empty-title" id="emptyTitle" data-i18n="grid.noResults">No results found</div>
+    <!-- Shown only on zero-result searches to display the quoted query -->
+    <div class="empty-query-wrap" id="emptyQueryWrap" style="display:none">
+      <span class="empty-query-text" id="emptyQueryText"></span>
+      <div class="empty-recovery-hint">Try a different title, or explore below.</div>
+    </div>
     <div class="empty-sub" id="emptySub" data-i18n="grid.noResultsSub">Try different filters or search terms</div>
   </div>
   <div class="load-wrap" id="loadWrap">
@@ -4499,6 +4528,53 @@ async function loadMovies(page = 1, append = false) {
     else        MOVIES = newMovies;
     applySortOrder();
     renderGrid(append ? newMovies : MOVIES, append);
+
+    // ── Zero-result recovery ──────────────────────────────────
+    const fuzzyEl = document.getElementById('fuzzyHint');
+    if (!append && sq) {
+      if (TOTAL_COUNT === 0) {
+        // Cinematic "no matches" state — replace generic text with the quoted query
+        const qWrap = document.getElementById('emptyQueryWrap');
+        const qText = document.getElementById('emptyQueryText');
+        const sub   = document.getElementById('emptySub');
+        if (qText) qText.textContent = `"${sq}"`;
+        if (qWrap) qWrap.style.display = '';
+        if (sub)   sub.style.display   = 'none';
+        // Restore For You / Fresh rows so the user has content to browse
+        _restoreFeedSections();
+        if (fuzzyEl) fuzzyEl.classList.remove('show');
+      } else {
+        // Hide zero-result overrides
+        const qWrap = document.getElementById('emptyQueryWrap');
+        const sub   = document.getElementById('emptySub');
+        if (qWrap) qWrap.style.display = 'none';
+        if (sub)   sub.style.display   = '';
+        // ── Fuzzy match hint ───────────────────────────────────
+        // If the top result's title shares no words with the query, the user
+        // likely has a typo or alternate title — surface a gentle hint.
+        if (fuzzyEl && MOVIES.length > 0) {
+          const topTitle = (MOVIES[0].title || '').toLowerCase();
+          const qWords   = sq.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+          const disjoint = qWords.length > 0 && !qWords.some(w => topTitle.includes(w));
+          if (disjoint) {
+            fuzzyEl.innerHTML = `Showing closest results for <strong>"${esc(MOVIES[0].title)}"</strong>`;
+            fuzzyEl.classList.add('show');
+          } else {
+            fuzzyEl.classList.remove('show');
+          }
+        } else if (fuzzyEl) {
+          fuzzyEl.classList.remove('show');
+        }
+      }
+    } else if (fuzzyEl) {
+      fuzzyEl.classList.remove('show');
+      const qWrap = document.getElementById('emptyQueryWrap');
+      const sub   = document.getElementById('emptySub');
+      if (qWrap) qWrap.style.display = 'none';
+      if (sub)   sub.style.display   = '';
+    }
+    // ─────────────────────────────────────────────────────────
+
     // Scroll the results grid into view on the first page of a search so the
     // user doesn't have to scroll past the filter bar manually.
     if (!append && sq) {
@@ -4683,6 +4759,17 @@ function hideAIBanner() {
   document.getElementById('aiResultsBadge')?.classList.remove('show');
 }
 
+/* Animate feed sections back into view (shared by clearAISearch + zero-result recovery) */
+function _restoreFeedSections() {
+  if (CONTENT_TYPE !== 'movie') return;
+  const feedEl = document.getElementById('feedSections');
+  if (!feedEl) return;
+  feedEl.style.display = '';
+  feedEl.classList.remove('feed-animate-in');
+  void feedEl.offsetWidth;
+  feedEl.classList.add('feed-animate-in');
+}
+
 /* Reset to full catalog */
 function clearAISearch() {
   AI_SEARCH_ACTIVE = false;
@@ -4693,15 +4780,7 @@ function clearAISearch() {
   _lastQuery = '';
   document.getElementById('searchWrap').classList.remove('ai-active', 'typing');
   document.getElementById('searchInput').value = '';
-  if (CONTENT_TYPE === 'movie') {
-    const feedEl = document.getElementById('feedSections');
-    if (feedEl) {
-      feedEl.style.display = '';
-      feedEl.classList.remove('feed-animate-in');
-      void feedEl.offsetWidth;
-      feedEl.classList.add('feed-animate-in');
-    }
-  }
+  _restoreFeedSections();
   const lbl = document.getElementById('searchModeLabel');
   if (lbl) lbl.classList.remove('show');
   if (CACHE_MOVIES.length) {
