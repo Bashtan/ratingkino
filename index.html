@@ -515,6 +515,29 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .count-text { font-size: 12px; color: var(--muted); }
 .count-text strong { color: var(--yellow); }
 
+/* ─── SEARCH MODE LABEL ───────────────────────── */
+.search-mode-label {
+  display: none;
+  font-family: 'Montserrat', sans-serif; font-weight: 800;
+  font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--text-sub); margin-bottom: 14px;
+  animation: smLabelIn 0.25s ease both;
+}
+.search-mode-label.show { display: block; }
+@keyframes smLabelIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── FEED SECTIONS ANIMATE IN/OUT ─────────────── */
+@keyframes feedReveal {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.feed-sections.feed-animate-in {
+  animation: feedReveal 0.35s ease both;
+}
+
 /* ─── MOVIE GRID ──────────────────────────────── */
 .movie-grid {
   display: grid;
@@ -2711,6 +2734,7 @@ if ('serviceWorker' in navigator) {
 
 <!-- ════════════ MAIN GRID ════════════ -->
 <main>
+  <div class="search-mode-label" id="searchModeLabel">Search results</div>
   <div class="count-row">
     <span class="count-text"><span data-i18n="grid.showing">Showing:</span> <strong id="countShown">—</strong> <span data-i18n="grid.of">of</span> <strong id="countTotal">—</strong></span>
     <span class="ai-results-badge" id="aiResultsBadge">
@@ -2770,7 +2794,7 @@ if ('serviceWorker' in navigator) {
           <button class="btn-trailer" id="btnTrailer" onclick="toggleTrailer()" style="display:none" data-i18n="modal.trailer">▶ Trailer</button>
           <a class="btn-amazon" id="btnAmazon" href="#" target="_blank" rel="noopener noreferrer">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Prime
+            Watch on Prime Video ↗
           </a>
           <button class="btn-shr" onclick="openShare()" data-i18n="modal.share">↗ Share</button>
           <button class="btn-wl-modal" id="btnWatchlist" onclick="toggleWatchlistModal()">
@@ -4289,11 +4313,25 @@ async function loadMovies(page = 1, append = false) {
   // ── Show/hide discovery rows based on whether a search query is active ──
   // feedSections holds "For You" and "Fresh Additions" rows.
   // They are hidden whenever the user has typed a query so the viewport stays
-  // focused on search results.  Clearing the input (q='') restores them.
+  // focused on search results.  Clearing the input (q='') restores them with
+  // a fade-in animation so the state change is clearly communicated.
   const sq = document.getElementById('searchInput').value.trim();
+  const searchLabel = document.getElementById('searchModeLabel');
+  if (searchLabel) searchLabel.classList.toggle('show', !!sq);
   if (CONTENT_TYPE === 'movie') {
     const feedEl = document.getElementById('feedSections');
-    if (feedEl) feedEl.style.display = sq ? 'none' : '';
+    if (feedEl) {
+      if (sq) {
+        feedEl.style.display = 'none';
+        feedEl.classList.remove('feed-animate-in');
+      } else if (feedEl.style.display === 'none') {
+        feedEl.style.display = '';
+        // Trigger reflow so the animation fires fresh each time
+        feedEl.classList.remove('feed-animate-in');
+        void feedEl.offsetWidth;
+        feedEl.classList.add('feed-animate-in');
+      }
+    }
   }
 
   const moreBtn = document.getElementById('btnMore');
@@ -4529,7 +4567,17 @@ function clearAISearch() {
   _lastQuery = '';
   document.getElementById('searchWrap').classList.remove('ai-active', 'typing');
   document.getElementById('searchInput').value = '';
-  if (CONTENT_TYPE === 'movie') document.getElementById('feedSections').style.display = '';
+  if (CONTENT_TYPE === 'movie') {
+    const feedEl = document.getElementById('feedSections');
+    if (feedEl) {
+      feedEl.style.display = '';
+      feedEl.classList.remove('feed-animate-in');
+      void feedEl.offsetWidth;
+      feedEl.classList.add('feed-animate-in');
+    }
+  }
+  const lbl = document.getElementById('searchModeLabel');
+  if (lbl) lbl.classList.remove('show');
   if (CACHE_MOVIES.length) {
     MOVIES      = [...CACHE_MOVIES];
     TOTAL_COUNT = CACHE_MOVIES.length;
@@ -5335,7 +5383,7 @@ function refreshWatchProviders(m) {
     const styleAttr = tagStyle ? ` style="${tagStyle}"` : '';
     return `<a class="provider-chip" href="${url}" target="_blank" rel="noopener noreferrer" title="Watch on ${esc(p.provider_name)}">
       ${p.logo_path ? `<img src="${TIMG_W45}${p.logo_path}" alt="${esc(p.provider_name)}">` : ''}
-      <span>${esc(p.provider_name)}</span>
+      <span>Watch on ${esc(p.provider_name)} ↗</span>
       <span class="provider-tag ${tagClass}"${styleAttr}>${tagLabel}</span>
     </a>`;
   }
