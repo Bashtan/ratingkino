@@ -1698,6 +1698,32 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .feed-row.for-you .mini-card:hover {
   box-shadow: 0 12px 32px rgba(99,102,241,0.3);
 }
+/* Recommendation reason pill — shown on For You cards */
+.mini-card-reason {
+  position: absolute;
+  bottom: 48px; left: 6px; right: 6px;
+  background: rgba(79,70,229,0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 8.5px; font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  padding: 4px 7px;
+  border-radius: 5px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  opacity: 0.88;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  transform: translateY(0);
+}
+.mini-card:hover .mini-card-reason {
+  opacity: 1;
+}
 /* Skeleton mini cards */
 .mini-card-skeleton {
   flex: 0 0 130px; border-radius: 10px; overflow: hidden;
@@ -3717,12 +3743,13 @@ const MAX_ENRICHERS    = 3;
 window._FEED_POOL = [];
 
 function renderMiniCard(m, opts = {}) {
-  const img   = m.poster ? `<img class="mini-card-img" src="${m.poster}" alt="${esc(m.title)}" loading="lazy">` :
-                            `<div class="mini-card-img-placeholder">🎬</div>`;
-  const score = m.avg ? `<div class="mini-card-score">★ ${m.avg}</div>` : '';
+  const img      = m.poster ? `<img class="mini-card-img" src="${m.poster}" alt="${esc(m.title)}" loading="lazy">` :
+                              `<div class="mini-card-img-placeholder">🎬</div>`;
+  const score    = m.avg ? `<div class="mini-card-score">★ ${m.avg}</div>` : '';
   const newBadge = opts.showNew ? `<div class="mini-card-new-badge">NEW</div>` : '';
+  const reason   = opts.reason  ? `<div class="mini-card-reason">${esc(opts.reason)}</div>` : '';
   return `<div class="mini-card" onclick="openMovie(${m.id})" title="${esc(m.title)}">
-    ${img}${score}${newBadge}
+    ${img}${score}${newBadge}${reason}
     <div class="mini-card-info">
       <div class="mini-card-title">${esc(m.title)}</div>
       <div class="mini-card-meta">${m.year || ''}${m.genres?.[0] ? ' · ' + m.genres[0] : ''}</div>
@@ -3760,13 +3787,66 @@ function fromKV(m) {
   };
 }
 
+// Returns a short, dynamic reason string for a "For You" card.
+// Priority: director affinity → critical acclaim → genre+decade combo → fallback.
+function genRecommendReason(m, profile) {
+  const genres = m.genres || [];
+  const year   = parseInt(m.year)   || 0;
+  const avg    = parseFloat(m.avg)  || 0;
+  const imdb   = parseFloat(m.imdb) || 0;
+  const rt     = parseInt(m.rt)     || 0;
+  const mc     = parseInt(m.mc)     || 0;
+  const p      = profile || {};
+
+  // 1. Director affinity — user has opened ≥2 films by this director
+  if (m.director && (p.directors?.[m.director] || 0) >= 2) {
+    const lastName = m.director.split(' ').pop();
+    return `Fan of ${lastName}`;
+  }
+
+  // 2. Decade label
+  const decade = year >= 2023 ? ''
+    : year >= 2020 ? 'Recent'
+    : year >= 2010 ? '2010s'
+    : year >= 2000 ? '2000s'
+    : year >= 1990 ? '90s'
+    : year >= 1980 ? '80s'
+    : year >  0    ? 'Classic'
+    : '';
+
+  // 3. Critical-acclaim labels (genre-enriched where it fits)
+  const primaryGenre = genres[0] || '';
+  if (avg >= 8.5 || imdb >= 8.5) return primaryGenre ? `Acclaimed ${primaryGenre}` : 'Critically Acclaimed';
+  if (rt >= 95)                  return 'Near-Perfect Score';
+  if (avg >= 8.0 || imdb >= 8.0) return 'IMDb Top Pick';
+  if (rt >= 88 || mc >= 85)      return 'Critics\' Favorite';
+
+  // 4. Taste-matched genre + decade combo
+  const genreScores = p.genres || {};
+  const matchedGenre = genres.find(g => (genreScores[g] || 0) > 0);
+  if (matchedGenre) {
+    if (decade && decade !== 'Recent') return `${decade} ${matchedGenre}`;
+    return `Top ${matchedGenre} Pick`;
+  }
+
+  // 5. Decade + primary genre fallback
+  if (year >= 2023 && primaryGenre) return `New ${primaryGenre}`;
+  if (decade && primaryGenre)       return `${decade} ${primaryGenre}`;
+
+  // 6. Generic fallback
+  if (avg >= 7.5) return 'Highly Rated';
+  return primaryGenre ? `${primaryGenre} Pick` : 'Recommended';
+}
+
 function renderForYouRow() {
   const profile = getTasteProfile();
   if (profile.total < TASTE_THRESHOLD || !window._FEED_POOL.length) return;
   const scored = scoredForProfile(window._FEED_POOL).slice(0, 20);
   if (!scored.length) return;
   document.getElementById('rowForYou').style.display = '';
-  document.getElementById('scrollForYou').innerHTML = scored.map(m => renderMiniCard(m)).join('');
+  document.getElementById('scrollForYou').innerHTML = scored.map(m =>
+    renderMiniCard(m, { reason: genRecommendReason(m, profile) })
+  ).join('');
 }
 
 async function loadFeedSections() {
