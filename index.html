@@ -731,19 +731,33 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   margin-bottom: 3px;
 }
 .m-orig { font-size: 12px; color: var(--text-sub); font-style: italic; margin-bottom: 14px; }
-.m-ratings-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
-.mr {
-  display: flex; flex-direction: column; align-items: center;
-  padding: 6px 12px; border-radius: 8px;
-  font-family: 'Montserrat', sans-serif;
+.m-ratings-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+
+/* ── Score transparency: hero avg + source breakdown ──────── */
+.mr-score-card {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 11px 16px 12px; border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.09);
 }
-.mr .val { font-size: 20px; font-weight: 900; line-height: 1.1; }
+.mr-hero-avg { display: flex; align-items: baseline; gap: 3px; line-height: 1; }
+.mr-star { font-size: 17px; font-weight: 900; color: var(--accent); font-family: 'Montserrat', sans-serif; }
+.mr-avg-num { font-size: 36px; font-weight: 900; font-family: 'Montserrat', sans-serif; color: #fff; letter-spacing: -1.5px; line-height: 1; }
+.mr-hero-lbl { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; }
+.mr-breakdown { display: flex; align-items: center; gap: 6px; margin-top: 3px; flex-wrap: wrap; }
+.mrb-src { display: flex; align-items: center; gap: 4px; }
+.mrb-lbl { font-size: 9.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; }
+.mrb-num { font-size: 13px; font-weight: 800; font-family: 'Montserrat', sans-serif; line-height: 1; }
+.mrb-num.mrb-imdb { color: var(--imdb); }
+.mrb-num.mrb-rt   { color: #ff7055; }
+.mrb-num.mrb-mc   { color: var(--mc); }
+.mrb-dot { color: rgba(255,255,255,0.18); font-size: 14px; line-height: 1; user-select: none; }
+
+/* ── Keep .mr for FindFilm local rating badge ─────────────── */
+.mr { display: flex; flex-direction: column; align-items: center; padding: 6px 12px; border-radius: 8px; font-family: 'Montserrat', sans-serif; }
+.mr .val { font-size: 18px; font-weight: 900; line-height: 1.1; }
 .mr .src { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.75; margin-top: 2px; }
-.mr.imd  { background: rgba(245,197,24,0.14); border: 1px solid var(--imdb); color: var(--imdb); }
-.mr.rt   { background: rgba(250,50,10,0.15); border: 1px solid var(--rt); color: var(--rt); }
-.mr.mc   { background: rgba(255,204,52,0.14); border: 1px solid var(--mc); color: var(--mc); }
-.mr.avg  { background: linear-gradient(135deg,rgba(124,58,237,0.28),rgba(249,115,22,0.25)); border: 1px solid var(--purple); color: #fff; }
-.mr.loading { background: rgba(124,58,237,0.08); border: 1px solid var(--border); color: var(--muted); }
+.mr.loading { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--muted); }
 .m-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn-trailer {
   display: flex; align-items: center; gap: 6px;
@@ -5202,24 +5216,53 @@ async function loadSimilarMovies(m) {
 }
 
 function refreshModalRatings(m) {
-  const rows = [];
-  if (!m.enriched) {
-    rows.push(`<div class="mr loading"><div class="val" style="font-size:12px">${t('modal.loading')}</div><div class="src">Ratings</div></div>`);
-  } else if (!m.imdb && !m.rt && !m.mc) {
-    if (m.tmdbScore) rows.push(`<div class="mr avg"><div class="val">★ ${m.tmdbScore.toFixed(1)}</div><div class="src">Score</div></div>`);
-  } else {
-    if (m.imdb) rows.push(`<div class="mr imd"><div class="val">${m.imdb}</div><div class="src">IMDb</div></div>`);
-    if (m.rt)   rows.push(`<div class="mr rt"><div class="val">${m.rt}%</div><div class="src">Rotten Tomatoes</div></div>`);
-    if (m.mc)   rows.push(`<div class="mr mc"><div class="val">${m.mc}</div><div class="src">Metacritic</div></div>`);
-    rows.push(`<div class="mr avg"><div class="val">★ ${calcAvg(m)}</div><div class="src">Avg Score</div></div>`);
-  }
-  // FindFilm Local Rating — shown whenever this movie has user reviews
+  const el = document.getElementById('mRatings');
+  if (!el) return;
+
+  // FindFilm local rating badge (always appended if reviews exist)
   const local = calcLocalRating(m.id);
-  if (local) {
-    const label = local.count === 1 ? 'review' : 'reviews';
-    rows.push(`<div class="mr ff-local"><div class="val">★ ${local.avg}</div><div class="src">FindFilm · ${local.count} ${label}</div></div>`);
+  const localBadge = local
+    ? `<div class="mr ff-local"><div class="val">★ ${local.avg}</div><div class="src">FindFilm · ${local.count} ${local.count === 1 ? 'review' : 'reviews'}</div></div>`
+    : '';
+
+  if (!m.enriched) {
+    el.innerHTML = `<div class="mr-score-card">
+      <div class="mr-hero-avg"><span class="mr-star">★</span><span class="mr-avg-num" style="font-size:22px;opacity:.5">${t('modal.loading')}</span></div>
+      <div class="mr-hero-lbl">Fetching ratings…</div>
+    </div>${localBadge}`;
+    return;
   }
-  document.getElementById('mRatings').innerHTML = rows.join('');
+
+  const avg = calcAvg(m);
+  const srcCount = [m.imdb, m.rt, m.mc].filter(Boolean).length;
+
+  if (!srcCount && !m.tmdbScore) {
+    el.innerHTML = `<div class="mr-score-card">
+      <div class="mr-hero-avg"><span class="mr-star" style="opacity:.35">★</span><span class="mr-avg-num" style="opacity:.35">—</span></div>
+      <div class="mr-hero-lbl">No ratings available</div>
+    </div>${localBadge}`;
+    return;
+  }
+
+  // Hero avg label
+  const srcLbl = srcCount === 0
+    ? 'TMDB score'
+    : `Weighted avg · ${srcCount} source${srcCount > 1 ? 's' : ''}`;
+
+  // Inline breakdown items
+  const bdItems = [];
+  if (m.imdb) bdItems.push(`<span class="mrb-src"><span class="mrb-lbl">IMDb</span><span class="mrb-num mrb-imdb">${m.imdb}</span></span>`);
+  if (m.rt)   bdItems.push(`<span class="mrb-src"><span class="mrb-lbl">RT</span><span class="mrb-num mrb-rt">${m.rt}%</span></span>`);
+  if (m.mc)   bdItems.push(`<span class="mrb-src"><span class="mrb-lbl">Meta</span><span class="mrb-num mrb-mc">${m.mc}</span></span>`);
+  const breakdown = bdItems.length
+    ? `<div class="mr-breakdown">${bdItems.join('<span class="mrb-dot">·</span>')}</div>`
+    : '';
+
+  el.innerHTML = `<div class="mr-score-card">
+    <div class="mr-hero-avg"><span class="mr-star">★</span><span class="mr-avg-num">${avg}</span></div>
+    <div class="mr-hero-lbl">${srcLbl}</div>
+    ${breakdown}
+  </div>${localBadge}`;
 }
 
 function refreshModalDetails(m) {
