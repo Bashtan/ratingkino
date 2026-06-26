@@ -375,16 +375,6 @@ header {
   to   { transform: rotate(360deg) scale(1.3); }
 }
 .btn-random.spinning .rnd-spark { animation: randomSpin 0.6s cubic-bezier(0.34,1.56,0.64,1); }
-.btn-settings {
-  width: 38px; height: 38px;
-  background: rgba(124,58,237,0.08);
-  border: 1.5px solid var(--border);
-  border-radius: 9px; color: var(--muted);
-  cursor: pointer; font-size: 16px;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s; flex-shrink: 0;
-}
-.btn-settings:hover { border-color: var(--purple); color: var(--text); }
 
 /* ─── FILTER BAR (Netflix-style) ─────────────── */
 .filters-bar {
@@ -794,6 +784,13 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .btn-stream:hover { background: rgba(255,255,255,0.13); border-color: rgba(255,255,255,0.28); transform: translateY(-1px); }
 .btn-stream img { width: 16px; height: 16px; border-radius: 3px; object-fit: cover; flex-shrink: 0; }
+.btn-stream-disabled {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 38px; padding: 0 14px;
+  background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.08);
+  border-radius: 10px; color: var(--muted); font-size: 13px; font-family: 'Inter', sans-serif;
+  white-space: nowrap; cursor: not-allowed; opacity: 0.6;
+}
 .btn-shr {
   display: flex; align-items: center; gap: 6px;
   height: 38px; padding: 0 16px;
@@ -1150,34 +1147,6 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .fuzzy-hint.show { display: block; }
 .fuzzy-hint strong { color: var(--text-sub); font-style: italic; font-weight: 600; }
 
-/* ─── SETTINGS ────────────────────────────────── */
-.settings-modal {
-  width: 100%; max-width: 480px;
-  background: var(--modal-bg); border-radius: 20px;
-  margin: 40px 20px; padding: 40px;
-  border: 1px solid rgba(255,255,255,0.07);
-  box-shadow: 0 40px 100px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04);
-  transform: scale(0.95);
-  opacity: 0;
-  transition: transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.22s ease;
-}
-.overlay.open .settings-modal { transform: scale(1); opacity: 1; }
-.settings-title { font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 18px; margin-bottom: 6px; background: linear-gradient(90deg,var(--purple),var(--orange)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-.settings-sub { font-size: 13px; color: var(--muted); line-height: 1.55; margin-bottom: 24px; }
-.settings-field { margin-bottom: 18px; }
-.settings-field > label { display: flex; justify-content: space-between; align-items: center; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; }
-.badge-req { font-size: 9px; padding: 2px 7px; border-radius: 10px; background: rgba(249,115,22,0.18); color: var(--orange); }
-.badge-opt { font-size: 9px; padding: 2px 7px; border-radius: 10px; background: rgba(124,58,237,0.14); color: var(--muted); }
-.settings-field input { width: 100%; height: 44px; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.12); border-radius: 10px; color: var(--text); -webkit-text-fill-color: var(--text); font-size: 13px; font-family: 'Inter', sans-serif; padding: 0 14px; outline: none; transition: border-color 0.2s, background 0.2s; }
-.settings-field input:focus { border-color: var(--accent); background: rgba(255,255,255,0.07); }
-.settings-field input:-webkit-autofill { -webkit-text-fill-color: var(--text); -webkit-box-shadow: 0 0 0 100px #1a1a1a inset; }
-.settings-field .get-key { font-size: 11px; color: var(--text-sub); text-decoration: none; margin-top: 5px; display: inline-block; transition: color 0.2s; }
-.settings-field .get-key:hover { color: var(--accent); }
-.settings-save { width: 100%; height: 48px; background: var(--accent); border: none; border-radius: 10px; color: #fff; font-weight: 900; font-size: 13px; font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 1.5px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 20px rgba(229,9,20,0.35); }
-.settings-save:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 8px 28px rgba(229,9,20,0.5); }
-.settings-save:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none; }
-.settings-err { font-size: 12px; color: var(--rt); margin-top: 9px; text-align: center; min-height: 18px; }
-.settings-note { font-size: 11px; color: rgba(255,255,255,0.25); text-align: center; margin-top: 10px; line-height: 1.5; }
 
 /* ─── FAB RANDOM (mobile) ────────────────────── */
 .fab-random {
@@ -2628,7 +2597,6 @@ if ('serviceWorker' in navigator) {
           <button class="lang-option" data-lang="uk" onclick="switchLang('uk')" role="option">Українська</button>
         </div>
       </div>
-      <button class="btn-settings" onclick="openSettings()" title="Settings" style="display:none">⚙</button>
     </div>
   </div>
 </header>
@@ -3000,27 +2968,6 @@ if ('serviceWorker' in navigator) {
   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
 </button>
 
-<!-- ════════════ SETTINGS OVERLAY ════════════ -->
-<div class="overlay" id="settingsOv">
-  <div class="settings-modal">
-    <button class="m-close" id="settingsClose" onclick="closeSettings()">✕</button>
-    <div class="settings-title">API Configuration</div>
-    <div class="settings-sub">Connect your free API keys to load real movie data.</div>
-    <div class="settings-field">
-      <label>TMDb API Key <span class="badge-req">Required</span></label>
-      <input type="text" id="sTmdb" placeholder="e.g. a1b2c3d4e5f6…" autocomplete="off" spellcheck="false">
-      <a class="get-key" href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">Get free key at themoviedb.org →</a>
-    </div>
-    <div class="settings-field">
-      <label>OMDb API Key <span class="badge-opt">Optional — IMDb, RT &amp; MC</span></label>
-      <input type="text" id="sOmdb" placeholder="e.g. a1b2c3d4" autocomplete="off" spellcheck="false">
-      <a class="get-key" href="http://www.omdbapi.com/apikey.aspx" target="_blank" rel="noopener">Get free key at omdbapi.com →</a>
-    </div>
-    <button class="settings-save" id="settingsSave" onclick="saveSettings()">Save &amp; Load Movies</button>
-    <div class="settings-err" id="settingsErr"></div>
-    <div class="settings-note">Keys are stored locally and never shared.</div>
-  </div>
-</div>
 
 <script>
 /* ═══════════════════════════════════
@@ -3798,7 +3745,6 @@ let ACTIVE_MOVIE = null;
 let SORT_SRC     = null;
 let TRAILER_OPEN = false;
 let IS_LOADING   = false;
-let SETTINGS_REQ = false;
 let PENDING_STARS = 0;         // stars selected in compose
 let RANDOM_POOL  = [];         // cached 500-movie roulette pool (daily sync)
 let DETECTED_COUNTRY = 'US';  // ISO-3166-1 from /api/geo-lang; used for watch providers
@@ -5477,7 +5423,7 @@ function refreshModalRatings(m) {
 
   // Hero avg label
   const srcLbl = srcCount === 0
-    ? 'TMDB score'
+    ? 'TMDB · no critic data yet'
     : `Weighted avg · ${srcCount} source${srcCount > 1 ? 's' : ''}`;
 
   // Inline breakdown items
@@ -5665,14 +5611,23 @@ function _refreshStreamingCtAs(m) {
   }
 
   if (!providers.length) {
-    // No TMDB data yet — show Amazon Prime Video as universal fallback; hide region
     setRegionLbl(false);
-    const url = `https://www.amazon.com/gp/video/search?phrase=${encodeURIComponent(title)}&tag=findfilm-20`;
-    container.innerHTML =
-      `<a class="btn-stream" href="${url}" target="_blank" rel="noopener noreferrer">` +
-        `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>` +
-        `Watch on Prime Video ↗` +
-      `</a>`;
+    if (m.enriched) {
+      // TMDB data arrived but no streaming providers in this region
+      container.innerHTML =
+        `<button class="btn-stream-disabled" disabled>` +
+          `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>` +
+          `Streaming links not available yet` +
+        `</button>`;
+    } else {
+      // Still loading — show Amazon Prime Video as pre-enrichment fallback
+      const url = `https://www.amazon.com/gp/video/search?phrase=${encodeURIComponent(title)}&tag=findfilm-20`;
+      container.innerHTML =
+        `<a class="btn-stream" href="${url}" target="_blank" rel="noopener noreferrer">` +
+          `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>` +
+          `Watch on Prime Video ↗` +
+        `</a>`;
+    }
     return;
   }
 
@@ -6033,68 +5988,12 @@ function copyLink() {
 /* ═══════════════════════════════════
    SETTINGS
 ═══════════════════════════════════ */
-const ADMIN_HASH = '86f4e615f592738e8b98853d2be7fc7ad2bef0be85f37a426a2b3fe9fe69c801';
-async function sha256(str) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-async function openSettings(required = false) {
-  const pw = prompt('Admin password:');
-  if (!pw) return;
-  if (await sha256(pw.trim()) !== ADMIN_HASH) { alert('Incorrect password.'); return; }
-  SETTINGS_REQ = required;
-  document.getElementById('sTmdb').value = CFG.tmdb === '__proxy__' ? '' : CFG.tmdb;
-  document.getElementById('sOmdb').value = CFG.omdb === '__proxy__' ? '' : CFG.omdb;
-  document.getElementById('settingsErr').textContent = '';
-  document.getElementById('settingsClose').style.display = required ? 'none' : '';
-  document.getElementById('settingsOv').classList.add('open');
-}
-function closeSettings() {
-  if (SETTINGS_REQ) return;
-  document.getElementById('settingsOv').classList.remove('open');
-}
-async function saveSettings() {
-  const tmdbKey = document.getElementById('sTmdb').value.trim();
-  const omdbKey = document.getElementById('sOmdb').value.trim();
-  if (!tmdbKey) { document.getElementById('settingsErr').textContent = 'TMDb API key is required.'; return; }
-  const saveBtn = document.getElementById('settingsSave');
-  saveBtn.disabled = true; saveBtn.textContent = 'Validating…';
-  document.getElementById('settingsErr').textContent = '';
-  try {
-    const r = await fetch(new URL(`${TMDB_BASE}/configuration?api_key=${encodeURIComponent(tmdbKey)}`, location.origin));
-    if (!r.ok) throw new Error('Invalid key');
-  } catch(e) {
-    document.getElementById('settingsErr').textContent = 'TMDb key invalid: ' + e.message;
-    saveBtn.disabled = false; saveBtn.textContent = 'Save & Load Movies'; return;
-  }
-  CFG.tmdb = tmdbKey; CFG.omdb = omdbKey;
-  saveBtn.disabled = false; saveBtn.textContent = 'Save & Load Movies';
-  SETTINGS_REQ = false;
-  document.getElementById('settingsOv').classList.remove('open');
-  ENRICH_QUEUE.length = 0; ENRICH_PROMISES.clear();
-  await loadGenres(); await loadMovies(1, false);
-}
-document.getElementById('settingsOv').addEventListener('click', function(e) {
-  if (e.target === this && !SETTINGS_REQ) closeSettings();
-});
 
 // Mobile search close / Escape
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeSearch(); closeMobSearch(); }
 });
 
-// Admin access: click the logo 5 times within 3 seconds (no visible shortcut)
-(function() {
-  let _taps = 0, _timer = null;
-  const logoEl = document.querySelector('a.logo');
-  if (!logoEl) return;
-  logoEl.addEventListener('click', e => {
-    _taps++;
-    clearTimeout(_timer);
-    if (_taps >= 5) { _taps = 0; openSettings(); return; }
-    _timer = setTimeout(() => { _taps = 0; }, 3000);
-  });
-})();
 
 /* ═══════════════════════════════════
    MOBILE SEARCH TOGGLE
@@ -6718,8 +6617,8 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
 <!-- Skimlinks affiliate tracking — loads after all app JS -->
 <script type="text/javascript" src="https://s.skimresources.com/js/304950X1793141.skimlinks.js" async></script>
 <footer class="site-footer">
-  As an Amazon Associate, FindFilm.ai earns from qualifying purchases. &nbsp;·&nbsp;
-  <a href="https://www.amazon.com" target="_blank" rel="noopener noreferrer">Amazon.com</a>
+  Data provided by <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">TMDB</a> and <a href="https://www.omdbapi.com" target="_blank" rel="noopener noreferrer">OMDB</a>. &nbsp;·&nbsp;
+  As an Amazon Associate, FindFilm.ai earns from qualifying purchases.
 </footer>
 
 <!-- ════════════ iOS PWA INSTALL PROMPT ════════════ -->
