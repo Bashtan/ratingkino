@@ -771,6 +771,18 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .btn-trailer:hover { background: var(--accent-hover); box-shadow: 0 6px 22px rgba(229,9,20,0.55); transform: translateY(-1px); }
 /* .btn-amazon kept for reference — replaced in HTML by #streamingCtAs */
 #streamingCtAs { display: contents; }
+/* Region-aware streaming transparency */
+.streaming-region-lbl {
+  display: none;
+  font-size: 9px; font-family: 'DM Mono', monospace;
+  letter-spacing: 0.8px; color: var(--muted);
+  margin-top: 6px; line-height: 1.2;
+}
+.watch-lbl-region {
+  margin-left: 7px; font-size: 13px;
+  letter-spacing: 0; text-transform: none;
+  vertical-align: middle; opacity: 0.75;
+}
 .btn-stream {
   display: inline-flex; align-items: center; gap: 6px;
   height: 38px; padding: 0 14px;
@@ -2845,6 +2857,7 @@ if ('serviceWorker' in navigator) {
             <span id="btnWatchlistText" data-i18n="modal.watchlist">+ Watchlist</span>
           </button>
         </div>
+        <div id="streamingRegionLbl" class="streaming-region-lbl"></div>
       </div>
     </div>
 
@@ -2861,7 +2874,7 @@ if ('serviceWorker' in navigator) {
         <div class="section-lbl" data-i18n="modal.details">Details</div>
         <div class="meta-grid" id="mMeta"></div>
 
-        <div class="section-lbl" id="watchLbl" data-i18n="modal.whereToWatch" style="display:none">Where to Watch</div>
+        <div class="section-lbl" id="watchLbl" data-i18n="modal.whereToWatch" style="display:none">Where to Watch<span class="watch-lbl-region" id="watchRegionFlag"></span></div>
         <div id="watchProviders" style="margin-bottom:4px"></div>
         <div id="vpnBanner" style="margin-bottom:18px"></div>
 
@@ -3565,6 +3578,9 @@ async function detectLang() {
     // Fallback: browser language → first two chars → match supported lang
     const nav = (navigator.language || 'en').split('-')[0].toLowerCase();
     if (TRANSLATIONS[nav]) CURRENT_LANG = nav;
+    // Infer country from browser locale region tag (e.g. 'en-GB' → 'GB', 'uk-UA' → 'UA')
+    const region = (navigator.language || '').split(/[-_]/)[1] || '';
+    if (region.length === 2) DETECTED_COUNTRY = region.toUpperCase();
   }
   applyTranslations();
 }
@@ -3904,6 +3920,17 @@ function esc(s) {
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// Converts an ISO-3166-1 alpha-2 country code to its flag emoji (e.g. 'US' → '🇺🇸')
+function countryFlag(cc) {
+  if (!cc || cc.length !== 2) return '';
+  try {
+    return String.fromCodePoint(
+      0x1F1E0 + cc.charCodeAt(0) - 65,
+      0x1F1E0 + cc.charCodeAt(1) - 65
+    );
+  } catch { return ''; }
+}
+
 const GRADS = [
   'linear-gradient(135deg,#1a237e,#4a148c)',
   'linear-gradient(135deg,#212121,#b71c1c)',
@@ -4126,14 +4153,16 @@ function mergeMovieData(movie, det, od, country = DETECTED_COUNTRY) {
 
   // Watch providers — use visitor's country, fallback to US
   const wpResults = det['watch/providers']?.results || {};
-  const wp = wpResults[country] || wpResults['US'] || null;
+  const wpCountry = wpResults[country] ? country : (wpResults['US'] ? 'US' : null);
+  const wp = wpCountry ? wpResults[wpCountry] : null;
   if (wp) {
     movie.watchProviders = {
       free:     (wp.free     || []).slice(0, 4),
       flatrate: (wp.flatrate || []).slice(0, 4),
       rent:     (wp.rent     || []).slice(0, 3),
     };
-    movie.wpLink = wp.link || null;
+    movie.wpLink    = wp.link || null;
+    movie.wpCountry = wpCountry;  // track which region these providers are for
   }
   // Preserve full cross-country map for geo-mismatch VPN banner logic
   movie.wpAllCountries = wpResults;
@@ -5482,10 +5511,24 @@ function refreshVpnBanner(m) {
    Falls back to an Amazon Prime Video search link until TMDB data arrives. */
 function _refreshStreamingCtAs(m) {
   const container = document.getElementById('streamingCtAs');
+  const regionLbl = document.getElementById('streamingRegionLbl');
   if (!container) return;
-  const title  = m.title || '';
-  const wpLink = m.wpLink || null;
-  const wp     = m.watchProviders;
+
+  const title   = m.title || '';
+  const wpLink  = m.wpLink || null;
+  const wp      = m.watchProviders;
+  const country = m.wpCountry || DETECTED_COUNTRY || 'US';
+
+  // Show/hide the "Streaming in 🇺🇸 US" label under the action bar
+  function setRegionLbl(show) {
+    if (!regionLbl) return;
+    if (show) {
+      regionLbl.textContent = `${countryFlag(country)} Streaming in ${country}`;
+      regionLbl.style.display = '';
+    } else {
+      regionLbl.style.display = 'none';
+    }
+  }
 
   // Collect up to 3 unique subscription/free providers (most useful to user)
   const providers = [];
@@ -5500,7 +5543,8 @@ function _refreshStreamingCtAs(m) {
   }
 
   if (!providers.length) {
-    // No TMDB data yet — show Amazon Prime Video as universal fallback
+    // No TMDB data yet — show Amazon Prime Video as universal fallback; hide region
+    setRegionLbl(false);
     const url = `https://www.amazon.com/gp/video/search?phrase=${encodeURIComponent(title)}&tag=findfilm-20`;
     container.innerHTML =
       `<a class="btn-stream" href="${url}" target="_blank" rel="noopener noreferrer">` +
@@ -5510,6 +5554,7 @@ function _refreshStreamingCtAs(m) {
     return;
   }
 
+  setRegionLbl(true);
   container.innerHTML = providers.map(p => {
     const url  = providerUrl(p, title, wpLink);
     const logo = p.logo_path
@@ -5524,13 +5569,17 @@ function _refreshStreamingCtAs(m) {
 function refreshWatchProviders(m) {
   // Update action-bar CTAs now that we have real TMDB provider data
   _refreshStreamingCtAs(m);
-  const lbl = document.getElementById('watchLbl');
+  const lbl       = document.getElementById('watchLbl');
   const container = document.getElementById('watchProviders');
+  const flagEl    = document.getElementById('watchRegionFlag');
   if (!m.watchProviders) {
     lbl.style.display = 'none';
     container.innerHTML = '';
+    if (flagEl) flagEl.textContent = '';
     return;
   }
+  // Show country flag in "Where to Watch" header
+  if (flagEl) flagEl.textContent = countryFlag(m.wpCountry || DETECTED_COUNTRY || '');
   const wp       = m.watchProviders;
   const free     = wp.free     || [];
   const flatrate = wp.flatrate || [];
