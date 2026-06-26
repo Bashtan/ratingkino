@@ -2348,17 +2348,17 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .search-wrap.has-mic .search-icon { right: 42px; }
 .search-wrap.has-mic .search-input { padding-right: 70px; }
 
-/* ─── First-visit AI intro overlay ──────────────────── */
+/* ─── First-visit onboarding overlay ──────────────────── */
 .fv-overlay {
   position: fixed; inset: 0; z-index: 10000;
   background: rgba(5,0,20,0.97);
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; opacity: 1; transition: opacity 0.6s ease;
+  opacity: 1; transition: opacity 0.6s ease;
 }
 .fv-overlay.hidden { opacity: 0; pointer-events: none; }
 .fv-content {
-  display: flex; flex-direction: column; align-items: center; gap: 28px;
-  text-align: center; padding: 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 26px;
+  text-align: center; padding: 32px 24px; max-width: 380px;
 }
 .fv-logo-mark {
   animation: fvLogoIn 0.8s cubic-bezier(0.34,1.56,0.64,1) both;
@@ -2368,10 +2368,16 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   from { opacity: 0; transform: scale(0.4) rotate(-12deg); }
   to   { opacity: 1; transform: scale(1) rotate(0deg); }
 }
+.fv-wordmark {
+  font-family: 'Montserrat', sans-serif; font-size: 26px; font-weight: 900;
+  letter-spacing: -0.5px; color: #fff; margin-top: -10px;
+  animation: fvDismissIn 0.5s ease 0.6s both;
+}
+.fv-wordmark span { color: var(--accent); }
 .fv-text {
   font-family: 'Montserrat', sans-serif;
-  font-size: clamp(20px, 5vw, 40px);
-  font-weight: 900; letter-spacing: -1px;
+  font-size: clamp(16px, 4vw, 28px);
+  font-weight: 900; letter-spacing: -0.5px;
   background: linear-gradient(90deg, #7C3AED, #22D3EE, #7C3AED);
   background-size: 200% 100%;
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
@@ -2386,13 +2392,34 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   animation: fvBlink 0.75s step-end infinite;
 }
 @keyframes fvBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-.fv-dismiss {
-  font-family: 'DM Mono', monospace;
-  font-size: 11px; letter-spacing: 2px;
-  color: rgba(255,255,255,0.28); text-transform: uppercase;
-  animation: fvDismissIn 0.5s ease 2.8s both;
+/* Value-proposition bullets */
+.fv-props {
+  display: flex; flex-direction: column; gap: 11px;
+  text-align: left; width: 100%;
+  animation: fvDismissIn 0.5s ease 3s both;
 }
-@keyframes fvDismissIn { from { opacity: 0; } to { opacity: 1; } }
+.fv-prop {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 13px; color: rgba(255,255,255,0.6);
+  font-family: 'Montserrat', sans-serif; line-height: 1.4;
+}
+.fv-prop-icon {
+  font-size: 14px; color: var(--accent); flex-shrink: 0;
+  width: 18px; text-align: center;
+}
+.fv-prop strong { color: rgba(255,255,255,0.9); font-weight: 700; }
+/* "Let's go!" CTA */
+.fv-cta {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--accent); color: #fff; border: none; border-radius: 9px;
+  font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 800;
+  letter-spacing: 0.3px; padding: 13px 32px; cursor: pointer;
+  box-shadow: 0 6px 24px rgba(229,9,20,0.45);
+  transition: background 0.18s, transform 0.15s, box-shadow 0.18s;
+  animation: fvDismissIn 0.5s ease 3.5s both;
+}
+.fv-cta:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(229,9,20,0.55); }
+@keyframes fvDismissIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 /* ─── iOS PWA Install Prompt ─────────────────────── */
 .ios-pwa-prompt {
@@ -2606,7 +2633,7 @@ if ('serviceWorker' in navigator) {
   </div>
 </header>
 
-<!-- ════════════ FIRST-VISIT AI INTRO ════════════ -->
+<!-- ════════════ FIRST-VISIT ONBOARDING ════════════ -->
 <div class="fv-overlay" id="fvOverlay">
   <div class="fv-content">
     <div class="fv-logo-mark">
@@ -2622,10 +2649,26 @@ if ('serviceWorker' in navigator) {
         <path d="M19 20.5 L30 25.5 L19 30.5 Z" fill="url(#fvLogoG)"/>
       </svg>
     </div>
+    <div class="fv-wordmark">FindFilm<span>.ai</span></div>
     <div class="fv-text">
       <span id="fvTyped"></span><span class="fv-cursor">|</span>
     </div>
-    <div class="fv-dismiss" data-i18n="fv.skip">Tap anywhere to continue</div>
+    <!-- Value proposition bullets -->
+    <div class="fv-props">
+      <div class="fv-prop">
+        <span class="fv-prop-icon">★</span>
+        <span>Unified scores from <strong>IMDb + RT + Metacritic</strong></span>
+      </div>
+      <div class="fv-prop">
+        <span class="fv-prop-icon">▶</span>
+        <span>Instantly see where to stream <strong>in your region</strong></span>
+      </div>
+      <div class="fv-prop">
+        <span class="fv-prop-icon">✦</span>
+        <span>AI search that understands <strong>moods &amp; vibes</strong></span>
+      </div>
+    </div>
+    <button class="fv-cta" onclick="dismissFirstVisit()">Let's go! →</button>
   </div>
 </div>
 
@@ -6567,7 +6610,8 @@ function initMobileInstallBanner() {
 function initFirstVisit() {
   const overlay = document.getElementById('fvOverlay');
   if (!overlay) return;
-  if (localStorage.getItem('rk_visited')) {
+  // Check both keys: new 'hasSeenOnboarding' and legacy 'rk_visited'
+  if (localStorage.getItem('hasSeenOnboarding') || localStorage.getItem('rk_visited')) {
     overlay.remove();
     return;
   }
@@ -6581,12 +6625,13 @@ function initFirstVisit() {
     i++;
     if (i <= text.length) setTimeout(type, 62);
   };
-  setTimeout(type, 650); // slight delay after logo animation
-  overlay.addEventListener('click', dismissFirstVisit);
+  setTimeout(type, 900); // slight delay after logo + wordmark animate in
 }
 
 function dismissFirstVisit() {
-  localStorage.setItem('rk_visited', '1');
+  // Persist so the overlay never appears again
+  localStorage.setItem('hasSeenOnboarding', 'true');
+  localStorage.setItem('rk_visited', '1'); // keep for backward compat
   const overlay = document.getElementById('fvOverlay');
   if (!overlay) return;
   overlay.classList.add('hidden');
