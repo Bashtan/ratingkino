@@ -755,17 +755,19 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   box-shadow: 0 4px 16px rgba(229,9,20,0.4);
 }
 .btn-trailer:hover { background: var(--accent-hover); box-shadow: 0 6px 22px rgba(229,9,20,0.55); transform: translateY(-1px); }
-.btn-amazon {
-  display: flex; align-items: center; gap: 6px;
-  height: 38px; padding: 0 16px;
-  background: rgba(255,153,0,0.1); border: 1.5px solid #FF9900;
-  border-radius: 8px; color: #FF9900;
+/* .btn-amazon kept for reference — replaced in HTML by #streamingCtAs */
+#streamingCtAs { display: contents; }
+.btn-stream {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 38px; padding: 0 14px;
+  background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.15);
+  border-radius: 8px; color: #fff;
   font-weight: 700; font-size: 12px; font-family: 'Montserrat', sans-serif;
-  text-transform: uppercase; letter-spacing: 0.5px;
-  cursor: pointer; text-decoration: none;
-  transition: background 0.18s, color 0.18s;
+  text-decoration: none; white-space: nowrap;
+  transition: background 0.18s, border-color 0.18s, transform 0.15s;
 }
-.btn-amazon:hover { background: rgba(255,153,0,0.22); color: #FFB84D; }
+.btn-stream:hover { background: rgba(255,255,255,0.13); border-color: rgba(255,255,255,0.28); transform: translateY(-1px); }
+.btn-stream img { width: 16px; height: 16px; border-radius: 3px; object-fit: cover; flex-shrink: 0; }
 .btn-shr {
   display: flex; align-items: center; gap: 6px;
   height: 38px; padding: 0 16px;
@@ -2796,10 +2798,7 @@ if ('serviceWorker' in navigator) {
         <div class="m-ratings-row" id="mRatings"></div>
         <div class="m-actions">
           <button class="btn-trailer" id="btnTrailer" onclick="toggleTrailer()" style="display:none" data-i18n="modal.trailer">▶ Trailer</button>
-          <a class="btn-amazon" id="btnAmazon" href="#" target="_blank" rel="noopener noreferrer">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Watch on Prime Video ↗
-          </a>
+          <div id="streamingCtAs"></div>
           <button class="btn-shr" onclick="openShare()" data-i18n="modal.share">↗ Share</button>
           <button class="btn-wl-modal" id="btnWatchlist" onclick="toggleWatchlistModal()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
@@ -5242,11 +5241,8 @@ function refreshModalDetails(m) {
   }
   // Trailer btn
   document.getElementById('btnTrailer').style.display = m.trailer ? '' : 'none';
-  // Amazon btn
-  const amazonBtn = document.getElementById('btnAmazon');
-  if (amazonBtn) {
-    amazonBtn.href = `https://www.amazon.com/gp/video/search?phrase=${encodeURIComponent(m.title)}&tag=findfilm-20`;
-  }
+  // Streaming CTAs — populated from TMDB watch-provider data, with Amazon fallback
+  _refreshStreamingCtAs(m);
   _updateModalWLBtn();
 }
 
@@ -5358,7 +5354,53 @@ function refreshVpnBanner(m) {
     </div>`;
 }
 
+/* ── Streaming CTAs in the actions bar ───────────────────────────────────
+   Shows up to 3 subscription/free providers as prominent buttons.
+   Falls back to an Amazon Prime Video search link until TMDB data arrives. */
+function _refreshStreamingCtAs(m) {
+  const container = document.getElementById('streamingCtAs');
+  if (!container) return;
+  const title  = m.title || '';
+  const wpLink = m.wpLink || null;
+  const wp     = m.watchProviders;
+
+  // Collect up to 3 unique subscription/free providers (most useful to user)
+  const providers = [];
+  if (wp) {
+    const seen = new Set();
+    for (const p of [...(wp.flatrate || []), ...(wp.free || [])]) {
+      if (!seen.has(p.provider_id) && providers.length < 3) {
+        seen.add(p.provider_id);
+        providers.push(p);
+      }
+    }
+  }
+
+  if (!providers.length) {
+    // No TMDB data yet — show Amazon Prime Video as universal fallback
+    const url = `https://www.amazon.com/gp/video/search?phrase=${encodeURIComponent(title)}&tag=findfilm-20`;
+    container.innerHTML =
+      `<a class="btn-stream" href="${url}" target="_blank" rel="noopener noreferrer">` +
+        `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>` +
+        `Watch on Prime Video ↗` +
+      `</a>`;
+    return;
+  }
+
+  container.innerHTML = providers.map(p => {
+    const url  = providerUrl(p, title, wpLink);
+    const logo = p.logo_path
+      ? `<img src="${TIMG_W45}${p.logo_path}" alt="${esc(p.provider_name)}">`
+      : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+    return `<a class="btn-stream" href="${url}" target="_blank" rel="noopener noreferrer">` +
+             `${logo}Watch on ${esc(p.provider_name)} ↗` +
+           `</a>`;
+  }).join('');
+}
+
 function refreshWatchProviders(m) {
+  // Update action-bar CTAs now that we have real TMDB provider data
+  _refreshStreamingCtAs(m);
   const lbl = document.getElementById('watchLbl');
   const container = document.getElementById('watchProviders');
   if (!m.watchProviders) {
@@ -5742,11 +5784,23 @@ document.getElementById('settingsOv').addEventListener('click', function(e) {
   if (e.target === this && !SETTINGS_REQ) closeSettings();
 });
 
-// Admin shortcut + mobile search close
+// Mobile search close / Escape
 document.addEventListener('keydown', e => {
-  if (e.ctrlKey && e.shiftKey && e.key === 'A') openSettings();
   if (e.key === 'Escape') { closeSearch(); closeMobSearch(); }
 });
+
+// Admin access: click the logo 5 times within 3 seconds (no visible shortcut)
+(function() {
+  let _taps = 0, _timer = null;
+  const logoEl = document.querySelector('a.logo');
+  if (!logoEl) return;
+  logoEl.addEventListener('click', e => {
+    _taps++;
+    clearTimeout(_timer);
+    if (_taps >= 5) { _taps = 0; openSettings(); return; }
+    _timer = setTimeout(() => { _taps = 0; }, 3000);
+  });
+})();
 
 /* ═══════════════════════════════════
    MOBILE SEARCH TOGGLE
@@ -6399,7 +6453,7 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
   <!-- Body text — steps injected dynamically by initIOSPrompt() -->
   <div class="ios-pwa-body">
     <div class="ios-pwa-title" id="iosPwaTitle">Install FindFilm<span>.ai</span></div>
-    <div class="ios-pwa-desc">Faster access and your watchlist on your home screen.</div>
+    <div class="ios-pwa-desc">For faster access and to keep your watchlist on your home screen.</div>
     <div class="ios-pwa-steps" id="iosPwaSteps"></div>
     <button class="ios-pwa-not-now" id="iosPwaNotNow">Not now</button>
   </div>
