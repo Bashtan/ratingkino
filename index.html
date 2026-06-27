@@ -2851,10 +2851,10 @@ if ('serviceWorker' in navigator) {
     <div class="feed-scroll" id="scrollFresh"></div>
   </div>
 
-  <!-- All-Time Popular row -->
+  <!-- AI Curated row — title is updated dynamically by loadFeedSections() -->
   <div class="feed-row" id="rowPopular">
     <div class="feed-row-header">
-      <span class="feed-row-title">🏆 Masterpieces</span>
+      <span class="feed-row-title" id="rowPopularTitle">🏆 Masterpieces</span>
     </div>
     <div class="feed-scroll" id="scrollPopular"></div>
   </div>
@@ -3821,7 +3821,8 @@ function renderMiniCard(m, opts = {}) {
   const score    = m.avg ? `<div class="mini-card-score">★ ${m.avg}</div>` : '';
   const newBadge = opts.showNew ? `<div class="mini-card-new-badge">NEW</div>` : '';
   const reason   = opts.reason  ? `<div class="mini-card-reason">${esc(opts.reason)}</div>` : '';
-  return `<div class="mini-card" onclick="openMovie(${m.id})" title="${esc(m.title)}">
+  const listArg  = opts.listName ? `,'${opts.listName}'` : '';
+  return `<div class="mini-card" onclick="openMovie(${m.id}${listArg})" title="${esc(m.title)}">
     ${img}${score}${newBadge}
     <div class="mini-card-info">
       <div class="mini-card-title">${esc(m.title)}</div>
@@ -3860,6 +3861,43 @@ function fromKV(m) {
     enriched: true,
   };
 }
+
+// Converts a raw TMDB /discover/movie result into internal mini-card format.
+// Called when loading the AI Curated row directly from the TMDB API (not KV).
+function fromDiscover(raw) {
+  return {
+    id:       raw.id,
+    title:    raw.title || '',
+    year:     (raw.release_date || '').slice(0, 4),
+    poster:   raw.poster_path ? TIMG_W500 + raw.poster_path : null,
+    genres:   (raw.genre_ids || []).map(id => GENRES[id]).filter(Boolean),
+    genre:    (raw.genre_ids || []).map(id => GENRES[id]).filter(Boolean)[0] || '',
+    desc:     raw.overview || '',
+    avg:      raw.vote_average ? parseFloat(raw.vote_average.toFixed(1)) : null,
+    imdb: null, rt: null, mc: null, director: '', country: '', trailer: null,
+    isTV: false, enriched: false,
+    grad: 'linear-gradient(135deg,#1a1a2e,#16213e)', emoji: '🎬',
+  };
+}
+
+// AI Curated themes — one is selected per calendar day so the row feels fresh daily.
+// Each theme maps to a TMDB Discover query; sort_by=vote_average.desc is the default.
+const CURATED_THEMES = [
+  { label: 'Mind-Bending Sci-Fi',     params: { with_genres: '878,53',   'vote_count.gte': '1000', 'vote_average.gte': '7.5' } },
+  { label: 'Hidden 90s Gems',          params: { 'primary_release_date.gte': '1990-01-01', 'primary_release_date.lte': '1999-12-31', 'vote_count.gte': '300', 'vote_count.lte': '8000', 'vote_average.gte': '7.6' } },
+  { label: 'Acclaimed Crime Dramas',   params: { with_genres: '80,18',   'vote_count.gte': '2000', 'vote_average.gte': '7.8' } },
+  { label: 'Epic Adventures',          params: { with_genres: '12',      'vote_count.gte': '1500', 'vote_average.gte': '7.5' } },
+  { label: 'Psychological Thrillers',  params: { with_genres: '53',      'vote_count.gte': '1000', 'vote_average.gte': '7.5' } },
+  { label: 'Best of the 2000s',        params: { 'primary_release_date.gte': '2000-01-01', 'primary_release_date.lte': '2009-12-31', 'vote_count.gte': '2000', 'vote_average.gte': '7.5' } },
+  { label: 'Modern Horror Gems',       params: { with_genres: '27',      'primary_release_date.gte': '2010-01-01', 'vote_count.gte': '800', 'vote_average.gte': '7.0' } },
+  { label: 'Timeless Comedies',        params: { with_genres: '35',      'vote_count.gte': '1000', 'vote_average.gte': '7.5' } },
+  { label: 'Essential World Cinema',   params: {                          'vote_count.gte': '1000', 'vote_average.gte': '8.0', without_genres: '16' } },
+  { label: 'Award-Season Dramas',      params: { with_genres: '18',      'vote_count.gte': '3000', 'vote_average.gte': '7.8' } },
+];
+
+// Global deduplication Set — reset each time loadFeedSections runs.
+// Prevents the same movie from appearing in multiple feed rows.
+let renderedMovieIds = new Set();
 
 // Returns a short, dynamic reason string for a "For You" card.
 // Priority: director affinity → critical acclaim → genre+decade combo → fallback.
@@ -3915,16 +3953,19 @@ function genRecommendReason(m, profile) {
 function renderForYouRow() {
   const profile = getTasteProfile();
   if (profile.total < TASTE_THRESHOLD || !window._FEED_POOL.length) return;
-  const scored = scoredForProfile(window._FEED_POOL).slice(0, 20);
+  const scored = scoredForProfile(window._FEED_POOL)
+    .filter(m => !renderedMovieIds.has(m.id))  // global dedup — no repeats from other rows
+    .slice(0, 20);
   if (!scored.length) return;
+  scored.forEach(m => renderedMovieIds.add(m.id));
   document.getElementById('rowForYou').style.display = '';
   document.getElementById('scrollForYou').innerHTML = scored.map(m =>
-    renderMiniCard(m, { reason: genRecommendReason(m, profile) })
+    renderMiniCard(m, { reason: genRecommendReason(m, profile), listName: 'For You' })
   ).join('');
 }
 
 async function loadFeedSections() {
-  // Only show feed rows on Movies (not TV) and not during AI search
+  // Only show feed rows on Movies (not TV)
   if (CONTENT_TYPE !== 'movie') {
     document.getElementById('feedSections').style.display = 'none';
     return;
@@ -3933,17 +3974,34 @@ async function loadFeedSections() {
   renderFeedSkeletons('scrollFresh', 8);
   renderFeedSkeletons('scrollPopular', 8);
 
-  const [freshRes, popRes] = await Promise.allSettled([
+  // Reset global deduplication for this render pass
+  renderedMovieIds = new Set();
+
+  // Pick today's AI curated theme (stable for the calendar day via UTC day index)
+  const dayIdx  = Math.floor(Date.now() / 86400000);
+  const theme   = CURATED_THEMES[dayIdx % CURATED_THEMES.length];
+  const titleEl = document.getElementById('rowPopularTitle');
+  if (titleEl) titleEl.textContent = `🧠 AI Curated: ${theme.label}`;
+
+  const [freshRes, curatedRes] = await Promise.allSettled([
     fetch('/api/cache/new-releases').then(r => r.json()),
-    fetch('/api/cache/popular').then(r => r.json()),
+    tmdbGet('/discover/movie', {
+      sort_by:       'vote_average.desc',
+      include_adult: 'false',
+      language:      'en-US',
+      page:          '1',
+      ...theme.params,
+    }),
   ]);
 
-  // Fresh Additions
+  // ── Fresh Additions ────────────────────────────────────────────────────
   if (freshRes.status === 'fulfilled' && Array.isArray(freshRes.value)) {
-    const fresh = freshRes.value.map(fromKV);
+    const fresh = freshRes.value
+      .map(fromKV)
+      .filter(m => !renderedMovieIds.has(m.id));
+    fresh.slice(0, 20).forEach(m => renderedMovieIds.add(m.id));
     document.getElementById('scrollFresh').innerHTML =
-      fresh.slice(0, 20).map(m => renderMiniCard(m, { showNew: true })).join('');
-    // Add to pool (deduplicated by id)
+      fresh.slice(0, 20).map(m => renderMiniCard(m, { showNew: true, listName: 'Fresh Additions' })).join('');
     for (const m of fresh) {
       if (!window._FEED_POOL.find(x => x.id === m.id)) window._FEED_POOL.push(m);
     }
@@ -3951,22 +4009,23 @@ async function loadFeedSections() {
     document.getElementById('rowFresh').style.display = 'none';
   }
 
-  // Masterpieces (popular / top-rated)
-  if (popRes.status === 'fulfilled' && Array.isArray(popRes.value)) {
-    const pop = popRes.value.map(fromKV)
-      .filter(m => m.avg && m.avg >= 7.0)          // only quality picks
-      .sort((a, b) => (b.avg || 0) - (a.avg || 0)); // highest rated first
+  // ── AI Curated row (TMDB Discover, deduplicated against Fresh) ─────────
+  const rawResults = curatedRes.status === 'fulfilled' ? (curatedRes.value?.results || []) : [];
+  if (rawResults.length) {
+    const curated = rawResults
+      .map(fromDiscover)
+      .filter(m => m.id && !renderedMovieIds.has(m.id));
+    curated.slice(0, 20).forEach(m => renderedMovieIds.add(m.id));
     document.getElementById('scrollPopular').innerHTML =
-      pop.slice(0, 20).map(m => renderMiniCard(m)).join('');
-    // Add to pool
-    for (const m of pop) {
+      curated.slice(0, 20).map(m => renderMiniCard(m, { listName: 'AI Curated' })).join('');
+    for (const m of curated) {
       if (!window._FEED_POOL.find(x => x.id === m.id)) window._FEED_POOL.push(m);
     }
   } else {
     document.getElementById('rowPopular').style.display = 'none';
   }
 
-  // Render "For You" if profile already exists
+  // Render "For You" if taste profile already exists (also deduplicates)
   renderForYouRow();
 }
 
@@ -5111,9 +5170,27 @@ async function randomMovie() {
 /* ═══════════════════════════════════
    MODAL
 ═══════════════════════════════════ */
-async function openMovie(tmdbId) {
-  const m = MOVIES.find(x => x.id === tmdbId);
-  if (!m) return;
+async function openMovie(tmdbId, listName = '') {
+  let m = MOVIES.find(x => x.id === tmdbId);
+  if (!m) {
+    // Fallback: AI Curated / Discover movies live in _FEED_POOL but not in MOVIES
+    m = window._FEED_POOL?.find(x => x.id === tmdbId) || null;
+    if (m) MOVIES.push(m); // register so enrichment, history & WL work correctly
+    else   return;
+  }
+  // Auto-detect list context when not explicitly provided (main grid)
+  if (!listName) {
+    const q = (document.getElementById('searchInput')?.value || '').trim();
+    listName = q ? 'Search' : 'Browse';
+  }
+  // GA4: track which feed row drives modal opens
+  if (typeof gtag === 'function') {
+    gtag('event', 'select_content', {
+      content_type:   'movie',
+      item_id:        String(tmdbId),
+      item_list_name: listName,
+    });
+  }
   ACTIVE_MOVIE = m;
   TRAILER_OPEN = false;
   PENDING_STARS = 0;
