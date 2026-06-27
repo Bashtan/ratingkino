@@ -550,7 +550,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   border-color: rgba(229,9,20,0.3);
   z-index: 2;
 }
-.movie-poster { width: 100%; aspect-ratio: 2/3; position: relative; overflow: hidden; }
+.movie-poster { width: 100%; aspect-ratio: 2/3; position: relative; overflow: hidden; background: rgba(124,58,237,0.07); }
 .poster-fill {
   width: 100%; height: 100%;
   display: flex; align-items: center; justify-content: center;
@@ -709,6 +709,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   aspect-ratio: 2/3; border-radius: 10px; overflow: hidden;
   border: 2px solid rgba(255,255,255,0.12);
   box-shadow: 0 12px 40px rgba(0,0,0,0.85);
+  background: rgba(124,58,237,0.07);
 }
 .m-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .m-poster-fill {
@@ -1531,6 +1532,11 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   .meta-grid   { grid-template-columns: 1fr 1fr; gap: 9px; }
   .m-info-strip { flex-direction: row; }
   .btn-trailer, .btn-shr, .btn-amazon { height: 44px; }
+  /* Streaming CTAs + watchlist modal button — 44px ergonomic minimum */
+  .btn-stream, .btn-wl-modal, .btn-stream-disabled { height: 44px; }
+  /* Card bookmark: expand to 44px, anchor to corner, always visible on touch devices */
+  .card-wl-btn { width: 44px; height: 44px; top: 0; left: 0; border-radius: 0 0 10px 0; opacity: 0.72; }
+  .card-wl-btn.saved { opacity: 1; }
 
   /* Share panel: full width */
   .share-panel { width: 100%; border-radius: 16px 16px 0 0; }
@@ -2566,7 +2572,7 @@ if ('serviceWorker' in navigator) {
           <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
         </svg>
       </span>
-      <input class="search-input" id="searchInput" type="text" autocomplete="off" spellcheck="false">
+      <input class="search-input" id="searchInput" type="text" autocomplete="off" spellcheck="false" maxlength="100">
       <svg class="search-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
       </svg>
@@ -3728,7 +3734,7 @@ function getTasteProfile() {
 }
 
 function saveTasteProfile(p) {
-  localStorage.setItem(TASTE_KEY, JSON.stringify(p));
+  try { localStorage.setItem(TASTE_KEY, JSON.stringify(p)); } catch {}
 }
 
 function recordInteraction(m) {
@@ -4991,7 +4997,7 @@ function applyFilters() {
     _lastQuery = '';
     document.getElementById('searchWrap').classList.remove('ai-active');
   }
-  filterTimer = setTimeout(() => loadMovies(1, false), 350);
+  filterTimer = setTimeout(() => loadMovies(1, false), 300);
 }
 
 document.getElementById('searchInput').addEventListener('input', function() {
