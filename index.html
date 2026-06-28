@@ -504,6 +504,14 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .count-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
 .count-text { font-size: 12px; color: var(--muted); }
 .count-text strong { color: var(--yellow); }
+/* Cinematic default title — visible only when not searching/filtering */
+.grid-explore-title {
+  font-size: 15px; font-weight: 600; letter-spacing: -0.2px;
+  color: var(--fg); opacity: 0.82;
+}
+/* When searching, hide the explore title and reveal the counter */
+.count-row.searching .grid-explore-title { display: none; }
+.count-row:not(.searching) .count-text   { display: none; }
 
 /* ─── SEARCH MODE LABEL ───────────────────────── */
 .search-mode-label {
@@ -2664,18 +2672,18 @@ if ('serviceWorker' in navigator) {
     <div class="fv-props">
       <div class="fv-prop">
         <span class="fv-prop-icon">★</span>
-        <span>Unified scores from <strong>IMDb + RT + Metacritic</strong></span>
+        <span data-i18n-html="onboard.prop1">Unified scores from <strong>IMDb + RT + Metacritic</strong></span>
       </div>
       <div class="fv-prop">
         <span class="fv-prop-icon">▶</span>
-        <span>Instantly see where to stream <strong>in your region</strong></span>
+        <span data-i18n-html="onboard.prop2">Instantly see where to stream <strong>in your region</strong></span>
       </div>
       <div class="fv-prop">
         <span class="fv-prop-icon">✦</span>
-        <span>AI search that understands <strong>moods &amp; vibes</strong></span>
+        <span data-i18n-html="onboard.prop3">AI search that understands <strong>moods &amp; vibes</strong></span>
       </div>
     </div>
-    <button class="fv-cta" onclick="dismissFirstVisit()">Let's go! →</button>
+    <button class="fv-cta" onclick="dismissFirstVisit()" data-i18n="onboard.cta">Let's go! →</button>
   </div>
 </div>
 
@@ -2864,7 +2872,8 @@ if ('serviceWorker' in navigator) {
 <!-- ════════════ MAIN GRID ════════════ -->
 <main>
   <div class="search-mode-label" id="searchModeLabel">Search results</div>
-  <div class="count-row">
+  <div class="count-row" id="countRow">
+    <span class="grid-explore-title" id="gridExploreTitle" data-i18n="grid.explore">🍿 Explore Collection</span>
     <span class="count-text"><span data-i18n="grid.showing">Showing:</span> <strong id="countShown">—</strong> <span data-i18n="grid.of">of</span> <strong id="countTotal">—</strong></span>
     <span class="ai-results-badge" id="aiResultsBadge">
       <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
@@ -2891,8 +2900,8 @@ if ('serviceWorker' in navigator) {
     <div class="empty-title" id="emptyTitle" data-i18n="grid.noResults">No results found</div>
     <!-- Shown only on zero-result searches to display the quoted query -->
     <div class="empty-query-wrap" id="emptyQueryWrap" style="display:none">
-      <div class="empty-query-text">No exact match found for <span id="emptyQueryText"></span></div>
-      <div class="empty-recovery-hint">Check out these titles instead.</div>
+      <div class="empty-query-text"><span data-i18n="search.noMatchFor">No exact match found for</span> <span id="emptyQueryText"></span></div>
+      <div class="empty-recovery-hint" data-i18n="search.noMatchHint">Check out these titles instead.</div>
     </div>
     <div class="empty-sub" id="emptySub" data-i18n="grid.noResultsSub">Try different filters or search terms</div>
   </div>
@@ -2968,7 +2977,7 @@ if ('serviceWorker' in navigator) {
         <div class="section-lbl" data-i18n="modal.yourReview">Your Review</div>
         <div class="review-compose" id="reviewCompose">
           <input type="text" class="review-name" id="reviewName"
-            placeholder="Your Name (optional)" maxlength="50" autocomplete="name">
+            data-i18n-placeholder="modal.reviewName" placeholder="Your Name (optional)" maxlength="50" autocomplete="name">
           <div class="review-stars" id="reviewStars">
             <button class="rev-star" data-s="1" aria-label="1 star"><svg viewBox="0 0 24 24"><path d="M12 2l2.939 6.326L22 9.354l-5.5 5.667 1.299 7.979L12 19.25l-5.799 3.75L7.5 15.021 2 9.354l7.061-1.028Z"/></svg></button>
             <button class="rev-star" data-s="2" aria-label="2 stars"><svg viewBox="0 0 24 24"><path d="M12 2l2.939 6.326L22 9.354l-5.5 5.667 1.299 7.979L12 19.25l-5.799 3.75L7.5 15.021 2 9.354l7.061-1.028Z"/></svg></button>
@@ -3128,6 +3137,79 @@ const TRANSLATIONS = {
     'time.monthsAgo':      '{n}mo ago',
     'time.yearsAgo':       '{n}y ago',
     'fv.skip':             'Tap anywhere to continue',
+    // Feed rows
+    'feed.forYou':         '✨ For You',
+    'feed.fresh':          '🔥 Fresh Additions',
+    'feed.forYouBadge':    'Based on your taste',
+    // Grid header
+    'grid.explore':        '🍿 Explore Collection',
+    // Watchlist
+    'wl.empty':            'Your watchlist is empty',
+    'wl.emptyHint':        'Tap the bookmark on any movie to save it here',
+    'wl.saved':            '✓ Saved',
+    'wl.title':            'AI Watchlist',
+    // Search / voice
+    'search.noMatchFor':   'No exact match found for',
+    'search.noMatchHint':  'Check out these titles instead.',
+    'search.listening':    'Listening…',
+    'search.micDenied':    'Mic permission denied — type your search',
+    // Review form
+    'modal.reviewName':    'Your Name (optional)',
+    // Card badge
+    'card.new':            'NEW',
+    // PWA install prompt
+    'pwa.title':           'Install FindFilm.ai',
+    'pwa.desc':            'For faster access and to keep your watchlist on your home screen.',
+    'pwa.notNow':          'Not now',
+    'pwa.chromeTip':       'Tap {share} in the address bar, then select <strong>Add to Home Screen</strong> {add}',
+    'pwa.safariTip':       'Tap {share} below, then select <strong>Add to Home Screen</strong> {add}',
+    // First-visit onboarding
+    'onboard.prop1':       'Unified scores from <strong>IMDb + RT + Metacritic</strong>',
+    'onboard.prop2':       'Instantly see where to stream <strong>in your region</strong>',
+    'onboard.prop3':       'AI search that understands <strong>moods &amp; vibes</strong>',
+    'onboard.cta':         'Let\'s go! →',
+    // AI thinking phrases
+    'ai.thinking.0':       'Analyzing your mood…',
+    'ai.thinking.1':       'Scanning 240,000 films…',
+    'ai.thinking.2':       'Calculating match scores…',
+    'ai.thinking.3':       'Finding the perfect vibe…',
+    'ai.thinking.4':       'Ranking by relevance…',
+    // AI search examples
+    'ai.example.0':        'mind-bending sci-fi with a twist ending',
+    'ai.example.1':        'cozy feel-good comedy for a rainy evening',
+    'ai.example.2':        'something tense like Breaking Bad but a movie',
+    'ai.example.3':        'heartwarming family film with a great soundtrack',
+    'ai.example.4':        'dark psychological thriller with an unreliable narrator',
+    'ai.example.5':        'romantic drama set in Europe',
+    'ai.example.6':        'intense action movie with a strong female lead',
+    'ai.example.7':        'slow-burn mystery that keeps you guessing',
+    'ai.example.8':        'documentary about nature or the ocean',
+    'ai.example.9':        'animated film that adults will love too',
+    // Contextual mobile placeholders
+    'ctx.default':         'Describe a mood, plot, or vibe…',
+    'ctx.midnight1':       '🌙 Looking for a midnight thriller?',
+    'ctx.midnight2':       'Can\'t sleep? Try a gripping mystery…',
+    'ctx.morning':         '☀️ Start the day with an inspiring story…',
+    'ctx.noon':            'Afternoon mood — something light and fun?',
+    'ctx.afternoon':       'Perfect time for a slow-burn thriller…',
+    'ctx.weekend1':        '🎉 Need a blockbuster for the weekend?',
+    'ctx.weekend2':        '🍿 Friday night — what\'s the vibe?',
+    'ctx.evening':         '🌆 Evening pick: what\'s the mood tonight?',
+    'ctx.moreGenre':       'More {genre} films you\'d love…',
+    // Streaming CTAs
+    'stream.disabled':     'Streaming links not available yet',
+    'stream.amazon':       'Watch on Prime Video ↗',
+    'stream.watchOn':      'Watch on {name} ↗',
+    'stream.region':       'Streaming in {country}',
+    // Score labels
+    'score.noData':        'No ratings available',
+    'score.tmdbOnly':      'TMDB · no critic data yet',
+    'score.weighted':      'Weighted avg · {n} source',
+    'score.weightedPlural':'Weighted avg · {n} sources',
+    // VPN banner
+    'vpn.title':           'Not on Netflix in your country — but streaming on Netflix {region}! {flag}',
+    'vpn.sub':             'Use a VPN to unlock it in seconds.',
+    'vpn.unlock':          'Unlock with {name}',
   },
   es: {
     'nav.movies':           'Películas',
@@ -3212,6 +3294,65 @@ const TRANSLATIONS = {
     'time.monthsAgo':      'hace {n}mes',
     'time.yearsAgo':       'hace {n}año',
     'fv.skip':             'Toca para continuar',
+    'feed.forYou':         '✨ Para Ti',
+    'feed.fresh':          '🔥 Nuevas Adiciones',
+    'feed.forYouBadge':    'Basado en tu gusto',
+    'grid.explore':        '🍿 Explorar Colección',
+    'wl.empty':            'Tu lista está vacía',
+    'wl.emptyHint':        'Toca el marcador en cualquier película para guardarla aquí',
+    'wl.saved':            '✓ Guardado',
+    'wl.title':            'Lista IA',
+    'search.noMatchFor':   'No se encontró coincidencia exacta para',
+    'search.noMatchHint':  'Mira estos títulos en su lugar.',
+    'search.listening':    'Escuchando…',
+    'search.micDenied':    'Micrófono denegado — escribe tu búsqueda',
+    'modal.reviewName':    'Tu nombre (opcional)',
+    'card.new':            'NUEVO',
+    'pwa.title':           'Instalar FindFilm.ai',
+    'pwa.desc':            'Para acceso rápido y para guardar tu lista en la pantalla de inicio.',
+    'pwa.notNow':          'Ahora no',
+    'pwa.chromeTip':       'Toca {share} en la barra de direcciones, luego selecciona <strong>Agregar a inicio</strong> {add}',
+    'pwa.safariTip':       'Toca {share} abajo, luego selecciona <strong>Agregar a inicio</strong> {add}',
+    'onboard.prop1':       'Puntuaciones unificadas de <strong>IMDb + RT + Metacritic</strong>',
+    'onboard.prop2':       'Ve al instante dónde transmitir <strong>en tu región</strong>',
+    'onboard.prop3':       'Búsqueda IA que entiende <strong>estados de ánimo</strong>',
+    'onboard.cta':         '¡Vamos! →',
+    'ai.thinking.0':       'Analizando tu estado de ánimo…',
+    'ai.thinking.1':       'Escaneando 240.000 películas…',
+    'ai.thinking.2':       'Calculando puntuaciones de coincidencia…',
+    'ai.thinking.3':       'Encontrando el ambiente perfecto…',
+    'ai.thinking.4':       'Clasificando por relevancia…',
+    'ai.example.0':        'ciencia ficción desconcertante con un giro final',
+    'ai.example.1':        'comedia reconfortante para una tarde lluviosa',
+    'ai.example.2':        'algo tenso como Breaking Bad pero una película',
+    'ai.example.3':        'película familiar emotiva con una gran banda sonora',
+    'ai.example.4':        'thriller psicológico oscuro con narrador poco fiable',
+    'ai.example.5':        'drama romántico ambientado en Europa',
+    'ai.example.6':        'película de acción intensa con protagonista femenina fuerte',
+    'ai.example.7':        'misterio de ritmo lento que te mantiene adivinando',
+    'ai.example.8':        'documental sobre la naturaleza o el océano',
+    'ai.example.9':        'película animada que los adultos también amarán',
+    'ctx.default':         'Describe un estado de ánimo, trama o atmósfera…',
+    'ctx.midnight1':       '🌙 ¿Buscas un thriller de medianoche?',
+    'ctx.midnight2':       '¿No puedes dormir? Prueba un misterio apasionante…',
+    'ctx.morning':         '☀️ Comienza el día con una historia inspiradora…',
+    'ctx.noon':            'Tarde tranquila — ¿algo ligero y divertido?',
+    'ctx.afternoon':       'Momento perfecto para un thriller de ritmo lento…',
+    'ctx.weekend1':        '🎉 ¿Necesitas un blockbuster para el fin de semana?',
+    'ctx.weekend2':        '🍿 Viernes por la noche — ¿cuál es el plan?',
+    'ctx.evening':         '🌆 Noche de película: ¿cuál es el ambiente?',
+    'ctx.moreGenre':       'Más películas de {genre} que te encantarán…',
+    'stream.disabled':     'No hay enlaces de streaming disponibles aún',
+    'stream.amazon':       'Ver en Prime Video ↗',
+    'stream.watchOn':      'Ver en {name} ↗',
+    'stream.region':       'Streaming en {country}',
+    'score.noData':        'Sin calificaciones disponibles',
+    'score.tmdbOnly':      'TMDB · sin datos de crítica aún',
+    'score.weighted':      'Prom. ponderado · {n} fuente',
+    'score.weightedPlural':'Prom. ponderado · {n} fuentes',
+    'vpn.title':           'No en Netflix en tu país — ¡pero disponible en Netflix {region}! {flag}',
+    'vpn.sub':             'Usa una VPN para desbloquearlo en segundos.',
+    'vpn.unlock':          'Desbloquear con {name}',
   },
   fr: {
     'nav.movies':           'Films',
@@ -3296,6 +3437,65 @@ const TRANSLATIONS = {
     'time.monthsAgo':      'il y a {n}mois',
     'time.yearsAgo':       'il y a {n}ans',
     'fv.skip':             'Appuyez pour continuer',
+    'feed.forYou':         '✨ Pour Vous',
+    'feed.fresh':          '🔥 Nouveautés',
+    'feed.forYouBadge':    'Selon vos goûts',
+    'grid.explore':        '🍿 Explorer la Collection',
+    'wl.empty':            'Votre liste est vide',
+    'wl.emptyHint':        'Appuyez sur le signet de n\'importe quel film pour l\'enregistrer ici',
+    'wl.saved':            '✓ Enregistré',
+    'wl.title':            'Liste IA',
+    'search.noMatchFor':   'Aucune correspondance exacte pour',
+    'search.noMatchHint':  'Découvrez ces titres à la place.',
+    'search.listening':    'Écoute…',
+    'search.micDenied':    'Microphone refusé — tapez votre recherche',
+    'modal.reviewName':    'Votre nom (facultatif)',
+    'card.new':            'NOUVEAU',
+    'pwa.title':           'Installer FindFilm.ai',
+    'pwa.desc':            'Pour un accès rapide et garder votre liste sur l\'écran d\'accueil.',
+    'pwa.notNow':          'Pas maintenant',
+    'pwa.chromeTip':       'Appuyez sur {share} dans la barre d\'adresse, puis choisissez <strong>Ajouter à l\'écran d\'accueil</strong> {add}',
+    'pwa.safariTip':       'Appuyez sur {share} en bas, puis choisissez <strong>Ajouter à l\'écran d\'accueil</strong> {add}',
+    'onboard.prop1':       'Scores unifiés de <strong>IMDb + RT + Metacritic</strong>',
+    'onboard.prop2':       'Voyez instantanément où regarder <strong>dans votre région</strong>',
+    'onboard.prop3':       'Recherche IA qui comprend <strong>les ambiances &amp; les vibes</strong>',
+    'onboard.cta':         'C\'est parti ! →',
+    'ai.thinking.0':       'Analyse de votre humeur…',
+    'ai.thinking.1':       'Scan de 240 000 films…',
+    'ai.thinking.2':       'Calcul des scores de correspondance…',
+    'ai.thinking.3':       'Recherche de l\'ambiance parfaite…',
+    'ai.thinking.4':       'Classement par pertinence…',
+    'ai.example.0':        'science-fiction déroutante avec une fin inattendue',
+    'ai.example.1':        'comédie feel-good pour une soirée pluvieuse',
+    'ai.example.2':        'quelque chose de tendu comme Breaking Bad mais en film',
+    'ai.example.3':        'film familial touchant avec une superbe bande-son',
+    'ai.example.4':        'thriller psychologique sombre avec un narrateur peu fiable',
+    'ai.example.5':        'drame romantique se déroulant en Europe',
+    'ai.example.6':        'film d\'action intense avec une héroïne forte',
+    'ai.example.7':        'mystère à rythme lent qui vous tient en haleine',
+    'ai.example.8':        'documentaire sur la nature ou l\'océan',
+    'ai.example.9':        'film d\'animation que les adultes adoreront aussi',
+    'ctx.default':         'Décrivez une ambiance, une intrigue ou une atmosphère…',
+    'ctx.midnight1':       '🌙 Vous cherchez un thriller de minuit ?',
+    'ctx.midnight2':       'Vous n\'arrivez pas à dormir ? Essayez un mystère captivant…',
+    'ctx.morning':         '☀️ Commencez la journée avec une histoire inspirante…',
+    'ctx.noon':            'Humeur d\'après-midi — quelque chose de léger et fun ?',
+    'ctx.afternoon':       'Le moment parfait pour un thriller à suspense lent…',
+    'ctx.weekend1':        '🎉 Besoin d\'un blockbuster pour le week-end ?',
+    'ctx.weekend2':        '🍿 Vendredi soir — quelle est l\'ambiance ?',
+    'ctx.evening':         '🌆 Soirée ciné : quelle est l\'humeur ce soir ?',
+    'ctx.moreGenre':       'Encore plus de films {genre} que vous adorerez…',
+    'stream.disabled':     'Liens de streaming non disponibles pour l\'instant',
+    'stream.amazon':       'Voir sur Prime Video ↗',
+    'stream.watchOn':      'Voir sur {name} ↗',
+    'stream.region':       'Streaming en {country}',
+    'score.noData':        'Aucune note disponible',
+    'score.tmdbOnly':      'TMDB · pas encore de données critiques',
+    'score.weighted':      'Moy. pondérée · {n} source',
+    'score.weightedPlural':'Moy. pondérée · {n} sources',
+    'vpn.title':           'Pas sur Netflix dans votre pays — mais disponible sur Netflix {region} ! {flag}',
+    'vpn.sub':             'Utilisez un VPN pour le débloquer en quelques secondes.',
+    'vpn.unlock':          'Débloquer avec {name}',
   },
   zh: {
     'nav.movies':           '电影',
@@ -3380,6 +3580,65 @@ const TRANSLATIONS = {
     'time.monthsAgo':      '{n}月前',
     'time.yearsAgo':       '{n}年前',
     'fv.skip':             '点击继续',
+    'feed.forYou':         '✨ 为你推荐',
+    'feed.fresh':          '🔥 最新上映',
+    'feed.forYouBadge':    '根据你的品味',
+    'grid.explore':        '🍿 探索合集',
+    'wl.empty':            '你的观看列表是空的',
+    'wl.emptyHint':        '点击任意电影上的书签图标即可保存',
+    'wl.saved':            '✓ 已保存',
+    'wl.title':            'AI 观看列表',
+    'search.noMatchFor':   '未找到精确匹配：',
+    'search.noMatchHint':  '看看这些推荐标题。',
+    'search.listening':    '正在聆听…',
+    'search.micDenied':    '麦克风权限被拒绝 — 请键入搜索内容',
+    'modal.reviewName':    '你的名字（可选）',
+    'card.new':            '新片',
+    'pwa.title':           '安装 FindFilm.ai',
+    'pwa.desc':            '快速访问并将观看列表保存到主屏幕。',
+    'pwa.notNow':          '暂不安装',
+    'pwa.chromeTip':       '点击地址栏中的 {share}，然后选择<strong>添加到主屏幕</strong> {add}',
+    'pwa.safariTip':       '点击下方的 {share}，然后选择<strong>添加到主屏幕</strong> {add}',
+    'onboard.prop1':       '汇聚 <strong>IMDb + RT + Metacritic</strong> 的综合评分',
+    'onboard.prop2':       '即时查看<strong>在你所在地区</strong>的播放平台',
+    'onboard.prop3':       '懂得<strong>情绪与氛围</strong>的 AI 搜索',
+    'onboard.cta':         '开始探索！→',
+    'ai.thinking.0':       '正在分析你的心情…',
+    'ai.thinking.1':       '正在扫描 24 万部电影…',
+    'ai.thinking.2':       '正在计算匹配分数…',
+    'ai.thinking.3':       '正在寻找完美氛围…',
+    'ai.thinking.4':       '按相关性排序…',
+    'ai.example.0':        '烧脑科幻片，有意想不到的结局',
+    'ai.example.1':        '温馨喜剧，适合雨天夜晚',
+    'ai.example.2':        '像《绝命毒师》一样紧张的电影',
+    'ai.example.3':        '温情家庭电影，配乐出色',
+    'ai.example.4':        '黑暗心理惊悚片，叙述者不可信',
+    'ai.example.5':        '以欧洲为背景的浪漫剧情片',
+    'ai.example.6':        '有强大女主角的激烈动作片',
+    'ai.example.7':        '让你猜到最后的慢热悬疑片',
+    'ai.example.8':        '关于自然或海洋的纪录片',
+    'ai.example.9':        '大人也会喜欢的动画电影',
+    'ctx.default':         '描述一种情绪、情节或氛围…',
+    'ctx.midnight1':       '🌙 想看午夜惊悚片？',
+    'ctx.midnight2':       '睡不着？试试引人入胜的悬疑片…',
+    'ctx.morning':         '☀️ 用一个励志故事开启新的一天…',
+    'ctx.noon':            '午后心情 — 来点轻松愉快的？',
+    'ctx.afternoon':       '享受一部慢热惊悚片的完美时机…',
+    'ctx.weekend1':        '🎉 周末需要一部大片？',
+    'ctx.weekend2':        '🍿 周五夜晚 — 今晚的氛围是？',
+    'ctx.evening':         '🌆 夜晚精选：今晚想看什么？',
+    'ctx.moreGenre':       '更多你会喜欢的 {genre} 影片…',
+    'stream.disabled':     '暂时没有流媒体链接',
+    'stream.amazon':       '在 Prime Video 上观看 ↗',
+    'stream.watchOn':      '在 {name} 上观看 ↗',
+    'stream.region':       '在 {country} 流媒体播放',
+    'score.noData':        '暂无评分',
+    'score.tmdbOnly':      'TMDB · 暂无评论数据',
+    'score.weighted':      '加权均分 · {n} 个来源',
+    'score.weightedPlural':'加权均分 · {n} 个来源',
+    'vpn.title':           '你所在国家暂无 Netflix — 但在 Netflix {region} 可以观看！{flag}',
+    'vpn.sub':             '使用 VPN 即可立即解锁。',
+    'vpn.unlock':          '通过 {name} 解锁',
   },
   ar: {
     'nav.movies':           'أفلام',
@@ -3464,6 +3723,65 @@ const TRANSLATIONS = {
     'time.monthsAgo':      'منذ {n}أشهر',
     'time.yearsAgo':       'منذ {n}سنة',
     'fv.skip':             'انقر للمتابعة',
+    'feed.forYou':         '✨ لك',
+    'feed.fresh':          '🔥 أحدث الإضافات',
+    'feed.forYouBadge':    'بناءً على ذوقك',
+    'grid.explore':        '🍿 استكشاف المجموعة',
+    'wl.empty':            'قائمة المشاهدة فارغة',
+    'wl.emptyHint':        'انقر على الإشارة المرجعية في أي فيلم لحفظه هنا',
+    'wl.saved':            '✓ محفوظ',
+    'wl.title':            'قائمة مشاهدة ذكية',
+    'search.noMatchFor':   'لم يتم العثور على تطابق دقيق لـ',
+    'search.noMatchHint':  'اطّلع على هذه العناوين بدلاً من ذلك.',
+    'search.listening':    'جارٍ الاستماع…',
+    'search.micDenied':    'تم رفض إذن الميكروفون — اكتب بحثك',
+    'modal.reviewName':    'اسمك (اختياري)',
+    'card.new':            'جديد',
+    'pwa.title':           'تثبيت FindFilm.ai',
+    'pwa.desc':            'للوصول السريع والاحتفاظ بقائمتك على الشاشة الرئيسية.',
+    'pwa.notNow':          'ليس الآن',
+    'pwa.chromeTip':       'انقر {share} في شريط العنوان، ثم اختر <strong>إضافة إلى الشاشة الرئيسية</strong> {add}',
+    'pwa.safariTip':       'انقر {share} في الأسفل، ثم اختر <strong>إضافة إلى الشاشة الرئيسية</strong> {add}',
+    'onboard.prop1':       'تقييمات موحدة من <strong>IMDb + RT + Metacritic</strong>',
+    'onboard.prop2':       'اعرف فوراً أين تشاهد <strong>في منطقتك</strong>',
+    'onboard.prop3':       'بحث بالذكاء الاصطناعي يفهم <strong>المزاج والأجواء</strong>',
+    'onboard.cta':         'هيا بنا! →',
+    'ai.thinking.0':       'جارٍ تحليل مزاجك…',
+    'ai.thinking.1':       'جارٍ مسح 240,000 فيلم…',
+    'ai.thinking.2':       'جارٍ حساب نقاط التطابق…',
+    'ai.thinking.3':       'جارٍ إيجاد الجو المثالي…',
+    'ai.thinking.4':       'جارٍ الترتيب حسب الصلة…',
+    'ai.example.0':        'خيال علمي مُذهل بنهاية مفاجئة',
+    'ai.example.1':        'كوميديا مريحة لأمسية ماطرة',
+    'ai.example.2':        'شيء مثير مثل Breaking Bad لكنه فيلم',
+    'ai.example.3':        'فيلم عائلي دافئ بموسيقى رائعة',
+    'ai.example.4':        'إثارة نفسية مظلمة مع راوٍ غير موثوق',
+    'ai.example.5':        'دراما رومانسية في أوروبا',
+    'ai.example.6':        'فيلم أكشن مكثف مع بطلة قوية',
+    'ai.example.7':        'غموض بطيء يجعلك تخمن باستمرار',
+    'ai.example.8':        'وثائقي عن الطبيعة أو المحيط',
+    'ai.example.9':        'فيلم رسوم متحركة يحبه الكبار أيضاً',
+    'ctx.default':         'صف مزاجاً أو حبكة أو أجواءً…',
+    'ctx.midnight1':       '🌙 تبحث عن إثارة منتصف الليل؟',
+    'ctx.midnight2':       'لا تستطيع النوم؟ جرب غموضاً مثيراً…',
+    'ctx.morning':         '☀️ ابدأ يومك بقصة ملهمة…',
+    'ctx.noon':            'مزاج ما بعد الظهر — شيء خفيف وممتع؟',
+    'ctx.afternoon':       'وقت مثالي لإثارة بطيئة الوتيرة…',
+    'ctx.weekend1':        '🎉 تحتاج إلى ضخم لعطلة الأسبوع؟',
+    'ctx.weekend2':        '🍿 ليلة الجمعة — ما هو المزاج؟',
+    'ctx.evening':         '🌆 اختيار المساء: ما مزاجك الليلة؟',
+    'ctx.moreGenre':       'المزيد من أفلام {genre} التي ستحبها…',
+    'stream.disabled':     'روابط البث غير متوفرة بعد',
+    'stream.amazon':       'شاهد على Prime Video ↗',
+    'stream.watchOn':      'شاهد على {name} ↗',
+    'stream.region':       'البث في {country}',
+    'score.noData':        'لا تتوفر تقييمات',
+    'score.tmdbOnly':      'TMDB · لا توجد بيانات نقدية بعد',
+    'score.weighted':      'متوسط مرجح · {n} مصدر',
+    'score.weightedPlural':'متوسط مرجح · {n} مصادر',
+    'vpn.title':           'غير متاح على Netflix في بلدك — لكنه متاح على Netflix {region}! {flag}',
+    'vpn.sub':             'استخدم VPN لإلغاء قفله في ثوانٍ.',
+    'vpn.unlock':          'افتح مع {name}',
   },
   uk: {
     'nav.movies':           'Фільми',
@@ -3548,6 +3866,65 @@ const TRANSLATIONS = {
     'time.monthsAgo':      '{n}міс тому',
     'time.yearsAgo':       '{n}р тому',
     'fv.skip':             'Натисніть будь-де',
+    'feed.forYou':         '✨ Для Тебе',
+    'feed.fresh':          '🔥 Нові Надходження',
+    'feed.forYouBadge':    'На основі вашого смаку',
+    'grid.explore':        '🍿 Дослідити Колекцію',
+    'wl.empty':            'Список перегляду порожній',
+    'wl.emptyHint':        'Натисніть на закладку будь-якого фільму, щоб зберегти його тут',
+    'wl.saved':            '✓ Збережено',
+    'wl.title':            'Список ШІ',
+    'search.noMatchFor':   'Точних збігів не знайдено для',
+    'search.noMatchHint':  'Перегляньте ці назви натомість.',
+    'search.listening':    'Слухаю…',
+    'search.micDenied':    'Мікрофон заблоковано — введіть пошук вручну',
+    'modal.reviewName':    'Ваше ім\'я (необов\'язково)',
+    'card.new':            'НОВИНКА',
+    'pwa.title':           'Встановити FindFilm.ai',
+    'pwa.desc':            'Для швидкого доступу та збереження списку перегляду на головному екрані.',
+    'pwa.notNow':          'Не зараз',
+    'pwa.chromeTip':       'Натисніть {share} в адресному рядку, потім виберіть <strong>Додати на головний екран</strong> {add}',
+    'pwa.safariTip':       'Натисніть {share} знизу, потім виберіть <strong>Додати на головний екран</strong> {add}',
+    'onboard.prop1':       'Єдиний рейтинг від <strong>IMDb + RT + Metacritic</strong>',
+    'onboard.prop2':       'Миттєво бачте, де дивитися <strong>у вашому регіоні</strong>',
+    'onboard.prop3':       'ШІ-пошук, що розуміє <strong>настрої та атмосферу</strong>',
+    'onboard.cta':         'Поїхали! →',
+    'ai.thinking.0':       'Аналізуємо ваш настрій…',
+    'ai.thinking.1':       'Скануємо 240 000 фільмів…',
+    'ai.thinking.2':       'Розраховуємо рейтинги збігів…',
+    'ai.thinking.3':       'Шукаємо ідеальну атмосферу…',
+    'ai.thinking.4':       'Ранжуємо за релевантністю…',
+    'ai.example.0':        'заплутана наукова фантастика з несподіваним фіналом',
+    'ai.example.1':        'затишна комедія для дощового вечора',
+    'ai.example.2':        'щось напружене, як «Пуститися берега», але фільм',
+    'ai.example.3':        'зворушливий сімейний фільм із чудовим саундтреком',
+    'ai.example.4':        'темний психологічний трилер із ненадійним оповідачем',
+    'ai.example.5':        'романтична драма, знята в Європі',
+    'ai.example.6':        'напружений бойовик із сильною жіночою героїнею',
+    'ai.example.7':        'повільний детектив, який тримає у напрузі до кінця',
+    'ai.example.8':        'документальний фільм про природу або океан',
+    'ai.example.9':        'мультфільм, який полюблять і дорослі',
+    'ctx.default':         'Опишіть настрій, сюжет або атмосферу…',
+    'ctx.midnight1':       '🌙 Шукаєте нічний трилер?',
+    'ctx.midnight2':       'Не можете заснути? Спробуйте захопливу детективну історію…',
+    'ctx.morning':         '☀️ Почніть день з надихаючої історії…',
+    'ctx.noon':            'Денний настрій — щось легке та веселе?',
+    'ctx.afternoon':       'Ідеальний час для повільного трилера…',
+    'ctx.weekend1':        '🎉 Потрібен блокбастер на вихідні?',
+    'ctx.weekend2':        '🍿 П\'ятниця ввечері — що будемо дивитися?',
+    'ctx.evening':         '🌆 Вечірній вибір: який сьогодні настрій?',
+    'ctx.moreGenre':       'Більше фільмів у жанрі {genre}, які вам сподобаються…',
+    'stream.disabled':     'Посилання на стрімінг ще не доступні',
+    'stream.amazon':       'Дивитися на Prime Video ↗',
+    'stream.watchOn':      'Дивитися на {name} ↗',
+    'stream.region':       'Стрімінг у {country}',
+    'score.noData':        'Оцінки відсутні',
+    'score.tmdbOnly':      'TMDB · даних критиків ще немає',
+    'score.weighted':      'Зважене середнє · {n} джерело',
+    'score.weightedPlural':'Зважене середнє · {n} джерела',
+    'vpn.title':           'Немає на Netflix у вашій країні — але є на Netflix {region}! {flag}',
+    'vpn.sub':             'Використайте VPN, щоб розблокувати за лічені секунди.',
+    'vpn.unlock':          'Розблокувати через {name}',
   },
 };
 
@@ -3570,10 +3947,27 @@ function applyTranslations() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     el.textContent = t(el.dataset.i18n);
   });
+  // Inner-HTML nodes (allows <strong> etc. in translation values)
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    el.innerHTML = t(el.dataset.i18nHtml);
+  });
   // Placeholder attributes
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     el.placeholder = t(el.dataset.i18nPlaceholder);
   });
+  // Feed row titles (static HTML)
+  const forYouTitle = document.querySelector('#rowForYou .feed-row-title');
+  if (forYouTitle) forYouTitle.textContent = t('feed.forYou');
+  const forYouBadge = document.querySelector('#rowForYou .feed-row-badge');
+  if (forYouBadge) { const svg = forYouBadge.querySelector('svg'); forYouBadge.textContent = ' ' + t('feed.forYouBadge'); if (svg) forYouBadge.prepend(svg); }
+  const freshTitle = document.querySelector('#rowFresh .feed-row-title');
+  if (freshTitle) freshTitle.textContent = t('feed.fresh');
+  // Watchlist drawer title
+  const wlTitleSpan = document.getElementById('wlTitleText');
+  if (wlTitleSpan) wlTitleSpan.textContent = t('wl.title');
+  // Grid explore title (default state)
+  const gridExplore = document.getElementById('gridExploreTitle');
+  if (gridExplore) gridExplore.textContent = t('grid.explore');
   // Switcher button: show native name of current language
   const nameEl = document.getElementById('langBtnName');
   if (nameEl) nameEl.textContent = LANG_NATIVE[CURRENT_LANG] || 'English';
@@ -3795,13 +4189,9 @@ let AI_SEARCH_TIMER   = null;
 let _lastQuery        = '';        // last AI query for follow-up context
 let _aiMatchScores    = new Map(); // tmdbId → match % for current AI results
 let _thinkingTimer    = null;      // cycling thinking-text timer
-const _THINKING_PHRASES = [
-  'Analyzing your mood…',
-  'Scanning 240,000 films…',
-  'Calculating match scores…',
-  'Finding the perfect vibe…',
-  'Ranking by relevance…',
-];
+function getThinkingPhrases() {
+  return [0,1,2,3,4].map(i => t(`ai.thinking.${i}`));
+}
 
 const ENRICH_QUEUE    = [];
 const ENRICH_PROMISES = new Map();
@@ -3819,7 +4209,7 @@ function renderMiniCard(m, opts = {}) {
   const img      = m.poster ? `<img class="mini-card-img" src="${m.poster}" alt="${esc(m.title)}" loading="lazy">` :
                               `<div class="mini-card-img-placeholder">🎬</div>`;
   const score    = m.avg ? `<div class="mini-card-score">★ ${m.avg}</div>` : '';
-  const newBadge = opts.showNew ? `<div class="mini-card-new-badge">NEW</div>` : '';
+  const newBadge = opts.showNew ? `<div class="mini-card-new-badge">${t('card.new')}</div>` : '';
   const reason   = opts.reason  ? `<div class="mini-card-reason">${esc(opts.reason)}</div>` : '';
   const listArg  = opts.listName ? `,'${opts.listName}'` : '';
   return `<div class="mini-card" onclick="openMovie(${m.id}${listArg})" title="${esc(m.title)}">
@@ -4561,6 +4951,12 @@ async function loadMovies(page = 1, append = false) {
   const sq = document.getElementById('searchInput').value.trim();
   const searchLabel = document.getElementById('searchModeLabel');
   if (searchLabel) searchLabel.classList.toggle('show', !!sq);
+  // Toggle cinematic explore title vs. "Showing X of Y" counter
+  const _cRow    = document.getElementById('countRow');
+  const _country = document.getElementById('fCountry')?.value || '';
+  const _rating  = parseFloat(document.getElementById('fMinRating')?.value || '0') || 0;
+  const _isFiltered = !!(sq || ACTIVE_GENRE || _country || _rating > 0 || AI_SEARCH_ACTIVE);
+  if (_cRow) _cRow.classList.toggle('searching', _isFiltered);
   if (CONTENT_TYPE === 'movie') {
     const feedEl = document.getElementById('feedSections');
     if (feedEl) {
@@ -4698,34 +5094,24 @@ function loadMore() {
    AI SEMANTIC SEARCH
 ═══════════════════════════════════ */
 
-/* Rotating example queries shown in the placeholder */
-const AI_EXAMPLES = [
-  'mind-bending sci-fi with a twist ending',
-  'cozy feel-good comedy for a rainy evening',
-  'something tense like Breaking Bad but a movie',
-  'heartwarming family film with a great soundtrack',
-  'dark psychological thriller with an unreliable narrator',
-  'romantic drama set in Europe',
-  'intense action movie with a strong female lead',
-  'slow-burn mystery that keeps you guessing',
-  'documentary about nature or the ocean',
-  'animated film that adults will love too',
-];
+/* Rotating example queries shown in the placeholder — localised via t() */
+function getAIExamples() { return [0,1,2,3,4,5,6,7,8,9].map(i => t(`ai.example.${i}`)); }
 let aiPlaceholderIdx = 0;
 
 function rotatePlaceholder() {
   const input = document.getElementById('searchInput');
   if (document.activeElement === input || input.value) return;
-  aiPlaceholderIdx = (aiPlaceholderIdx + 1) % AI_EXAMPLES.length;
+  const examples = getAIExamples();
+  aiPlaceholderIdx = (aiPlaceholderIdx + 1) % examples.length;
   // Alternate between title-search hint and AI-search hint
   if (aiPlaceholderIdx % 2 === 0) {
-    input.placeholder = 'Search 240,000 films by title…';
+    input.placeholder = t('search.placeholder');
   } else {
-    input.placeholder = `↵ AI: "${AI_EXAMPLES[aiPlaceholderIdx]}"…`;
+    input.placeholder = `↵ AI: "${examples[aiPlaceholderIdx]}"…`;
   }
 }
 // Initial placeholder: title search (primary mode)
-document.getElementById('searchInput').placeholder = 'Search 240,000 films by title…';
+document.getElementById('searchInput').placeholder = t('search.placeholder');
 setInterval(rotatePlaceholder, 3500);
 
 /* Show / hide the banner below the count row */
@@ -4733,13 +5119,14 @@ setInterval(rotatePlaceholder, 3500);
 function startThinkingText() {
   let idx = 0;
   const el = document.getElementById('aiBannerText');
-  el.textContent = _THINKING_PHRASES[0];
+  const _phrases = getThinkingPhrases();
+  el.textContent = _phrases[0];
   idx = 1;
   function cycle() {
     if (!document.getElementById('aiBanner').classList.contains('loading')) return;
     el.classList.add('fading');
     setTimeout(() => {
-      el.textContent = _THINKING_PHRASES[idx % _THINKING_PHRASES.length];
+      el.textContent = _phrases[idx % _phrases.length];
       idx++;
       el.classList.remove('fading');
     }, 220);
@@ -4837,7 +5224,7 @@ function buildMatchScores(results) {
 function showAIBanner(text, isLoading = false) {
   const banner = document.getElementById('aiBanner');
   if (isLoading) {
-    document.getElementById('aiBannerText').textContent = _THINKING_PHRASES[0];
+    document.getElementById('aiBannerText').textContent = getThinkingPhrases()[0];
     startThinkingText();
   } else {
     document.getElementById('aiBannerText').textContent = text;
@@ -4877,6 +5264,7 @@ function clearAISearch() {
   _restoreFeedSections();
   const lbl = document.getElementById('searchModeLabel');
   if (lbl) lbl.classList.remove('show');
+  document.getElementById('countRow')?.classList.remove('searching');
   if (CACHE_MOVIES.length) {
     MOVIES      = [...CACHE_MOVIES];
     TOTAL_COUNT = CACHE_MOVIES.length;
@@ -5374,7 +5762,7 @@ function _updateModalWLBtn() {
   if (!btn || !ACTIVE_MOVIE) return;
   const saved = isWatchlisted(ACTIVE_MOVIE.id);
   btn.classList.toggle('saved', saved);
-  if (txt) txt.textContent = saved ? '✓ Saved' : t('modal.watchlist');
+  if (txt) txt.textContent = saved ? t('wl.saved') : t('modal.watchlist');
 }
 
 function openWatchlist() {
@@ -5400,8 +5788,8 @@ function renderWatchlistDrawer() {
   if (WATCHLIST.length === 0) {
     body.innerHTML = `<div class="wl-empty">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.35"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-      <p>Your watchlist is empty</p>
-      <span>Tap the bookmark on any movie to save it here</span>
+      <p>${t('wl.empty')}</p>
+      <span>${t('wl.emptyHint')}</span>
     </div>`;
     return;
   }
@@ -5437,7 +5825,7 @@ function clearWatchlist() {
 // Backward compat for AIM "save" buttons
 function aimAddWL(id, btn) {
   toggleWatchlist(id, null);
-  if (btn) { btn.textContent = '✓ Saved'; btn.style.color = '#4ade80'; }
+  if (btn) { btn.textContent = t('wl.saved'); btn.style.color = '#4ade80'; }
 }
 
 const AIM_SKEL_HTML = `<div class="ai-matches-wrap">
@@ -5539,15 +5927,15 @@ function refreshModalRatings(m) {
   if (!srcCount && !m.tmdbScore) {
     el.innerHTML = `<div class="mr-score-card">
       <div class="mr-hero-avg"><span class="mr-star" style="opacity:.35">★</span><span class="mr-avg-num" style="opacity:.35">—</span></div>
-      <div class="mr-hero-lbl">No ratings available</div>
+      <div class="mr-hero-lbl">${t('score.noData')}</div>
     </div>${localBadge}`;
     return;
   }
 
   // Hero avg label
   const srcLbl = srcCount === 0
-    ? 'TMDB · no critic data yet'
-    : `Weighted avg · ${srcCount} source${srcCount > 1 ? 's' : ''}`;
+    ? t('score.tmdbOnly')
+    : (srcCount > 1 ? t('score.weightedPlural', { n: srcCount }) : t('score.weighted', { n: srcCount }));
 
   // Inline breakdown items
   const bdItems = [];
@@ -5683,15 +6071,15 @@ function refreshVpnBanner(m) {
         <div class="vpn-banner-icon">▶</div>
         <div class="vpn-banner-copy">
           <div class="vpn-banner-title">
-            Not on Netflix in your country — but streaming on Netflix ${esc(regionName)}! ${flag}
+            ${t('vpn.title', { region: esc(regionName), flag })}
           </div>
-          <div class="vpn-banner-sub">Use a VPN to unlock it in seconds.</div>
+          <div class="vpn-banner-sub">${t('vpn.sub')}</div>
         </div>
       </div>
       <a class="vpn-banner-cta"
          href="${esc(VPN_AFFILIATE.url)}"
          target="_blank" rel="noopener noreferrer sponsored">
-        Unlock with ${esc(VPN_AFFILIATE.name)}
+        ${t('vpn.unlock', { name: esc(VPN_AFFILIATE.name) })}
       </a>
       <div class="vpn-banner-discount">${esc(VPN_AFFILIATE.discount)}</div>
     </div>`;
@@ -5714,7 +6102,7 @@ function _refreshStreamingCtAs(m) {
   function setRegionLbl(show) {
     if (!regionLbl) return;
     if (show) {
-      regionLbl.textContent = `${countryFlag(country)} Streaming in ${country}`;
+      regionLbl.textContent = `${countryFlag(country)} ${t('stream.region', { country })}`;
       regionLbl.style.display = '';
     } else {
       regionLbl.style.display = 'none';
@@ -5740,7 +6128,7 @@ function _refreshStreamingCtAs(m) {
       container.innerHTML =
         `<button class="btn-stream-disabled" disabled>` +
           `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>` +
-          `Streaming links not available yet` +
+          t('stream.disabled') +
         `</button>`;
     } else {
       // Still loading — show Amazon Prime Video as pre-enrichment fallback
@@ -5748,7 +6136,7 @@ function _refreshStreamingCtAs(m) {
       container.innerHTML =
         `<a class="btn-stream" href="${url}" target="_blank" rel="noopener noreferrer">` +
           `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>` +
-          `Watch on Prime Video ↗` +
+          t('stream.amazon') +
         `</a>`;
     }
     return;
@@ -5761,7 +6149,7 @@ function _refreshStreamingCtAs(m) {
       ? `<img src="${TIMG_W45}${p.logo_path}" alt="${esc(p.provider_name)}">`
       : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
     return `<a class="btn-stream" href="${url}" target="_blank" rel="noopener noreferrer">` +
-             `${logo}Watch on ${esc(p.provider_name)} ↗` +
+             `${logo}${t('stream.watchOn', { name: esc(p.provider_name) })}` +
            `</a>`;
   }).join('');
 }
@@ -6188,15 +6576,15 @@ function getContextualPlaceholders() {
     ? (Object.entries(taste.genres).sort((a,b)=>b[1]-a[1])[0]||[])[0]
     : null;
 
-  const list = ['Describe a mood, plot, or vibe…'];
-  if      (h >= 0  && h < 5)  list.push('🌙 Looking for a midnight thriller?', 'Can\'t sleep? Try a gripping mystery…');
-  else if (h >= 5  && h < 10) list.push('☀️ Start the day with an inspiring story…');
-  else if (h >= 10 && h < 14) list.push('Afternoon mood — something light and fun?');
-  else if (h >= 14 && h < 17) list.push('Perfect time for a slow-burn thriller…');
+  const list = [t('ctx.default')];
+  if      (h >= 0  && h < 5)  list.push(t('ctx.midnight1'), t('ctx.midnight2'));
+  else if (h >= 5  && h < 10) list.push(t('ctx.morning'));
+  else if (h >= 10 && h < 14) list.push(t('ctx.noon'));
+  else if (h >= 14 && h < 17) list.push(t('ctx.afternoon'));
   else if (h >= 17 && h < 20 && (day === 5 || day === 6))
-    list.push('🎉 Need a blockbuster for the weekend?', '🍿 Friday night — what\'s the vibe?');
-  else if (h >= 20) list.push('🌆 Evening pick: what\'s the mood tonight?');
-  if (topGenre) list.push(`More ${topGenre.toLowerCase()} films you\'d love…`);
+    list.push(t('ctx.weekend1'), t('ctx.weekend2'));
+  else if (h >= 20) list.push(t('ctx.evening'));
+  if (topGenre) list.push(t('ctx.moreGenre', { genre: topGenre.toLowerCase() }));
   return list;
 }
 
@@ -6254,7 +6642,7 @@ function toggleVoiceSearch() {
     _isListening = true;
     document.getElementById('mobAiInputWrap').classList.add('listening');
     document.getElementById('mobAiMic').classList.add('listening');
-    document.getElementById('mobSearchInput').placeholder = 'Listening…';
+    document.getElementById('mobSearchInput').placeholder = t('search.listening');
     stopMobPlaceholder();
   };
   _recognition.onresult = e => {
@@ -6276,7 +6664,7 @@ function toggleVoiceSearch() {
     _stopListening();
     const inp = document.getElementById('mobSearchInput');
     if (e.error === 'not-allowed') {
-      inp.placeholder = 'Mic permission denied — type your search';
+      inp.placeholder = t('search.micDenied');
       setTimeout(startMobPlaceholder, 2500);
     } else {
       startMobPlaceholder();
@@ -6308,7 +6696,7 @@ function toggleDesktopVoice() {
   _recognition.onstart = () => {
     _isListening = true;
     if (micBtn) micBtn.classList.add('listening');
-    if (inp)    inp.placeholder = 'Listening…';
+    if (inp)    inp.placeholder = t('search.listening');
   };
   _recognition.onresult = e => {
     const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
@@ -6474,10 +6862,10 @@ function initIOSPrompt() {
 
   if (isChromeIOS) {
     prompt.setAttribute('data-browser', 'chrome');
-    stepsEl.innerHTML = `Tap ${shareIcon} in the address bar, then select <strong>Add to Home Screen</strong> ${addIcon}`;
+    stepsEl.innerHTML = t('pwa.chromeTip', { share: shareIcon, add: addIcon });
   } else {
     prompt.setAttribute('data-browser', 'safari');
-    stepsEl.innerHTML = `Tap ${shareIcon} below, then select <strong>Add to Home Screen</strong> ${addIcon}`;
+    stepsEl.innerHTML = t('pwa.safariTip', { share: shareIcon, add: addIcon });
   }
 
   // ── 6. Dismiss handler — keep element in DOM so header button can re-show ─
@@ -6770,10 +7158,10 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
 
   <!-- Body text — steps injected dynamically by initIOSPrompt() -->
   <div class="ios-pwa-body">
-    <div class="ios-pwa-title" id="iosPwaTitle">Install FindFilm<span>.ai</span></div>
-    <div class="ios-pwa-desc">For faster access and to keep your watchlist on your home screen.</div>
+    <div class="ios-pwa-title" id="iosPwaTitle" data-i18n="pwa.title">Install FindFilm.ai</div>
+    <div class="ios-pwa-desc" data-i18n="pwa.desc">For faster access and to keep your watchlist on your home screen.</div>
     <div class="ios-pwa-steps" id="iosPwaSteps"></div>
-    <button class="ios-pwa-not-now" id="iosPwaNotNow">Not now</button>
+    <button class="ios-pwa-not-now" id="iosPwaNotNow" data-i18n="pwa.notNow">Not now</button>
   </div>
 </div>
 
@@ -6783,7 +7171,7 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
   <div class="wl-header">
     <div class="wl-title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-      AI Watchlist
+      <span id="wlTitleText" data-i18n="wl.title">AI Watchlist</span>
       <span class="wl-count-chip" id="wlCountChip">0</span>
     </div>
     <button class="wl-close" onclick="closeWatchlist()" aria-label="Close">✕</button>
