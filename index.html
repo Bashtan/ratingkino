@@ -793,6 +793,42 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .btn-stream:hover { background: rgba(255,255,255,0.13); border-color: rgba(255,255,255,0.28); transform: translateY(-1px); }
 .btn-stream img { width: 16px; height: 16px; border-radius: 3px; object-fit: cover; flex-shrink: 0; }
+/* ── Amazon featured CTA ──────────────────────────────────────────── */
+.btn-amazon {
+  background: linear-gradient(135deg, #FF9900 0%, #e68200 100%);
+  border-color: transparent;
+  color: #111;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  box-shadow: 0 2px 14px rgba(255,153,0,0.38);
+}
+.btn-amazon:hover {
+  background: linear-gradient(135deg, #ffac26 0%, #f09000 100%);
+  border-color: transparent;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(255,153,0,0.50);
+  color: #111;
+}
+.btn-amazon img { border-radius: 3px; }
+.btn-amazon-badge {
+  display: inline-block; font-size: 9px; font-weight: 800;
+  letter-spacing: 0.8px; text-transform: uppercase;
+  background: rgba(0,0,0,0.18); color: #111;
+  padding: 2px 5px; border-radius: 4px; margin-left: 2px;
+}
+/* ── Secondary (non-Amazon) providers ─────────────────────────────── */
+.btn-stream-secondary {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.60);
+}
+.btn-stream-secondary:hover {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.20);
+  color: rgba(255,255,255,0.88);
+  transform: translateY(-1px);
+}
+/* ── Disabled ─────────────────────────────────────────────────────── */
 .btn-stream-disabled {
   display: inline-flex; align-items: center; gap: 6px;
   height: 38px; padding: 0 14px;
@@ -6109,6 +6145,9 @@ function _refreshStreamingCtAs(m) {
     }
   }
 
+  // Amazon provider IDs (Prime Video, Amazon Video, Prime alt)
+  const AMAZON_IDS = new Set([9, 10, 119]);
+
   // Collect up to 3 unique subscription/free providers (most useful to user)
   const providers = [];
   if (wp) {
@@ -6121,6 +6160,13 @@ function _refreshStreamingCtAs(m) {
     }
   }
 
+  // Sort: Amazon always first (affiliate priority)
+  providers.sort((a, b) => {
+    const aIsAmazon = AMAZON_IDS.has(a.provider_id) ? 0 : 1;
+    const bIsAmazon = AMAZON_IDS.has(b.provider_id) ? 0 : 1;
+    return aIsAmazon - bIsAmazon;
+  });
+
   if (!providers.length) {
     setRegionLbl(false);
     if (m.enriched) {
@@ -6131,10 +6177,10 @@ function _refreshStreamingCtAs(m) {
           t('stream.disabled') +
         `</button>`;
     } else {
-      // Still loading — show Amazon Prime Video as pre-enrichment fallback
+      // Still loading — show Amazon Prime Video as featured affiliate fallback
       const url = `https://www.amazon.com/gp/video/search?phrase=${encodeURIComponent(title)}&tag=findfilm-20`;
       container.innerHTML =
-        `<a class="btn-stream" href="${url}" target="_blank" rel="noopener noreferrer">` +
+        `<a class="btn-stream btn-amazon" href="${url}" target="_blank" rel="noopener noreferrer sponsored">` +
           `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>` +
           t('stream.amazon') +
         `</a>`;
@@ -6144,12 +6190,15 @@ function _refreshStreamingCtAs(m) {
 
   setRegionLbl(true);
   container.innerHTML = providers.map(p => {
-    const url  = providerUrl(p, title, wpLink);
-    const logo = p.logo_path
+    const url      = providerUrl(p, title, wpLink);
+    const isAmazon = AMAZON_IDS.has(p.provider_id);
+    const cls      = isAmazon ? 'btn-stream btn-amazon' : 'btn-stream btn-stream-secondary';
+    const logo     = p.logo_path
       ? `<img src="${TIMG_W45}${p.logo_path}" alt="${esc(p.provider_name)}">`
       : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
-    return `<a class="btn-stream" href="${url}" target="_blank" rel="noopener noreferrer">` +
-             `${logo}${t('stream.watchOn', { name: esc(p.provider_name) })}` +
+    const badge    = isAmazon ? `<span class="btn-amazon-badge">Prime</span>` : '';
+    return `<a class="${cls}" href="${url}" target="_blank" rel="noopener noreferrer${isAmazon ? ' sponsored' : ''}">` +
+             `${logo}${t('stream.watchOn', { name: esc(p.provider_name) })}${badge}` +
            `</a>`;
   }).join('');
 }
