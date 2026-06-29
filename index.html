@@ -4229,6 +4229,57 @@ function getThinkingPhrases() {
   return [0,1,2,3,4].map(i => t(`ai.thinking.${i}`));
 }
 
+/* ── Session continuity (sessionStorage — clears when tab closes) ── */
+const FF_SESSION_KEY = 'ff_session';
+
+function saveSession() {
+  try {
+    sessionStorage.setItem(FF_SESSION_KEY, JSON.stringify({
+      query:   (document.getElementById('searchInput')?.value || '').trim(),
+      genre:   ACTIVE_GENRE || '',
+      country: document.getElementById('fCountry')?.value   || '',
+      rating:  document.getElementById('fMinRating')?.value || '',
+      sort:    SORT_SRC || '',
+    }));
+  } catch {}
+}
+
+function restoreSession() {
+  let s;
+  try { s = JSON.parse(sessionStorage.getItem(FF_SESSION_KEY) || 'null'); } catch {}
+  if (!s) return false;
+  const hasState = !!(s.query || s.genre || s.country || s.rating || s.sort);
+  if (!hasState) return false;
+
+  // Restore search input
+  const inp = document.getElementById('searchInput');
+  if (inp && s.query) {
+    inp.value = s.query;
+    document.getElementById('searchWrap')?.classList.add('typing');
+  }
+  // Restore genre pill
+  if (s.genre) {
+    ACTIVE_GENRE = s.genre;
+    document.querySelectorAll('.gpill').forEach(p => p.classList.remove('active'));
+    const pill = document.getElementById(`pill-${s.genre}`) || document.getElementById('pill-all');
+    if (pill) pill.classList.add('active');
+  }
+  // Restore dropdowns
+  const countryEl = document.getElementById('fCountry');
+  if (countryEl && s.country) countryEl.value = s.country;
+  const ratingEl = document.getElementById('fMinRating');
+  if (ratingEl && s.rating) ratingEl.value = s.rating;
+  // Restore sort
+  if (s.sort) {
+    SORT_SRC = s.sort;
+    const sortMap = { IMD: 'imd', RT: 'rt', MC: 'mc', AVG: 'avg' };
+    Object.entries(sortMap).forEach(([id, val]) => {
+      document.getElementById('btn' + id)?.classList.toggle('on', SORT_SRC === val);
+    });
+  }
+  return true;
+}
+
 const ENRICH_QUEUE    = [];
 const ENRICH_PROMISES = new Map();
 let   ACTIVE_ENRICHERS = 0;
@@ -5297,6 +5348,7 @@ function clearAISearch() {
   _lastQuery = '';
   document.getElementById('searchWrap').classList.remove('ai-active', 'typing');
   document.getElementById('searchInput').value = '';
+  saveSession();
   _restoreFeedSections();
   const lbl = document.getElementById('searchModeLabel');
   if (lbl) lbl.classList.remove('show');
@@ -5480,6 +5532,7 @@ function applyFilters() {
     _lastQuery = '';
     document.getElementById('searchWrap').classList.remove('ai-active');
   }
+  saveSession();
   filterTimer = setTimeout(() => loadMovies(1, false), 300);
 }
 
@@ -5515,6 +5568,7 @@ function toggleSrc(src) {
   });
   applySortOrder();
   renderGrid(MOVIES);
+  saveSession();
 }
 
 /* ═══════════════════════════════════
@@ -7104,6 +7158,7 @@ function dismissFirstVisit() {
 async function init() {
   await detectLang();
   await loadGenres();
+  restoreSession(); // re-populate inputs before the first loadMovies call
   loadFeedSections(); // fire and forget — loads KV rows in parallel
   await loadMovies(1, false);
 
