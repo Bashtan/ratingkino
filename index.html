@@ -836,6 +836,28 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   border-radius: 10px; color: var(--muted); font-size: 13px; font-family: 'Inter', sans-serif;
   white-space: nowrap; cursor: not-allowed; opacity: 0.6;
 }
+/* ── NordVPN affiliate CTA ─────────────────────────────────────────── */
+.btn-nordvpn {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  flex-basis: 100%;               /* own row inside .m-actions flex-wrap */
+  height: 36px; padding: 0 16px;
+  background: rgba(70, 135, 255, 0.07);
+  border: 1.5px solid rgba(70, 135, 255, 0.30);
+  border-radius: 10px;
+  color: #7aaeff;
+  font-size: 12px; font-family: 'Inter', sans-serif; font-weight: 600;
+  letter-spacing: 0.1px;
+  text-decoration: none; white-space: nowrap;
+  transition: background 0.18s, border-color 0.18s, color 0.15s, box-shadow 0.18s, transform 0.15s;
+  cursor: pointer;
+}
+.btn-nordvpn:hover {
+  background: rgba(70, 135, 255, 0.16);
+  border-color: #4687FF;
+  color: #c5d9ff;
+  box-shadow: 0 2px 14px rgba(70, 135, 255, 0.22);
+  transform: translateY(-1px);
+}
 .btn-shr {
   display: flex; align-items: center; gap: 6px;
   height: 38px; padding: 0 16px;
@@ -3246,6 +3268,7 @@ const TRANSLATIONS = {
     'vpn.title':           'Not on Netflix in your country — but streaming on Netflix {region}! {flag}',
     'vpn.sub':             'Use a VPN to unlock it in seconds.',
     'vpn.unlock':          'Unlock with {name}',
+    'vpn.nordvpn':         '🌍 Not available in your region? Unlock with NordVPN',
   },
   es: {
     'nav.movies':           'Películas',
@@ -3389,6 +3412,7 @@ const TRANSLATIONS = {
     'vpn.title':           'No en Netflix en tu país — ¡pero disponible en Netflix {region}! {flag}',
     'vpn.sub':             'Usa una VPN para desbloquearlo en segundos.',
     'vpn.unlock':          'Desbloquear con {name}',
+    'vpn.nordvpn':         '🌍 ¿No disponible en tu región? Desbloquea con NordVPN',
   },
   fr: {
     'nav.movies':           'Films',
@@ -3532,6 +3556,7 @@ const TRANSLATIONS = {
     'vpn.title':           'Pas sur Netflix dans votre pays — mais disponible sur Netflix {region} ! {flag}',
     'vpn.sub':             'Utilisez un VPN pour le débloquer en quelques secondes.',
     'vpn.unlock':          'Débloquer avec {name}',
+    'vpn.nordvpn':         '🌍 Pas disponible dans votre région ? Débloquez avec NordVPN',
   },
   zh: {
     'nav.movies':           '电影',
@@ -3675,6 +3700,7 @@ const TRANSLATIONS = {
     'vpn.title':           '你所在国家暂无 Netflix — 但在 Netflix {region} 可以观看！{flag}',
     'vpn.sub':             '使用 VPN 即可立即解锁。',
     'vpn.unlock':          '通过 {name} 解锁',
+    'vpn.nordvpn':         '🌍 你所在地区无法观看？使用 NordVPN 解锁',
   },
   ar: {
     'nav.movies':           'أفلام',
@@ -3818,6 +3844,7 @@ const TRANSLATIONS = {
     'vpn.title':           'غير متاح على Netflix في بلدك — لكنه متاح على Netflix {region}! {flag}',
     'vpn.sub':             'استخدم VPN لإلغاء قفله في ثوانٍ.',
     'vpn.unlock':          'افتح مع {name}',
+    'vpn.nordvpn':         '🌍 غير متاح في منطقتك؟ افتحه مع NordVPN',
   },
   uk: {
     'nav.movies':           'Фільми',
@@ -3961,6 +3988,7 @@ const TRANSLATIONS = {
     'vpn.title':           'Немає на Netflix у вашій країні — але є на Netflix {region}! {flag}',
     'vpn.sub':             'Використайте VPN, щоб розблокувати за лічені секунди.',
     'vpn.unlock':          'Розблокувати через {name}',
+    'vpn.nordvpn':         '🌍 Недоступно у вашому регіоні? Розблокуй з NordVPN',
   },
 };
 
@@ -6188,6 +6216,10 @@ function _refreshStreamingCtAs(m) {
   const wp      = m.watchProviders;
   const country = m.wpCountry || DETECTED_COUNTRY || 'US';
 
+  // NordVPN affiliate CTA — always shown below streaming provider buttons
+  const NORD_URL   = 'https://go.nordvpn.net/aff_c?offer_id=15&aff_id=151623&url_id=902';
+  const nordvpnBtn = `<a class="btn-nordvpn" href="${NORD_URL}" target="_blank" rel="noopener noreferrer sponsored">${t('vpn.nordvpn')}</a>`;
+
   // Show/hide the "Streaming in 🇺🇸 US" label under the action bar
   function setRegionLbl(show) {
     if (!regionLbl) return;
@@ -6229,7 +6261,8 @@ function _refreshStreamingCtAs(m) {
         `<button class="btn-stream-disabled" disabled>` +
           `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>` +
           t('stream.disabled') +
-        `</button>`;
+        `</button>` +
+        nordvpnBtn;
     } else {
       // Still loading — show Amazon Prime Video as featured affiliate fallback
       const url = `https://www.amazon.com/gp/video/search?phrase=${encodeURIComponent(title)}&tag=findfilm-20`;
@@ -6237,7 +6270,8 @@ function _refreshStreamingCtAs(m) {
         `<a class="btn-stream btn-amazon" href="${url}" target="_blank" rel="noopener noreferrer sponsored">` +
           `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>` +
           t('stream.amazon') +
-        `</a>`;
+        `</a>` +
+        nordvpnBtn;
     }
     return;
   }
@@ -6254,7 +6288,7 @@ function _refreshStreamingCtAs(m) {
     return `<a class="${cls}" href="${url}" target="_blank" rel="noopener noreferrer${isAmazon ? ' sponsored' : ''}">` +
              `${logo}${t('stream.watchOn', { name: esc(p.provider_name) })}${badge}` +
            `</a>`;
-  }).join('');
+  }).join('') + nordvpnBtn;
 }
 
 function refreshWatchProviders(m) {
@@ -7233,7 +7267,8 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
 <script type="text/javascript" src="https://s.skimresources.com/js/304950X1793141.skimlinks.js" async></script>
 <footer class="site-footer">
   Data provided by <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">TMDB</a> and <a href="https://www.omdbapi.com" target="_blank" rel="noopener noreferrer">OMDB</a>. &nbsp;·&nbsp;
-  As an Amazon Associate, FindFilm.ai earns from qualifying purchases.
+  As an Amazon Associate, FindFilm.ai earns from qualifying purchases. &nbsp;·&nbsp;
+  FindFilm.ai is an official NordVPN affiliate partner — we may earn a commission if you subscribe through our links.
 </footer>
 
 <!-- ════════════ iOS PWA INSTALL PROMPT ════════════ -->
