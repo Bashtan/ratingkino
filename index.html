@@ -190,7 +190,8 @@ header {
               0 0 22px rgba(124,58,237,0.12);
   transition: background 0.25s, box-shadow 0.25s;
 }
-.search-input::placeholder { color: rgba(167,139,250,0.55); -webkit-text-fill-color: rgba(167,139,250,0.55); }
+/* Native placeholder hidden — replaced by .search-ph-overlay for fade animation */
+#searchInput::placeholder { color: transparent; -webkit-text-fill-color: transparent; }
 .search-input:focus {
   background: rgba(22,6,48,0.96);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.08),
@@ -227,6 +228,40 @@ header {
   0%   { transform: translateY(-50%) rotate(0deg); }
   100% { transform: translateY(-50%) rotate(360deg); }
 }
+
+/* ── Animated custom placeholder overlay ─────────────────────────── */
+.search-ph-overlay {
+  position: absolute; left: 40px; right: 44px; top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none; z-index: 2;
+  font-size: 14px; font-family: 'Inter', sans-serif;
+  color: rgba(167,139,250,0.55);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  opacity: 1;
+  transition: opacity 0.35s ease;
+}
+.search-ph-overlay.ph-fading { opacity: 0; }
+/* Hide when user is typing, focused, or in AI mode */
+.search-wrap.typing .search-ph-overlay,
+.search-wrap:focus-within .search-ph-overlay,
+.search-wrap.ai-active .search-ph-overlay { opacity: 0; }
+
+/* ── NLP helper hint below search bar ────────────────────────────── */
+.search-nlp-hint {
+  position: absolute; left: 0; right: 0;
+  top: calc(100% + 7px);
+  text-align: center;
+  font-size: 11px; font-family: 'Inter', sans-serif;
+  color: rgba(167,139,250,0.42);
+  letter-spacing: 0.15px;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  white-space: nowrap;
+}
+.search-wrap.typing .search-nlp-hint,
+.search-wrap.ai-active .search-nlp-hint { opacity: 0; }
+@media (max-width: 768px) { .search-nlp-hint { display: none; } }
 
 /* ─── AI results banner ──────────────────────────────────────── */
 .ai-banner {
@@ -2639,6 +2674,8 @@ if ('serviceWorker' in navigator) {
         </svg>
       </span>
       <input class="search-input" id="searchInput" type="text" autocomplete="off" spellcheck="false" maxlength="100">
+      <!-- Animated placeholder overlay — replaces native ::placeholder for fade cycling -->
+      <span class="search-ph-overlay" id="searchPhOverlay" aria-hidden="true"></span>
       <svg class="search-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
       </svg>
@@ -2648,6 +2685,8 @@ if ('serviceWorker' in navigator) {
           <path d="M5 11a7 7 0 0 0 14 0M12 19v3M9 22h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
         </svg>
       </button>
+      <!-- NLP discovery hint — hidden when typing or in AI mode -->
+      <div class="search-nlp-hint" id="searchNlpHint" aria-hidden="true" data-i18n="search.nlpHint">✨ Can't remember the title? Just describe the plot!</div>
     </div>
 
     <div class="header-btns">
@@ -3211,6 +3250,12 @@ const TRANSLATIONS = {
     'search.noMatchHint':  'Check out these titles instead.',
     'search.listening':    'Listening…',
     'search.micDenied':    'Mic permission denied — type your search',
+    // Animated placeholder cycling strings
+    'search.ph0':          'Search by title, genre, or year…',
+    'search.ph1':          "Try: 'A movie about space with Matthew McConaughey'",
+    'search.ph2':          "Try: '90s thriller with a massive plot twist'",
+    'search.ph3':          "Try: 'A light comedy for a Friday night'",
+    'search.nlpHint':      "✨ Can't remember the title? Just describe the plot!",
     // Review form
     'modal.reviewName':    'Your Name (optional)',
     // Card badge
@@ -3365,6 +3410,11 @@ const TRANSLATIONS = {
     'search.noMatchHint':  'Mira estos títulos en su lugar.',
     'search.listening':    'Escuchando…',
     'search.micDenied':    'Micrófono denegado — escribe tu búsqueda',
+    'search.ph0':          'Busca por título, género o año…',
+    'search.ph1':          "Prueba: 'Una película en el espacio con Matthew McConaughey'",
+    'search.ph2':          "Prueba: 'Thriller de los 90 con un gran giro final'",
+    'search.ph3':          "Prueba: 'Una comedia ligera para el viernes por la noche'",
+    'search.nlpHint':      "✨ ¿No recuerdas el título? ¡Solo describe la trama!",
     'modal.reviewName':    'Tu nombre (opcional)',
     'card.new':            'NUEVO',
     'pwa.title':           'Instalar FindFilm.ai',
@@ -3509,6 +3559,11 @@ const TRANSLATIONS = {
     'search.noMatchHint':  'Découvrez ces titres à la place.',
     'search.listening':    'Écoute…',
     'search.micDenied':    'Microphone refusé — tapez votre recherche',
+    'search.ph0':          'Cherchez par titre, genre ou année…',
+    'search.ph1':          "Essayez : 'Un film sur l'espace avec Matthew McConaughey'",
+    'search.ph2':          "Essayez : 'Thriller des années 90 avec un grand retournement'",
+    'search.ph3':          "Essayez : 'Une comédie légère pour un vendredi soir'",
+    'search.nlpHint':      "✨ Vous ne vous souvenez plus du titre ? Décrivez juste l'intrigue !",
     'modal.reviewName':    'Votre nom (facultatif)',
     'card.new':            'NOUVEAU',
     'pwa.title':           'Installer FindFilm.ai',
@@ -3653,6 +3708,11 @@ const TRANSLATIONS = {
     'search.noMatchHint':  '看看这些推荐标题。',
     'search.listening':    '正在聆听…',
     'search.micDenied':    '麦克风权限被拒绝 — 请键入搜索内容',
+    'search.ph0':          '按标题、类型或年份搜索…',
+    'search.ph1':          "试试：'一部关于太空的电影，主演马修·麦康纳'",
+    'search.ph2':          "试试：'90年代有大反转的惊悚片'",
+    'search.ph3':          "试试：'适合周五夜晚的轻松喜剧'",
+    'search.nlpHint':      '✨ 不记得片名？描述一下剧情就行！',
     'modal.reviewName':    '你的名字（可选）',
     'card.new':            '新片',
     'pwa.title':           '安装 FindFilm.ai',
@@ -3797,6 +3857,11 @@ const TRANSLATIONS = {
     'search.noMatchHint':  'اطّلع على هذه العناوين بدلاً من ذلك.',
     'search.listening':    'جارٍ الاستماع…',
     'search.micDenied':    'تم رفض إذن الميكروفون — اكتب بحثك',
+    'search.ph0':          'ابحث بالعنوان أو النوع أو السنة…',
+    'search.ph1':          "جرّب: 'فيلم عن الفضاء مع ماثيو ماكونهي'",
+    'search.ph2':          "جرّب: 'تشويق التسعينيات مع منعطف مفاجئ'",
+    'search.ph3':          "جرّب: 'كوميديا خفيفة لليلة الجمعة'",
+    'search.nlpHint':      '✨ لا تتذكر العنوان؟ فقط صف القصة!',
     'modal.reviewName':    'اسمك (اختياري)',
     'card.new':            'جديد',
     'pwa.title':           'تثبيت FindFilm.ai',
@@ -3941,6 +4006,11 @@ const TRANSLATIONS = {
     'search.noMatchHint':  'Перегляньте ці назви натомість.',
     'search.listening':    'Слухаю…',
     'search.micDenied':    'Мікрофон заблоковано — введіть пошук вручну',
+    'search.ph0':          'Шукай за назвою, жанром або роком…',
+    'search.ph1':          "Спробуй: 'Фільм про космос з Меттью МакКонахі'",
+    'search.ph2':          "Спробуй: 'Трилер 90-х із несподіваним поворотом'",
+    'search.ph3':          "Спробуй: 'Легка комедія для п\\'ятничного вечора'",
+    'search.nlpHint':      "✨ Не пам'ятаєш назву? Просто опиши сюжет!",
     'modal.reviewName':    'Ваше ім\'я (необов\'язково)',
     'card.new':            'НОВИНКА',
     'pwa.title':           'Встановити FindFilm.ai',
@@ -4032,6 +4102,11 @@ function applyTranslations() {
   // Grid explore title (default state)
   const gridExplore = document.getElementById('gridExploreTitle');
   if (gridExplore) gridExplore.textContent = t('grid.explore');
+  // Refresh desktop placeholder overlay after language change
+  const _phOverlay = document.getElementById('searchPhOverlay');
+  if (_phOverlay && !document.getElementById('searchInput')?.value) {
+    _phOverlay.textContent = getDesktopPlaceholders()[_deskPhIdx];
+  }
   // Switcher button: show native name of current language
   const nameEl = document.getElementById('langBtnName');
   if (nameEl) nameEl.textContent = LANG_NATIVE[CURRENT_LANG] || 'English';
@@ -5211,23 +5286,39 @@ function loadMore() {
 
 /* Rotating example queries shown in the placeholder — localised via t() */
 function getAIExamples() { return [0,1,2,3,4,5,6,7,8,9].map(i => t(`ai.example.${i}`)); }
-let aiPlaceholderIdx = 0;
 
-function rotatePlaceholder() {
-  const input = document.getElementById('searchInput');
-  if (document.activeElement === input || input.value) return;
-  const examples = getAIExamples();
-  aiPlaceholderIdx = (aiPlaceholderIdx + 1) % examples.length;
-  // Alternate between title-search hint and AI-search hint
-  if (aiPlaceholderIdx % 2 === 0) {
-    input.placeholder = t('search.placeholder');
-  } else {
-    input.placeholder = `↵ AI: "${examples[aiPlaceholderIdx]}"…`;
-  }
+/* ── Animated desktop placeholder overlay ─────────────────────────
+   Cycles through 4 NLP-education strings with a smooth opacity fade.
+   The overlay is used instead of the native ::placeholder so we can
+   animate the transition. Native placeholder kept for a11y only.    */
+function getDesktopPlaceholders() {
+  return [t('search.ph0'), t('search.ph1'), t('search.ph2'), t('search.ph3')];
 }
-// Initial placeholder: title search (primary mode)
+let _deskPhIdx   = 0;
+let _deskPhTimer = null;
+
+function _cycleDeskPh() {
+  const inp     = document.getElementById('searchInput');
+  const overlay = document.getElementById('searchPhOverlay');
+  if (!overlay) return;
+  if (document.activeElement === inp || inp.value) return; // paused while focused / typing
+  overlay.classList.add('ph-fading');
+  setTimeout(() => {
+    _deskPhIdx = (_deskPhIdx + 1) % 4;
+    overlay.textContent = getDesktopPlaceholders()[_deskPhIdx];
+    overlay.classList.remove('ph-fading');
+  }, 350);
+}
+
+function initDesktopPlaceholder() {
+  const overlay = document.getElementById('searchPhOverlay');
+  if (!overlay) return;
+  overlay.textContent = getDesktopPlaceholders()[0];
+  _deskPhTimer = setInterval(_cycleDeskPh, 3800);
+}
+// Set static a11y placeholder (hidden visually by CSS)
 document.getElementById('searchInput').placeholder = t('search.placeholder');
-setInterval(rotatePlaceholder, 3500);
+initDesktopPlaceholder();
 
 /* Show / hide the banner below the count row */
 /* ── Thinking-text cycling ───────────────────────────────────── */
