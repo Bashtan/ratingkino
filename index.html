@@ -1269,17 +1269,23 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .share-cast.connected { background: rgba(6,182,212,0.2); border-color: var(--cyan); color: var(--cyan); }
 @keyframes castPulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
 
-/* ─── EMPTY / ERROR STATE (.state-message) ───── */
-/* Flex centering + min-height prevents footer CLS when grid is empty */
+/* ─── RESULTS ZONE (stable outer shell, prevents footer CLS) ─── */
+/* Always occupies at least two rows of cards so the footer never jumps.
+   The zone wraps both #movieGrid (cards/skeletons) and #emptyState so
+   only one of them is ever visible at a time — total height stays ≥60vh. */
+.results-zone {
+  min-height: 60vh;
+}
+/* ─── EMPTY / ERROR STATE ───────────────────────────────────────── */
 .empty-state {
   display: none;
   flex-direction: column; align-items: center; justify-content: center;
   text-align: center; padding: 60px 20px;
-  min-height: 50vh;
+  min-height: 60vh; /* fills the zone when visible */
 }
 .empty-state.show { display: flex; }
-/* Also prevent CLS during skeleton→results transition */
-.movie-grid:empty { min-height: 50vh; }
+/* Grid is now managed by .results-zone; no separate floor needed */
+.movie-grid:empty { min-height: 0; }
 .empty-icon { font-size: 60px; margin-bottom: 14px; line-height: 1; }
 .empty-title { font-size: 20px; font-weight: 700; color: var(--muted); }
 .empty-sub { font-size: 13px; color: rgba(167,139,250,0.5); margin-top: 7px; max-width: 420px; line-height: 1.6; }
@@ -3094,20 +3100,23 @@ if ('serviceWorker' in navigator) {
   <!-- Fuzzy match hint: shown when top result title doesn't match query -->
   <div id="fuzzyHint" class="fuzzy-hint"></div>
 
-  <div class="movie-grid" id="movieGrid"></div>
-  <div class="empty-state" id="emptyState">
-    <div class="empty-icon" id="emptyIcon">🎬</div>
-    <div class="empty-title" id="emptyTitle" data-i18n="grid.noResults">No results found</div>
-    <!-- Shown only on zero-result searches to display the quoted query -->
-    <div class="empty-query-wrap" id="emptyQueryWrap" style="display:none">
-      <div class="empty-query-text"><span data-i18n="search.noMatchFor">No exact match found for</span> <span id="emptyQueryText"></span></div>
-      <div class="empty-recovery-hint" data-i18n="search.noMatchHint">Check out these titles instead.</div>
+  <!-- results-zone: stable min-height wrapper prevents footer CLS -->
+  <div class="results-zone">
+    <div class="movie-grid" id="movieGrid"></div>
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon" id="emptyIcon">🎬</div>
+      <div class="empty-title" id="emptyTitle" data-i18n="grid.noResults">No results found</div>
+      <!-- Shown only on zero-result searches to display the quoted query -->
+      <div class="empty-query-wrap" id="emptyQueryWrap" style="display:none">
+        <div class="empty-query-text"><span data-i18n="search.noMatchFor">No exact match found for</span> <span id="emptyQueryText"></span></div>
+        <div class="empty-recovery-hint" data-i18n="search.noMatchHint">Check out these titles instead.</div>
+      </div>
+      <div class="empty-sub" id="emptySub" data-i18n="grid.noResultsSub">We couldn't find any movies matching your search or filters.</div>
+      <!-- No-results CTA: clears all filters + sessionStorage then reloads -->
+      <button class="state-btn" id="emptyResetBtn" onclick="resetAllFilters()" data-i18n="grid.emptyReset" style="display:none">Clear Filters &amp; Reset Search</button>
+      <!-- Error CTA: re-triggers the last fetch -->
+      <button class="state-btn state-btn-retry" id="emptyRetryBtn" onclick="retryLastFetch()" data-i18n="grid.errorRetry" style="display:none">Try Again</button>
     </div>
-    <div class="empty-sub" id="emptySub" data-i18n="grid.noResultsSub">We couldn't find any movies matching your search or filters.</div>
-    <!-- No-results CTA: clears all filters + sessionStorage then reloads -->
-    <button class="state-btn" id="emptyResetBtn" onclick="resetAllFilters()" data-i18n="grid.emptyReset" style="display:none">Clear Filters &amp; Reset Search</button>
-    <!-- Error CTA: re-triggers the last fetch -->
-    <button class="state-btn state-btn-retry" id="emptyRetryBtn" onclick="retryLastFetch()" data-i18n="grid.errorRetry" style="display:none">Try Again</button>
   </div>
   <div class="load-wrap" id="loadWrap">
     <button class="btn-more" id="btnMore" onclick="loadMore()">
@@ -5555,7 +5564,7 @@ function _cycleDeskPh() {
   const inp     = document.getElementById('searchInput');
   const overlay = document.getElementById('searchPhOverlay');
   if (!overlay) return;
-  if (document.activeElement === inp || inp.value) return; // paused while focused / typing
+  if (document.activeElement === inp || inp.value || IS_LOADING || AI_SEARCH_ACTIVE) return; // paused while focused / typing / fetching
   overlay.classList.add('ph-fading');
   setTimeout(() => {
     _deskPhIdx = (_deskPhIdx + 1) % 4;
@@ -5600,8 +5609,11 @@ function renderSuggestionPills() {
 }
 
 function showSuggestions() {
-  const el = document.getElementById('searchSuggestions');
-  if (!el) return;
+  const inp = document.getElementById('searchInput');
+  const el  = document.getElementById('searchSuggestions');
+  if (!el || !inp) return;
+  // Suppress while there is text in the box OR while a fetch is in-flight
+  if (inp.value.length > 0 || IS_LOADING || AI_SEARCH_ACTIVE) return;
   renderSuggestionPills(); // always re-render for current language
   el.classList.add('ss-visible');
   el.setAttribute('aria-hidden', 'false');
@@ -5640,12 +5652,12 @@ function initSearchSuggestions() {
   const wrap = document.getElementById('searchWrap');
   if (!inp) return;
 
-  // Show when focused on an empty input
+  // Show when focused on an empty input and no fetch is running
   inp.addEventListener('focus', () => {
-    if (!inp.value) showSuggestions();
+    if (!inp.value && !IS_LOADING && !AI_SEARCH_ACTIVE) showSuggestions();
   });
 
-  // Show/hide as the user types
+  // Show/hide as the user types (showSuggestions() itself also guards)
   inp.addEventListener('input', () => {
     if (inp.value) hideSuggestions();
     else           showSuggestions();
