@@ -1221,12 +1221,48 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .share-cast.connected { background: rgba(6,182,212,0.2); border-color: var(--cyan); color: var(--cyan); }
 @keyframes castPulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
 
-/* ─── EMPTY STATE ─────────────────────────────── */
-.empty-state { text-align: center; padding: 80px 20px; display: none; }
-.empty-state.show { display: block; }
-.empty-icon { font-size: 60px; margin-bottom: 14px; }
+/* ─── EMPTY / ERROR STATE (.state-message) ───── */
+/* Flex centering + min-height prevents footer CLS when grid is empty */
+.empty-state {
+  display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 60px 20px;
+  min-height: 50vh;
+}
+.empty-state.show { display: flex; }
+/* Also prevent CLS during skeleton→results transition */
+.movie-grid:empty { min-height: 50vh; }
+.empty-icon { font-size: 60px; margin-bottom: 14px; line-height: 1; }
 .empty-title { font-size: 20px; font-weight: 700; color: var(--muted); }
-.empty-sub { font-size: 13px; color: rgba(167,139,250,0.5); margin-top: 7px; }
+.empty-sub { font-size: 13px; color: rgba(167,139,250,0.5); margin-top: 7px; max-width: 420px; line-height: 1.6; }
+/* ── State CTA buttons ──────────────────────────────────────────── */
+.state-btn {
+  margin-top: 22px;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 42px; padding: 0 22px;
+  background: rgba(124,58,237,0.15); border: 1.5px solid rgba(124,58,237,0.38);
+  border-radius: 10px; color: #a78bfa;
+  font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 600;
+  cursor: pointer; text-decoration: none;
+  transition: background 0.18s, border-color 0.18s, color 0.15s, transform 0.15s;
+}
+.state-btn:hover {
+  background: rgba(124,58,237,0.30);
+  border-color: rgba(124,58,237,0.65);
+  color: #c4b5fd;
+  transform: translateY(-1px);
+}
+.state-btn-retry {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.65);
+}
+.state-btn-retry:hover {
+  background: rgba(255,255,255,0.11);
+  border-color: rgba(255,255,255,0.28);
+  color: #fff;
+  transform: translateY(-1px);
+}
 /* Zero-result query display */
 .empty-query-wrap { margin: 14px 0 6px; }
 .empty-query-text {
@@ -3000,7 +3036,11 @@ if ('serviceWorker' in navigator) {
       <div class="empty-query-text"><span data-i18n="search.noMatchFor">No exact match found for</span> <span id="emptyQueryText"></span></div>
       <div class="empty-recovery-hint" data-i18n="search.noMatchHint">Check out these titles instead.</div>
     </div>
-    <div class="empty-sub" id="emptySub" data-i18n="grid.noResultsSub">Try different filters or search terms</div>
+    <div class="empty-sub" id="emptySub" data-i18n="grid.noResultsSub">We couldn't find any movies matching your search or filters.</div>
+    <!-- No-results CTA: clears all filters + sessionStorage then reloads -->
+    <button class="state-btn" id="emptyResetBtn" onclick="resetAllFilters()" data-i18n="grid.emptyReset" style="display:none">Clear Filters &amp; Reset Search</button>
+    <!-- Error CTA: re-triggers the last fetch -->
+    <button class="state-btn state-btn-retry" id="emptyRetryBtn" onclick="retryLastFetch()" data-i18n="grid.errorRetry" style="display:none">Try Again</button>
   </div>
   <div class="load-wrap" id="loadWrap">
     <button class="btn-more" id="btnMore" onclick="loadMore()">
@@ -3171,7 +3211,11 @@ const TRANSLATIONS = {
     'grid.aiResults':       'AI Results',
     'grid.loadMore':        'Load More',
     'grid.noResults':       'No results found',
-    'grid.noResultsSub':    'Try different filters or search terms',
+    'grid.noResultsSub':    "We couldn't find any movies matching your search or filters.",
+    'grid.emptyReset':      'Clear Filters & Reset Search',
+    'grid.errorTitle':      'Something went wrong',
+    'grid.errorBody':       'Oops! Something went wrong on our end, or your network is disconnected.',
+    'grid.errorRetry':      'Try Again',
     'grid.failedLoad':      'Failed to load',
     'grid.noMatches':       'No matches for this AI search',
     'card.viewDetails':     'View Details',
@@ -3335,7 +3379,11 @@ const TRANSLATIONS = {
     'grid.aiResults':       'Resultados IA',
     'grid.loadMore':        'Cargar más',
     'grid.noResults':       'Sin resultados',
-    'grid.noResultsSub':    'Prueba otros filtros o términos de búsqueda',
+    'grid.noResultsSub':    'No encontramos películas que coincidan con tu búsqueda o filtros.',
+    'grid.emptyReset':      'Borrar filtros y reiniciar búsqueda',
+    'grid.errorTitle':      'Algo salió mal',
+    'grid.errorBody':       '¡Vaya! Algo salió mal en nuestro servidor, o tu red está desconectada.',
+    'grid.errorRetry':      'Reintentar',
     'grid.failedLoad':      'Error al cargar',
     'grid.noMatches':       'Sin coincidencias para esta búsqueda IA',
     'card.viewDetails':     'Ver detalles',
@@ -3484,7 +3532,11 @@ const TRANSLATIONS = {
     'grid.aiResults':       'Résultats IA',
     'grid.loadMore':        'Charger plus',
     'grid.noResults':       'Aucun résultat',
-    'grid.noResultsSub':    "Essayez d'autres filtres ou termes de recherche",
+    'grid.noResultsSub':    "Nous n'avons trouvé aucun film correspondant à votre recherche ou vos filtres.",
+    'grid.emptyReset':      'Effacer les filtres et réinitialiser',
+    'grid.errorTitle':      "Une erreur s'est produite",
+    'grid.errorBody':       "Oups ! Quelque chose s'est mal passé de notre côté, ou votre réseau est déconnecté.",
+    'grid.errorRetry':      'Réessayer',
     'grid.failedLoad':      'Échec du chargement',
     'grid.noMatches':       'Aucune correspondance pour cette recherche IA',
     'card.viewDetails':     'Voir les détails',
@@ -3633,7 +3685,11 @@ const TRANSLATIONS = {
     'grid.aiResults':       'AI 结果',
     'grid.loadMore':        '加载更多',
     'grid.noResults':       '未找到结果',
-    'grid.noResultsSub':    '请尝试不同的筛选条件或搜索词',
+    'grid.noResultsSub':    '没有找到与您的搜索或筛选条件匹配的电影。',
+    'grid.emptyReset':      '清除筛选并重置搜索',
+    'grid.errorTitle':      '出了点问题',
+    'grid.errorBody':       '糟糕！我们的服务器出错了，或者您的网络已断开连接。',
+    'grid.errorRetry':      '重试',
     'grid.failedLoad':      '加载失败',
     'grid.noMatches':       '此 AI 搜索无匹配结果',
     'card.viewDetails':     '查看详情',
@@ -3782,7 +3838,11 @@ const TRANSLATIONS = {
     'grid.aiResults':       'نتائج الذكاء الاصطناعي',
     'grid.loadMore':        'تحميل المزيد',
     'grid.noResults':       'لا توجد نتائج',
-    'grid.noResultsSub':    'جرب فلاتر أو مصطلحات بحث مختلفة',
+    'grid.noResultsSub':    'لم نتمكن من العثور على أفلام تطابق بحثك أو فلاتر.',
+    'grid.emptyReset':      'مسح الفلاتر وإعادة ضبط البحث',
+    'grid.errorTitle':      'حدث خطأ ما',
+    'grid.errorBody':       'عذراً! حدث خطأ من جانبنا، أو قد تكون شبكتك غير متصلة.',
+    'grid.errorRetry':      'حاول مجدداً',
     'grid.failedLoad':      'فشل التحميل',
     'grid.noMatches':       'لا تطابقات لبحث الذكاء الاصطناعي هذا',
     'card.viewDetails':     'عرض التفاصيل',
@@ -3931,7 +3991,11 @@ const TRANSLATIONS = {
     'grid.aiResults':       'Результати ШІ',
     'grid.loadMore':        'Завантажити ще',
     'grid.noResults':       'Нічого не знайдено',
-    'grid.noResultsSub':    'Спробуйте інші фільтри або ключові слова',
+    'grid.noResultsSub':    'Ми не знайшли жодного фільму за вашим запитом або фільтрами.',
+    'grid.emptyReset':      'Скинути фільтри й пошук',
+    'grid.errorTitle':      'Щось пішло не так',
+    'grid.errorBody':       "Упс! Сталася помилка на нашому сервері або відсутнє з'єднання з мережею.",
+    'grid.errorRetry':      'Спробувати знову',
     'grid.failedLoad':      'Помилка завантаження',
     'grid.noMatches':       'Немає збігів для цього ШІ-пошуку',
     'card.viewDetails':     'Детальніше',
@@ -4102,6 +4166,14 @@ function applyTranslations() {
   // Grid explore title (default state)
   const gridExplore = document.getElementById('gridExploreTitle');
   if (gridExplore) gridExplore.textContent = t('grid.explore');
+  // Keep empty/error state texts correct after language change
+  const _emptyEl = document.getElementById('emptyState');
+  if (_emptyEl?.classList.contains('show')) {
+    const _isError = document.getElementById('emptyRetryBtn')?.style.display !== 'none';
+    document.getElementById('emptyTitle').textContent = _isError ? t('grid.errorTitle') : t('grid.noResults');
+    document.getElementById('emptySub').textContent   = _isError ? t('grid.errorBody')  : t('grid.noResultsSub');
+    if (_isError) document.getElementById('emptyIcon').textContent = '⚠️';
+  }
   // Refresh desktop placeholder overlay after language change
   const _phOverlay = document.getElementById('searchPhOverlay');
   if (_phOverlay && !document.getElementById('searchInput')?.value) {
@@ -5003,16 +5075,89 @@ function updateCardInGrid(tmdbId) {
   if (m) el.outerHTML = renderCardHTML(m);
 }
 
+/* ── Empty / Error state helpers ─────────────────────────────────── */
+function _showNoResultsState() {
+  document.getElementById('emptyIcon').textContent    = '🍿';
+  document.getElementById('emptyTitle').textContent   = t('grid.noResults');
+  document.getElementById('emptyTitle').style.display = '';
+  document.getElementById('emptySub').textContent     = t('grid.noResultsSub');
+  document.getElementById('emptySub').style.display   = '';
+  document.getElementById('emptyQueryWrap').style.display = 'none';
+  document.getElementById('emptyResetBtn').style.display  = '';
+  document.getElementById('emptyRetryBtn').style.display  = 'none';
+  document.getElementById('emptyState').classList.add('show');
+}
+
+function _showErrorState() {
+  document.getElementById('movieGrid').innerHTML = '';
+  document.getElementById('emptyIcon').textContent    = '⚠️';
+  document.getElementById('emptyTitle').textContent   = t('grid.errorTitle');
+  document.getElementById('emptyTitle').style.display = '';
+  document.getElementById('emptySub').textContent     = t('grid.errorBody');
+  document.getElementById('emptySub').style.display   = '';
+  document.getElementById('emptyQueryWrap').style.display = 'none';
+  document.getElementById('emptyResetBtn').style.display  = 'none';
+  document.getElementById('emptyRetryBtn').style.display  = '';
+  document.getElementById('emptyState').classList.add('show');
+  document.getElementById('loadWrap').style.display = 'none';
+}
+
+/* Retry: re-triggers loadMovies with the current filter/search state */
+function retryLastFetch() { loadMovies(1, false); }
+
+/* Reset: clear every filter, sessionStorage, AI state, then reload */
+function resetAllFilters() {
+  // Search input
+  const inp = document.getElementById('searchInput');
+  if (inp) inp.value = '';
+  document.getElementById('searchWrap')?.classList.remove('typing', 'ai-active');
+  // Reset overlay
+  const overlay = document.getElementById('searchPhOverlay');
+  if (overlay) {
+    _deskPhIdx = 0;
+    overlay.textContent = getDesktopPlaceholders()[0];
+    overlay.classList.remove('ph-fading');
+  }
+  // Genre
+  ACTIVE_GENRE = '';
+  document.querySelectorAll('.gpill').forEach(p => p.classList.remove('active'));
+  document.getElementById('pill-all')?.classList.add('active');
+  // Country / rating dropdowns
+  const cEl = document.getElementById('fCountry');   if (cEl) cEl.value = '';
+  const rEl = document.getElementById('fMinRating'); if (rEl) rEl.value = '';
+  // Sort
+  SORT_SRC = null;
+  ['IMD','RT','MC','AVG'].forEach(s => document.getElementById('btn'+s)?.classList.remove('on'));
+  // sessionStorage
+  try { sessionStorage.removeItem(FF_SESSION_KEY); } catch {}
+  // AI search state (avoid calling clearAISearch() which triggers its own loadMovies)
+  if (AI_SEARCH_ACTIVE) {
+    AI_SEARCH_ACTIVE = false;
+    clearTimeout(AI_SEARCH_TIMER);
+    hideAIBanner();
+    clearFollowUps();
+    _aiMatchScores.clear();
+    _lastQuery = '';
+  }
+  // Count row
+  document.getElementById('countRow')?.classList.remove('searching');
+  // Reload
+  loadMovies(1, false);
+}
+
 function renderGrid(movies, append = false) {
   const grid  = document.getElementById('movieGrid');
   const empty = document.getElementById('emptyState');
   if (!movies.length && !append) {
     grid.innerHTML = '';
-    empty.classList.add('show');
+    _showNoResultsState();
     document.getElementById('countShown').textContent = '0';
     return;
   }
   empty.classList.remove('show');
+  // Reset button visibility when results reappear
+  document.getElementById('emptyResetBtn').style.display = 'none';
+  document.getElementById('emptyRetryBtn').style.display = 'none';
   const html = movies.map(renderCardHTML).join('');
   if (append) grid.insertAdjacentHTML('beforeend', html);
   else        grid.innerHTML = html;
@@ -5264,12 +5409,7 @@ async function loadMovies(page = 1, append = false) {
     document.getElementById('loadWrap').style.display = CUR_PAGE >= TOTAL_PAGES ? 'none' : '';
   } catch(e) {
     console.error('Load failed:', e.message);
-    if (!append) {
-      document.getElementById('movieGrid').innerHTML = '';
-      const empty = document.getElementById('emptyState');
-      empty.classList.add('show');
-      document.getElementById('emptySub').textContent = t('grid.failedLoad');
-    }
+    if (!append) _showErrorState();
   } finally {
     IS_LOADING = false;
     moreBtn.disabled = false;
