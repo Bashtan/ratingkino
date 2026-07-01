@@ -263,6 +263,52 @@ header {
 .search-wrap.ai-active .search-nlp-hint { opacity: 0; }
 @media (max-width: 768px) { .search-nlp-hint { display: none; } }
 
+/* ── Search suggestion dropdown ────────────────────────────────── */
+.search-suggestions {
+  position: absolute; left: 0; right: 0;
+  top: calc(100% + 10px);
+  background: rgba(12, 3, 28, 0.97);
+  border: 1px solid rgba(124, 58, 237, 0.28);
+  border-radius: 14px;
+  padding: 13px 15px 14px;
+  z-index: 200;
+  opacity: 0; pointer-events: none;
+  transform: translateY(-6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(124,58,237,0.10);
+}
+.search-suggestions.ss-visible {
+  opacity: 1; pointer-events: auto;
+  transform: translateY(0);
+}
+.ss-label {
+  display: block; margin-bottom: 10px;
+  font-size: 10px; font-family: 'DM Mono', monospace;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  color: rgba(167, 139, 250, 0.45);
+}
+.ss-pills { display: flex; flex-wrap: wrap; gap: 7px; }
+.ss-pill {
+  display: inline-flex; align-items: center;
+  padding: 5px 13px;
+  background: rgba(124, 58, 237, 0.10);
+  border: 1px solid rgba(124, 58, 237, 0.22);
+  border-radius: 20px;
+  font-size: 12px; font-family: 'Inter', sans-serif;
+  color: rgba(167, 139, 250, 0.82);
+  cursor: pointer; user-select: none;
+  transition: background 0.14s, border-color 0.14s, color 0.14s, transform 0.12s;
+}
+.ss-pill:hover {
+  background: rgba(124, 58, 237, 0.22);
+  border-color: rgba(167, 139, 250, 0.50);
+  color: #c4b5fd;
+  transform: translateY(-1px);
+}
+.ss-pill:active { transform: translateY(0); }
+@media (max-width: 768px) { .search-suggestions { display: none; } }
+
 /* ─── AI results banner ──────────────────────────────────────── */
 .ai-banner {
   display: none;
@@ -2723,6 +2769,11 @@ if ('serviceWorker' in navigator) {
       </button>
       <!-- NLP discovery hint — hidden when typing or in AI mode -->
       <div class="search-nlp-hint" id="searchNlpHint" aria-hidden="true" data-i18n="search.nlpHint">✨ Can't remember the title? Just describe the plot!</div>
+      <!-- Clickable suggestion pills — shown on focus when input is empty -->
+      <div class="search-suggestions" id="searchSuggestions" role="listbox" aria-label="Search suggestions" aria-hidden="true">
+        <span class="ss-label" data-i18n="search.suggestLabel">Try searching for:</span>
+        <div class="ss-pills" id="ssPills"></div>
+      </div>
     </div>
 
     <div class="header-btns">
@@ -3300,6 +3351,13 @@ const TRANSLATIONS = {
     'search.ph2':          "Try: '90s thriller with a massive plot twist'",
     'search.ph3':          "Try: 'A light comedy for a Friday night'",
     'search.nlpHint':      "✨ Can't remember the title? Just describe the plot!",
+    // Search suggestion pills
+    'search.suggestLabel': 'Try searching for:',
+    'search.sug0':         '80s sci-fi',
+    'search.sug1':         'Mind-bending plot twists',
+    'search.sug2':         'Cozy Friday comedy',
+    'search.sug3':         'Directed by Christopher Nolan',
+    'search.sug4':         'Feel-good family movie',
     // Review form
     'modal.reviewName':    'Your Name (optional)',
     // Card badge
@@ -3463,6 +3521,12 @@ const TRANSLATIONS = {
     'search.ph2':          "Prueba: 'Thriller de los 90 con un gran giro final'",
     'search.ph3':          "Prueba: 'Una comedia ligera para el viernes por la noche'",
     'search.nlpHint':      "✨ ¿No recuerdas el título? ¡Solo describe la trama!",
+    'search.suggestLabel': 'Prueba buscar:',
+    'search.sug0':         'Ciencia ficción de los 80',
+    'search.sug1':         'Giros de trama sorprendentes',
+    'search.sug2':         'Comedia relajada del viernes',
+    'search.sug3':         'Dirigido por Christopher Nolan',
+    'search.sug4':         'Película familiar para animar el ánimo',
     'modal.reviewName':    'Tu nombre (opcional)',
     'card.new':            'NUEVO',
     'pwa.title':           'Instalar FindFilm.ai',
@@ -3616,6 +3680,12 @@ const TRANSLATIONS = {
     'search.ph2':          "Essayez : 'Thriller des années 90 avec un grand retournement'",
     'search.ph3':          "Essayez : 'Une comédie légère pour un vendredi soir'",
     'search.nlpHint':      "✨ Vous ne vous souvenez plus du titre ? Décrivez juste l'intrigue !",
+    'search.suggestLabel': 'Essayez :',
+    'search.sug0':         'Sci-fi des années 80',
+    'search.sug1':         'Retournements de situation époustouflants',
+    'search.sug2':         'Comédie légère du vendredi',
+    'search.sug3':         'Réalisé par Christopher Nolan',
+    'search.sug4':         'Film feel-good en famille',
     'modal.reviewName':    'Votre nom (facultatif)',
     'card.new':            'NOUVEAU',
     'pwa.title':           'Installer FindFilm.ai',
@@ -3769,6 +3839,12 @@ const TRANSLATIONS = {
     'search.ph2':          "试试：'90年代有大反转的惊悚片'",
     'search.ph3':          "试试：'适合周五夜晚的轻松喜剧'",
     'search.nlpHint':      '✨ 不记得片名？描述一下剧情就行！',
+    'search.suggestLabel': '试试搜索：',
+    'search.sug0':         '80年代科幻',
+    'search.sug1':         '烧脑剧情反转',
+    'search.sug2':         '轻松的周五喜剧',
+    'search.sug3':         '克里斯托弗·诺兰导演',
+    'search.sug4':         '适合全家观看的温馨电影',
     'modal.reviewName':    '你的名字（可选）',
     'card.new':            '新片',
     'pwa.title':           '安装 FindFilm.ai',
@@ -3922,6 +3998,12 @@ const TRANSLATIONS = {
     'search.ph2':          "جرّب: 'تشويق التسعينيات مع منعطف مفاجئ'",
     'search.ph3':          "جرّب: 'كوميديا خفيفة لليلة الجمعة'",
     'search.nlpHint':      '✨ لا تتذكر العنوان؟ فقط صف القصة!',
+    'search.suggestLabel': 'جرّب البحث عن:',
+    'search.sug0':         'خيال علمي من الثمانينيات',
+    'search.sug1':         'تقلبات مثيرة في الحبكة',
+    'search.sug2':         'كوميديا هادئة لليلة الجمعة',
+    'search.sug3':         'من إخراج كريستوفر نولان',
+    'search.sug4':         'فيلم عائلي مبهج',
     'modal.reviewName':    'اسمك (اختياري)',
     'card.new':            'جديد',
     'pwa.title':           'تثبيت FindFilm.ai',
@@ -4075,6 +4157,12 @@ const TRANSLATIONS = {
     'search.ph2':          "Спробуй: 'Трилер 90-х із несподіваним поворотом'",
     'search.ph3':          "Спробуй: 'Легка комедія для п\\'ятничного вечора'",
     'search.nlpHint':      "✨ Не пам'ятаєш назву? Просто опиши сюжет!",
+    'search.suggestLabel': 'Спробуй пошукати:',
+    'search.sug0':         'Наукова фантастика 80-х',
+    'search.sug1':         'Несподівані повороти сюжету',
+    'search.sug2':         "Легка п\\'ятнична комедія",
+    'search.sug3':         'Режисер Крістофер Нолан',
+    'search.sug4':         'Добре кіно для всієї родини',
     'modal.reviewName':    'Ваше ім\'я (необов\'язково)',
     'card.new':            'НОВИНКА',
     'pwa.title':           'Встановити FindFilm.ai',
@@ -4173,6 +4261,10 @@ function applyTranslations() {
     document.getElementById('emptyTitle').textContent = _isError ? t('grid.errorTitle') : t('grid.noResults');
     document.getElementById('emptySub').textContent   = _isError ? t('grid.errorBody')  : t('grid.noResultsSub');
     if (_isError) document.getElementById('emptyIcon').textContent = '⚠️';
+  }
+  // Re-render suggestion pills in the new language if the panel is open
+  if (document.getElementById('searchSuggestions')?.classList.contains('ss-visible')) {
+    renderSuggestionPills();
   }
   // Refresh desktop placeholder overlay after language change
   const _phOverlay = document.getElementById('searchPhOverlay');
@@ -5459,6 +5551,89 @@ function initDesktopPlaceholder() {
 // Set static a11y placeholder (hidden visually by CSS)
 document.getElementById('searchInput').placeholder = t('search.placeholder');
 initDesktopPlaceholder();
+
+/* ── Search suggestion pills ──────────────────────────────────────
+   Shown on focus when the input is empty; each pill fires an AI
+   search immediately when clicked (mousedown fires before blur so
+   the pill click always registers before the input loses focus).   */
+function getSuggestions() {
+  return [
+    t('search.sug0'), t('search.sug1'), t('search.sug2'),
+    t('search.sug3'), t('search.sug4'),
+  ];
+}
+
+function renderSuggestionPills() {
+  const container = document.getElementById('ssPills');
+  if (!container) return;
+  container.innerHTML = getSuggestions()
+    .map(s => `<button class="ss-pill" role="option" data-sug="${esc(s)}">${esc(s)}</button>`)
+    .join('');
+  container.querySelectorAll('.ss-pill').forEach(btn => {
+    btn.addEventListener('mousedown', e => {
+      e.preventDefault(); // prevent blur before click registers
+      _applySuggestion(btn.dataset.sug);
+    });
+  });
+}
+
+function showSuggestions() {
+  const el = document.getElementById('searchSuggestions');
+  if (!el) return;
+  renderSuggestionPills(); // always re-render for current language
+  el.classList.add('ss-visible');
+  el.setAttribute('aria-hidden', 'false');
+}
+
+function hideSuggestions() {
+  const el = document.getElementById('searchSuggestions');
+  if (!el) return;
+  el.classList.remove('ss-visible');
+  el.setAttribute('aria-hidden', 'true');
+}
+
+function _applySuggestion(text) {
+  const inp  = document.getElementById('searchInput');
+  const wrap = document.getElementById('searchWrap');
+  if (!inp) return;
+  inp.value = text;
+  wrap.classList.add('typing');
+  // Hide the animated overlay (it checks inp.value on next tick anyway)
+  const overlay = document.getElementById('searchPhOverlay');
+  if (overlay) overlay.classList.add('ph-fading');
+  hideSuggestions();
+  saveSession();
+  // Prefer AI semantic search for NL phrases; fall back to title search
+  clearTimeout(filterTimer);
+  clearTimeout(AI_SEARCH_TIMER);
+  if (CACHE_MOVIES.length && CONTENT_TYPE === 'movie') {
+    aiSearch(text);
+  } else {
+    loadMovies(1, false);
+  }
+}
+
+function initSearchSuggestions() {
+  const inp  = document.getElementById('searchInput');
+  const wrap = document.getElementById('searchWrap');
+  if (!inp) return;
+
+  // Show when focused on an empty input
+  inp.addEventListener('focus', () => {
+    if (!inp.value) showSuggestions();
+  });
+
+  // Show/hide as the user types
+  inp.addEventListener('input', () => {
+    if (inp.value) hideSuggestions();
+    else           showSuggestions();
+  });
+
+  // Hide on any click outside the search wrap
+  document.addEventListener('mousedown', e => {
+    if (!wrap.contains(e.target)) hideSuggestions();
+  });
+}
 
 /* Show / hide the banner below the count row */
 /* ── Thinking-text cycling ───────────────────────────────────── */
@@ -7458,6 +7633,7 @@ async function init() {
   }
 }
 init();
+initSearchSuggestions();
 initWatchlist();
 initFirstVisit();
 initIOSPrompt();
