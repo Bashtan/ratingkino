@@ -939,6 +939,8 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   box-shadow: 0 2px 14px rgba(70, 135, 255, 0.22);
   transform: translateY(-1px);
 }
+/* Mobile-only sticky NordVPN footer — hidden on desktop */
+.m-nordvpn-footer { display: none; }
 .btn-shr {
   display: flex; align-items: center; gap: 6px;
   height: 38px; padding: 0 16px;
@@ -1699,7 +1701,8 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   .overlay { padding: 0; align-items: flex-end; }
   .modal {
     border-radius: 20px 20px 0 0; max-width: 100%;
-    max-height: 90vh; overflow-y: auto;
+    max-height: 90vh; overflow: hidden;
+    display: flex; flex-direction: column;
     transform: translateY(100%) scale(1); opacity: 1;
   }
   .overlay.open .modal { transform: translateY(0) scale(1); opacity: 1; }
@@ -1709,9 +1712,22 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   .m-meta-col  { padding-top: 58px; }
   .m-title     { font-size: 18px; }
   .m-close     { width: 44px; height: 44px; top: 10px; right: 10px; font-size: 16px; }
-  .m-body      { grid-template-columns: 1fr; }
+  .m-body      { grid-template-columns: 1fr; flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .m-left      { padding: 14px 16px; border-right: none; border-bottom: 1px solid var(--border); }
   .m-right     { padding: 14px 16px; }
+  /* On mobile the NordVPN CTA moves to the sticky bottom bar — hide inline version */
+  .btn-nordvpn { display: none; }
+  /* Sticky NordVPN footer pinned at bottom of the modal flex column */
+  .m-nordvpn-footer {
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; min-height: 44px; padding: 10px 16px;
+    background: rgba(70, 135, 255, 0.09);
+    border-top: 1px solid rgba(70, 135, 255, 0.22);
+    color: #7aaeff; font-size: 13px; font-family: 'Inter', sans-serif;
+    font-weight: 700; text-decoration: none; text-align: center; line-height: 1.35;
+    box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.42);
+    transition: background 0.18s, color 0.15s;
+  }
   .meta-grid   { grid-template-columns: 1fr 1fr; gap: 9px; }
   .m-info-strip { flex-direction: row; }
   .btn-trailer, .btn-shr, .btn-amazon { height: 44px; }
@@ -3137,7 +3153,7 @@ if ('serviceWorker' in navigator) {
       </div>
     </div>
 
-    <!-- Body -->
+    <!-- Body (scrollable on mobile) -->
     <div class="m-body">
       <div class="m-left">
         <div class="trailer-wrap" id="trailerWrap">
@@ -3182,6 +3198,12 @@ if ('serviceWorker' in navigator) {
         <div class="reviews-list" id="mReviews"></div>
       </div>
     </div>
+
+    <!-- Mobile-only sticky NordVPN footer (flex column bottom item) -->
+    <a class="m-nordvpn-footer" id="mNordvpnFooter"
+       href="https://go.nordvpn.net/aff_c?offer_id=15&aff_id=151623&url_id=902"
+       target="_blank" rel="noopener noreferrer sponsored"
+       data-i18n="vpn.nordvpn">🌍 Not available in your region? Unlock with NordVPN</a>
   </div>
 </div>
 
