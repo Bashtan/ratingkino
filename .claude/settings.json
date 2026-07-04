@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "last_handoff=$(git -C \"$PWD\" log --follow -- HANDOFF.md -1 --format='%H' 2>/dev/null || echo ''); latest=$(git -C \"$PWD\" log -1 --format='%H' 2>/dev/null || echo ''); [ -n \"$latest\" ] && [ \"$last_handoff\" != \"$latest\" ] && echo 'HANDOFF.md is behind HEAD. Update it with this session changes (new session block + any stale sections), then commit and push.' || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
