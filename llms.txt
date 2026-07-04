@@ -1,0 +1,43 @@
+# FindFilm.ai
+
+> FindFilm.ai is a free AI-powered movie discovery platform. Ask it anything in plain language — "a mind-bending sci-fi thriller like Inception", "a feel-good comedy for family night", "French films about second chances" — and it returns ranked results with aggregated critic scores (IMDb, Rotten Tomatoes, Metacritic) plus streaming availability for your country.
+
+## What it does
+
+- **Natural-language movie search** powered by Cloudflare Workers AI (Llama 3.3 70B). Users describe what they want in plain English (or 5 other languages) and get relevant results — no exact title needed.
+- **Aggregated ratings** — IMDb score, Rotten Tomatoes %, and Metacritic score combined into a single weighted rating for 240,000+ films.
+- **Streaming availability** — shows which platforms (Netflix, Prime Video, Apple TV+, Disney+, etc.) carry each film in the user's country, pulled from TMDB's watch-provider data.
+- **Filters** — genre, release year, country of origin, minimum rating, sort order. All combinable with AI search.
+- **Watchlist** — save movies locally (localStorage). Shareable via deep-link URL.
+- **Multilingual** — English, Español, Français, 中文, العربية, Українська. Language auto-detected from visitor's country via Cloudflare geo.
+
+## Who it's for
+
+Anyone who finds themselves stuck choosing what to watch. Especially useful for:
+- People who know the *feeling* they want but not the title
+- Viewers who want to compare critic consensus across multiple sources at a glance
+- International audiences who need to know what's actually available on their local streaming services
+
+## Key facts
+
+- **URL:** https://findfilm.ai (also https://ratingkino.com)
+- **Free to use** — no account required
+- **No tracking cookies** — no third-party analytics beyond Cloudflare's privacy-preserving analytics
+- **PWA** — installable as a mobile/desktop app
+- **Data sources:** TMDB (metadata, posters, watch providers), OMDb (IMDb rating, RT %, Metacritic), Cloudflare Workers AI (semantic search + translation)
+- **Update cadence:** Movie catalogue synced nightly via a Cloudflare Worker cron (00:00–00:10 UTC)
+
+## Content coverage
+
+240,000+ films spanning all major genres: Action, Adventure, Animation, Comedy, Crime, Documentary, Drama, Family, Fantasy, History, Horror, Music, Mystery, Romance, Science Fiction, Thriller, War, Western. Includes both English-language and international cinema. TV shows are excluded — films only.
+
+## How AI search works
+
+The user types a natural-language query. The query is sent to `/api/ai-search` which calls Llama 3.3 70B Instruct (via Cloudflare Workers AI) with a structured prompt that extracts TMDB-compatible filter parameters (genre IDs, year range, vote thresholds, sort order, keywords). Results are fetched from TMDB and enriched with OMDb ratings. The model never makes up movie titles — it converts intent into database queries.
+
+## Limitations
+
+- Streaming availability is country-specific and may lag TMDB's data by up to 24 hours
+- OMDb free tier: 1,000 requests/day — live enrichment may fall back to TMDB-only scores under heavy traffic
+- AI search requires a network call; offline mode (via Service Worker) shows cached popular/new-release films only
+- Watch-provider data is not available for every film or every country
