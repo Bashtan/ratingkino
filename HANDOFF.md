@@ -1,6 +1,25 @@
 # RatingKino — Handoff
 
+---
+
+## ⚡ Most Recent Session (2026-07-04) — Product Hunt Pre-Launch Polish
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `840cd31` | **Session continuity** — `saveSession()` / `restoreSession()` hook into `applyFilters()`, `toggleSrc()`, `clearAISearch()`, `init()`. Persists query/genre/country/rating/sort to `sessionStorage['ff_session']`. |
+| `addfadb` | **NordVPN affiliate CTA** — `.btn-nordvpn` in `_refreshStreamingCtAs()` (all 3 branches). Affiliate URL: `https://go.nordvpn.net/aff_c?offer_id=15&aff_id=151623&url_id=902`. `vpn.nordvpn` i18n key in all 6 languages. Footer disclosure added. |
+| `3cc2e62` | **Animated NLP placeholder** — `#searchPhOverlay` span (hides native `::placeholder`), `_cycleDeskPh()` cycles 4 strings with fade. `initDesktopPlaceholder()` starts the 3.8s interval. `.search-nlp-hint` bar below search. All 6 languages. |
+| `d70b67d` | **Empty + error states** — `_showNoResultsState()`, `_showErrorState()`, `resetAllFilters()`, `retryLastFetch()`. HTML: `#emptyResetBtn`, `#emptyRetryBtn`. CSS: `.state-btn`, `.state-btn-retry`. `applyTranslations()` updated to re-apply correct i18n on lang change. |
+| `a0c1629` | **Search suggestion pills** — `#searchSuggestions` glass dropdown on empty-input focus. `getSuggestions()`, `renderSuggestionPills()`, `showSuggestions()`, `hideSuggestions()`, `_applySuggestion()`, `initSearchSuggestions()`. Uses `mousedown` (not `click`) to fire before `blur`. Hidden on mobile. |
+| `a8b2153` | **Mobile modal UX** — `.modal` becomes flex column (`overflow: hidden`) on ≤768 px. `.m-body` scrolls independently (`flex:1; overflow-y:auto; min-height:0`). `.m-close` already 44×44 px. Inline `.btn-nordvpn` hidden on mobile. New `<a class="m-nordvpn-footer" id="mNordvpnFooter">` sticky bottom bar: full-width, `min-height:44px`, bold, `box-shadow` above. Desktop: `display:none`. |
+| `a5b6533` | **Search state machine + CLS fix** — `showSuggestions()` now guards `inp.value.length > 0 \|\| IS_LOADING \|\| AI_SEARCH_ACTIVE`. `_cycleDeskPh()` adds same fetch guards. Focus handler also checks `!IS_LOADING && !AI_SEARCH_ACTIVE`. CLS: `<div class="results-zone">` wraps `#movieGrid` + `#emptyState` (`min-height:60vh`); `.movie-grid:empty { min-height:0 }`. |
+
+---
+
 ## Live Site
+
 - **Production:** https://findfilm.ai (custom domain) — also https://ratingkino.com
 - **Cloudflare Pages fallback:** https://ratingkino.pages.dev
 - **Cloudflare account:** `e8eeb644ca96a2d4cb2a9674ea599e79`
@@ -11,7 +30,7 @@
 
 ## What This Is
 
-Single-file movie discovery platform — one `index.html` (~4000 lines) plus a Cloudflare Pages Function and a daily sync Worker. No build step, no framework, no dependencies.
+Single-file movie discovery platform — one `index.html` (~7 500 lines) plus a Cloudflare Pages Function and a daily sync Worker. No build step, no framework, no dependencies.
 
 Users browse movies fetched from KV (pre-enriched nightly) or live TMDB/OMDb, filter by genre/year, search with AI semantic search, open a modal with ratings + trailer + watch providers, and share deep links.
 
@@ -21,7 +40,7 @@ Users browse movies fetched from KV (pre-enriched nightly) or live TMDB/OMDb, fi
 
 ```
 ratingkino/
-├── index.html            ← entire site: CSS + JS + HTML (~4000 lines)
+├── index.html            ← entire site: CSS + JS + HTML (~7500 lines)
 ├── sw.js                 ← Service Worker (PWA offline cache + install prompt trigger)
 ├── functions/
 │   └── api/[[path]].js   ← Cloudflare Pages Function (API proxy + KV reader + AI)
@@ -86,10 +105,21 @@ npx wrangler secret put TMDB_KEY --name ratingkino-sync
 npx wrangler secret put OMDB_KEY --name ratingkino-sync
 ```
 
-**Clean up old deployments after a manual deploy spree:**
+---
+
+## Known Environment Quirk (Stop Hook)
+
+Three **unrelated** preview servers trigger the verification stop-hook on every `index.html` edit:
+
+| Server name | Port | Project |
+|-------------|------|---------|
+| `ratingkino` (misleading name) | 8181 | bakalo-site |
+| `design-preview` | 4321 | starbook |
+| `nextjs-dev` | 3000 | starbook |
+
+**Workaround:** After each edit, run `preview_list` — confirm none are in `/Users/bashtan/Projects/ratingkino/` — then verify production with:
 ```bash
-npx wrangler pages deployment list --project-name ratingkino
-npx wrangler pages deployment delete <id> --project-name=ratingkino --force
+curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 ```
 
 ---
@@ -129,54 +159,66 @@ npx wrangler pages deployment delete <id> --project-name=ratingkino --force
 
 ---
 
-## PWA (Progressive Web App)
+## Key JS Functions Reference
 
-The site is fully installable as a PWA on all platforms.
+| Function | Purpose |
+|----------|---------|
+| `loadMovies(page, append)` | Main paginated fetch; sets/clears `IS_LOADING`; calls `renderGrid()` |
+| `aiSearch(query)` | AI semantic search; sets `AI_SEARCH_ACTIVE`; calls `renderGrid()` |
+| `renderGrid(movies, append)` | Renders cards or calls `_showNoResultsState()`; removes `.show` from `#emptyState` |
+| `showSkeletons(n)` | Fills grid with skeleton placeholders; hides empty state |
+| `_refreshStreamingCtAs()` | Builds streaming provider buttons + NordVPN CTA inside `#streamingCtAs` |
+| `applyTranslations()` | Walks DOM for `[data-i18n]`; re-renders suggestion pills on lang change |
+| `saveSession()` / `restoreSession()` | Read/write `sessionStorage['ff_session']` |
+| `showSuggestions()` | Guards: `inp.value.length > 0 \|\| IS_LOADING \|\| AI_SEARCH_ACTIVE` |
+| `_cycleDeskPh()` | Pause: `inp.value \|\| IS_LOADING \|\| AI_SEARCH_ACTIVE` |
+| `resetAllFilters()` | Clears all 5 filter dimensions + AI state + sessionStorage → `loadMovies(1,false)` |
+| `retryLastFetch()` | Alias for `loadMovies(1, false)` |
+| `_applySuggestion(text)` | Populates input, hides pills, triggers `aiSearch()` or `loadMovies()` |
+| `initSearchSuggestions()` | Wires focus/input/mousedown; focus guard: `!inp.value && !IS_LOADING && !AI_SEARCH_ACTIVE` |
+| `initDesktopPlaceholder()` | Sets first placeholder text; starts 3.8s `_cycleDeskPh` interval |
+| `_showNoResultsState()` | Sets emptyState to 🍿 + no-results copy + reset CTA |
+| `_showErrorState()` | Sets emptyState to ⚠️ + error copy + retry CTA; hides load spinner |
 
-### Architecture
-- **`sw.js`** at origin root — registered in `<head>` with scope `/`
-  - Navigation requests → network-first, cache fallback
-  - Static assets (icons, fonts, manifest) → stale-while-revalidate
-  - External API calls → network-only (never cached)
-- **`assets/site.webmanifest`** — `display: "standalone"`, `start_url: "/"`
-- **Apple meta tags** (required for iOS standalone mode):
-  ```html
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="FindFilm">
-  ```
+---
 
-### Install UX
+## CSS Architecture (selected additions from 2026-07-04)
 
-**Mobile (≤768px) — `#mobileInstallBanner`**
-- Full-width top banner above `<header>`, in document flow (not sticky)
-- Dark glass aesthetic: `rgba(13,0,32,0.97)` + `backdrop-filter: blur(20px)` + purple gradient border
-- iOS: banner appears after 1.2s; Install button opens `#iosPwaPrompt` (bottom-sheet with Share instructions)
-- Android: banner appears on `beforeinstallprompt` event; Install button triggers native OS dialog
-- X dismiss: collapses with max-height animation, saves `rk_install_banner_dismissed` timestamp
-- **7-day cooldown**: banner stays hidden until 604,800,000ms after last dismiss
-- Standalone guard: if already installed, banner never shows
+```css
+/* Results zone — prevents footer CLS */
+.results-zone        { min-height: 60vh; }
+.empty-state         { min-height: 60vh; display: none; flex-direction: column;
+                       align-items: center; justify-content: center; }
+.empty-state.show    { display: flex; }
+.movie-grid:empty    { min-height: 0; }   /* zone owns the floor */
 
-**Desktop (>768px) — `#btnInstall` (header button)**
-- Glassmorphism gradient-border button in header nav
-- Gradient text ("Install App"), desktop only — icon-only was removed on mobile
-- Android/Desktop: captured `beforeinstallprompt` stored in `_deferredInstallPrompt`
-- iOS desktop: routes to iOS prompt (unlikely use case but handled)
-- Hidden via `appinstalled` event
+/* Animated search placeholder */
+#searchInput::placeholder         { color: transparent; -webkit-text-fill-color: transparent; }
+.search-ph-overlay                { position: absolute; left: 40px; right: 44px;
+                                    opacity transitions on .ph-fading }
+.search-wrap.typing .search-ph-overlay,
+.search-wrap:focus-within .search-ph-overlay,
+.search-wrap.ai-active .search-ph-overlay { opacity: 0; }
 
-**iOS bottom-sheet — `#iosPwaPrompt`**
-- Slide-up panel with step-by-step "Share → Add to Home Screen" instructions
-- Auto-shows after 3.5s on iOS Safari (15-day cooldown: `rk_ios_pwa_dismissed`)
-- Also triggered by: mobile banner Install button, header Install button
-- `z-index: 10500` — above first-visit overlay (z:10000)
-- `#pwa-debug` URL hash bypasses all guards, shows after 500ms (dev tool)
+/* Search suggestions dropdown */
+.search-suggestions               { position: absolute; glass effect; z-index: 200; }
+.search-suggestions.ss-visible    { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.ss-pill                          { border-radius: 20px; purple-tinted }
+@media (max-width: 768px) { .search-suggestions { display: none; } }
 
-### Key JS functions
-- `initIOSPrompt()` — sets up iOS bottom-sheet, auto-show timer
-- `showIosPwaPrompt()` — global, called from banner + header button
-- `initInstallButton()` — desktop header button; captures `_deferredInstallPrompt`
-- `initMobileInstallBanner()` — mobile banner with 7-day cooldown logic
-- `syncFiltersTop()` — measures header height, sets `filters-bar.style.top` dynamically
+/* NordVPN — desktop inline vs mobile sticky footer */
+.btn-nordvpn         { flex-basis: 100%; height: 36px; blue border #4687FF }
+.m-nordvpn-footer    { display: none; }   /* hidden on desktop */
+@media (max-width: 768px) {
+  .btn-nordvpn       { display: none; }
+  .m-nordvpn-footer  { display: flex; flex-shrink: 0; min-height: 44px;
+                       font-weight: 700; box-shadow: 0 -4px 18px rgba(0,0,0,0.42); }
+  /* Modal becomes scrollable flex column */
+  .modal   { display: flex; flex-direction: column; overflow: hidden; max-height: 90vh; }
+  .m-body  { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .m-close { width: 44px; height: 44px; }
+}
+```
 
 ---
 
@@ -232,20 +274,6 @@ Taste profile stored in `localStorage['rk_taste_v1']`: `{ genres: {}, directors:
 
 ---
 
-## Weighted Average Formula
-
-```js
-// All sources normalized to 0–10
-srcs = [
-  { v: imdb,      w: imdbVotes  || 1000 },
-  { v: rt   / 10, w: rtVotes    || 1000 },
-  { v: mc   / 10, w: mcVotes    || 1000 },
-]
-avg = Σ(v*w) / Σ(w)   → displayed as ★ X.X
-```
-
----
-
 ## Key localStorage Keys
 
 | Key | Contents |
@@ -258,7 +286,7 @@ avg = Σ(v*w) / Σ(w)   → displayed as ★ X.X
 | `rk_ios_pwa_dismissed` | Timestamp of last iOS PWA bottom-sheet dismiss (15-day cooldown) |
 | `rk_install_banner_dismissed` | Timestamp of last mobile install banner dismiss (7-day cooldown) |
 
-Session storage: `rk_tr_{movieId}_{lang}` — cached translated descriptions.
+Session storage: `ff_session` (query/genre/country/rating/sort), `rk_tr_{movieId}_{lang}` (translated descriptions).
 
 ---
 
@@ -278,15 +306,50 @@ Session storage: `rk_tr_{movieId}_{lang}` — cached translated descriptions.
 
 ---
 
-## Pending / Known Issues
+## PWA (Progressive Web App)
 
-- [ ] **AI description translation quality** — m2m100-1.2b is decent but not GPT-quality. Consider switching to `@cf/meta/llama-3.3-70b-instruct-fp8-fast` for translation if quality is unsatisfactory.
-- [ ] **Chinese (ZH) translation** — m2m100 may struggle with simplified vs. traditional Chinese. Monitor user feedback.
-- [ ] **For You row threshold** — currently shows after 3 interactions. May feel too slow on first visit. Consider lowering to 2.
-- [ ] **Mobile RTL layout** — Arabic RTL tested on desktop; verify on mobile (375px) that filter bar and feed rows don't break.
-- [ ] **OMDb rate limit** — free tier is 1000 req/day. Heavy live-browsing traffic will exhaust it. KV cache mitigates this for pre-loaded movies.
-- [ ] **SEO** — `<meta name="description">`, Open Graph tags, and `<link rel="canonical">` are minimal. Expand before a marketing push.
-- [ ] **Sync Worker monitoring** — no alerting if the nightly cron fails. Add a Cloudflare Worker Cron alert or check `/api/cache/status` in a health-check script.
-- [ ] **`www.findfilm.ai` redirect** — verify Cloudflare Redirect Rule for `www` → apex is active.
-- [ ] **Android install banner timing** — `beforeinstallprompt` only fires if the Service Worker is registered and the site meets installability criteria. If the event never fires (e.g. SW install failed), the banner never shows on Android. Monitor via DevTools → Application → Manifest.
-- [ ] **Mobile reviews panel** — on very short viewports the iOS PWA bottom-sheet may clip. Consider reducing content or adding scroll within the sheet.
+The site is fully installable as a PWA on all platforms.
+
+### Architecture
+- **`sw.js`** at origin root — registered in `<head>` with scope `/`
+  - Navigation requests → network-first, cache fallback
+  - Static assets (icons, fonts, manifest) → stale-while-revalidate
+  - External API calls → network-only (never cached)
+- **`assets/site.webmanifest`** — `display: "standalone"`, `start_url: "/"`
+
+### Install UX
+
+**Mobile (≤768px) — `#mobileInstallBanner`**
+- Full-width top banner; iOS shows after 1.2s, Android on `beforeinstallprompt`
+- 7-day cooldown: `rk_install_banner_dismissed`
+
+**Desktop (>768px) — `#btnInstall` (header button)**
+- Glassmorphism gradient-border button; captured `_deferredInstallPrompt`
+
+**iOS bottom-sheet — `#iosPwaPrompt`**
+- Slide-up panel, auto-shows after 3.5s; 15-day cooldown: `rk_ios_pwa_dismissed`
+- `z-index: 10500`; `#pwa-debug` URL hash bypasses all guards
+
+---
+
+## Pending / Next Steps
+
+- [ ] **Product Hunt listing** — confirm title, tagline, description, and gallery screenshots are ready
+- [ ] **SEO** — `<meta name="description">`, Open Graph tags, `<link rel="canonical">` minimal — expand before marketing push
+- [ ] **`www.findfilm.ai` redirect** — verify Cloudflare Redirect Rule for `www` → apex is active
+- [ ] **Sync Worker monitoring** — no alerting if nightly cron fails; consider health-check script against `/api/cache/status`
+- [ ] **AI description translation quality** — m2m100-1.2b; consider switching to llama-3.3-70b-instruct for translation
+- [ ] **OMDb rate limit** — free tier 1000 req/day; monitor under traffic spike
+- [ ] **For You row threshold** — shows after 3 interactions; consider lowering to 2
+- [ ] **Mobile RTL layout** — Arabic RTL; verify on 375px that filter bar and feed rows are correct
+- [ ] **Star hover state bug** — dual CSS + inline colour on review stars; can leave stuck state on rapid mouse exit (pre-existing)
+- [ ] **Admin password on mobile modal** — client-side toggle only, no real auth
+- [ ] **Cross-device watchlist** — currently localStorage only
+
+---
+
+## Suggested Skills for Next Session
+
+- **`web-perf`** — run Lighthouse / Core Web Vitals audit; the CLS fix (`results-zone`) from this session should be measurable. Good to do before Product Hunt.
+- **`cloudflare`** or **`wrangler`** — if touching Pages Functions, D1, KV, or deployment config.
+- **`handoff`** — at end of next session to produce the next handoff doc (`/handoff`).
