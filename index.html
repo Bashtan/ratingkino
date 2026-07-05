@@ -1712,11 +1712,11 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
     transform: translateY(100%) scale(1); opacity: 1;
   }
   .overlay.open .modal { transform: translateY(0) scale(1); opacity: 1; }
-  .m-backdrop  { height: 160px; }
-  .m-info-strip { padding: 0 14px 14px; margin-top: -52px; gap: 12px; }
-  .m-poster    { width: 80px; }
-  .m-meta-col  { padding-top: 58px; }
-  .m-title     { font-size: 18px; }
+  .m-backdrop  { height: 110px; }
+  .m-info-strip { padding: 0 14px 10px; margin-top: -28px; gap: 10px; }
+  .m-poster    { width: 66px; }
+  .m-meta-col  { padding-top: 22px; }
+  .m-title     { font-size: 16px; line-height: 1.18; margin-bottom: 1px; }
   .m-close     { width: 44px; height: 44px; top: 10px; right: 10px; font-size: 16px; }
   .m-body      { grid-template-columns: 1fr; flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .m-left      { padding: 10px 14px 14px; border-right: none; border-bottom: 1px solid var(--border); }
@@ -1745,11 +1745,22 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
     box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.42);
     transition: background 0.18s, color 0.15s;
   }
-  .meta-grid   { grid-template-columns: 1fr 1fr; gap: 9px; }
+  .meta-grid   { grid-template-columns: 1fr 1fr; gap: 7px; }
   .m-info-strip { flex-direction: row; }
-  .btn-trailer, .btn-shr, .btn-amazon { height: 44px; }
-  /* Streaming CTAs + watchlist modal button — 44px ergonomic minimum */
-  .btn-stream, .btn-wl-modal, .btn-stream-disabled { height: 44px; }
+  /* Ratings card: compact for mobile hero */
+  .m-orig        { margin-bottom: 3px; font-size: 11px; }
+  .m-ratings-row { margin-bottom: 5px; }
+  .mr-score-card { padding: 6px 9px 7px; gap: 3px; }
+  .mr-avg-num    { font-size: 24px; letter-spacing: -1px; }
+  .mr-hero-lbl   { display: none; }
+  .mr-breakdown  { margin-top: 0; gap: 4px; }
+  .mrb-num       { font-size: 11px; }
+  /* Action buttons: Trailer|Watchlist row 1 → Streaming row 2 → Share row 3 */
+  .m-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: stretch; }
+  .btn-trailer  { flex: 1 1 calc(50% - 3px); min-width: 0; order: 1; height: 40px; padding: 0 10px; }
+  .btn-wl-modal { flex: 1 1 calc(50% - 3px); min-width: 0; order: 2; height: 40px; font-size: 11px; }
+  .btn-amazon, .btn-stream, .btn-stream-disabled { flex: 0 0 100%; order: 3; height: 40px; }
+  .btn-shr { flex: 0 0 100%; order: 4; height: 36px; font-size: 11px; }
   /* Card bookmark: expand to 44px, anchor to corner, always visible on touch devices */
   .card-wl-btn { width: 44px; height: 44px; top: 0; left: 0; border-radius: 0 0 10px 0; opacity: 0.72; }
   .card-wl-btn.saved { opacity: 1; }
