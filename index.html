@@ -1719,8 +1719,19 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   .m-title     { font-size: 18px; }
   .m-close     { width: 44px; height: 44px; top: 10px; right: 10px; font-size: 16px; }
   .m-body      { grid-template-columns: 1fr; flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .m-left      { padding: 14px 16px; border-right: none; border-bottom: 1px solid var(--border); }
-  .m-right     { padding: 14px 16px; }
+  .m-left      { padding: 10px 14px 14px; border-right: none; border-bottom: 1px solid var(--border); }
+  .m-right     { padding: 12px 14px; }
+  /* Trailer: modern aspect-ratio replaces the padding-bottom:56.25% hack — no wasted height */
+  .trailer-wrap { padding-bottom: 0; height: auto; aspect-ratio: 16 / 9; margin-bottom: 10px; }
+  /* Description: tighter margins so content above the fold */
+  .m-desc { font-size: 13px; line-height: 1.65; margin-bottom: 14px; }
+  /* Section labels: tighter on mobile */
+  .section-lbl { margin-bottom: 7px; }
+  /* Meta grid, awards: reduce bottom breathing room */
+  .meta-grid { gap: 7px; margin-bottom: 14px; }
+  .awards    { margin-bottom: 14px; }
+  /* Similar movies: flush edges on mobile, reduce bottom margin */
+  .m-similar-scroll { padding: 4px 0 8px; margin: 0 0 8px; }
   /* On mobile the NordVPN CTA moves to the sticky bottom bar — hide inline version */
   .btn-nordvpn { display: none; }
   /* Sticky NordVPN footer pinned at bottom of the modal flex column */
@@ -1992,8 +2003,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 
 /* ─── SIMILAR MOVIES in modal → AI Top Matches redesign ─── */
 .m-similar-scroll {
-  display: block; overflow-x: visible;
-  padding: 0; margin: 0 0 24px;
+  padding: 4px 0 12px; margin: 0 0 16px;
 }
 .ai-matches-wrap {
   border-radius: 14px;
@@ -6142,6 +6152,7 @@ async function openMovie(tmdbId, listName = '') {
   PENDING_STARS = 0;
   recordInteraction(m); // taste tracking
   populateModal(m);
+  document.querySelector('.m-body')?.scrollTo({ top: 0, behavior: 'instant' });
   loadSimilarMovies(m); // async — renders after modal opens
   document.getElementById('overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -6402,13 +6413,24 @@ const AIM_SKEL_HTML = `<div class="ai-matches-wrap">
   </div>`).join('')}</div>
 </div>`;
 
+const _SIM_SKEL = Array(6).fill(
+  `<div class="mini-card" style="pointer-events:none">
+    <div class="mini-card-img-placeholder" style="background:rgba(255,255,255,0.04);animation:shimmer 1.4s infinite;background-size:200% 100%;background-image:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.09) 50%,rgba(255,255,255,0.04) 75%)"></div>
+    <div class="mini-card-info">
+      <div class="aim-skel-line" style="height:7px;border-radius:3px;margin-bottom:3px"></div>
+      <div class="aim-skel-line short" style="height:6px;border-radius:3px;width:55%"></div>
+    </div>
+  </div>`
+).join('');
+
 async function loadSimilarMovies(m) {
   const lbl    = document.getElementById('similarLbl');
   const scroll = document.getElementById('similarScroll');
   if (!scroll) return;
-  if (lbl) lbl.style.display = 'none'; // header is embedded inside scroll
 
-  scroll.innerHTML = AIM_SKEL_HTML;
+  // Show label + skeleton immediately
+  if (lbl) lbl.style.display = '';
+  scroll.innerHTML = _SIM_SKEL;
   scroll.style.display = '';
 
   try {
@@ -6416,48 +6438,37 @@ async function loadSimilarMovies(m) {
     const data = await tmdbGet(`/${type}/${m.id}/recommendations`, { language: 'en-US', page: '1' });
     const results = (data?.results || []).filter(r => r.poster_path).slice(0, 8);
 
-    if (!results.length) { scroll.style.display = 'none'; return; }
+    if (!results.length) {
+      scroll.style.display = 'none';
+      if (lbl) lbl.style.display = 'none';
+      return;
+    }
 
     results.forEach(raw => {
       if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromTMDb(raw));
     });
 
-    const items = results.map((raw, i) => {
+    scroll.innerHTML = results.map((raw, i) => {
       const title  = esc(raw.title || raw.name || '');
       const year   = (raw.release_date || raw.first_air_date || '').slice(0, 4);
       const score  = raw.vote_average ? raw.vote_average.toFixed(1) : '';
-      const genre  = (raw.genre_ids || []).map(id => GENRES[id]).filter(Boolean)[0] || '';
+      const emoji  = MOVIES.find(x => x.id === raw.id)?.emoji || '🎬';
       const imgSrc = `${TIMG_W500}${raw.poster_path}`;
-      const pct    = calcMatchScore(m, raw);
-      const why    = matchInsight(m, raw);
-      const meta   = [year, genre, score ? '★' + score : ''].filter(Boolean).join(' · ');
-      return `<div class="aim-item" onclick="openMovie(${raw.id})" style="animation-delay:${i * 55}ms">
-        <img class="aim-thumb" src="${imgSrc}" alt="${title}" loading="lazy"
-          onerror="this.outerHTML='<div class=\\'aim-thumb-ph\\'>🎬</div>'">
-        <div class="aim-body">
-          <div class="aim-title">${title}</div>
-          <div class="aim-why">${why}</div>
-          <div class="aim-meta">${esc(meta)}</div>
-        </div>
-        <div class="aim-score"><span class="aim-score-badge">✦ ${pct}%</span></div>
-        <div class="aim-actions">
-          <button class="aim-btn aim-btn-view" onclick="event.stopPropagation();openMovie(${raw.id})">View</button>
-          <button class="aim-btn aim-btn-wl" onclick="event.stopPropagation();aimAddWL(${raw.id},this)">+ Watchlist</button>
+      return `<div class="mini-card" onclick="openMovie(${raw.id},'Similar')"
+          style="animation-delay:${i * 45}ms;opacity:0;animation:aimFadeIn 0.35s ease forwards">
+        <img class="mini-card-img" src="${imgSrc}" alt="${title}" loading="lazy"
+          onerror="this.outerHTML='<div class=\\'mini-card-img-placeholder\\'>${emoji}</div>'">
+        ${score ? `<div class="mini-card-score">★ ${score}</div>` : ''}
+        <div class="mini-card-info">
+          <div class="mini-card-title">${title}</div>
+          ${year ? `<div class="mini-card-meta">${year}</div>` : ''}
         </div>
       </div>`;
     }).join('');
 
-    scroll.innerHTML = `<div class="ai-matches-wrap">
-      <div class="ai-matches-head">
-        <div class="ai-matches-dot"></div>
-        <span class="ai-matches-title">✦ AI Top Matches</span>
-        <span class="ai-matches-count">${results.length} picks</span>
-      </div>
-      <div class="aim-list">${items}</div>
-    </div>`;
-
   } catch {
     scroll.style.display = 'none';
+    if (lbl) lbl.style.display = 'none';
   }
 }
 
