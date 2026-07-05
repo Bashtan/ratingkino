@@ -2,6 +2,19 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-07-05) — Mobile Modal UX + Project Memory
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `fda50d0` | **Project memory** — `CLAUDE.md` (auto-loaded every session, defines HANDOFF.md protocol). `.claude/settings.json` Stop hook: checks `last_handoff_commit != HEAD`, outputs reminder, self-terminates once HANDOFF.md is at HEAD. |
+| `61fe1da` | **llms.txt** — AEO/GEO file at `https://findfilm.ai/llms.txt`. H1 + blockquote summary, feature bullets, data sources, limitations. Served as static file by Cloudflare Pages. |
+| `61a0af1` | **Similar movies horizontal scroll** — `loadSimilarMovies()` rewritten: renders `mini-card` poster strip directly into `#similarScroll` (`.feed-scroll.m-similar-scroll`), replacing vertical `aim-list` inside `ai-matches-wrap`. `_SIM_SKEL` const for skeleton. `#similarLbl` now shown/hidden alongside scroll. `openMovie()` adds `.m-body?.scrollTo({top:0,behavior:'instant'})` after `populateModal()`. `.m-similar-scroll` CSS: removed `display:block;overflow-x:visible` overrides that defeated `.feed-scroll`. Mobile: `.trailer-wrap` → `aspect-ratio:16/9; padding-bottom:0; height:auto`. |
+| `94bb0d6` | **Aggressive mobile hero compaction** — Hero section −130px on 375px phones; ABOUT now above fold. `.m-backdrop` 160→110px. `.m-info-strip` margin-top −52→−28px. `.m-poster` 80→66px. `.m-meta-col` padding-top 58→22px. `.m-title` 18→16px. Rating card: `.mr-avg-num` 36→24px, `.mr-hero-lbl` hidden, padding 6/9px. `.m-orig` margin 14→3px. `.m-ratings-row` margin 14→5px. Buttons reordered via CSS `order`: Trailer(1)\|Watchlist(2) row 1, Streaming(3) full-width row 2, Share(4) full-width row 3. `.m-actions` now `display:flex;flex-wrap:wrap;gap:6px`. |
+
+---
+
 ## ⚡ Most Recent Session (2026-07-04) — Product Hunt Pre-Launch Polish
 
 All commits on `main`, all live on https://findfilm.ai.
