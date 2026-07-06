@@ -2,6 +2,16 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-07-06) — AI Loading Micro-copy
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `4275155` | **AI loading micro-copy** — `getThinkingPhrases()` now returns 4 phrases (indices 0–3, dropped 4). English `ai.thinking.0-3` updated to: "Analyzing your prompt…" / "Scanning 240,000+ films…" / "Calculating unified ratings…" / "Finding the perfect matches…". Cycle interval `startThinkingText()`: 2600 → 1800ms. Fade CSS unchanged (`.ai-banner-text { transition: opacity 0.22s, transform 0.22s }` / `.fading { opacity:0; translateY(5px) }`). |
+
+---
+
 ## ⚡ Most Recent Session (2026-07-05) — Mobile Modal UX + Project Memory
 
 All commits on `main`, all live on https://findfilm.ai.
