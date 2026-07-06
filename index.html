@@ -662,7 +662,42 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   color: #fff; font-size: 11px; font-weight: 900; padding: 4px 9px;
   border-radius: 9px; letter-spacing: -0.3px;
   box-shadow: 0 2px 14px rgba(0,0,0,0.65);
+  pointer-events: auto; cursor: default;
 }
+
+/* ─── Unified rating breakdown tooltip ─────────────────────────── */
+.rtip {
+  position: fixed; z-index: 8500;
+  padding: 10px 13px;
+  background: rgba(10,10,16,0.97);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,0,0,0.45);
+  pointer-events: none;
+  opacity: 0; transform: translateY(5px) scale(0.98);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.rtip.show { opacity: 1; transform: none; }
+.rtip-header {
+  font-size: 9px; font-weight: 800; letter-spacing: 1.5px;
+  text-transform: uppercase; color: rgba(255,255,255,0.3);
+  margin-bottom: 8px;
+}
+.rtip-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 5px 0;
+}
+.rtip-row + .rtip-row { border-top: 1px solid rgba(255,255,255,0.07); }
+.rtip-src { font-size: 10px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; }
+.rtip-imdb    { color: #F5C518; }
+.rtip-rt      { color: #ff7055; }
+.rtip-mc-good { color: #4ade80; }
+.rtip-mc-mid  { color: #fbbf24; }
+.rtip-mc-bad  { color: #f87171; }
+.rtip-tmdb    { color: #01b4e4; }
+.rtip-val { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+.rtip-denom { font-size: 10px; font-weight: 400; color: rgba(255,255,255,0.4); }
 
 /* Persistent ratings row — always visible below movie title */
 .card-ratings {
@@ -5155,7 +5190,10 @@ function skeletonCard() {
 
 // Avg pill for poster overlay (top-right)
 function avgBadgeHTML(m) {
-  return `<span class="rb avg">★ ${calcAvg(m)}</span>`;
+  return `<span class="rb avg" data-mid="${m.id}"
+    onmouseenter="showRatingTooltip(${m.id},this)"
+    onmouseleave="hideRatingTooltip()"
+    ontouchstart="event.stopPropagation();toggleRatingTooltip(${m.id},this)">★ ${calcAvg(m)}</span>`;
 }
 
 // Always-visible ratings row below card title
@@ -5209,6 +5247,48 @@ function renderCardHTML(m) {
     </div>
     ${cardRatingsHTML(m)}
   </div>`;
+}
+
+/* ─── Rating breakdown tooltip ──────────────────────────────────── */
+function _buildRtipRows(m) {
+  const rows = [];
+  if (m.imdb) rows.push(`<div class="rtip-row"><span class="rtip-src rtip-imdb">IMDb</span><span class="rtip-val">${m.imdb}<span class="rtip-denom"> / 10</span></span></div>`);
+  if (m.rt)   rows.push(`<div class="rtip-row"><span class="rtip-src rtip-rt">RT</span><span class="rtip-val">${m.rt}<span class="rtip-denom">%</span></span></div>`);
+  if (m.mc) {
+    const cls = m.mc >= 61 ? 'rtip-mc-good' : m.mc >= 40 ? 'rtip-mc-mid' : 'rtip-mc-bad';
+    rows.push(`<div class="rtip-row"><span class="rtip-src ${cls}">MC</span><span class="rtip-val">${m.mc}<span class="rtip-denom"> / 100</span></span></div>`);
+  }
+  if (!rows.length && m.tmdbScore) rows.push(`<div class="rtip-row"><span class="rtip-src rtip-tmdb">TMDB</span><span class="rtip-val">${(+m.tmdbScore).toFixed(1)}<span class="rtip-denom"> / 10</span></span></div>`);
+  return rows;
+}
+
+function showRatingTooltip(mid, el) {
+  const m = MOVIES.find(x => x.id === mid);
+  const tip = document.getElementById('rtip');
+  if (!m || !tip) return;
+  const rows = _buildRtipRows(m);
+  if (!rows.length) return;
+  tip.innerHTML = `<div class="rtip-header">Unified Rating</div>${rows.join('')}`;
+  const TIP_W = 172;
+  const r = el.getBoundingClientRect();
+  let left = r.left + r.width / 2 - TIP_W / 2;
+  left = Math.max(8, Math.min(left, window.innerWidth - TIP_W - 8));
+  tip.style.left  = left + 'px';
+  tip.style.width = TIP_W + 'px';
+  tip.style.top   = (r.top - 4) + 'px'; // temp — needed before offsetHeight
+  tip.classList.add('show');
+  const tipH = tip.offsetHeight;
+  tip.style.top = (r.top - tipH - 8 < 8 ? r.bottom + 8 : r.top - tipH - 8) + 'px';
+}
+
+function hideRatingTooltip() {
+  document.getElementById('rtip')?.classList.remove('show');
+}
+
+function toggleRatingTooltip(mid, el) {
+  document.getElementById('rtip')?.classList.contains('show')
+    ? hideRatingTooltip()
+    : showRatingTooltip(mid, el);
 }
 
 function updateCardInGrid(tmdbId) {
@@ -7712,6 +7792,9 @@ if (window.navigator.standalone) {
   }, { capture: true });
 }
 
+// Dismiss rating tooltip on outside tap (mobile)
+document.addEventListener('click', e => { if (!e.target.closest('.rb.avg')) hideRatingTooltip(); });
+
 /* ── Sync filters-bar top to actual header height ───────────────────────── */
 function syncFiltersTop() {
   const hdr = document.querySelector('header');
@@ -7782,5 +7865,7 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
     <button class="wl-clear-btn" onclick="clearWatchlist()" data-i18n="wl.clear">Clear all</button>
   </div>
 </div>
+<!-- Unified rating breakdown tooltip — fixed overlay, escapes overflow:hidden cards -->
+<div id="rtip" class="rtip" role="tooltip" aria-hidden="true"></div>
 </body>
 </html>
