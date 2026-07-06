@@ -3426,11 +3426,10 @@ const TRANSLATIONS = {
     'onboard.prop3':       'AI search that understands <strong>moods &amp; vibes</strong>',
     'onboard.cta':         'Let\'s go! →',
     // AI thinking phrases
-    'ai.thinking.0':       'Analyzing your mood…',
-    'ai.thinking.1':       'Scanning 240,000 films…',
-    'ai.thinking.2':       'Calculating match scores…',
-    'ai.thinking.3':       'Finding the perfect vibe…',
-    'ai.thinking.4':       'Ranking by relevance…',
+    'ai.thinking.0':       'Analyzing your prompt…',
+    'ai.thinking.1':       'Scanning 240,000+ films…',
+    'ai.thinking.2':       'Calculating unified ratings…',
+    'ai.thinking.3':       'Finding the perfect matches…',
     // AI search examples
     'ai.example.0':        'mind-bending sci-fi with a twist ending',
     'ai.example.1':        'cozy feel-good comedy for a rainy evening',
@@ -4545,7 +4544,7 @@ let _lastQuery        = '';        // last AI query for follow-up context
 let _aiMatchScores    = new Map(); // tmdbId → match % for current AI results
 let _thinkingTimer    = null;      // cycling thinking-text timer
 function getThinkingPhrases() {
-  return [0,1,2,3,4].map(i => t(`ai.thinking.${i}`));
+  return [0,1,2,3].map(i => t(`ai.thinking.${i}`));
 }
 
 /* ── Session continuity (sessionStorage — clears when tab closes) ── */
@@ -5706,9 +5705,9 @@ function startThinkingText() {
       idx++;
       el.classList.remove('fading');
     }, 220);
-    _thinkingTimer = setTimeout(cycle, 2600);
+    _thinkingTimer = setTimeout(cycle, 1800);
   }
-  _thinkingTimer = setTimeout(cycle, 2600);
+  _thinkingTimer = setTimeout(cycle, 1800);
 }
 
 function stopThinkingText() {
