@@ -2,6 +2,16 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-07-06) — AI "Why Recommended" Match Reasons
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `e620a3e` | **AI "why recommended" match reasons** — Backend `handleAISearch()` (`functions/api/[[path]].js`) system/user prompts now ask the LLM for a personalized `reason` (max 10-15 words) per movie, returned as `{ results:[{id,reason}], message }` (backward-compat fallback to legacy `{ids:[...]}` shape). Parsing dedupes/validates ids against catalog, caps at 20, sanitizes `reason` (strips newlines, caps 140 chars). `max_tokens` 400→1600. API response now `{ ids, reasons, message }`. Frontend: new `_aiMatchReasons` Map (tmdbId → reason string), cleared alongside `_aiMatchScores` in `resetAllFilters()`, `clearAISearch()`, `applyFilters()`, and start of `aiSearch()`; populated in `aiSearch()` after `buildMatchScores()`. `renderCardHTML()` renders `.ai-why-reason` pill (✨ sparkle + italic text) under the title/meta row when a reason exists. CSS: `.ai-why-reason`, `.ai-why-spark`, `.ai-why-text` (2-line clamp), `@keyframes aiWhyFadeIn`. |
+
+---
+
 ## ⚡ Most Recent Session (2026-07-06) — AI Loading Micro-copy + Rating Tooltip
 
 All commits on `main`, all live on https://findfilm.ai.
