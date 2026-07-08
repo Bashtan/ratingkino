@@ -733,6 +733,30 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .movie-meta { font-size: 10px; color: var(--text-sub); display: flex; gap: 5px; }
 .mdot { color: var(--orange); }
 
+/* ─── AI "why recommended" insight pill ─────────────────────────── */
+.ai-why-reason {
+  display: flex; align-items: flex-start; gap: 5px;
+  margin-top: 6px; padding: 5px 8px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.14), rgba(6,182,212,0.08));
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: 7px;
+  animation: aiWhyFadeIn 0.35s ease both;
+}
+.ai-why-spark {
+  flex-shrink: 0; font-size: 10px; line-height: 1.45;
+  filter: drop-shadow(0 0 3px rgba(167,139,250,0.6));
+}
+.ai-why-text {
+  font-size: 10px; font-style: italic; font-weight: 500; line-height: 1.4;
+  color: #c4b5fd;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@keyframes aiWhyFadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ─── SKELETON ────────────────────────────────── */
 @keyframes shimmer {
   0%   { background-position: -900px 0; }
@@ -4577,6 +4601,7 @@ let AI_SEARCH_ACTIVE  = false;
 let AI_SEARCH_TIMER   = null;
 let _lastQuery        = '';        // last AI query for follow-up context
 let _aiMatchScores    = new Map(); // tmdbId → match % for current AI results
+let _aiMatchReasons   = new Map(); // tmdbId → "why recommended" AI explanation
 let _thinkingTimer    = null;      // cycling thinking-text timer
 function getThinkingPhrases() {
   return [0,1,2,3].map(i => t(`ai.thinking.${i}`));
@@ -5227,6 +5252,10 @@ function renderCardHTML(m) {
   const matchBadge = matchScore
     ? `<div class="ai-match-badge">✦ ${matchScore}%</div>`
     : '';
+  const matchReason = _aiMatchReasons.get(m.id);
+  const whyReasonHTML = matchReason
+    ? `<div class="ai-why-reason"><span class="ai-why-spark">✨</span><span class="ai-why-text">${esc(matchReason)}</span></div>`
+    : '';
   return `<div class="movie-card" id="card-${m.id}" onclick="openMovie(${m.id})">
     <div class="movie-poster">
       ${poster}
@@ -5244,6 +5273,7 @@ function renderCardHTML(m) {
         ${m.year ? '<span class="mdot">·</span>' : ''}
         <span>${esc(m.genre)}</span>
       </div>
+      ${whyReasonHTML}
     </div>
     ${cardRatingsHTML(m)}
   </div>`;
@@ -5360,6 +5390,7 @@ function resetAllFilters() {
     hideAIBanner();
     clearFollowUps();
     _aiMatchScores.clear();
+    _aiMatchReasons.clear();
     _lastQuery = '';
   }
   // Count row
@@ -5913,6 +5944,7 @@ function clearAISearch() {
   hideAIBanner();
   clearFollowUps();
   _aiMatchScores.clear();
+  _aiMatchReasons.clear();
   _lastQuery = '';
   document.getElementById('searchWrap').classList.remove('ai-active', 'typing');
   document.getElementById('searchInput').value = '';
@@ -6006,6 +6038,7 @@ async function aiSearch(query) {
   AI_SEARCH_ACTIVE = true;
   clearFollowUps();
   _aiMatchScores.clear();
+  _aiMatchReasons.clear();
   document.getElementById('searchWrap').classList.add('ai-active');
   document.getElementById('feedSections').style.display = 'none';
   showSkeletons(12);
@@ -6024,7 +6057,7 @@ async function aiSearch(query) {
     clearTimeout(timeout);
 
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const { ids, message } = await r.json();
+    const { ids, reasons, message } = await r.json();
 
     if (!ids || !ids.length) throw new Error('Empty AI response');
 
@@ -6042,8 +6075,12 @@ async function aiSearch(query) {
     TOTAL_COUNT = CACHE_MOVIES.length;
     _lastQuery  = query;
 
-    // Build per-card match scores before rendering
+    // Build per-card match scores + "why recommended" reasons before rendering
     buildMatchScores(results);
+    _aiMatchReasons.clear();
+    if (reasons) {
+      Object.entries(reasons).forEach(([id, reason]) => _aiMatchReasons.set(Number(id), reason));
+    }
 
     // Switch banner from loading → result with typewriter
     const banner = document.getElementById('aiBanner');
@@ -6097,6 +6134,7 @@ function applyFilters() {
     hideAIBanner();
     clearFollowUps();
     _aiMatchScores.clear();
+    _aiMatchReasons.clear();
     _lastQuery = '';
     document.getElementById('searchWrap').classList.remove('ai-active');
   }

@@ -758,7 +758,10 @@ async function handleAISearch(request, env, cors) {
     'Rank results by this strict priority: ' +
     '(1) movies whose TITLE contains the query words — rank these FIRST; ' +
     '(2) movies whose DESCRIPTION or TAGLINE matches — rank these SECOND; ' +
-    '(3) thematic, genre, or mood similarity — rank these LAST.';
+    '(3) thematic, genre, or mood similarity — rank these LAST. ' +
+    'For every result, also write a short, punchy, conversational "reason" ' +
+    '(max 10-15 words) explaining specifically why THAT movie matches the ' +
+    'user\'s exact query — a personalized match explanation, not a generic plot summary.';
 
   const userPrompt =
     `User query: "${query}"\n\n` +
@@ -770,12 +773,19 @@ async function handleAISearch(request, env, cors) {
     `${catalog}\n\n` +
     `Return JSON:\n` +
     `{\n` +
-    `  "ids": [integer movie IDs ordered best-match first, max 20],\n` +
+    `  "results": [\n` +
+    `    { "id": integer, "reason": "short punchy match reason, max 10-15 words" },\n` +
+    `    ...\n` +
+    `  ],\n` +
     `  "message": null\n` +
     `}\n` +
-    `If no movie is a close match, return the 3 nearest IDs and set "message" to a ` +
-    `short friendly note (e.g. "These are the closest recent releases to your request."). ` +
-    `Never return an empty ids array.`;
+    `results ordered best-match first, max 20 entries.\n` +
+    `Example reason for query "crime movie like Zodiac but faster": ` +
+    `"Maintains the dark, gritty tone of Zodiac but with a much faster, action-packed pace."\n` +
+    `If no movie is a close match, return the 3 nearest IDs (each with a "reason" explaining ` +
+    `the closest connection you found) and set "message" to a short friendly note ` +
+    `(e.g. "These are the closest recent releases to your request."). ` +
+    `Never return an empty results array.`;
 
   if (!env.AI) {
     return json({ error: 'AI binding not configured — deploy to Cloudflare to enable' }, 503);
@@ -787,7 +797,7 @@ async function handleAISearch(request, env, cors) {
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: userPrompt   },
       ],
-      max_tokens:  400,
+      max_tokens:  1600,
       temperature: 0.1,
       stream:      false,
     });
@@ -812,14 +822,29 @@ async function handleAISearch(request, env, cors) {
 
     const result = JSON.parse(match[0]);
 
-    // Validate: only return IDs that actually exist in our catalog
-    const validIds = new Set(movies.map(m => m.id));
-    const ids = (result.ids || [])
-      .map(id => Number(id))
-      .filter(id => Number.isInteger(id) && validIds.has(id))
-      .slice(0, 20);
+    // Validate: only keep IDs that actually exist in our catalog, dedupe, cap at 20.
+    // Support both the new { results:[{id,reason}] } shape and a legacy { ids:[...] }
+    // fallback in case the model ever drops the reason field.
+    const validIds  = new Set(movies.map(m => m.id));
+    const rawResults = Array.isArray(result.results)
+      ? result.results
+      : (result.ids || []).map(id => ({ id }));
 
-    return json({ ids, message: result.message || null });
+    const seen    = new Set();
+    const ids     = [];
+    const reasons = {};
+    for (const r of rawResults) {
+      const id = Number(r?.id);
+      if (!Number.isInteger(id) || !validIds.has(id) || seen.has(id)) continue;
+      seen.add(id);
+      ids.push(id);
+      if (typeof r.reason === 'string' && r.reason.trim()) {
+        reasons[id] = r.reason.trim().replace(/[\n\r]+/g, ' ').slice(0, 140);
+      }
+      if (ids.length >= 20) break;
+    }
+
+    return json({ ids, reasons, message: result.message || null });
 
   } catch (e) {
     console.error('[ai-search] error:', e.message);
