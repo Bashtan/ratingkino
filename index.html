@@ -1771,14 +1771,14 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
     transform: translateY(100%) scale(1); opacity: 1;
   }
   .overlay.open .modal { transform: translateY(0) scale(1); opacity: 1; }
-  .m-backdrop  { height: 110px; }
-  .m-info-strip { padding: 0 14px 10px; margin-top: -28px; gap: 10px; }
+  .m-backdrop  { height: 90px; }
+  .m-info-strip { padding: 0 14px 6px; margin-top: -22px; gap: 8px; }
   .m-poster    { width: 66px; }
-  .m-meta-col  { padding-top: 22px; }
+  .m-meta-col  { padding-top: 16px; }
   .m-title     { font-size: 16px; line-height: 1.18; margin-bottom: 1px; }
   .m-close     { width: 44px; height: 44px; top: 10px; right: 10px; font-size: 16px; }
   .m-body      { grid-template-columns: 1fr; flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .m-left      { padding: 10px 14px 14px; border-right: none; border-bottom: 1px solid var(--border); }
+  .m-left      { padding: 8px 14px 14px; border-right: none; border-bottom: 1px solid var(--border); }
   .m-right     { padding: 12px 14px; }
   /* Trailer: modern aspect-ratio replaces the padding-bottom:56.25% hack — no wasted height */
   .trailer-wrap { padding-bottom: 0; height: auto; aspect-ratio: 16 / 9; margin-bottom: 10px; }
@@ -1806,20 +1806,38 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   }
   .meta-grid   { grid-template-columns: 1fr 1fr; gap: 7px; }
   .m-info-strip { flex-direction: row; }
-  /* Ratings card: compact for mobile hero */
+  /* Ratings card: single-line inline pill for mobile hero */
   .m-orig        { margin-bottom: 3px; font-size: 11px; }
   .m-ratings-row { margin-bottom: 5px; }
-  .mr-score-card { padding: 6px 9px 7px; gap: 3px; }
-  .mr-avg-num    { font-size: 24px; letter-spacing: -1px; }
+  .mr-score-card { flex-direction: row; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; }
+  .mr-hero-avg   { gap: 2px; }
+  .mr-star       { font-size: 13px; }
+  .mr-avg-num    { font-size: 17px; letter-spacing: -0.5px; }
   .mr-hero-lbl   { display: none; }
-  .mr-breakdown  { margin-top: 0; gap: 4px; }
+  .mr-breakdown  { margin-top: 0; gap: 5px; padding-left: 6px; border-left: 1px solid rgba(255,255,255,0.12); }
+  .mrb-lbl       { font-size: 8.5px; }
   .mrb-num       { font-size: 11px; }
-  /* Action buttons: Trailer|Watchlist row 1 → Streaming row 2 → Share row 3 */
-  .m-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: stretch; }
-  .btn-trailer  { flex: 1 1 calc(50% - 3px); min-width: 0; order: 1; height: 40px; padding: 0 10px; }
-  .btn-wl-modal { flex: 1 1 calc(50% - 3px); min-width: 0; order: 2; height: 40px; font-size: 11px; }
-  .btn-amazon, .btn-stream, .btn-stream-disabled { flex: 0 0 100%; order: 3; height: 40px; }
-  .btn-shr { flex: 0 0 100%; order: 4; height: 36px; font-size: 11px; }
+  /* Action row: Trailer / Share / Watchlist as small auto-width pills, then a
+     horizontally-scrollable "Stream on:" icon row on its own line below. */
+  .m-actions    { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .btn-trailer  { order: 1; flex: 0 0 auto; height: 34px; padding: 0 12px; font-size: 11px; }
+  .btn-shr      { order: 2; flex: 0 0 auto; height: 34px; padding: 0 12px; font-size: 11px; }
+  .btn-wl-modal { order: 3; flex: 0 0 auto; height: 34px; padding: 0 12px; font-size: 11px; }
+
+  .stream-on-lbl { order: 4; flex: 0 0 100%; font-size: 10px; color: var(--muted); margin: 2px 0 -2px; }
+  .stream-row {
+    order: 5; flex: 0 0 100%; display: flex; gap: 8px;
+    overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px;
+  }
+  .stream-row .btn-stream {
+    flex: 0 0 auto; width: 42px; height: 42px; padding: 0;
+    justify-content: center; border-radius: 11px;
+  }
+  .stream-row .btn-stream-label { display: none; }
+  .stream-row .btn-amazon-badge { display: none; }
+  .stream-row .btn-stream img   { width: 22px; height: 22px; border-radius: 5px; }
+  /* Fallback single CTA (loading / no providers in region) stays full-width & readable */
+  .btn-stream, .btn-stream-disabled { flex: 0 0 100%; order: 5; height: 40px; }
   /* Card bookmark: expand to 44px, anchor to corner, always visible on touch devices */
   .card-wl-btn { width: 44px; height: 44px; top: 0; left: 0; border-radius: 0 0 10px 0; opacity: 0.72; }
   .card-wl-btn.saved { opacity: 1; }
@@ -3516,6 +3534,7 @@ const TRANSLATIONS = {
     'stream.amazon':       'Watch on Prime Video ↗',
     'stream.watchOn':      'Watch on {name} ↗',
     'stream.region':       'Streaming in {country}',
+    'stream.streamOn':     'Stream on:',
     // Score labels
     'score.noData':        'No ratings available',
     'score.tmdbOnly':      'TMDB · no critic data yet',
@@ -3677,6 +3696,7 @@ const TRANSLATIONS = {
     'stream.amazon':       'Ver en Prime Video ↗',
     'stream.watchOn':      'Ver en {name} ↗',
     'stream.region':       'Streaming en {country}',
+    'stream.streamOn':     'Ver en:',
     'score.noData':        'Sin calificaciones disponibles',
     'score.tmdbOnly':      'TMDB · sin datos de crítica aún',
     'score.weighted':      'Prom. ponderado · {n} fuente',
@@ -3836,6 +3856,7 @@ const TRANSLATIONS = {
     'stream.amazon':       'Voir sur Prime Video ↗',
     'stream.watchOn':      'Voir sur {name} ↗',
     'stream.region':       'Streaming en {country}',
+    'stream.streamOn':     'Disponible sur :',
     'score.noData':        'Aucune note disponible',
     'score.tmdbOnly':      'TMDB · pas encore de données critiques',
     'score.weighted':      'Moy. pondérée · {n} source',
@@ -3995,6 +4016,7 @@ const TRANSLATIONS = {
     'stream.amazon':       '在 Prime Video 上观看 ↗',
     'stream.watchOn':      '在 {name} 上观看 ↗',
     'stream.region':       '在 {country} 流媒体播放',
+    'stream.streamOn':     '观看平台：',
     'score.noData':        '暂无评分',
     'score.tmdbOnly':      'TMDB · 暂无评论数据',
     'score.weighted':      '加权均分 · {n} 个来源',
@@ -4154,6 +4176,7 @@ const TRANSLATIONS = {
     'stream.amazon':       'شاهد على Prime Video ↗',
     'stream.watchOn':      'شاهد على {name} ↗',
     'stream.region':       'البث في {country}',
+    'stream.streamOn':     'المشاهدة على:',
     'score.noData':        'لا تتوفر تقييمات',
     'score.tmdbOnly':      'TMDB · لا توجد بيانات نقدية بعد',
     'score.weighted':      'متوسط مرجح · {n} مصدر',
@@ -4313,6 +4336,7 @@ const TRANSLATIONS = {
     'stream.amazon':       'Дивитися на Prime Video ↗',
     'stream.watchOn':      'Дивитися на {name} ↗',
     'stream.region':       'Стрімінг у {country}',
+    'stream.streamOn':     'Дивитись на:',
     'score.noData':        'Оцінки відсутні',
     'score.tmdbOnly':      'TMDB · даних критиків ще немає',
     'score.weighted':      'Зважене середнє · {n} джерело',
@@ -6860,18 +6884,21 @@ function _refreshStreamingCtAs(m) {
   }
 
   setRegionLbl(true);
-  container.innerHTML = providers.map(p => {
+  const streamLbl = `<span class="stream-on-lbl">${t('stream.streamOn')}</span>`;
+  const providerBtns = providers.map(p => {
     const url      = providerUrl(p, title, wpLink);
     const isAmazon = AMAZON_IDS.has(p.provider_id);
     const cls      = isAmazon ? 'btn-stream btn-amazon' : 'btn-stream btn-stream-secondary';
+    const label    = t('stream.watchOn', { name: esc(p.provider_name) });
     const logo     = p.logo_path
       ? `<img src="${TIMG_W45}${p.logo_path}" alt="${esc(p.provider_name)}">`
       : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
     const badge    = isAmazon ? `<span class="btn-amazon-badge">Prime</span>` : '';
-    return `<a class="${cls}" href="${url}" target="_blank" rel="noopener noreferrer${isAmazon ? ' sponsored' : ''}">` +
-             `${logo}${t('stream.watchOn', { name: esc(p.provider_name) })}${badge}` +
+    return `<a class="${cls}" href="${url}" target="_blank" rel="noopener noreferrer${isAmazon ? ' sponsored' : ''}" aria-label="${label}">` +
+             `${logo}<span class="btn-stream-label">${label}</span>${badge}` +
            `</a>`;
-  }).join('') + nordvpnBtn;
+  }).join('');
+  container.innerHTML = streamLbl + `<div class="stream-row">${providerBtns}</div>` + nordvpnBtn;
 }
 
 function refreshWatchProviders(m) {
