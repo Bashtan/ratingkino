@@ -2,6 +2,16 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-07-06) — Conversational Query Refinement Chips
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `c62a5da` | **Conversational query refinement (dynamic chips)** — Backend `handleAISearch()` now returns `suggestedRefinements` (3-4 short, 1-3 word follow-up tweaks e.g. "Darker tone", "More recent", tailored to the query + returned movies), sanitized/deduped/capped at 4 (30-char hard cap). API response now `{ ids, reasons, suggestedRefinements, message }`. Frontend `renderFollowUps(query, dynamicChips)` (pre-existing static keyword-pool function, `index.html` ~5872) now prefers AI-generated chips passed from `aiSearch()`, falling back to the static `_followUpPool()` heuristic only when the backend supplies none. Chip icon changed `↳`→`↺` on `.ai-sug-chip` to match new spec. Reused pre-existing `applyFollowUp()` click-to-search logic unchanged (appends chip to `_lastQuery`, re-triggers `aiSearch()`) — no new CSS needed, `.ai-sug-chip`/`.ai-suggestions` styling (bordered pill, hover lift, `chipFadeIn` animation) already existed from the earlier follow-up-chips feature. |
+
+---
+
 ## ⚡ Most Recent Session (2026-07-06) — AI "Why Recommended" Match Reasons
 
 All commits on `main`, all live on https://findfilm.ai.
