@@ -761,7 +761,11 @@ async function handleAISearch(request, env, cors) {
     '(3) thematic, genre, or mood similarity — rank these LAST. ' +
     'For every result, also write a short, punchy, conversational "reason" ' +
     '(max 10-15 words) explaining specifically why THAT movie matches the ' +
-    'user\'s exact query — a personalized match explanation, not a generic plot summary.';
+    'user\'s exact query — a personalized match explanation, not a generic plot summary. ' +
+    'Finally, based on the user\'s query and the movies you picked, suggest 3-4 short ' +
+    'follow-up refinements the user might want next (e.g. "Darker tone", "More recent", ' +
+    '"Based on true story", "Faster pace") — each MUST be 1-3 words, conversational, ' +
+    'and a logical next tweak to the current search.';
 
   const userPrompt =
     `User query: "${query}"\n\n` +
@@ -777,11 +781,14 @@ async function handleAISearch(request, env, cors) {
     `    { "id": integer, "reason": "short punchy match reason, max 10-15 words" },\n` +
     `    ...\n` +
     `  ],\n` +
+    `  "suggestedRefinements": ["1-3 word refinement", "...", "...", "..."],\n` +
     `  "message": null\n` +
     `}\n` +
     `results ordered best-match first, max 20 entries.\n` +
     `Example reason for query "crime movie like Zodiac but faster": ` +
     `"Maintains the dark, gritty tone of Zodiac but with a much faster, action-packed pace."\n` +
+    `suggestedRefinements must be 3-4 short (1-3 word) follow-up tweaks relevant to this ` +
+    `exact query and result set, e.g. ["Darker tone", "More recent", "Based on true story", "Faster pace"].\n` +
     `If no movie is a close match, return the 3 nearest IDs (each with a "reason" explaining ` +
     `the closest connection you found) and set "message" to a short friendly note ` +
     `(e.g. "These are the closest recent releases to your request."). ` +
@@ -844,7 +851,21 @@ async function handleAISearch(request, env, cors) {
       if (ids.length >= 20) break;
     }
 
-    return json({ ids, reasons, message: result.message || null });
+    // Sanitize suggestedRefinements: strings only, trimmed, short (max 30 chars
+    // as a hard cap beyond the "1-3 words" prompt instruction), deduped, max 4.
+    const seenRefinements = new Set();
+    const suggestedRefinements = [];
+    for (const raw of (Array.isArray(result.suggestedRefinements) ? result.suggestedRefinements : [])) {
+      if (typeof raw !== 'string') continue;
+      const clean = raw.trim().replace(/[\n\r]+/g, ' ').slice(0, 30);
+      const key = clean.toLowerCase();
+      if (!clean || seenRefinements.has(key)) continue;
+      seenRefinements.add(key);
+      suggestedRefinements.push(clean);
+      if (suggestedRefinements.length >= 4) break;
+    }
+
+    return json({ ids, reasons, suggestedRefinements, message: result.message || null });
 
   } catch (e) {
     console.error('[ai-search] error:', e.message);

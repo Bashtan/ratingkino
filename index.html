@@ -5869,14 +5869,18 @@ function _followUpPool(q) {
   return _FU_POOLS.default;
 }
 
-function renderFollowUps(query) {
+function renderFollowUps(query, dynamicChips) {
   const el = document.getElementById('aiSuggestions');
   if (!el) return;
-  const chips = _followUpPool(query).slice(0, 4);
+  // Prefer AI-generated refinements (contextual to this exact query + results);
+  // fall back to the static keyword-based pool if the backend didn't supply any.
+  const chips = (Array.isArray(dynamicChips) && dynamicChips.length)
+    ? dynamicChips.slice(0, 4)
+    : _followUpPool(query).slice(0, 4);
   el.innerHTML = `<div class="ai-sug-label">Refine your search</div>
     <div class="ai-sug-chips">${chips.map((c, i) =>
       `<button class="ai-sug-chip" style="animation-delay:${i*65}ms"
-         onclick="applyFollowUp(this.dataset.q)" data-q="${esc(c)}">↳ ${esc(c)}</button>`
+         onclick="applyFollowUp(this.dataset.q)" data-q="${esc(c)}">↺ ${esc(c)}</button>`
     ).join('')}</div>`;
   el.classList.add('show');
 }
@@ -6057,7 +6061,7 @@ async function aiSearch(query) {
     clearTimeout(timeout);
 
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const { ids, reasons, message } = await r.json();
+    const { ids, reasons, suggestedRefinements, message } = await r.json();
 
     if (!ids || !ids.length) throw new Error('Empty AI response');
 
@@ -6094,8 +6098,8 @@ async function aiSearch(query) {
     renderGrid(results, false);
     document.getElementById('countTotal').textContent = CACHE_MOVIES.length.toLocaleString();
 
-    // Show follow-up chips after a short delay
-    setTimeout(() => renderFollowUps(query), 600);
+    // Show follow-up chips after a short delay (AI-generated when available)
+    setTimeout(() => renderFollowUps(query, suggestedRefinements), 600);
 
   } catch (e) {
     // Fallback: client-side keyword filter
