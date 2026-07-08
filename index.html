@@ -1778,8 +1778,12 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   .m-title     { font-size: 16px; line-height: 1.18; margin-bottom: 1px; }
   .m-close     { width: 44px; height: 44px; top: 10px; right: 10px; font-size: 16px; }
   .m-body      { grid-template-columns: 1fr; flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .m-left      { padding: 8px 14px 14px; border-right: none; border-bottom: 1px solid var(--border); }
-  .m-right     { padding: 12px 14px; }
+  /* min-width:0 overrides the CSS Grid default (min-width:auto), which otherwise lets
+     wide descendants (cast list, provider chips, VPN banner) force this column wider
+     than the viewport instead of wrapping — the root cause of mobile horizontal overflow. */
+  .m-left      { padding: 8px 14px 14px; border-right: none; border-bottom: 1px solid var(--border); min-width: 0; }
+  .m-right     { padding: 12px 14px; min-width: 0; }
+  .meta-item span, .provider-chip span { overflow-wrap: break-word; word-break: break-word; }
   /* Trailer: modern aspect-ratio replaces the padding-bottom:56.25% hack — no wasted height */
   .trailer-wrap { padding-bottom: 0; height: auto; aspect-ratio: 16 / 9; margin-bottom: 10px; }
   /* Description: tighter margins so content above the fold */
@@ -4701,7 +4705,8 @@ function renderMiniCard(m, opts = {}) {
   const newBadge = opts.showNew ? `<div class="mini-card-new-badge">${t('card.new')}</div>` : '';
   const reason   = opts.reason  ? `<div class="mini-card-reason">${esc(opts.reason)}</div>` : '';
   const listArg  = opts.listName ? `,'${opts.listName}'` : '';
-  return `<div class="mini-card" onclick="openMovie(${m.id}${listArg})" title="${esc(m.title)}">
+  const styleAttr = opts.style ? ` style="${opts.style}"` : '';
+  return `<div class="mini-card" onclick="openMovie(${m.id}${listArg})" title="${esc(m.title)}"${styleAttr}>
     ${img}${score}${newBadge}
     <div class="mini-card-info">
       <div class="mini-card-title">${esc(m.title)}</div>
@@ -6604,22 +6609,23 @@ async function loadSimilarMovies(m) {
       if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromTMDb(raw));
     });
 
+    // Build lightweight card-view objects (full poster URL + string avg, unlike
+    // fromTMDb()'s stored shape) so we can reuse the shared renderMiniCard() helper
+    // — this also restores the AI "why recommended" reason via matchInsight().
     scroll.innerHTML = results.map((raw, i) => {
-      const title  = esc(raw.title || raw.name || '');
-      const year   = (raw.release_date || raw.first_air_date || '').slice(0, 4);
-      const score  = raw.vote_average ? raw.vote_average.toFixed(1) : '';
-      const emoji  = MOVIES.find(x => x.id === raw.id)?.emoji || '🎬';
-      const imgSrc = `${TIMG_W500}${raw.poster_path}`;
-      return `<div class="mini-card" onclick="openMovie(${raw.id},'Similar')"
-          style="animation-delay:${i * 45}ms;opacity:0;animation:aimFadeIn 0.35s ease forwards">
-        <img class="mini-card-img" src="${imgSrc}" alt="${title}" loading="lazy"
-          onerror="this.outerHTML='<div class=\\'mini-card-img-placeholder\\'>${emoji}</div>'">
-        ${score ? `<div class="mini-card-score">★ ${score}</div>` : ''}
-        <div class="mini-card-info">
-          <div class="mini-card-title">${title}</div>
-          ${year ? `<div class="mini-card-meta">${year}</div>` : ''}
-        </div>
-      </div>`;
+      const card = {
+        id:     raw.id,
+        title:  raw.title || raw.name || '',
+        year:   (raw.release_date || raw.first_air_date || '').slice(0, 4),
+        poster: raw.poster_path ? TIMG_W500 + raw.poster_path : null,
+        genres: (raw.genre_ids || []).map(id => GENRES[id]).filter(Boolean),
+        avg:    raw.vote_average ? raw.vote_average.toFixed(1) : null,
+      };
+      return renderMiniCard(card, {
+        reason:   matchInsight(m, raw),
+        listName: 'Similar',
+        style:    `animation-delay:${i * 45}ms;opacity:0;animation:aimFadeIn 0.35s ease forwards`,
+      });
     }).join('');
 
   } catch {
