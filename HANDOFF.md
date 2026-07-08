@@ -2,6 +2,16 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-07-08) — Mobile Movie Modal Compact Redesign
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `535aa39` | **Compact mobile movie modal** — Mobile hero area (rating box, full-width trailer toggle, stacked watch-provider buttons, full-width Share/Watchlist) condensed to fit poster/title/rating/actions + start of trailer without scrolling. `_refreshStreamingCtAs()` (`index.html` ~6862) success path now emits `<span class="stream-on-lbl">` + provider `<a class="btn-stream">` wrapped in a new `<div class="stream-row">`, with visible label moved into `<span class="btn-stream-label">` and an `aria-label` added per link (a11y-safe when label is hidden on mobile). Loading/disabled fallback branches unchanged. New i18n key `stream.streamOn` ("Stream on:") added to all 6 languages (en/es/fr/zh/ar/uk). CSS — all scoped to `@media (max-width:768px)`, desktop untouched (`#streamingCtAs{display:contents}` at L912 passes new wrappers through as flex items of `.m-actions`): rating card (`.mr-score-card`) now single-line inline pill (`flex-direction:row`, smaller fonts, `.mr-breakdown` gets a left divider); `.btn-trailer`/`.btn-shr`/`.btn-wl-modal` become small `order:1-3` auto-width pills (34px height); `.stream-on-lbl` (order 4) + `.stream-row` (order 5, horizontally scrollable, `.btn-stream` 42×42px icon-only via `.stream-row .btn-stream` specificity override) replace the old full-width stacked provider buttons; `.btn-stream`/`.btn-stream-disabled` fallback (no providers / still loading) keeps full-width readable style. General spacing: `.m-backdrop` 110→90px, `.m-info-strip` padding/margin tightened, `.m-meta-col` padding-top 22→16px, `.m-left` padding-top 10→8px. |
+
+---
+
 ## ⚡ Most Recent Session (2026-07-06) — Conversational Query Refinement Chips
 
 All commits on `main`, all live on https://findfilm.ai.
