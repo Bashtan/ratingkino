@@ -2,6 +2,18 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-07-08) — Mobile Modal Overflow Fix + AI Match Reasons Restored
+
+All commits on `main`. Deployed live via manual `wrangler pages deploy` (see **Deployment**
+section below — this project has **no git-integration auto-deploy**, discovered this session).
+
+| Commit | Feature |
+|--------|---------|
+| `8548c7c` | **Mobile modal overflow fix** — Root cause: `.m-body { display:grid }` gives its columns (`.m-left`/`.m-right`) an implicit `min-width:auto`, so wide descendants (long cast list, `.provider-chip` "Where to Watch" buttons, `.vpn-banner` text) forced the column wider than the viewport instead of wrapping; `.modal{overflow:hidden}` then silently clipped the overflow instead of showing a scrollbar. Fixed by adding `min-width:0` to `.m-left`/`.m-right` inside `@media (max-width:768px)` (`index.html` ~L1781-1782), plus `overflow-wrap/word-break:break-word` on `.meta-item span, .provider-chip span`. `.providers-row`/`.awards` already had `flex-wrap:wrap` and needed no changes once the parent stopped over-expanding. |
+| `8548c7c` | **Restored AI "why recommended" labels on similar movies** — `loadSimilarMovies()` (`index.html` ~L6587) rewritten to build a light card-view object per TMDB recommendation (`poster`→full URL, `avg`→string, `genres`) and call the shared `renderMiniCard(card, { reason: matchInsight(m, raw), listName:'Similar', style })` helper instead of hand-rolling markup — restoring the heuristic (non-LLM) match-reason logic (`matchInsight()`/`calcMatchScore()`/`AIM_VIBES`, `index.html` ~L6398-6435, originally built for the retired vertical `.aim-list` UI) via the already-built-but-unused `.mini-card-reason` CSS component (static always-visible subtitle on mobile, hover tooltip on desktop). `renderMiniCard()` gained an optional `opts.style` param (backward-compatible) to preserve the staggered fade-in animation. |
+
+---
+
 ## ⚡ Most Recent Session (2026-07-08) — Mobile Movie Modal Compact Redesign
 
 All commits on `main`, all live on https://findfilm.ai.
@@ -132,15 +144,15 @@ To test PWA install prompt debug mode: open `http://localhost:8282#pwa-debug` �
 
 ## Deployment
 
-**Automatic:** git push to `main` triggers a Cloudflare Pages build automatically.
+**IMPORTANT — no git integration.** `wrangler pages project list` confirms this Pages
+project has `Git Provider: No`. `git push origin main` does **not** auto-deploy — it
+only updates the GitHub repo. Confirmed 2026-07-08: the live site was ~1 week/several
+sessions of commits stale until a manual deploy was run. **Every session that changes
+`index.html` or `functions/` must end with a manual deploy, not just a git push.**
 
 ```bash
-git push origin main   # triggers auto-deploy via Cloudflare Pages git integration
-```
-
-**Manual (if git integration is down):**
-```bash
-npx wrangler pages deploy . --project-name ratingkino
+git push origin main                                          # updates GitHub only, does NOT deploy
+npx wrangler pages deploy . --project-name ratingkino --branch main   # actually deploys to findfilm.ai
 ```
 
 **Deploy / update sync Worker:**
