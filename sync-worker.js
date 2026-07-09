@@ -275,6 +275,7 @@ async function enrichOne(raw, env) {
     const director    = (detail.credits?.crew || []).find(c => c.job === 'Director')?.name || null;
     const actors      = (detail.credits?.cast || []).slice(0, 5).map(c => c.name);
     const castPhotos  = (detail.credits?.cast || []).slice(0, 2).map(c => ({
+      id:    c.id,
       name:  c.name,
       photo: c.profile_path ? `https://image.tmdb.org/t/p/w45${c.profile_path}` : null,
     }));

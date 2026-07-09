@@ -801,6 +801,30 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .overlay.open { opacity: 1; pointer-events: all; }
 
+/* ─── ACTOR PROFILE MODAL ─────────────────────── */
+.actor-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.86);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  z-index: 400; overflow-y: auto;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.22s ease;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 30px 16px 40px;
+}
+.actor-overlay.open { opacity: 1; pointer-events: all; }
+.actor-modal {
+  width: 100%; max-width: 900px;
+  background: var(--modal-bg); border-radius: 20px;
+  padding: 28px; position: relative;
+}
+.actor-hero { display: flex; gap: 20px; margin-bottom: 24px; align-items: flex-start; }
+.actor-photo { width: 100px; height: 100px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: #2a2a3d; }
+.actor-photo img { width: 100%; height: 100%; object-fit: cover; }
+.actor-name { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.actor-bio { font-size: 13px; color: var(--text-sub); line-height: 1.5; }
+.actor-grid-label { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+
 /* ─── MOVIE MODAL ─────────────────────────────── */
 .modal {
   width: 100%; max-width: 1020px;
@@ -875,15 +899,22 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   margin-bottom: 14px; font-size: 12px; color: var(--text-sub);
   line-height: 1; overflow: hidden;
 }
-.m-starring-avatars { display: flex; flex-shrink: 0; }
+.m-starring-label { flex-shrink: 0; }
 .m-starring-avatar {
   width: 22px; height: 22px; border-radius: 50%; object-fit: cover;
   background: #2a2a3d; border: 1.5px solid var(--modal-bg);
   display: flex; align-items: center; justify-content: center;
-  font-size: 8px; font-weight: 700; color: #fff;
+  font-size: 8px; font-weight: 700; color: #fff; flex-shrink: 0;
 }
-.m-starring-avatars .m-starring-avatar + .m-starring-avatar { margin-left: -8px; }
-.m-starring-names { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-starring-actor {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: none; border: none; padding: 0; margin: 0;
+  color: inherit; font: inherit; cursor: pointer;
+}
+.m-starring-static { cursor: default; }
+.m-starring-actor:hover .m-starring-name { color: var(--text-main); text-decoration: underline; }
+.m-starring-sep { margin-right: 4px; flex-shrink: 0; }
+.m-starring-name { white-space: nowrap; }
 .m-ratings-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 
 /* ── Score transparency: hero avg + source breakdown ──────── */
@@ -1776,6 +1807,12 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   .load-wrap   { margin-top: 24px; }
   .btn-more    { width: 100%; height: 50px; }
 
+  /* Actor Profile modal: sheet sliding up from bottom */
+  .actor-overlay { padding: 0; align-items: flex-end; }
+  .actor-modal { border-radius: 16px 16px 0 0; max-height: 92vh; overflow-y: auto; }
+  .actor-hero { gap: 14px; }
+  .actor-photo { width: 72px; height: 72px; }
+
   /* Modal: sheet sliding up from bottom */
   .overlay { padding: 0; align-items: flex-end; }
   .modal {
@@ -1828,7 +1865,6 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   .m-orig        { margin-bottom: 3px; font-size: 11px; }
   .m-starring    { gap: 5px; margin-bottom: 8px; font-size: 10.5px; }
   .m-starring-avatar { width: 18px; height: 18px; font-size: 7px; }
-  .m-starring-avatars .m-starring-avatar + .m-starring-avatar { margin-left: -7px; }
   .m-ratings-row { margin-bottom: 5px; }
   .mr-score-card { flex-direction: row; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; }
   .mr-hero-avg   { gap: 2px; }
@@ -3350,6 +3386,22 @@ if ('serviceWorker' in navigator) {
   </button>
 </div>
 
+<!-- ════════════ ACTOR PROFILE MODAL ════════════ -->
+<div class="actor-overlay" id="actorOverlay" onclick="actorOverlayClick(event)">
+  <div class="actor-modal" id="actorModal">
+    <button class="m-close" onclick="closeActorProfile()">✕</button>
+    <div class="actor-hero">
+      <div class="actor-photo" id="actorPhoto"></div>
+      <div class="actor-info">
+        <div class="actor-name" id="actorName"></div>
+        <div class="actor-bio" id="actorBio"></div>
+      </div>
+    </div>
+    <div class="actor-grid-label" data-i18n="actor.filmography">Filmography</div>
+    <div class="movie-grid" id="actorGrid"></div>
+  </div>
+</div>
+
 <!-- ════════════ FAB RANDOM (mobile) ════════════ -->
 <button class="fab-random" onclick="randomMovie()" aria-label="Random movie">
   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
@@ -3376,6 +3428,7 @@ const TIMG_W500  = 'https://image.tmdb.org/t/p/w500';
 const TIMG_W780  = 'https://image.tmdb.org/t/p/w780';
 const TIMG_W1280 = 'https://image.tmdb.org/t/p/w1280';
 const TIMG_W45   = 'https://image.tmdb.org/t/p/w45';
+const TIMG_W185  = 'https://image.tmdb.org/t/p/w185';
 const OMDB_BASE  = PROXY_BASE + '/omdb';
 
 const COUNTRY_NAME = {
@@ -3441,6 +3494,7 @@ const TRANSLATIONS = {
     'modal.firstAired':     'First Aired',
     'modal.director':       'Director',
     'modal.starring':       'Starring:',
+    'actor.filmography':    'Filmography',
     'modal.creator':        'Creator',
     'modal.trailer':        '▶ Trailer',
     'modal.hideTrailer':    '▼ Hide Trailer',
@@ -3461,6 +3515,7 @@ const TRANSLATIONS = {
     'ai.searching':         '✦ Searching for "{q}"…',
     'ai.found':             '✦ AI found {n} match for "{q}"',
     'ai.foundPlural':       '✦ AI found {n} matches for "{q}"',
+    'ai.foundForActor':     '✦ Top movies starring {name}',
     'search.placeholder':   'Search 240,000 films by title… or ↵ for AI',
     'search.mobileTitle':   'Search movies',
     'search.mobileHint':    'Describe a mood, plot, or vibe',
@@ -3617,6 +3672,7 @@ const TRANSLATIONS = {
     'modal.firstAired':     'Primera emisión',
     'modal.director':       'Director',
     'modal.starring':       'Con:',
+    'actor.filmography':    'Filmografía',
     'modal.creator':        'Creador',
     'modal.trailer':        '▶ Tráiler',
     'modal.hideTrailer':    '▼ Ocultar tráiler',
@@ -3637,6 +3693,7 @@ const TRANSLATIONS = {
     'ai.searching':         '✦ Buscando "{q}"…',
     'ai.found':             '✦ La IA encontró {n} resultado para "{q}"',
     'ai.foundPlural':       '✦ La IA encontró {n} resultados para "{q}"',
+    'ai.foundForActor':     '✦ Mejores películas con {name}',
     'search.placeholder':   'Buscar 240.000 películas por título… o ↵ para IA',
     'search.mobileTitle':   'Buscar películas',
     'search.mobileHint':    'Describe un ambiente, trama o sensación',
@@ -3778,6 +3835,7 @@ const TRANSLATIONS = {
     'modal.firstAired':     'Première diffusion',
     'modal.director':       'Réalisateur',
     'modal.starring':       'Avec :',
+    'actor.filmography':    'Filmographie',
     'modal.creator':        'Créateur',
     'modal.trailer':        '▶ Bande-annonce',
     'modal.hideTrailer':    '▼ Cacher la bande-annonce',
@@ -3798,6 +3856,7 @@ const TRANSLATIONS = {
     'ai.searching':         '✦ Recherche de "{q}"…',
     'ai.found':             '✦ L\'IA a trouvé {n} résultat pour "{q}"',
     'ai.foundPlural':       '✦ L\'IA a trouvé {n} résultats pour "{q}"',
+    'ai.foundForActor':     '✦ Meilleurs films avec {name}',
     'search.placeholder':   'Chercher parmi 240 000 films… ou ↵ pour l\'IA',
     'search.mobileTitle':   'Rechercher des films',
     'search.mobileHint':    'Décrivez une ambiance, une intrigue ou une atmosphère',
@@ -3939,6 +3998,7 @@ const TRANSLATIONS = {
     'modal.firstAired':     '首播日期',
     'modal.director':       '导演',
     'modal.starring':       '主演：',
+    'actor.filmography':    '作品',
     'modal.creator':        '创作者',
     'modal.trailer':        '▶ 预告片',
     'modal.hideTrailer':    '▼ 隐藏预告片',
@@ -3959,6 +4019,7 @@ const TRANSLATIONS = {
     'ai.searching':         '✦ 正在搜索「{q}」…',
     'ai.found':             '✦ AI 为「{q}」找到 {n} 个结果',
     'ai.foundPlural':       '✦ AI 为「{q}」找到 {n} 个结果',
+    'ai.foundForActor':     '✦ {name} 的代表作品',
     'search.placeholder':   '搜索24万部电影… 或按↵进行AI搜索',
     'search.mobileTitle':   '搜索电影',
     'search.mobileHint':    '描述一种情绪、情节或氛围',
@@ -4100,6 +4161,7 @@ const TRANSLATIONS = {
     'modal.firstAired':     'تاريخ أول عرض',
     'modal.director':       'المخرج',
     'modal.starring':       'بطولة:',
+    'actor.filmography':    'الأعمال',
     'modal.creator':        'المبدع',
     'modal.trailer':        '▶ إعلان',
     'modal.hideTrailer':    '▼ إخفاء الإعلان',
@@ -4120,6 +4182,7 @@ const TRANSLATIONS = {
     'ai.searching':         '✦ جاري البحث عن "{q}"…',
     'ai.found':             '✦ وجد الذكاء الاصطناعي {n} نتيجة لـ "{q}"',
     'ai.foundPlural':       '✦ وجد الذكاء الاصطناعي {n} نتائج لـ "{q}"',
+    'ai.foundForActor':     '✦ أفضل أفلام {name}',
     'search.placeholder':   'ابحث في 240,000 فيلم بالعنوان… أو ↵ للذكاء الاصطناعي',
     'search.mobileTitle':   'بحث عن أفلام',
     'search.mobileHint':    'صف مزاجاً أو حبكة أو أجواءً',
@@ -4261,6 +4324,7 @@ const TRANSLATIONS = {
     'modal.firstAired':     'Перший ефір',
     'modal.director':       'Режисер',
     'modal.starring':       'У ролях:',
+    'actor.filmography':    'Фільмографія',
     'modal.creator':        'Творець',
     'modal.trailer':        '▶ Трейлер',
     'modal.hideTrailer':    '▼ Сховати трейлер',
@@ -4281,6 +4345,7 @@ const TRANSLATIONS = {
     'ai.searching':         '✦ Пошук "{q}"…',
     'ai.found':             '✦ ШІ знайшов {n} результат для "{q}"',
     'ai.foundPlural':       '✦ ШІ знайшов {n} результати для "{q}"',
+    'ai.foundForActor':     '✦ Кращі фільми з {name}',
     'search.placeholder':   'Пошук серед 240 000 фільмів… або ↵ для AI',
     'search.mobileTitle':   'Пошук фільмів',
     'search.mobileHint':    'Опиши настрій, сюжет або атмосферу',
@@ -5095,6 +5160,37 @@ function fromTMDb(raw) {
   };
 }
 
+/* Normalizer for TMDB /person/{id}/combined_credits cast items — mixed movie/TV,
+ * media_type-driven (unlike fromTMDb, which relies on the global CONTENT_TYPE). */
+function fromPersonCredit(raw) {
+  const isTV = raw.media_type === 'tv';
+  const title = isTV ? (raw.name || raw.original_name) : (raw.title || raw.original_title);
+  const titleOrig = isTV ? (raw.original_name || '') : (raw.original_title || '');
+  const dateStr = isTV ? raw.first_air_date : raw.release_date;
+  const year = dateStr ? parseInt(dateStr) : null;
+  const genreIds = raw.genre_ids || [];
+  const genres = genreIds.map(id => GENRES[id]).filter(Boolean);
+  return {
+    id: raw.id, title: title || 'Untitled', titleOrig, year,
+    genres, genre: genres[0] || '',
+    country: null, director: null,
+    imdb: null, rt: null, mc: null,
+    imdbV: 0, rtV: 0, mcV: 0,
+    tmdbScore: raw.vote_average || null,
+    tmdbVotes: raw.vote_count || 0,
+    desc: raw.overview || '',
+    actors: [], castPhotos: [], awards: [],
+    poster: raw.poster_path || null,
+    backdrop: raw.backdrop_path || null,
+    imdbId: null, trailer: null,
+    watchProviders: null,
+    enriched: false,
+    grad: gradFromId(raw.id),
+    emoji: emojiFromGenreIds(genreIds),
+    genreIds, isTV,
+  };
+}
+
 /* ═══════════════════════════════════
    WEIGHTED AVERAGE
 ═══════════════════════════════════ */
@@ -5171,6 +5267,7 @@ function mergeMovieData(movie, det, od, country = DETECTED_COUNTRY) {
     : (crew.find(p => p.job === 'Director')?.name || null);
   movie.actors = cast.slice(0, 6).map(a => a.name);
   movie.castPhotos = cast.slice(0, 2).map(a => ({
+    id:    a.id,
     name:  a.name,
     photo: a.profile_path ? TIMG_W45 + a.profile_path : null,
   }));
@@ -6120,7 +6217,36 @@ async function aiSearch(query) {
     clearTimeout(timeout);
 
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const { ids, reasons, suggestedRefinements, message } = await r.json();
+    const data = await r.json();
+
+    // Actor-focused queries return real TMDB filmography data directly —
+    // bypasses the closed-world CACHE_MOVIES filtering below entirely.
+    if (data.actorQuery && data.movies?.length) {
+      data.movies.forEach(raw => {
+        if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromTMDb(raw));
+      });
+      const results = data.movies.map(raw => MOVIES.find(x => x.id === raw.id)).filter(Boolean);
+
+      MOVIES      = results;
+      TOTAL_COUNT = results.length;
+      _lastQuery  = query;
+
+      _aiMatchScores.clear();
+      _aiMatchReasons.clear();
+      Object.entries(data.reasons || {}).forEach(([id, reason]) => _aiMatchReasons.set(Number(id), reason));
+
+      const banner = document.getElementById('aiBanner');
+      banner.classList.remove('loading');
+      typewriterBanner(t('ai.foundForActor', { name: data.personName }));
+
+      renderGrid(results, false);
+      document.getElementById('countTotal').textContent = results.length.toLocaleString();
+
+      setTimeout(() => renderFollowUps(query, data.suggestedRefinements), 600);
+      return;
+    }
+
+    const { ids, reasons, suggestedRefinements, message } = data;
 
     if (!ids || !ids.length) throw new Error('Empty AI response');
 
@@ -6719,13 +6845,17 @@ function refreshModalDetails(m) {
   const starringEl = document.getElementById('mStarring');
   if (m.castPhotos?.length) {
     const initials = n => n.split(' ').map(w => w[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
-    const avatars = m.castPhotos.map(a =>
-      a.photo
-        ? `<img class="m-starring-avatar" src="${a.photo}" alt="${esc(a.name)}" loading="lazy">`
-        : `<div class="m-starring-avatar m-starring-initials">${esc(initials(a.name))}</div>`
-    ).join('');
-    const names = esc(m.castPhotos.map(a => a.name).join(', '));
-    starringEl.innerHTML = `<span class="m-starring-avatars">${avatars}</span><span class="m-starring-names">${t('modal.starring')} ${names}</span>`;
+    const chips = m.castPhotos.map((a, i) => {
+      const avatar = a.photo
+        ? `<img class="m-starring-avatar" src="${a.photo}" alt="" loading="lazy">`
+        : `<div class="m-starring-avatar m-starring-initials">${esc(initials(a.name))}</div>`;
+      const sep = i > 0 ? `<span class="m-starring-sep">,</span>` : '';
+      const inner = `${avatar}<span class="m-starring-name">${esc(a.name)}</span>`;
+      return a.id
+        ? `${sep}<button class="m-starring-actor" onclick="event.stopPropagation();openActorProfile(${a.id})">${inner}</button>`
+        : `${sep}<span class="m-starring-actor m-starring-static">${inner}</span>`;
+    }).join('');
+    starringEl.innerHTML = `<span class="m-starring-label">${t('modal.starring')}</span>${chips}`;
     starringEl.style.display = '';
   } else {
     starringEl.style.display = 'none';
@@ -7005,6 +7135,52 @@ function overlayClick(e) {
   if (e.target === document.getElementById('overlay')) closeModal();
 }
 
+async function openActorProfile(personId) {
+  document.getElementById('actorOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('actorName').textContent = '';
+  document.getElementById('actorBio').textContent = '';
+  document.getElementById('actorPhoto').innerHTML = '';
+  document.getElementById('actorGrid').innerHTML = Array(8).fill(null).map(skeletonCard).join('');
+
+  const lang = TMDB_LANG[CURRENT_LANG] || 'en-US';
+  try {
+    const [person, credits] = await Promise.all([
+      tmdbGet(`/person/${personId}`, { language: lang }),
+      tmdbGet(`/person/${personId}/combined_credits`, { language: lang }),
+    ]);
+
+    document.getElementById('actorName').textContent = person.name || '';
+    document.getElementById('actorBio').textContent = (person.biography || '').slice(0, 400);
+    document.getElementById('actorPhoto').innerHTML = person.profile_path
+      ? `<img src="${TIMG_W185}${person.profile_path}" alt="${esc(person.name || '')}">`
+      : '';
+
+    const films = (credits.cast || [])
+      .filter(c => c.poster_path)
+      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+
+    films.forEach(raw => {
+      if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromPersonCredit(raw));
+    });
+    document.getElementById('actorGrid').innerHTML = films.map(raw => renderCardHTML(fromPersonCredit(raw))).join('');
+  } catch (e) {
+    document.getElementById('actorGrid').innerHTML = '';
+    console.warn('[actor profile] failed:', e.message);
+  }
+}
+
+function actorOverlayClick(e) {
+  if (e.target === document.getElementById('actorOverlay')) closeActorProfile();
+}
+
+function closeActorProfile() {
+  document.getElementById('actorOverlay').classList.remove('open');
+  if (!document.getElementById('overlay').classList.contains('open')) {
+    document.body.style.overflow = '';
+  }
+}
+
 function closeModal() {
   document.getElementById('overlay').classList.remove('open');
   document.getElementById('trailerFrame').src = '';
@@ -7013,6 +7189,7 @@ function closeModal() {
   ACTIVE_MOVIE = null;
   TRAILER_OPEN = false;
   closeShare();
+  closeActorProfile();
   // Clean up the ?movie= param without firing popstate
   if (history.state?.movie) {
     history.replaceState(null, '', location.pathname);

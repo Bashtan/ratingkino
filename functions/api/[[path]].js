@@ -263,7 +263,8 @@ async function _parseIntent(query, env) {
       'Fields: ' +
       '"clean_title_guess": if the user is searching for a specific movie title (with possible typos or in another language), normalise it to English; otherwise empty string. ' +
       '"english_keywords": core plot or vibe elements translated to English, 3-5 words max. ' +
-      '"intent": "title_search" if they want a specific movie, "vibe_search" if describing a theme or mood. ' +
+      '"intent": "title_search" if they want a specific movie, "vibe_search" if describing a theme or mood, "actor_search" if the query is specifically about movies featuring a particular real actor/actress. ' +
+      '"actor_name": the actor/actress\'s name in English if intent is actor_search; otherwise empty string. ' +
       '"user_language": ISO 639-1 code of the input language.';
 
     const aiResp = await env.AI.run(_INTENT_MODEL, {
@@ -284,10 +285,14 @@ async function _parseIntent(query, env) {
     if (!match) return null;
 
     const parsed = JSON.parse(match[0]);
+    const intent =
+      parsed.intent === 'vibe_search'  ? 'vibe_search'  :
+      parsed.intent === 'actor_search' ? 'actor_search' : 'title_search';
     return {
       clean_title_guess: String(parsed.clean_title_guess || '').trim(),
       english_keywords:  String(parsed.english_keywords  || '').trim(),
-      intent:            parsed.intent === 'vibe_search' ? 'vibe_search' : 'title_search',
+      intent,
+      actor_name:        String(parsed.actor_name || '').trim(),
       user_language:     String(parsed.user_language     || 'en').trim().slice(0, 10),
     };
   } catch (e) {
@@ -310,6 +315,35 @@ function _keywordsToGenreIds(keywords) {
       .filter(([name]) => lower.includes(name))
       .map(([, id]) => id)
   )];
+}
+
+/**
+ * Resolve a free-text actor name to their top movie credits via TMDB.
+ * 2 TMDB calls total: /search/person then /person/{id}/movie_credits —
+ * both already carry title/poster/overview/vote_average/release_date/genre_ids
+ * so no per-movie detail fetch is needed.
+ * Returns null if no matching person is found.
+ */
+async function _actorMovies(actorName, env) {
+  const searchUrl = new URL('https://api.themoviedb.org/3/search/person');
+  searchUrl.searchParams.set('api_key', env.TMDB_KEY);
+  searchUrl.searchParams.set('query', actorName);
+  const sr = await fetch(searchUrl.toString(), { headers: { 'User-Agent': 'FindFilm.ai/1.0' } });
+  const sData = sr.ok ? await sr.json() : { results: [] };
+  const person = (sData.results || [])[0];
+  if (!person) return null;
+
+  const creditsUrl = new URL(`https://api.themoviedb.org/3/person/${person.id}/movie_credits`);
+  creditsUrl.searchParams.set('api_key', env.TMDB_KEY);
+  const cr = await fetch(creditsUrl.toString(), { headers: { 'User-Agent': 'FindFilm.ai/1.0' } });
+  const cData = cr.ok ? await cr.json() : { cast: [] };
+
+  const movies = (cData.cast || [])
+    .filter(m => m.poster_path && m.vote_count >= 20)
+    .sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0))
+    .slice(0, 12);
+
+  return { personId: person.id, personName: person.name, movies };
 }
 
 // Validated BCP-47 language codes accepted from the client
@@ -727,6 +761,100 @@ async function handleAISearch(request, env, cors) {
   }
 
   if (!query) return json({ error: 'Missing query' }, 400);
+
+  // Actor-focused queries ("Best movies with Leonardo DiCaprio") bypass the
+  // closed-world KV catalog entirely — they return real TMDB filmography data.
+  // Any failure here (intent parse, actor not found, TMDB error) falls through
+  // unchanged to the existing catalog-embedding flow below.
+  if (env.AI && env.TMDB_KEY) {
+    try {
+      const intent = await _parseIntent(query, env);
+      if (intent?.intent === 'actor_search' && intent.actor_name) {
+        const actorResult = await _actorMovies(intent.actor_name, env);
+        if (actorResult && actorResult.movies.length) {
+          const { personName, movies: actorMovies } = actorResult;
+          const miniCatalog = actorMovies.map(m =>
+            `${m.id}|${m.title} (${(m.release_date || '').slice(0, 4)})|${(m.overview || '').slice(0, 100)}`
+          ).join('\n');
+
+          const actorSystemPrompt =
+            'You are a movie recommendation engine focused on a specific actor. ' +
+            'Respond with valid JSON only — no markdown fences, no extra text. ' +
+            `For every movie, write a short, punchy "reason" (max 10-15 words) explaining why it's a great ${personName} performance or movie. ` +
+            'Finally, suggest 3-4 short (1-3 word) follow-up refinements relevant to this actor\'s filmography.';
+
+          const actorUserPrompt =
+            `Actor: ${personName}\n\n` +
+            `Movies (format: id|title (year)|description):\n\n${miniCatalog}\n\n` +
+            `Return JSON:\n` +
+            `{\n` +
+            `  "results": [ { "id": integer, "reason": "short punchy reason, max 10-15 words" }, ... ],\n` +
+            `  "suggestedRefinements": ["1-3 word refinement", "...", "...", "..."]\n` +
+            `}\n` +
+            `results ordered best-match first, include ALL provided movies.`;
+
+          let reasons = {};
+          let suggestedRefinements = [];
+          try {
+            const aiResp = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
+              messages: [
+                { role: 'system', content: actorSystemPrompt },
+                { role: 'user',   content: actorUserPrompt   },
+              ],
+              max_tokens:  800,
+              temperature: 0.1,
+              stream:      false,
+            });
+
+            let text = '';
+            if (aiResp?.choices?.[0]?.message?.content) text = aiResp.choices[0].message.content;
+            else if (typeof aiResp?.response === 'string') text = aiResp.response;
+            else if (typeof aiResp === 'string') text = aiResp;
+            text = text.trim();
+
+            const match  = text.match(/\{[\s\S]*\}/);
+            const result = match ? JSON.parse(match[0]) : {};
+
+            const validIds = new Set(actorMovies.map(m => m.id));
+            for (const r of (Array.isArray(result.results) ? result.results : [])) {
+              const id = Number(r?.id);
+              if (!Number.isInteger(id) || !validIds.has(id)) continue;
+              if (typeof r.reason === 'string' && r.reason.trim()) {
+                reasons[id] = r.reason.trim().replace(/[\n\r]+/g, ' ').slice(0, 140);
+              }
+            }
+
+            const seenRefinements = new Set();
+            for (const raw of (Array.isArray(result.suggestedRefinements) ? result.suggestedRefinements : [])) {
+              if (typeof raw !== 'string') continue;
+              const clean = raw.trim().replace(/[\n\r]+/g, ' ').slice(0, 30);
+              const key = clean.toLowerCase();
+              if (!clean || seenRefinements.has(key)) continue;
+              seenRefinements.add(key);
+              suggestedRefinements.push(clean);
+              if (suggestedRefinements.length >= 4) break;
+            }
+          } catch (e) {
+            // Reason-generation failed — still return the actor's movies, just without reasons.
+            console.error('[ai-search:actor] reason-gen failed:', e.message);
+          }
+
+          return json({
+            actorQuery: true,
+            personName,
+            movies: actorMovies,
+            reasons,
+            suggestedRefinements,
+            message: null,
+          });
+        }
+        // actor not found in TMDB — fall through to the existing catalog-based flow
+      }
+    } catch (e) {
+      console.error('[ai-search:actor] intent parse failed:', e.message);
+      // fall through to existing flow
+    }
+  }
 
   if (!env.MOVIES_CACHE) {
     return json({ error: 'Cache not available', hint: 'Run sync-worker first' }, 503);
