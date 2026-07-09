@@ -2,6 +2,16 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-07-09) — "Starring" Row with Micro-Avatars
+
+All commits on `main`. Deployed via manual `wrangler pages deploy` (no git-integration auto-deploy).
+
+| Commit | Feature |
+|--------|---------|
+| `004cdb5` | **Top-2 cast micro-avatars in modal hero** — New `castPhotos` field (`[{name, photo}]`, top 2 cast members) populated alongside existing `actors` in `mergeMovieData()` (`index.html` ~L5147, frontend live-enrichment) and `enrichOne()` (`sync-worker.js` ~L276, nightly cron). Passthrough/default added to `fromTMDb()`, `fromDiscover()`, `fromCache()` (`index.html`) and `basicMovie()` (`sync-worker.js`) so un-enriched movies simply render nothing until populated. New `<div class="m-starring" id="mStarring">` in modal hero (`index.html` ~L3252), between `#aiMatchPill` and `.m-ratings-row`. Render logic inline at the top of `refreshModalDetails()` (`index.html` ~L6694): shows overlapping circular avatars (`<img>` when `profile_path` exists, else 2-letter initials fallback `<div class="m-starring-initials">`) + `"Starring: Name1, Name2"` label, single-line with ellipsis truncation; `display:none` (no reserved space) when `castPhotos` is empty, avoiding CLS. New i18n key `modal.starring` in all 6 languages. CSS: `.m-starring`, `.m-starring-avatars`, `.m-starring-avatar`, `.m-starring-initials`, `.m-starring-names` (base rules ~L872 + `@media (max-width:768px)` override ~L1814 with smaller avatars/gaps). Existing `actors` string array (used by the Details/Cast row) left untouched. |
+
+---
+
 ## ⚡ Most Recent Session (2026-07-08) — Mobile Modal Overflow Fix + AI Match Reasons Restored
 
 All commits on `main`. Deployed live via manual `wrangler pages deploy` (see **Deployment**
