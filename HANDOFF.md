@@ -2,6 +2,16 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-07-09) — Modal History Stack & Back Button
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `5b76e35` | **Modal view-history stack + Back button UX** — Deep `Movie ➔ Actor ➔ Movie ➔ Actor` navigation now has a modern Back step alongside the X close. New state after `TRAILER_OPEN` (`index.html` ~L4709): `VIEW_STACK` (`[{type:'movie'\|'actor', id}]`), `CURRENT_VIEW`, `_navBack` flag. Helpers (~L7204): `_recordNavigation(view)` pushes the outgoing view when navigating deeper / resets the trail on a fresh open from grid/search / consumes a pending Back re-render via `_navBack`; `_updateBackBtns()` toggles `.show` on `#mBack`/`#actorBack` when `VIEW_STACK.length>0`; `goBack()` pops the last view, sets `_navBack=true`, and re-opens it in place (`openMovie`/`openActorProfile`). Wired: `_recordNavigation({type:'movie',id})` at the top of `openMovie()` (after the `if(!m)` resolve, before the infinite-loop clean-switch), `_recordNavigation({type:'actor',id})` at the top of `openActorProfile()`. Unified `closeModal()` now closes BOTH overlays, clears the stack, resets `CURRENT_VIEW`; `closeActorProfile()` removed entirely; `actorOverlayClick()` (backdrop) + both modal X buttons call `closeModal()`. `popstate` handler also clears the stack. New Back buttons (← chevron SVG, `<button class="m-back" id="mBack"/"actorBack" onclick="goBack()">`) top-left of both modals, X stays top-right. CSS `.m-back` (base ~L871: absolute top/left 12px, 36×36 blur circle, `display:none`; `.m-back.show{display:flex}`; hover → accent + scale; mobile ~L1846 → 44×44). |
+
+---
+
 ## ⚡ Most Recent Session (2026-07-09) — Interactive Actor Avatars, Filmography Modal & AI Actor Search
 
 All commits on `main`, all live on https://findfilm.ai.
