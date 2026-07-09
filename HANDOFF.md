@@ -2,6 +2,18 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-07-09) — Interactive Actor Avatars, Filmography Modal & AI Actor Search
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `fe917ab` | **Clickable actor avatars** — `castPhotos` (`[{id,name,photo}]`) now carries real TMDB `person_id`, added in `mergeMovieData()` (`index.html` ~L5148) and `enrichOne()` (`sync-worker.js` ~L277). `refreshModalDetails()` (`index.html` ~L6718) restructured: each actor is its own clickable `<button class="m-starring-actor" onclick="openActorProfile(id)">` (avatar+name together); actors without an `id` (pre-existing KV-cached data) degrade to a non-interactive `<span class="m-starring-static">` until the next sync. CSS reworked from overlapping-avatar-stack to per-actor chips: `.m-starring-actor`, `.m-starring-static`, `.m-starring-sep`, `.m-starring-name` (base ~L873, mobile override ~L1829 — negative-margin overlap rule removed). |
+| `fe917ab` | **Actor Filmography Modal** — New nested overlay `.actor-overlay`/`#actorOverlay` (`z-index:400`, stacks above the main `.overlay` at 200 and `.share-panel` at 300 — first nested-modal precedent in the codebase). Opens via `openActorProfile(personId)` (`index.html`, near `closeModal()`): fetches `/person/{id}` + `/person/{id}/combined_credits` via the existing generic `tmdbGet()` proxy (zero backend changes needed), shows photo/name/bio, and renders filmography using the **existing** `renderCardHTML()` `.movie-grid` component (inherits Unified Ratings + AI hover states for free). New `fromPersonCredit(raw)` normalizer (`index.html`, next to `fromTMDb()`) — needed because `combined_credits.cast[]` mixes movie/TV via `raw.media_type`, unlike `fromTMDb()` which reads the global `CONTENT_TYPE`. `closeActorProfile()` guards `document.body.style.overflow` so closing the actor overlay doesn't re-enable scroll if the main movie modal is still open underneath; wired into `closeModal()` alongside the existing `closeShare()` call. New `TIMG_W185` image-size constant. Mobile: bottom-sheet slide-up (`@media max-width:768px`, mirrors `.overlay` mobile pattern). New i18n key `actor.filmography` (6 languages). |
+| `fe917ab` | **AI Search actor-query support** — `_parseIntent()` (`functions/api/[[path]].js` ~L259) extended with a 3rd intent value `actor_search` + `actor_name` field. New `_actorMovies(actorName, env)` helper (~L305, next to `_keywordsToGenreIds()`): 2 direct TMDB calls (`/search/person` → `/person/{id}/movie_credits`, same one-off-fetch pattern as the existing `/discover/movie` call), filters `vote_count>=20`, top 12 by `vote_average`. `handleAISearch()` (~L746) now calls `_parseIntent()` unconditionally at the top; on `actor_search` intent with a resolved actor, branches into a dedicated flow — bypasses the closed-world `CACHE_MOVIES` KV catalog entirely (an actor's real filmography is almost never a subset of the ~119-movie AI-search cache), generates "why recommended" reasons via a small scoped LLM prompt (same model, mini catalog of ≤12 candidates), and returns `{ actorQuery:true, personName, movies, reasons, suggestedRefinements, message:null }`. Any failure (intent parse, actor not found, reason-gen) falls through unchanged to the existing catalog-embedding flow — zero behavior change for non-actor queries. Frontend `aiSearch()` (`index.html` ~L6197) branches on `data.actorQuery`: pushes raw TMDB movies through the existing `fromTMDb()` + `MOVIES.push()` pattern (safe here since `movie_credits` never returns TV items, matching `fromTMDb()`'s `CONTENT_TYPE==='movie'` assumption), sets `_aiMatchReasons`, and shows the typewriter banner via new i18n key `ai.foundForActor` (6 languages, e.g. en `"Top movies starring {name}"`). |
+
+---
+
 ## ⚡ Most Recent Session (2026-07-09) — "Starring" Row with Micro-Avatars
 
 All commits on `main`. Deployed via manual `wrangler pages deploy` (no git-integration auto-deploy).
@@ -255,6 +267,10 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 | `initDesktopPlaceholder()` | Sets first placeholder text; starts 3.8s `_cycleDeskPh` interval |
 | `_showNoResultsState()` | Sets emptyState to 🍿 + no-results copy + reset CTA |
 | `_showErrorState()` | Sets emptyState to ⚠️ + error copy + retry CTA; hides load spinner |
+| `openActorProfile(personId)` / `closeActorProfile()` | Opens/closes the nested Actor Filmography Modal (`#actorOverlay`); fetches `/person/{id}` + `/person/{id}/combined_credits` via `tmdbGet()` |
+| `fromPersonCredit(raw)` | Normalizes a `combined_credits.cast[]` item (mixed movie/TV via `raw.media_type`) into a card-renderable movie object |
+
+Backend (`functions/api/[[path]].js`): `_actorMovies(actorName, env)` resolves an actor name → top 12 movie credits via TMDB `/search/person` + `/person/{id}/movie_credits`; used by `handleAISearch()`'s actor-query branch (triggered by `_parseIntent()`'s `actor_search` intent).
 
 ---
 
