@@ -870,6 +870,20 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   margin-bottom: 3px;
 }
 .m-orig { font-size: 12px; color: var(--text-sub); font-style: italic; margin-bottom: 14px; }
+.m-starring {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 14px; font-size: 12px; color: var(--text-sub);
+  line-height: 1; overflow: hidden;
+}
+.m-starring-avatars { display: flex; flex-shrink: 0; }
+.m-starring-avatar {
+  width: 22px; height: 22px; border-radius: 50%; object-fit: cover;
+  background: #2a2a3d; border: 1.5px solid var(--modal-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 700; color: #fff;
+}
+.m-starring-avatars .m-starring-avatar + .m-starring-avatar { margin-left: -8px; }
+.m-starring-names { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .m-ratings-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 
 /* ── Score transparency: hero avg + source breakdown ──────── */
@@ -1812,6 +1826,9 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   .m-info-strip { flex-direction: row; }
   /* Ratings card: single-line inline pill for mobile hero */
   .m-orig        { margin-bottom: 3px; font-size: 11px; }
+  .m-starring    { gap: 5px; margin-bottom: 8px; font-size: 10.5px; }
+  .m-starring-avatar { width: 18px; height: 18px; font-size: 7px; }
+  .m-starring-avatars .m-starring-avatar + .m-starring-avatar { margin-left: -7px; }
   .m-ratings-row { margin-bottom: 5px; }
   .mr-score-card { flex-direction: row; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; }
   .mr-hero-avg   { gap: 2px; }
@@ -3250,6 +3267,7 @@ if ('serviceWorker' in navigator) {
           <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
           <span data-i18n="modal.smartMatch">Smart Match</span>
         </span>
+        <div class="m-starring" id="mStarring"></div>
         <div class="m-ratings-row" id="mRatings"></div>
         <div class="m-actions">
           <button class="btn-trailer" id="btnTrailer" onclick="toggleTrailer()" style="display:none" data-i18n="modal.trailer">▶ Trailer</button>
@@ -3422,6 +3440,7 @@ const TRANSLATIONS = {
     'modal.year':           'Year',
     'modal.firstAired':     'First Aired',
     'modal.director':       'Director',
+    'modal.starring':       'Starring:',
     'modal.creator':        'Creator',
     'modal.trailer':        '▶ Trailer',
     'modal.hideTrailer':    '▼ Hide Trailer',
@@ -3597,6 +3616,7 @@ const TRANSLATIONS = {
     'modal.year':           'Año',
     'modal.firstAired':     'Primera emisión',
     'modal.director':       'Director',
+    'modal.starring':       'Con:',
     'modal.creator':        'Creador',
     'modal.trailer':        '▶ Tráiler',
     'modal.hideTrailer':    '▼ Ocultar tráiler',
@@ -3757,6 +3777,7 @@ const TRANSLATIONS = {
     'modal.year':           'Année',
     'modal.firstAired':     'Première diffusion',
     'modal.director':       'Réalisateur',
+    'modal.starring':       'Avec :',
     'modal.creator':        'Créateur',
     'modal.trailer':        '▶ Bande-annonce',
     'modal.hideTrailer':    '▼ Cacher la bande-annonce',
@@ -3917,6 +3938,7 @@ const TRANSLATIONS = {
     'modal.year':           '年份',
     'modal.firstAired':     '首播日期',
     'modal.director':       '导演',
+    'modal.starring':       '主演：',
     'modal.creator':        '创作者',
     'modal.trailer':        '▶ 预告片',
     'modal.hideTrailer':    '▼ 隐藏预告片',
@@ -4077,6 +4099,7 @@ const TRANSLATIONS = {
     'modal.year':           'السنة',
     'modal.firstAired':     'تاريخ أول عرض',
     'modal.director':       'المخرج',
+    'modal.starring':       'بطولة:',
     'modal.creator':        'المبدع',
     'modal.trailer':        '▶ إعلان',
     'modal.hideTrailer':    '▼ إخفاء الإعلان',
@@ -4237,6 +4260,7 @@ const TRANSLATIONS = {
     'modal.year':           'Рік',
     'modal.firstAired':     'Перший ефір',
     'modal.director':       'Режисер',
+    'modal.starring':       'У ролях:',
     'modal.creator':        'Творець',
     'modal.trailer':        '▶ Трейлер',
     'modal.hideTrailer':    '▼ Сховати трейлер',
@@ -4759,6 +4783,7 @@ function fromDiscover(raw) {
     desc:     raw.overview || '',
     avg:      raw.vote_average ? parseFloat(raw.vote_average.toFixed(1)) : null,
     imdb: null, rt: null, mc: null, director: '', country: '', trailer: null,
+    actors: [], castPhotos: [],
     isTV: false, enriched: false,
     grad: 'linear-gradient(135deg,#1a1a2e,#16213e)', emoji: '🎬',
   };
@@ -5058,7 +5083,7 @@ function fromTMDb(raw) {
     tmdbScore: raw.vote_average || null,
     tmdbVotes: raw.vote_count || 0,
     desc: raw.overview || '',
-    actors: [], awards: [],
+    actors: [], castPhotos: [], awards: [],
     poster: raw.poster_path || null,
     backdrop: raw.backdrop_path || null,
     imdbId: null, trailer: null,
@@ -5145,6 +5170,10 @@ function mergeMovieData(movie, det, od, country = DETECTED_COUNTRY) {
     ? ((det.created_by || []).map(p => p.name).join(', ') || null)
     : (crew.find(p => p.job === 'Director')?.name || null);
   movie.actors = cast.slice(0, 6).map(a => a.name);
+  movie.castPhotos = cast.slice(0, 2).map(a => ({
+    name:  a.name,
+    photo: a.profile_path ? TIMG_W45 + a.profile_path : null,
+  }));
 
   // Trailer — prefer official Trailer, fallback to any YouTube video
   const vids = det.videos?.results || [];
@@ -5523,6 +5552,7 @@ function fromCache(m) {
     tmdbVotes:    m.tmdbVotes  || 0,
     desc:         m.desc       || '',
     actors:       m.actors     || [],
+    castPhotos:   m.castPhotos || [],
     awards:       m.awards     || [],
     poster:       m.poster     || null,
     backdrop:     m.backdrop   || null,
@@ -6686,6 +6716,20 @@ function refreshModalRatings(m) {
 
 function refreshModalDetails(m) {
   refreshDescTranslation(m);
+  const starringEl = document.getElementById('mStarring');
+  if (m.castPhotos?.length) {
+    const initials = n => n.split(' ').map(w => w[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
+    const avatars = m.castPhotos.map(a =>
+      a.photo
+        ? `<img class="m-starring-avatar" src="${a.photo}" alt="${esc(a.name)}" loading="lazy">`
+        : `<div class="m-starring-avatar m-starring-initials">${esc(initials(a.name))}</div>`
+    ).join('');
+    const names = esc(m.castPhotos.map(a => a.name).join(', '));
+    starringEl.innerHTML = `<span class="m-starring-avatars">${avatars}</span><span class="m-starring-names">${t('modal.starring')} ${names}</span>`;
+    starringEl.style.display = '';
+  } else {
+    starringEl.style.display = 'none';
+  }
   const countryDisplay = COUNTRY_NAME[m.country] || m.country || '—';
   const roleLabel = m.isTV ? t('modal.creator') : t('modal.director');
   document.getElementById('mMeta').innerHTML = `

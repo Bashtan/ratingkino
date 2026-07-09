@@ -274,6 +274,10 @@ async function enrichOne(raw, env) {
     const imdbId      = detail.external_ids?.imdb_id || null;
     const director    = (detail.credits?.crew || []).find(c => c.job === 'Director')?.name || null;
     const actors      = (detail.credits?.cast || []).slice(0, 5).map(c => c.name);
+    const castPhotos  = (detail.credits?.cast || []).slice(0, 2).map(c => ({
+      name:  c.name,
+      photo: c.profile_path ? `https://image.tmdb.org/t/p/w45${c.profile_path}` : null,
+    }));
     const trailerKey  = (detail.videos?.results || [])
                           .find(v => v.type === 'Trailer' && v.site === 'YouTube')?.key || null;
     const trailer     = trailerKey ? `https://www.youtube.com/embed/${trailerKey}` : null;
@@ -291,6 +295,7 @@ async function enrichOne(raw, env) {
       country:   (detail.production_countries || [])[0]?.iso_3166_1 || null,
       director,
       actors,
+      castPhotos,
       desc:      detail.overview || '',
       trailer,
       poster:    detail.poster_path   || null,
@@ -333,6 +338,7 @@ function basicMovie(m) {
     backdrop:  m.backdrop_path || null,
     tmdbScore: m.vote_average ? +m.vote_average.toFixed(1) : null,
     tmdbVotes: m.vote_count   || 0,
+    castPhotos: [],
     enriched:  false,
     isTV:      false,
   };
