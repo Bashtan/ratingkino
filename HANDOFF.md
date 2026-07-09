@@ -2,6 +2,16 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-07-09) — Synopsis "Read More" + Wrap Fix
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `80b4ce7` | **Modal synopsis wrap fix + Read more/Show less** — `.m-desc` (`#mDesc`, the About synopsis, `index.html` ~L1086) gained `overflow-wrap:anywhere; word-break:break-word` so no long token can push the modal layout off-screen. Long text now collapses to 4 lines via a new `.m-desc.clamped` (`display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden`) with a subtle toggle `<button class="m-desc-toggle" id="mDescToggle" onclick="toggleSynopsis()">` (new HTML after `#mDesc` ~L3368). New JS: `_setupSynopsisClamp()` runs after every synopsis text set (all three branches of `refreshDescTranslation()` — English/no-desc, cached translation, async translation) and measures `scrollHeight > clientHeight` to decide whether to keep the clamp + show the toggle (adds `.has-more` for tight 6px spacing) or drop it for short text; `toggleSynopsis()` flips the `.clamped` class + swaps button label. New i18n keys `modal.readMore` / `modal.showLess` (6 languages). Verified via preview: long→clamp+"Read more", toggle→"Show less"/expand, short→no button, 400-char unbroken token→no horizontal overflow. |
+
+---
+
 ## ⚡ Most Recent Session (2026-07-09) — Genre Filter Fix
 
 All commits on `main`, all live on https://findfilm.ai.
