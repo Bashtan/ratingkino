@@ -5727,12 +5727,17 @@ async function loadMovies(page = 1, append = false) {
   const _cRow    = document.getElementById('countRow');
   const _country = document.getElementById('fCountry')?.value || '';
   const _rating  = parseFloat(document.getElementById('fMinRating')?.value || '0') || 0;
-  const _isFiltered = !!(sq || ACTIVE_GENRE || _country || _rating > 0 || AI_SEARCH_ACTIVE);
+  // A "browse filter" is any query/genre/country/rating that narrows the grid.
+  // When one is active the discovery feed rows (For You / Fresh / Masterpieces) are
+  // hidden and the grid is scrolled into view — otherwise the (unfiltered) feed rows
+  // stay pinned above the filtered grid and the filter looks like it did nothing.
+  const _browseFilter = !!(sq || ACTIVE_GENRE || _country || _rating > 0);
+  const _isFiltered = !!(_browseFilter || AI_SEARCH_ACTIVE);
   if (_cRow) _cRow.classList.toggle('searching', _isFiltered);
   if (CONTENT_TYPE === 'movie') {
     const feedEl = document.getElementById('feedSections');
     if (feedEl) {
-      if (sq) {
+      if (_browseFilter) {
         feedEl.style.display = 'none';
         feedEl.classList.remove('feed-animate-in');
       } else if (feedEl.style.display === 'none') {
@@ -5837,9 +5842,10 @@ async function loadMovies(page = 1, append = false) {
     }
     // ─────────────────────────────────────────────────────────
 
-    // Scroll the results grid into view on the first page of a search so the
-    // user doesn't have to scroll past the filter bar manually.
-    if (!append && sq) {
+    // Scroll the results grid into view on the first page of any browse filter
+    // (search / genre / country / rating) so the user doesn't have to scroll
+    // past the filter bar manually to see the freshly filtered results.
+    if (!append && _browseFilter) {
       document.getElementById('movieGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     for (const m of newMovies) queueEnrich(m);
