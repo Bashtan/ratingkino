@@ -6451,6 +6451,12 @@ async function openMovie(tmdbId, listName = '') {
     if (m) MOVIES.push(m); // register so enrichment, history & WL work correctly
     else   return;
   }
+  // Infinite-loop UX (Movie ➔ Actor ➔ Movie ➔ Actor): if this was triggered by a
+  // card inside the actor filmography grid, clean-switch — dismiss the actor overlay
+  // (z-index 400) so the reused movie modal (#overlay, z-index 200) isn't hidden
+  // behind it. Both overlays share a 0.22s opacity transition → smooth crossfade.
+  const _actorOv = document.getElementById('actorOverlay');
+  if (_actorOv.classList.contains('open')) _actorOv.classList.remove('open');
   // Auto-detect list context when not explicitly provided (main grid)
   if (!listName) {
     const q = (document.getElementById('searchInput')?.value || '').trim();
