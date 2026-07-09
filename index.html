@@ -1086,7 +1086,25 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .m-desc {
   font-size: 14px; line-height: 1.7; color: rgba(240,230,255,0.82);
   margin-bottom: 22px;
+  overflow-wrap: anywhere; word-break: break-word;
 }
+/* Collapsed synopsis: clamp to 4 lines with an ellipsis. */
+.m-desc.clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* When a Read more/Show less toggle follows the synopsis, the toggle owns the
+   bottom spacing so text↔button stay tight in both collapsed + expanded states. */
+.m-desc.has-more { margin-bottom: 6px; }
+.m-desc-toggle {
+  display: inline-block; background: none; border: none; padding: 0;
+  margin: 0 0 22px; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: var(--muted);
+  transition: color 0.18s;
+}
+.m-desc-toggle:hover { color: var(--text); }
 .meta-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-bottom: 22px;
 }
@@ -3347,6 +3365,7 @@ if ('serviceWorker' in navigator) {
 
         <div class="section-lbl" data-i18n="modal.about">About</div>
         <div class="m-desc" id="mDesc"></div>
+        <button class="m-desc-toggle" id="mDescToggle" onclick="toggleSynopsis()" aria-expanded="false" style="display:none"></button>
 
         <div class="section-lbl" data-i18n="modal.details">Details</div>
         <div class="meta-grid" id="mMeta"></div>
@@ -3498,6 +3517,8 @@ const TRANSLATIONS = {
     'grid.noMatches':       'No matches for this AI search',
     'card.viewDetails':     'View Details',
     'modal.about':          'About',
+    'modal.readMore':       'Read more',
+    'modal.showLess':       'Show less',
     'modal.details':        'Details',
     'modal.whereToWatch':   'Where to Watch',
     'modal.awards':         'Awards & Recognition',
@@ -3676,6 +3697,8 @@ const TRANSLATIONS = {
     'grid.noMatches':       'Sin coincidencias para esta búsqueda IA',
     'card.viewDetails':     'Ver detalles',
     'modal.about':          'Sobre la película',
+    'modal.readMore':       'Leer más',
+    'modal.showLess':       'Mostrar menos',
     'modal.details':        'Detalles',
     'modal.whereToWatch':   'Dónde ver',
     'modal.awards':         'Premios y reconocimientos',
@@ -3839,6 +3862,8 @@ const TRANSLATIONS = {
     'grid.noMatches':       'Aucune correspondance pour cette recherche IA',
     'card.viewDetails':     'Voir les détails',
     'modal.about':          'À propos',
+    'modal.readMore':       'Lire plus',
+    'modal.showLess':       'Afficher moins',
     'modal.details':        'Détails',
     'modal.whereToWatch':   'Où regarder',
     'modal.awards':         'Prix et distinctions',
@@ -4002,6 +4027,8 @@ const TRANSLATIONS = {
     'grid.noMatches':       '此 AI 搜索无匹配结果',
     'card.viewDetails':     '查看详情',
     'modal.about':          '关于',
+    'modal.readMore':       '展开',
+    'modal.showLess':       '收起',
     'modal.details':        '详情',
     'modal.whereToWatch':   '在哪里观看',
     'modal.awards':         '奖项与荣誉',
@@ -4165,6 +4192,8 @@ const TRANSLATIONS = {
     'grid.noMatches':       'لا تطابقات لبحث الذكاء الاصطناعي هذا',
     'card.viewDetails':     'عرض التفاصيل',
     'modal.about':          'حول الفيلم',
+    'modal.readMore':       'اقرأ المزيد',
+    'modal.showLess':       'عرض أقل',
     'modal.details':        'تفاصيل',
     'modal.whereToWatch':   'أين تشاهد',
     'modal.awards':         'الجوائز والتقدير',
@@ -4328,6 +4357,8 @@ const TRANSLATIONS = {
     'grid.noMatches':       'Немає збігів для цього ШІ-пошуку',
     'card.viewDetails':     'Детальніше',
     'modal.about':          'Про фільм',
+    'modal.readMore':       'Читати більше',
+    'modal.showLess':       'Згорнути',
     'modal.details':        'Деталі',
     'modal.whereToWatch':   'Де дивитися',
     'modal.awards':         'Нагороди та визнання',
@@ -4649,14 +4680,14 @@ async function translateDesc(movieId, text, lang) {
 function refreshDescTranslation(m) {
   if (!m?.desc || CURRENT_LANG === 'en') {
     const el = document.getElementById('mDesc');
-    if (el) { el.textContent = m?.desc || '—'; el.classList.remove('translating'); }
+    if (el) { el.textContent = m?.desc || '—'; el.classList.remove('translating'); _setupSynopsisClamp(); }
     return;
   }
   const el = document.getElementById('mDesc');
   if (!el) return;
   // Check cache first — if hit, swap instantly with no flicker
   const cached = _transCache.get(_transCacheKey(m.id, CURRENT_LANG));
-  if (cached) { el.textContent = cached; el.classList.remove('translating'); return; }
+  if (cached) { el.textContent = cached; el.classList.remove('translating'); _setupSynopsisClamp(); return; }
   // Show translating state while waiting
   el.setAttribute('data-translating-label', t('modal.translating'));
   el.classList.add('translating');
@@ -4665,8 +4696,45 @@ function refreshDescTranslation(m) {
     if (ACTIVE_MOVIE?.id === m.id && document.getElementById('mDesc') === el) {
       el.textContent = translated;
       el.classList.remove('translating');
+      _setupSynopsisClamp();
     }
   });
+}
+
+// After the synopsis text is (re)set, decide whether it needs a Read more toggle.
+// Clamps to 4 lines; only shows the toggle when the text actually overflows that.
+function _setupSynopsisClamp() {
+  const el  = document.getElementById('mDesc');
+  const btn = document.getElementById('mDescToggle');
+  if (!el || !btn) return;
+  // Baseline: collapse first so we can measure the clamped vs. full height.
+  el.classList.add('clamped');
+  el.classList.remove('has-more');
+  const overflowing = el.scrollHeight > el.clientHeight + 1;
+  if (overflowing) {
+    el.classList.add('has-more');
+    btn.style.display = '';
+    btn.textContent = t('modal.readMore');
+    btn.setAttribute('aria-expanded', 'false');
+  } else {
+    el.classList.remove('clamped');
+    btn.style.display = 'none';
+  }
+}
+
+// Toggle the synopsis between clamped (4 lines) and full text.
+function toggleSynopsis() {
+  const el  = document.getElementById('mDesc');
+  const btn = document.getElementById('mDescToggle');
+  if (!el || !btn) return;
+  const collapsed = el.classList.toggle('clamped');   // returns new state
+  if (collapsed) {
+    btn.textContent = t('modal.readMore');
+    btn.setAttribute('aria-expanded', 'false');
+  } else {
+    btn.textContent = t('modal.showLess');
+    btn.setAttribute('aria-expanded', 'true');
+  }
 }
 
 /* ═══════════════════════════════════
