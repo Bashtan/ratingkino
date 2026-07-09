@@ -6498,6 +6498,27 @@ async function openMovie(tmdbId, listName = '') {
       refreshModalRatings(m);
     });
   }
+  // Backfill castPhotos (with TMDB person_id) for pre-enriched cache movies whose
+  // KV data predates the Starring-row feature. Without this the clickable-actor
+  // Starring row never renders for the homepage feed — those movies are enriched:true
+  // and skip enrichNow, so mergeMovieData never populates castPhotos.
+  if (m.enriched && !m.castPhotos?.length) {
+    const lang = TMDB_LANG[CURRENT_LANG] || 'en-US';
+    tmdbGet(`/movie/${tmdbId}`, { append_to_response: 'credits', language: lang })
+      .then(det => {
+        if (ACTIVE_MOVIE?.id !== tmdbId) return;
+        const cast = det.credits?.cast || [];
+        if (!cast.length) return;
+        m.castPhotos = cast.slice(0, 2).map(a => ({
+          id:    a.id,
+          name:  a.name,
+          photo: a.profile_path ? TIMG_W45 + a.profile_path : null,
+        }));
+        if (!m.actors?.length) m.actors = cast.slice(0, 6).map(a => a.name);
+        refreshModalDetails(m);
+      })
+      .catch(() => {});
+  }
 }
 
 function populateModal(m) {
