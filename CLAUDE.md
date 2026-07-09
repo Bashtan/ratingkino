@@ -54,7 +54,7 @@ All commits on `main`, all live on https://findfilm.ai.
 
 - **Production:** https://findfilm.ai — also https://ratingkino.com
 - **Stack:** Single `index.html` (~7 500 lines) + `functions/api/[[path]].js` (Cloudflare Pages Function) + `sync-worker.js` (nightly cron)
-- **Deploy:** `git push origin main` → auto-deploy via Cloudflare Pages git integration
+- **Deploy:** No Cloudflare Pages git integration. `git push origin main` alone does **not** deploy. After pushing, run `npx wrangler pages deploy . --project-name=ratingkino` to push changes live.
 - **No build step.** Edit index.html directly. No framework, no bundler.
 - **Local dev (static):** `python3 -m http.server 8282` — API calls won't work
 - **Local dev (full):** `npx wrangler pages dev . --port 8282`
