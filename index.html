@@ -869,6 +869,22 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   background: var(--accent); border-color: var(--accent);
   transform: scale(1.08);
 }
+.m-back {
+  position: absolute; top: 12px; left: 12px; z-index: 10;
+  width: 36px; height: 36px;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 50%;
+  color: #fff; cursor: pointer;
+  display: none; align-items: center; justify-content: center;
+  transition: background 0.18s, border-color 0.18s, transform 0.18s;
+}
+.m-back.show { display: flex; }        /* shown only when the view-history trail is non-empty */
+.m-back:hover {
+  background: var(--accent); border-color: var(--accent);
+  transform: scale(1.08);
+}
+.m-back svg { display: block; margin-right: 1px; }  /* optical-center the left chevron */
 
 /* Info strip — poster + meta, below backdrop */
 .m-info-strip {
@@ -1828,6 +1844,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   .m-meta-col  { padding-top: 16px; }
   .m-title     { font-size: 16px; line-height: 1.18; margin-bottom: 1px; }
   .m-close     { width: 44px; height: 44px; top: 10px; right: 10px; font-size: 16px; }
+  .m-back      { width: 44px; height: 44px; top: 10px; left: 10px; }
   .m-body      { grid-template-columns: 1fr; flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   /* min-width:0 overrides the CSS Grid default (min-width:auto), which otherwise lets
      wide descendants (cast list, provider chips, VPN banner) force this column wider
@@ -3286,6 +3303,9 @@ if ('serviceWorker' in navigator) {
 <!-- ════════════ MOVIE MODAL ════════════ -->
 <div class="overlay" id="overlay" onclick="overlayClick(event)">
   <div class="modal" id="modal">
+    <button class="m-back" id="mBack" onclick="goBack()" aria-label="Back">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
     <button class="m-close" onclick="closeModal()">✕</button>
 
     <!-- Backdrop image -->
@@ -3389,7 +3409,10 @@ if ('serviceWorker' in navigator) {
 <!-- ════════════ ACTOR PROFILE MODAL ════════════ -->
 <div class="actor-overlay" id="actorOverlay" onclick="actorOverlayClick(event)">
   <div class="actor-modal" id="actorModal">
-    <button class="m-close" onclick="closeActorProfile()">✕</button>
+    <button class="m-back" id="actorBack" onclick="goBack()" aria-label="Back">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <button class="m-close" onclick="closeModal()">✕</button>
     <div class="actor-hero">
       <div class="actor-photo" id="actorPhoto"></div>
       <div class="actor-info">
@@ -4707,6 +4730,10 @@ let TOTAL_COUNT  = 0;
 let ACTIVE_MOVIE = null;
 let SORT_SRC     = null;
 let TRAILER_OPEN = false;
+// ── Modal view-history stack (Movie ➔ Actor ➔ Movie ➔ Actor "Back" nav) ──
+let VIEW_STACK   = [];        // trail of visited views: [{ type:'movie'|'actor', id }]
+let CURRENT_VIEW = null;      // the view currently on screen: { type, id }
+let _navBack     = false;     // set by goBack() so the next open*() re-render skips the push
 let IS_LOADING   = false;
 let PENDING_STARS = 0;         // stars selected in compose
 let RANDOM_POOL  = [];         // cached 500-movie roulette pool (daily sync)
@@ -6451,6 +6478,9 @@ async function openMovie(tmdbId, listName = '') {
     if (m) MOVIES.push(m); // register so enrichment, history & WL work correctly
     else   return;
   }
+  // Record this hop in the modal view-history (push previous view / reset trail /
+  // consume a pending Back re-render) and refresh Back-button visibility.
+  _recordNavigation({ type: 'movie', id: tmdbId });
   // Infinite-loop UX (Movie ➔ Actor ➔ Movie ➔ Actor): if this was triggered by a
   // card inside the actor filmography grid, clean-switch — dismiss the actor overlay
   // (z-index 400) so the reused movie modal (#overlay, z-index 200) isn't hidden
@@ -7163,6 +7193,9 @@ function overlayClick(e) {
 }
 
 async function openActorProfile(personId) {
+  // Record this hop in the modal view-history before the overlay opens, so
+  // _recordNavigation still sees the outgoing view's overlay state.
+  _recordNavigation({ type: 'actor', id: personId });
   document.getElementById('actorOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
   document.getElementById('actorName').textContent = '';
@@ -7197,26 +7230,63 @@ async function openActorProfile(personId) {
   }
 }
 
+// Clicking the actor overlay backdrop fully closes the modal + clears the trail.
 function actorOverlayClick(e) {
-  if (e.target === document.getElementById('actorOverlay')) closeActorProfile();
+  if (e.target === document.getElementById('actorOverlay')) closeModal();
 }
 
-function closeActorProfile() {
-  document.getElementById('actorOverlay').classList.remove('open');
-  if (!document.getElementById('overlay').classList.contains('open')) {
-    document.body.style.overflow = '';
+/* ─── Modal view-history: Back-button navigation ─────────────────── */
+// Called at the top of openMovie()/openActorProfile(). Decides whether this open
+// is a fresh entry (reset the trail), a deeper navigation (push the current view),
+// or a Back-button re-render (skip the push — signalled via the _navBack flag).
+function _recordNavigation(view) {
+  if (_navBack) {                         // re-render triggered by goBack()
+    _navBack = false;
+    CURRENT_VIEW = view;
+    _updateBackBtns();
+    return;
   }
+  const modalOpen = document.getElementById('overlay').classList.contains('open')
+                 || document.getElementById('actorOverlay').classList.contains('open');
+  if (modalOpen && CURRENT_VIEW
+      && !(CURRENT_VIEW.type === view.type && CURRENT_VIEW.id === view.id)) {
+    VIEW_STACK.push(CURRENT_VIEW);         // navigating deeper → remember where we were
+  } else if (!modalOpen) {
+    VIEW_STACK = [];                       // fresh open from the grid/search → reset trail
+  }
+  CURRENT_VIEW = view;
+  _updateBackBtns();
 }
 
+// Toggle Back-button visibility on both modals based on the trail depth.
+function _updateBackBtns() {
+  const show = VIEW_STACK.length > 0;
+  document.getElementById('mBack')?.classList.toggle('show', show);
+  document.getElementById('actorBack')?.classList.toggle('show', show);
+}
+
+// Pop the previous view and re-render it in place — the overlay stays open.
+function goBack() {
+  if (!VIEW_STACK.length) return;
+  const prev = VIEW_STACK.pop();
+  _navBack = true;   // consumed by _recordNavigation inside the open*() call below
+  if (prev.type === 'movie') openMovie(prev.id);
+  else                       openActorProfile(prev.id);
+}
+
+// Full close: dismiss both overlays and reset the entire view-history trail.
 function closeModal() {
   document.getElementById('overlay').classList.remove('open');
+  document.getElementById('actorOverlay').classList.remove('open');
   document.getElementById('trailerFrame').src = '';
   document.getElementById('trailerWrap').classList.remove('active');
   document.body.style.overflow = '';
   ACTIVE_MOVIE = null;
   TRAILER_OPEN = false;
   closeShare();
-  closeActorProfile();
+  VIEW_STACK = [];
+  CURRENT_VIEW = null;
+  _updateBackBtns();
   // Clean up the ?movie= param without firing popstate
   if (history.state?.movie) {
     history.replaceState(null, '', location.pathname);
@@ -7228,12 +7298,16 @@ function closeModal() {
 window.addEventListener('popstate', () => {
   if (ACTIVE_MOVIE) {
     document.getElementById('overlay').classList.remove('open');
+    document.getElementById('actorOverlay').classList.remove('open');
     document.getElementById('trailerFrame').src = '';
     document.getElementById('trailerWrap').classList.remove('active');
     document.body.style.overflow = '';
     ACTIVE_MOVIE = null;
     TRAILER_OPEN = false;
     closeShare();
+    VIEW_STACK = [];
+    CURRENT_VIEW = null;
+    _updateBackBtns();
     // history already moved back by the browser — no further manipulation needed
   }
 });
