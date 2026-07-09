@@ -2,6 +2,16 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-07-09) — Genre Filter Fix
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `e0889f1` | **Fix: genre/country/rating filters looked broken** — Root cause was NOT the fetch: `setGenre(id)` → `applyFilters()` → `loadMovies(1,false)` → `fetchPage()` already appended `with_genres` correctly (verified against live `/api/tmdb/discover/movie?with_genres=27` → all Horror), `tryCache()` already bypassed the KV cache when a genre is set, and the grid re-rendered with filtered results. The disconnect: `loadMovies()` (`index.html` ~L5732 + ~L5847) only hid the discovery feed rows (`#feedSections`: For You / Fresh / Masterpieces) and scrolled `#movieGrid` into view **when a search query was present** (`if (sq)`). Selecting a genre (no query) left the unfiltered feed rows pinned above the grid and never scrolled down → the filter appeared to do nothing. Fix: new shared `_browseFilter = !!(sq \|\| ACTIVE_GENRE \|\| _country \|\| _rating > 0)` flag now drives both the feed-hide and the scroll-into-view (mirroring search behavior); clearing to "All" (`_browseFilter` false) restores the feed with no scroll. `_isFiltered` (count-row "searching" class) now derives from `_browseFilter \|\| AI_SEARCH_ACTIVE`. Same fix also repairs the identical latent issue for Country + Min-Rating filters. |
+
+---
+
 ## ⚡ Most Recent Session (2026-07-09) — Modal History Stack & Back Button
 
 All commits on `main`, all live on https://findfilm.ai.
