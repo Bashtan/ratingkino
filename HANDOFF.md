@@ -2,6 +2,16 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-07-11) — Synopsis Overflow: Grid Blowout Fix
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `132af4c` | **Fix: synopsis text overflowing off-screen as one continuous line (persisted after `80b4ce7`)** — The prior `80b4ce7` wrap/clamp fix was correct on `.m-desc` itself but the real defect lived in its parent grid. `.m-body` is `display:grid; grid-template-columns:1fr 300px` (`index.html` ~L1076); the desktop `.m-left`/`.m-right` grid items (~L1079-1080) lacked `min-width:0` (only the mobile `@media` override at ~L1870 had it). Default `min-width:auto` let a wide child inside `.m-left` (the `#similarScroll` horizontal `.feed-scroll` and/or the trailer `iframe`) force the `1fr` track past the modal width → `.m-desc` then laid out at that oversized width and the synopsis rendered as a single non-wrapping horizontal line running off the viewport (no clamp/button visible because the element was wider than its text). Fix: add `min-width:0` to desktop `.m-left` and `.m-right` so the `1fr` track can shrink and inner scrollers scroll instead of expanding the track. Verified via the **real** `openMovie()` flow (not isolated textContent): `docScrollW === winW` (no horizontal page overflow), `.m-desc` constrained to 595px desktop / 323px mobile, clamp `-webkit-line-clamp:4` active (`clientH 95 < scrollH 143`), `#mDescToggle` "Read more" appended + visible, `toggleSynopsis()` expand→"Show less"/collapse→"Read more" both correct. Lesson: earlier preview test measured `.m-desc` in isolation with `.open` pre-applied, so it missed the sibling-driven grid blowout — always drive the real `openMovie` path. |
+
+---
+
 ## ⚡ Most Recent Session (2026-07-09) — Synopsis "Read More" + Wrap Fix
 
 All commits on `main`, all live on https://findfilm.ai.
