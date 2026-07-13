@@ -7290,8 +7290,16 @@ async function openActorProfile(personId) {
       ? `<img src="${TIMG_W185}${person.profile_path}" alt="${esc(person.name || '')}">`
       : '';
 
-    const films = (credits.cast || [])
-      .filter(c => c.poster_path)
+    // TMDB returns one object per credit/role, so the same title can appear
+    // multiple times (multi-episode TV, dual cast+crew, etc). Dedupe by
+    // media_type+id (keeps movie/TV id namespaces distinct) before rendering.
+    const _seenFilm = new Map();
+    (credits.cast || []).forEach(c => {
+      if (!c.poster_path) return;
+      const key = `${c.media_type}:${c.id}`;
+      if (!_seenFilm.has(key)) _seenFilm.set(key, c);
+    });
+    const films = Array.from(_seenFilm.values())
       .sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
 
     films.forEach(raw => {
