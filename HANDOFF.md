@@ -2,6 +2,16 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-07-13) — Actor Filmography Dedupe
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `ca6a1dd` | **Fix: duplicate cards in actor filmography grid** — `openActorProfile()` (`index.html` ~L7293) mapped `combined_credits.cast` straight to cards, but TMDB returns one object per credit/role so the same title recurs (multi-episode TV, dual cast+crew, recurring award-show appearances) — e.g. "Golden Globe Awards" ×4, "Jimmy Kimmel Live!" ×2 rendered as separate cards. Fix: after the `poster_path` filter, collapse into a `Map` keyed by `` `${c.media_type}:${c.id}` `` (`_seenFilm`, keeps movie vs TV id namespaces distinct), then `Array.from(_seenFilm.values())` before the existing `popularity` sort — sort/render logic otherwise unchanged. Verified via real `openActorProfile()` flow with a stubbed `tmdbGet` returning 8 dupe-laden credits → exactly 3 unique cards (no-poster item filtered, sort order 90→80→50 intact). |
+
+---
+
 ## ⚡ Most Recent Session (2026-07-11) — Synopsis Overflow: Grid Blowout Fix
 
 All commits on `main`, all live on https://findfilm.ai.
