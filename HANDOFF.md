@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-13) — Actor Filmography Dedupe
+## ⚡ Most Recent Session (2026-07-13) — Cast to TV: Leanback Receiver + State Machine + QR Fallback
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `124d369` | **Cast to TV upgrade — second-screen experience, not a mirror.** Four parts. **(1) Action clarity:** share `#shareCast` button restructured to two-line layout — bold title `#castBtnText` (`share.cast` = "Cast Trailer to TV") + `<small>` `#castBtnSub` (`share.castSub` = "Watch trailer & AI rating on the big screen"); TV icon `.cast-ico-tv` + hidden stop icon `.cast-ico-stop` + `.cast-spinner` (`#castSpinner`). **(2) State machine `_castSetState(state)`** (`index.html` ~L7680): `idle` / `connecting` (adds `.connecting`, spinner shown via `.share-cast.connecting .cast-spinner{display:block}`, `disabled=true`) / `connected` (`.connected`, solid `var(--cyan)` bg, stop icon, "Connected — Tap to Disconnect" + "Casting to your TV" sub). `castToTV()` rewritten: if already `.connected` → `_castDisconnect()` (terminates `_castConn`); else builds `tvUrl = ${location.origin}/tv/${ACTIVE_MOVIE.id}`, `_castSetState('connecting')`, `new PresentationRequest([tvUrl]).start()` with 12s `_castTimer` → QR fallback on timeout; on success wires `close`/`terminate` listeners back to idle; catch differentiates user-cancel (`NotAllowedError`/`AbortError` → silent idle) vs failure (→ QR). No Presentation API → `openCastQr()` directly. **(3) QR failsafe modal** `#castQrOverlay` (z-index 500) / `.cast-qr-modal`: `openCastQr(url)` renders via vendored **MIT qrcode-generator** (inlined `var qrcode=function` before main `<script>`, ~L3453) → `qrcode(0,'M').addData(url).make().createSvgTag({cellSize:6,margin:2,scalable:true})` into `#castQrCode`; `#castQrLink` + `copyCastTvLink()` (`#castQrCopy`, `.copied` state). `closeCastQr()`/`castQrOverlayClick()`. **(4) New `/tv/index.html` Leanback receiver** (standalone, ~12KB, NOT a mirror): fullscreen dark, `#bg` blurred backdrop (`blur(34px) brightness(0.42)`, `.ready` fade-in), centered unified rating `.unified`/`#uNum` (replicates `calcAvg` via `unifiedRating(r)` + `scoreColor(v)`), autoplay muted trailer `#player` iframe, `#srcChips`, `#overview`, `#brand` watermark. `getMovieId()` reads `/tv/(\d+)` path OR `?m=`; fetches `/api/tmdb/movie/{id}?append_to_response=videos,external_ids` + `/api/omdb?i={imdb_id}`; `showError()` fallback. **Routing:** `_redirects` rewrites `/tv/*  /tv/  200` (200 = rewrite, URL stays `/tv/:id`). ⚠️ Destination is canonical `/tv/` **not** `/tv/index.html` — the latter 308-redirects to `/tv/`, which broke the internal rewrite (served root SPA index.html instead). Static assets under `/tv/` still take precedence, so the rule only fires for dynamic `/tv/:id`. i18n keys added ×6 langs: `share.cast`, `share.castSub`, `share.castConnecting`, `share.castConnectedSub`, `share.lookingDevices`, `share.castConnected`, `share.castNone`, `cast.qrTitle`, `cast.qrSub`, `cast.qrCopy`. Verified: state text/class/disabled swaps, QR SVG renders (178×178, scannable, screenshot), TV page serves at live `/tv/27205` (Inception — TMDB proxy returns title/backdrop/imdb_id/trailer key `cdx31ak4KbQ`). |
+
+---
+
+## ⚡ Session (2026-07-13) — Actor Filmography Dedupe
 
 All commits on `main`, all live on https://findfilm.ai.
 
