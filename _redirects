@@ -1,0 +1,6 @@
+# Cast-to-TV Leanback receiver: serve the /tv/ page for /tv/:movieId
+# (200 = rewrite, so the URL stays /tv/123 and the page reads the id from the path).
+# Destination is the canonical /tv/ directory (not /tv/index.html, which 308-redirects
+# and breaks the internal rewrite). Static assets under /tv/ still take precedence, so
+# this rule only fires for the dynamic /tv/:id paths.
+/tv/*  /tv/  200
