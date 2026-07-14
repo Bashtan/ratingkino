@@ -1641,6 +1641,35 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .share-cast.connected .cast-ico-stop { display: inline-block; }
 .share-cast.connected .cast-txt > small { opacity: 0.85; }
 
+/* Pitch to Friends button — violet accent, two-line, own action */
+.share-pitch {
+  width: 100%; margin-top: 8px; min-height: 52px; padding: 8px 14px;
+  background: rgba(139,92,246,0.08);
+  border: 1.5px solid rgba(139,92,246,0.3);
+  border-radius: 10px; color: #a78bfa;
+  font-family: 'Montserrat', sans-serif;
+  cursor: pointer; display: none;
+  align-items: center; justify-content: center; gap: 10px;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+.share-pitch.show { display: flex; }
+.share-pitch:hover { background: rgba(139,92,246,0.18); border-color: #8b5cf6; }
+.share-pitch .pitch-ico { flex-shrink: 0; font-size: 16px; line-height: 1; }
+.share-pitch .pitch-txt { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2; text-align: left; }
+.share-pitch .pitch-txt > span { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+.share-pitch .pitch-txt > small { font-size: 10px; font-weight: 600; letter-spacing: 0.2px; text-transform: none; opacity: 0.72; margin-top: 2px; }
+.share-pitch .pitch-spinner {
+  display: none; width: 16px; height: 16px; flex-shrink: 0;
+  border: 2px solid rgba(139,92,246,0.3); border-top-color: #8b5cf6;
+  border-radius: 50%; animation: castSpin 0.7s linear infinite;
+}
+.share-pitch.loading { cursor: default; opacity: 0.9; }
+.share-pitch.loading .pitch-spinner { display: block; }
+.share-pitch.loading .pitch-ico { display: none; }
+.share-pitch.copied {
+  background: rgba(139,92,246,0.22); border-color: #8b5cf6; color: #c4b5fd;
+}
+
 /* ── Cast QR fallback modal ── */
 .cast-qr-overlay {
   position: fixed; inset: 0; z-index: 500;
@@ -3765,6 +3794,14 @@ if ('serviceWorker' in navigator) {
       <small id="castBtnSub" data-i18n="share.castSub">Watch trailer &amp; AI rating on the big screen</small>
     </span>
   </button>
+  <button class="share-pitch" id="sharePitch" onclick="pitchToFriends()">
+    <span class="pitch-spinner" id="pitchSpinner" aria-hidden="true"></span>
+    <span class="pitch-ico">🗳️</span>
+    <span class="pitch-txt">
+      <span id="pitchBtnText" data-i18n="share.pitch">Pitch to Friends</span>
+      <small id="pitchBtnSub" data-i18n="share.pitchSub">Share a link so friends can vote &amp; comment</small>
+    </span>
+  </button>
 </div>
 
 <!-- ════════════ CAST QR FALLBACK ════════════ -->
@@ -3937,6 +3974,10 @@ const TRANSLATIONS = {
     'share.copied':         '✓ Copied!',
     'share.cast':            'Cast Trailer to TV',
     'share.castSub':         'Watch trailer & AI rating on the big screen',
+    'share.pitch':           'Pitch to Friends',
+    'share.pitchSub':        'Share a link so friends can vote & comment',
+    'share.pitchCopied':     '✓ Link copied — send it!',
+    'share.pitchFail':       'Could not create link',
     'share.lookingDevices':  'Looking for devices…',
     'share.castConnecting':  'Connecting…',
     'share.castConnected':   'Connected — Tap to Disconnect',
@@ -4195,6 +4236,10 @@ const TRANSLATIONS = {
     'share.copied':         '✓ ¡Copiado!',
     'share.cast':            'Enviar tráiler al TV',
     'share.castSub':         'Mira el tráiler y la valoración IA en la pantalla grande',
+    'share.pitch':           'Propón a Amigos',
+    'share.pitchSub':        'Comparte un enlace para que voten y comenten',
+    'share.pitchCopied':     '✓ Enlace copiado — ¡envíalo!',
+    'share.pitchFail':       'No se pudo crear el enlace',
     'share.lookingDevices':  'Buscando dispositivos…',
     'share.castConnecting':  'Conectando…',
     'share.castConnected':   'Conectado — Toca para desconectar',
@@ -4438,6 +4483,10 @@ const TRANSLATIONS = {
     'share.copied':         '✓ Copié !',
     'share.cast':            'Diffuser la bande-annonce',
     'share.castSub':         'Bande-annonce & note IA sur grand écran',
+    'share.pitch':           'Proposer aux Amis',
+    'share.pitchSub':        'Partagez un lien pour voter et commenter',
+    'share.pitchCopied':     '✓ Lien copié — envoyez-le !',
+    'share.pitchFail':       'Impossible de créer le lien',
     'share.lookingDevices':  'Recherche de dispositifs…',
     'share.castConnecting':  'Connexion…',
     'share.castConnected':   'Connecté — Toucher pour déconnecter',
@@ -4681,6 +4730,10 @@ const TRANSLATIONS = {
     'share.copied':         '✓ 已复制！',
     'share.cast':            '投射预告片到电视',
     'share.castSub':         '在大屏上观看预告片和 AI 评分',
+    'share.pitch':           '推荐给朋友',
+    'share.pitchSub':        '分享链接，让朋友投票和评论',
+    'share.pitchCopied':     '✓ 链接已复制 — 发送吧！',
+    'share.pitchFail':       '无法创建链接',
     'share.lookingDevices':  '正在搜索设备…',
     'share.castConnecting':  '正在连接…',
     'share.castConnected':   '已连接 — 点按断开',
@@ -4924,6 +4977,10 @@ const TRANSLATIONS = {
     'share.copied':         '✓ تم النسخ!',
     'share.cast':            'بث المقطع الدعائي على التلفاز',
     'share.castSub':         'شاهد المقطع الدعائي وتقييم الذكاء الاصطناعي على الشاشة الكبيرة',
+    'share.pitch':           'اقترح على الأصدقاء',
+    'share.pitchSub':        'شارك رابطًا ليصوّت الأصدقاء ويعلّقوا',
+    'share.pitchCopied':     '✓ تم نسخ الرابط — أرسله!',
+    'share.pitchFail':       'تعذّر إنشاء الرابط',
     'share.lookingDevices':  'جارٍ البحث عن أجهزة…',
     'share.castConnecting':  'جارٍ الاتصال…',
     'share.castConnected':   'متصل — انقر لقطع الاتصال',
@@ -5167,6 +5224,10 @@ const TRANSLATIONS = {
     'share.copied':         '✓ Скопійовано!',
     'share.cast':            'Транслювати трейлер на TV',
     'share.castSub':         'Дивіться трейлер та AI-оцінку на великому екрані',
+    'share.pitch':           'Запропонувати друзям',
+    'share.pitchSub':        'Поділіться посиланням, щоб друзі голосували й коментували',
+    'share.pitchCopied':     '✓ Посилання скопійовано — надішліть!',
+    'share.pitchFail':       'Не вдалося створити посилання',
     'share.lookingDevices':  'Пошук пристроїв…',
     'share.castConnecting':  'Підключення…',
     'share.castConnected':   'Підключено — торкніться, щоб відключити',
@@ -8951,6 +9012,12 @@ function openShare() {
   const castBtn = document.getElementById('shareCast');
   castBtn.classList.add('show');
   if (!castBtn.classList.contains('connected')) _castSetState('idle');
+  // Pitch to Friends — reset to default state each open.
+  const pitchBtn = document.getElementById('sharePitch');
+  pitchBtn.classList.add('show');
+  pitchBtn.classList.remove('copied', 'loading');
+  document.getElementById('pitchBtnText').textContent = t('share.pitch');
+  document.getElementById('pitchBtnSub').textContent = t('share.pitchSub');
   document.getElementById('sharePanel').classList.add('open');
 }
 function closeShare() { document.getElementById('sharePanel').classList.remove('open'); }
@@ -9089,6 +9156,58 @@ function copyLink() {
   } else {
     legacyCopy(url); confirm();
   }
+}
+
+/* Pitch to Friends — create a shared /pitch/:id voting link and copy it. */
+async function pitchToFriends() {
+  if (!ACTIVE_MOVIE) return;
+  const m = ACTIVE_MOVIE;
+  const btn = document.getElementById('sharePitch');
+  const txt = document.getElementById('pitchBtnText');
+  const sub = document.getElementById('pitchBtnSub');
+  if (btn.classList.contains('loading')) return;
+
+  btn.classList.add('loading');
+  txt.textContent = t('share.pitch');
+  sub.textContent = '…';
+
+  const done = (url) => {
+    const copied = () => {
+      btn.classList.remove('loading');
+      btn.classList.add('copied');
+      txt.textContent = t('share.pitchCopied');
+      sub.textContent = url.replace(/^https?:\/\//, '');
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).then(copied).catch(() => { legacyCopy(url); copied(); });
+    } else { legacyCopy(url); copied(); }
+  };
+  const fail = () => {
+    btn.classList.remove('loading');
+    txt.textContent = t('share.pitchFail');
+    sub.textContent = t('share.pitchSub');
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      txt.textContent = t('share.pitch');
+      sub.textContent = t('share.pitchSub');
+    }, 3000);
+  };
+
+  try {
+    const res = await fetch('/api/pitch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        movieId: m.id,
+        title:   m.title || '',
+        year:    m.year || '',
+        poster:  m.poster || ''
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.id) return fail();
+    done(`${location.origin}/pitch/${data.id}`);
+  } catch { fail(); }
 }
 
 /* ═══════════════════════════════════

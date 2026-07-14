@@ -53,6 +53,14 @@ export async function onRequest({ request, env, params, waitUntil }) {
     return handleFitSummary(request, env, cors, waitUntil);
   }
 
+  /* ── /api/pitch ── "Movie Pitch": shared voting + comments (D1-backed) ── */
+  if (path === '/pitch' && request.method === 'POST') {
+    return handlePitchCreate(request, env, cors);
+  }
+  if (path.startsWith('/pitch/')) {
+    return handlePitchSub(path.slice('/pitch/'.length), request, env, cors);
+  }
+
   /* ── /api/geo-lang ── detect language from visitor country ── */
   if (path === '/geo-lang') {
     const country = request.cf?.country || '';
@@ -1304,5 +1312,188 @@ async function handleFitSummary(request, env, cors, waitUntil) {
   } catch (e) {
     console.error('[fit-summary] error:', e.message);
     return json({ error: 'Fit summary failed', detail: e.message }, 500);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * "Movie Pitch" — shared voting + discussion, backed by Cloudflare D1 (env.DB).
+ * Tables: pitches / votes / comments (see schema.sql).
+ * All DB access uses parameterized .bind() — never string interpolation.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+const PITCH_ID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+function genPitchId(len = 8) {
+  const bytes = new Uint8Array(len);
+  crypto.getRandomValues(bytes);
+  let s = '';
+  for (let i = 0; i < len; i++) s += PITCH_ID_ALPHABET[bytes[i] % PITCH_ID_ALPHABET.length];
+  return s;
+}
+
+function pitchJson(cors) {
+  return (body, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+}
+
+// POST /api/pitch — create a new pitch, return { id }
+async function handlePitchCreate(request, env, cors) {
+  const json = pitchJson(cors);
+  if (!env.DB) return json({ error: 'DB unavailable' }, 503);
+
+  let movieId, title, year, poster;
+  try {
+    const body = await request.json();
+    movieId = Number(body.movieId);
+    title   = (body.title || '').toString().trim().slice(0, 200);
+    year    = (body.year || '').toString().trim().slice(0, 8);
+    poster  = (body.poster || '').toString().trim().slice(0, 300);
+  } catch {
+    return json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  if (!Number.isInteger(movieId) || !title) return json({ error: 'Missing movieId or title' }, 400);
+
+  const now = Date.now();
+  try {
+    // Generate a unique id (retry once on the rare PK collision).
+    let id = genPitchId();
+    let res = await env.DB
+      .prepare('INSERT OR IGNORE INTO pitches (id, movie_id, title, year, poster, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(id, movieId, title, year, poster, now)
+      .run();
+    if (!res.meta || res.meta.changes === 0) {
+      id = genPitchId();
+      await env.DB
+        .prepare('INSERT INTO pitches (id, movie_id, title, year, poster, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+        .bind(id, movieId, title, year, poster, now)
+        .run();
+    }
+    return json({ id });
+  } catch (e) {
+    console.error('[pitch create] error:', e.message);
+    return json({ error: 'Create failed', detail: e.message }, 500);
+  }
+}
+
+// Dispatch /api/pitch/<id>, /api/pitch/<id>/vote, /api/pitch/<id>/comment
+async function handlePitchSub(rest, request, env, cors) {
+  const json = pitchJson(cors);
+  if (!env.DB) return json({ error: 'DB unavailable' }, 503);
+
+  const parts = rest.split('/').filter(Boolean);   // ["id"] | ["id","vote"] | ["id","comment"]
+  const id = (parts[0] || '').slice(0, 16);
+  const sub = parts[1] || '';
+
+  if (!id || !/^[A-Za-z0-9]+$/.test(id)) return json({ error: 'Bad pitch id' }, 400);
+
+  if (!sub && request.method === 'GET')          return pitchGet(id, env, json);
+  if (sub === 'vote'    && request.method === 'POST') return pitchVote(id, request, env, json);
+  if (sub === 'comment' && request.method === 'POST') return pitchComment(id, request, env, json);
+  return json({ error: 'Not found' }, 404);
+}
+
+async function pitchTallies(id, env) {
+  const rows = await env.DB
+    .prepare('SELECT vote, COUNT(*) AS c FROM votes WHERE pitch_id = ? GROUP BY vote')
+    .bind(id).all();
+  const votes = { yes: 0, maybe: 0, no: 0, total: 0 };
+  for (const r of (rows.results || [])) {
+    if (r.vote in votes) { votes[r.vote] = r.c; votes.total += r.c; }
+  }
+  return votes;
+}
+
+// GET /api/pitch/:id — movie meta + vote tallies + comments (the poll endpoint)
+async function pitchGet(id, env, json) {
+  try {
+    const pitch = await env.DB
+      .prepare('SELECT id, movie_id, title, year, poster, created_at FROM pitches WHERE id = ?')
+      .bind(id).first();
+    if (!pitch) return json({ error: 'Pitch not found' }, 404);
+
+    const votes = await pitchTallies(id, env);
+    const cRows = await env.DB
+      .prepare('SELECT name, body, created_at FROM comments WHERE pitch_id = ? ORDER BY created_at DESC LIMIT 200')
+      .bind(id).all();
+
+    return json({
+      id: pitch.id,
+      movie: { movieId: pitch.movie_id, title: pitch.title, year: pitch.year, poster: pitch.poster },
+      votes,
+      comments: (cRows.results || []).map(c => ({ name: c.name, body: c.body, created_at: c.created_at })),
+    });
+  } catch (e) {
+    console.error('[pitch get] error:', e.message);
+    return json({ error: 'Fetch failed', detail: e.message }, 500);
+  }
+}
+
+// POST /api/pitch/:id/vote — { voter, vote } upsert (one vote per voter)
+async function pitchVote(id, request, env, json) {
+  let voter, vote;
+  try {
+    const body = await request.json();
+    voter = (body.voter || '').toString().trim().slice(0, 64);
+    vote  = (body.vote || '').toString().trim().toLowerCase();
+  } catch {
+    return json({ error: 'Invalid JSON body' }, 400);
+  }
+  if (!voter) return json({ error: 'Missing voter' }, 400);
+  if (!['yes', 'maybe', 'no'].includes(vote)) return json({ error: 'Invalid vote' }, 400);
+
+  try {
+    const pitch = await env.DB.prepare('SELECT id FROM pitches WHERE id = ?').bind(id).first();
+    if (!pitch) return json({ error: 'Pitch not found' }, 404);
+
+    await env.DB
+      .prepare(
+        'INSERT INTO votes (pitch_id, voter, vote, created_at) VALUES (?, ?, ?, ?) ' +
+        'ON CONFLICT(pitch_id, voter) DO UPDATE SET vote = excluded.vote, created_at = excluded.created_at'
+      )
+      .bind(id, voter, vote, Date.now())
+      .run();
+
+    return json({ ok: true, votes: await pitchTallies(id, env) });
+  } catch (e) {
+    console.error('[pitch vote] error:', e.message);
+    return json({ error: 'Vote failed', detail: e.message }, 500);
+  }
+}
+
+// POST /api/pitch/:id/comment — { name, body }
+async function pitchComment(id, request, env, json) {
+  let name, text;
+  try {
+    const body = await request.json();
+    name = (body.name || '').toString().replace(/[\n\r]+/g, ' ').trim().slice(0, 40) || 'Guest';
+    text = (body.body || '').toString().replace(/[\r]+/g, '').trim().slice(0, 500);
+  } catch {
+    return json({ error: 'Invalid JSON body' }, 400);
+  }
+  if (!text) return json({ error: 'Empty comment' }, 400);
+
+  try {
+    const pitch = await env.DB.prepare('SELECT id FROM pitches WHERE id = ?').bind(id).first();
+    if (!pitch) return json({ error: 'Pitch not found' }, 404);
+
+    const countRow = await env.DB
+      .prepare('SELECT COUNT(*) AS c FROM comments WHERE pitch_id = ?')
+      .bind(id).first();
+    if (countRow && countRow.c >= 200) return json({ error: 'Comment limit reached' }, 429);
+
+    const now = Date.now();
+    await env.DB
+      .prepare('INSERT INTO comments (pitch_id, name, body, created_at) VALUES (?, ?, ?, ?)')
+      .bind(id, name, text, now)
+      .run();
+
+    return json({ ok: true, comment: { name, body: text, created_at: now } });
+  } catch (e) {
+    console.error('[pitch comment] error:', e.message);
+    return json({ error: 'Comment failed', detail: e.message }, 500);
   }
 }

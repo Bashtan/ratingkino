@@ -11,5 +11,12 @@ compatibility_date     = "2024-11-01"
 binding = "MOVIES_CACHE"
 id      = "9b1ddd3fe25446c390304fd3a460606e"
 
+# D1 database for the "Movie Pitch" feature (shared voting + comments).
+# Schema in schema.sql. Bound as DB in functions/api/[[path]].js.
+[[d1_databases]]
+binding       = "DB"
+database_name = "findfilm-pitch"
+database_id   = "261cc44d-36e9-4913-a1c9-b61e1aed949e"
+
 [ai]
 binding = "AI"

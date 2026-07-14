@@ -4,3 +4,8 @@
 # and breaks the internal rewrite). Static assets under /tv/ still take precedence, so
 # this rule only fires for the dynamic /tv/:id paths.
 /tv/*  /tv/  200
+
+# "Movie Pitch" shared voting page: serve /pitch/ for /pitch/:pitchId
+# (200 = rewrite, URL stays /pitch/abc123, page reads the id from the path).
+# Static assets under /pitch/ take precedence, so this only fires for /pitch/:id.
+/pitch/*  /pitch/  200

@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>FindFilm.ai — Movie Pitch</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+  :root {
+    --bg: #07070d;
+    --text: #f4f1ff;
+    --sub: rgba(244,241,255,0.62);
+    --cyan: #06b6d4;
+    --violet: #8b5cf6;
+    --card: rgba(20,20,32,0.72);
+    --line: rgba(255,255,255,0.10);
+    --yes: #22c55e;
+    --maybe: #eab308;
+    --no: #ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    min-height: 100%; width: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Blurred backdrop */
+  #bg {
+    position: fixed; inset: -8%;
+    background-size: cover; background-position: center top;
+    filter: blur(38px) brightness(0.34) saturate(1.15);
+    transform: scale(1.1);
+    transition: opacity 0.8s ease; opacity: 0;
+    z-index: 0;
+  }
+  #bg.ready { opacity: 1; }
+  #scrim {
+    position: fixed; inset: 0; z-index: 1;
+    background:
+      radial-gradient(130% 80% at 50% 0%, rgba(7,7,13,0.30) 0%, rgba(7,7,13,0.80) 55%, rgba(7,7,13,0.97) 100%);
+  }
+  /* Content column */
+  #wrap {
+    position: relative; z-index: 2;
+    max-width: 620px; margin: 0 auto;
+    padding: 26px 18px 90px;
+  }
+  .brandtop {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    color: var(--sub); font-weight: 800; font-size: 14px; letter-spacing: 0.4px;
+    margin-bottom: 20px; opacity: 0.85;
+  }
+  .brandtop b { color: var(--cyan); }
+  .kicker {
+    text-align: center; text-transform: uppercase; letter-spacing: 2px;
+    font-size: 11px; font-weight: 800; color: var(--violet); margin-bottom: 10px;
+  }
+  /* Movie header */
+  .m-head { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 22px; }
+  .m-poster {
+    width: 96px; min-width: 96px; aspect-ratio: 2/3; border-radius: 12px;
+    background: #14141f center/cover no-repeat; box-shadow: 0 12px 34px -10px rgba(0,0,0,0.8);
+    border: 1px solid var(--line);
+  }
+  .m-meta { flex: 1; min-width: 0; padding-top: 4px; }
+  .m-title { font-size: 24px; font-weight: 800; line-height: 1.12; letter-spacing: -0.3px; }
+  .m-year { color: var(--sub); font-size: 15px; font-weight: 600; margin-top: 5px; }
+  .m-prompt { margin-top: 12px; font-size: 14px; color: var(--text); font-weight: 600; opacity: 0.9; }
+  /* Trailer */
+  #player {
+    position: relative; width: 100%; aspect-ratio: 16/9;
+    border-radius: 14px; overflow: hidden; background: #000;
+    box-shadow: 0 20px 60px -20px rgba(0,0,0,0.85), 0 0 0 1px var(--line);
+    margin-bottom: 22px; cursor: pointer;
+  }
+  #player iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  #playThumb { position: absolute; inset: 0; background-size: cover; background-position: center; }
+  #playBtn {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.30);
+  }
+  #playBtn svg { width: 62px; height: 62px; filter: drop-shadow(0 4px 14px rgba(0,0,0,0.6)); }
+  #noTrailer {
+    position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    color: var(--sub); font-size: 14px; font-weight: 600;
+  }
+  /* Section label */
+  .sec-lbl {
+    text-transform: uppercase; letter-spacing: 1.6px; font-size: 11px; font-weight: 800;
+    color: var(--sub); margin: 0 0 12px 2px;
+  }
+  /* Fit summary */
+  #fitBlock { margin-bottom: 26px; display: none; }
+  .fit-card {
+    background: linear-gradient(160deg, rgba(99,102,241,0.14), rgba(139,92,246,0.06));
+    border: 1px solid rgba(129,140,248,0.28); border-radius: 16px; padding: 16px 16px 6px;
+  }
+  .fit-row { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+  .fit-ico { font-size: 18px; line-height: 1.3; min-width: 22px; text-align: center; }
+  .fit-role { font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; display: block; margin-bottom: 3px; }
+  .fit-for  .fit-role { color: #86efac; }
+  .fit-skip .fit-role { color: #fca5a5; }
+  .fit-vibe .fit-role { color: #c4b5fd; }
+  .fit-val { font-size: 13.5px; line-height: 1.5; color: var(--text); font-weight: 500; }
+  /* Vote bar */
+  #voteBlock { margin-bottom: 30px; }
+  .vote-bar { display: flex; gap: 10px; }
+  .vote-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: var(--card); border: 2px solid var(--line); border-radius: 14px;
+    padding: 14px 6px 12px; cursor: pointer; color: var(--text);
+    font-family: inherit; transition: transform 0.12s ease, border-color 0.15s ease, background 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .vote-btn:active { transform: scale(0.96); }
+  .vote-emoji { font-size: 26px; line-height: 1; }
+  .vote-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--sub); }
+  .vote-count { font-size: 19px; font-weight: 800; }
+  .vote-btn.sel[data-v="yes"]   { border-color: var(--yes);   background: rgba(34,197,94,0.14); }
+  .vote-btn.sel[data-v="maybe"] { border-color: var(--maybe); background: rgba(234,179,8,0.14); }
+  .vote-btn.sel[data-v="no"]    { border-color: var(--no);    background: rgba(239,68,68,0.14); }
+  .vote-total { text-align: center; margin-top: 11px; font-size: 12.5px; color: var(--sub); font-weight: 600; }
+  /* Comments */
+  .cmt-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .cmt {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 11px 13px;
+  }
+  .cmt-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+  .cmt-name { font-weight: 800; font-size: 13px; color: var(--text); }
+  .cmt-time { font-size: 11px; color: var(--sub); font-weight: 500; }
+  .cmt-body { font-size: 13.5px; line-height: 1.5; color: var(--text); opacity: 0.92; white-space: pre-wrap; word-break: break-word; }
+  .cmt-empty { color: var(--sub); font-size: 13px; text-align: center; padding: 14px 0; }
+  .cmt-form { display: flex; flex-direction: column; gap: 9px; }
+  .cmt-form input, .cmt-form textarea {
+    width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--line);
+    border-radius: 10px; padding: 11px 13px; color: var(--text); font-family: inherit;
+    font-size: 14px; resize: none;
+  }
+  .cmt-form input:focus, .cmt-form textarea:focus { outline: none; border-color: var(--violet); }
+  .cmt-form textarea { min-height: 62px; }
+  .cmt-send {
+    align-self: flex-end;
+    background: linear-gradient(135deg, var(--violet), var(--cyan));
+    color: #fff; border: 0; border-radius: 10px; padding: 10px 22px;
+    font-family: inherit; font-weight: 800; font-size: 14px; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cmt-send:disabled { opacity: 0.5; cursor: default; }
+  /* Footer */
+  .foot { text-align: center; margin-top: 34px; color: var(--sub); font-size: 12.5px; }
+  .foot a { color: var(--cyan); font-weight: 700; text-decoration: none; }
+  /* States */
+  #loader {
+    position: fixed; inset: 0; z-index: 5;
+    display: flex; align-items: center; justify-content: center; background: var(--bg);
+  }
+  .spin {
+    width: 48px; height: 48px; border-radius: 50%;
+    border: 4px solid rgba(255,255,255,0.14); border-top-color: var(--violet);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #errbox { display: none; position: relative; z-index: 2; text-align: center; padding: 80px 24px; }
+  #errbox h1 { font-size: 26px; margin-bottom: 12px; }
+  #errbox p { color: var(--sub); font-size: 15px; line-height: 1.5; }
+  #errbox a { color: var(--cyan); font-weight: 700; text-decoration: none; }
+</style>
+</head>
+<body>
+  <div id="bg"></div>
+  <div id="scrim"></div>
+
+  <div id="loader"><div class="spin"></div></div>
+
+  <div id="wrap" style="display:none">
+    <div class="brandtop">✦ FindFilm<b>.ai</b></div>
+    <div class="kicker">Movie Pitch · Vote with your friends</div>
+
+    <div class="m-head">
+      <div class="m-poster" id="mPoster"></div>
+      <div class="m-meta">
+        <div class="m-title" id="mTitle"></div>
+        <div class="m-year" id="mYear"></div>
+        <div class="m-prompt">Should we watch this together?</div>
+      </div>
+    </div>
+
+    <div id="player" onclick="playTrailer()">
+      <div id="playThumb"></div>
+      <div id="playBtn">
+        <svg viewBox="0 0 68 48" fill="none"><path d="M66.5 7.7c-.8-2.9-3-5.1-5.9-5.9C55.4.5 34 .5 34 .5S12.6.5 7.4 1.8C4.5 2.6 2.3 4.8 1.5 7.7.2 12.9.2 24 .2 24s0 11.1 1.3 16.3c.8 2.9 3 5.1 5.9 5.9C12.6 47.5 34 47.5 34 47.5s21.4 0 26.6-1.3c2.9-.8 5.1-3 5.9-5.9C67.8 35.1 67.8 24 67.8 24s0-11.1-1.3-16.3z" fill="#f00"/><path d="M27 34l18-10-18-10v20z" fill="#fff"/></svg>
+      </div>
+      <div id="noTrailer">Trailer unavailable</div>
+    </div>
+
+    <div id="fitBlock">
+      <div class="sec-lbl">Spoiler-Free Fit</div>
+      <div class="fit-card">
+        <div class="fit-row fit-for"><span class="fit-ico">👍</span><div><span class="fit-role">For you if</span><span class="fit-val" id="fitFor"></span></div></div>
+        <div class="fit-row fit-skip"><span class="fit-ico">⏭️</span><div><span class="fit-role">Skip if</span><span class="fit-val" id="fitSkip"></span></div></div>
+        <div class="fit-row fit-vibe"><span class="fit-ico">✨</span><div><span class="fit-role">The experience</span><span class="fit-val" id="fitVibe"></span></div></div>
+      </div>
+    </div>
+
+    <div id="voteBlock">
+      <div class="sec-lbl">Cast your vote</div>
+      <div class="vote-bar">
+        <button class="vote-btn" data-v="yes" onclick="vote('yes')"><span class="vote-emoji">👍</span><span class="vote-count" id="cntYes">0</span><span class="vote-label">Yes</span></button>
+        <button class="vote-btn" data-v="maybe" onclick="vote('maybe')"><span class="vote-emoji">🤷</span><span class="vote-count" id="cntMaybe">0</span><span class="vote-label">Maybe</span></button>
+        <button class="vote-btn" data-v="no" onclick="vote('no')"><span class="vote-emoji">👎</span><span class="vote-count" id="cntNo">0</span><span class="vote-label">No</span></button>
+      </div>
+      <div class="vote-total" id="voteTotal"></div>
+    </div>
+
+    <div>
+      <div class="sec-lbl">Discussion</div>
+      <div class="cmt-list" id="cmtList"></div>
+      <div class="cmt-form">
+        <input id="cmtName" type="text" maxlength="40" placeholder="Your name" autocomplete="name">
+        <textarea id="cmtBody" maxlength="500" placeholder="Add a comment…"></textarea>
+        <button class="cmt-send" id="cmtSend" onclick="sendComment()">Post</button>
+      </div>
+    </div>
+
+    <div class="foot">Pitched with <a href="/" target="_blank">FindFilm.ai</a> — find something everyone will love.</div>
+  </div>
+
+  <div id="errbox">
+    <h1>Pitch not found</h1>
+    <p>This link is invalid or has expired.<br><a href="/">Head to FindFilm.ai →</a></p>
+  </div>
+
+<script>
+/* ── "Movie Pitch" shared voting + discussion. Standalone page. ──
+   Reads the pitch id from /pitch/{id} (rewrite), fetches state from the
+   D1-backed /api/pitch/:id endpoint, and polls every 3s. Votes + comments
+   POST to /api/pitch/:id/vote and /api/pitch/:id/comment. */
+(function () {
+  var TIMG_W500  = 'https://image.tmdb.org/t/p/w500';
+  var TIMG_W1280 = 'https://image.tmdb.org/t/p/w1280';
+  var POLL_MS = 3000;
+
+  var PITCH_ID = null;
+  var MOVIE = null;
+  var VOTER = null;
+  var myVote = null;
+  var cmtCount = 0;         // rendered comment count, to detect new ones on poll
+  var pollTimer = null;
+  var trailerKey = null;
+  var trailerLoaded = false;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[<>&"]/g, function (c) {
+      return ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c];
+    });
+  }
+  function getPitchId() {
+    var m = location.pathname.match(/\/pitch\/([A-Za-z0-9]+)/);
+    if (m) return m[1];
+    var q = new URLSearchParams(location.search).get('p');
+    return q && /^[A-Za-z0-9]+$/.test(q) ? q : null;
+  }
+  function getVoter() {
+    var v = null;
+    try { v = localStorage.getItem('ff_pitch_voter'); } catch (e) {}
+    if (!v) {
+      v = (self.crypto && crypto.randomUUID ? crypto.randomUUID() : 'v' + Math.random().toString(36).slice(2) + Date.now().toString(36));
+      try { localStorage.setItem('ff_pitch_voter', v); } catch (e) {}
+    }
+    return v;
+  }
+  function relTime(ts) {
+    var s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+    if (s < 60) return 'just now';
+    var m = Math.floor(s / 60); if (m < 60) return m + 'm ago';
+    var h = Math.floor(m / 60); if (h < 24) return h + 'h ago';
+    var d = Math.floor(h / 24); if (d < 7) return d + 'd ago';
+    return new Date(ts).toLocaleDateString();
+  }
+
+  function showError() {
+    if (pollTimer) clearInterval(pollTimer);
+    $('loader').style.display = 'none';
+    $('wrap').style.display = 'none';
+    $('errbox').style.display = 'block';
+  }
+
+  async function init() {
+    PITCH_ID = getPitchId();
+    if (!PITCH_ID) return showError();
+    VOTER = getVoter();
+    try { myVote = localStorage.getItem('ff_pitch_vote_' + PITCH_ID); } catch (e) {}
+
+    var data;
+    try {
+      var res = await fetch('/api/pitch/' + PITCH_ID);
+      if (!res.ok) throw new Error('pitch ' + res.status);
+      data = await res.json();
+    } catch (e) {
+      console.warn('[pitch] load failed:', e.message);
+      return showError();
+    }
+
+    MOVIE = data.movie || {};
+    renderMovie(MOVIE);
+    renderVotes(data.votes);
+    renderComments(data.comments || []);
+
+    $('loader').style.display = 'none';
+    $('wrap').style.display = 'block';
+
+    // Enrich in parallel: trailer + fit summary (best-effort).
+    loadTrailer(MOVIE.movieId);
+    loadFit(MOVIE);
+
+    // Start polling.
+    pollTimer = setInterval(poll, POLL_MS);
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+      else if (!pollTimer) { poll(); pollTimer = setInterval(poll, POLL_MS); }
+    });
+  }
+
+  function posterUrl(p, size) {
+    if (!p) return null;
+    return p.indexOf('http') === 0 ? p : ('https://image.tmdb.org/t/p/' + size + p);
+  }
+
+  function renderMovie(m) {
+    document.title = (m.title || 'Movie Pitch') + ' — FindFilm.ai';
+    $('mTitle').textContent = m.title || 'Untitled';
+    $('mYear').textContent = m.year || '';
+    if (m.poster) {
+      $('mPoster').style.backgroundImage = 'url("' + posterUrl(m.poster, 'w500') + '")';
+      var bg = $('bg');
+      var url = posterUrl(m.poster, 'w1280');
+      var img = new Image();
+      img.onload = function () { bg.style.backgroundImage = 'url("' + url + '")'; bg.classList.add('ready'); };
+      img.src = url;
+    }
+  }
+
+  function renderVotes(v) {
+    v = v || { yes: 0, maybe: 0, no: 0, total: 0 };
+    $('cntYes').textContent = v.yes || 0;
+    $('cntMaybe').textContent = v.maybe || 0;
+    $('cntNo').textContent = v.no || 0;
+    var total = v.total || 0;
+    $('voteTotal').textContent = total === 0 ? 'Be the first to vote' : (total + (total === 1 ? ' vote so far' : ' votes so far'));
+    document.querySelectorAll('.vote-btn').forEach(function (b) {
+      b.classList.toggle('sel', b.getAttribute('data-v') === myVote);
+    });
+  }
+
+  function renderComments(list) {
+    var el = $('cmtList');
+    if (!list.length) { el.innerHTML = '<div class="cmt-empty">No comments yet — start the conversation.</div>'; cmtCount = 0; return; }
+    el.innerHTML = list.map(function (c) {
+      return '<div class="cmt"><div class="cmt-head"><span class="cmt-name">' + esc(c.name || 'Guest') +
+        '</span><span class="cmt-time">' + relTime(c.created_at) + '</span></div>' +
+        '<div class="cmt-body">' + esc(c.body) + '</div></div>';
+    }).join('');
+    cmtCount = list.length;
+  }
+
+  async function poll() {
+    try {
+      var res = await fetch('/api/pitch/' + PITCH_ID);
+      if (!res.ok) return;
+      var data = await res.json();
+      renderVotes(data.votes);
+      // Only re-render comments if the count changed (avoids clobbering focus).
+      if ((data.comments || []).length !== cmtCount) renderComments(data.comments || []);
+    } catch (e) { /* transient — keep polling */ }
+  }
+
+  window.vote = async function (choice) {
+    if (!['yes', 'maybe', 'no'].includes(choice)) return;
+    var prev = myVote;
+    myVote = choice;
+    try { localStorage.setItem('ff_pitch_vote_' + PITCH_ID, choice); } catch (e) {}
+    // Optimistic highlight.
+    document.querySelectorAll('.vote-btn').forEach(function (b) {
+      b.classList.toggle('sel', b.getAttribute('data-v') === myVote);
+    });
+    try {
+      var res = await fetch('/api/pitch/' + PITCH_ID + '/vote', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voter: VOTER, vote: choice }),
+      });
+      if (res.ok) { var d = await res.json(); renderVotes(d.votes); }
+      else { myVote = prev; renderVotes(); }
+    } catch (e) { myVote = prev; renderVotes(); }
+  };
+
+  window.sendComment = async function () {
+    var nameEl = $('cmtName'), bodyEl = $('cmtBody'), btn = $('cmtSend');
+    var name = nameEl.value.trim(), body = bodyEl.value.trim();
+    if (!body) { bodyEl.focus(); return; }
+    btn.disabled = true;
+    try {
+      var res = await fetch('/api/pitch/' + PITCH_ID + '/comment', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, body: body }),
+      });
+      if (res.ok) {
+        bodyEl.value = '';
+        try { if (name) localStorage.setItem('ff_pitch_name', name); } catch (e) {}
+        await poll();
+      }
+    } catch (e) { /* ignore */ }
+    btn.disabled = false;
+  };
+
+  async function loadTrailer(movieId) {
+    if (!movieId) { $('noTrailer').style.display = 'flex'; $('playBtn').style.display = 'none'; return; }
+    try {
+      var res = await fetch('/api/tmdb/movie/' + movieId + '?append_to_response=videos&language=en-US');
+      if (!res.ok) throw new Error('tmdb ' + res.status);
+      var d = await res.json();
+      var vids = (d.videos && d.videos.results) || [];
+      var trl = vids.find(function (v) { return v.site === 'YouTube' && v.type === 'Trailer'; })
+             || vids.find(function (v) { return v.site === 'YouTube' && v.type === 'Teaser'; })
+             || vids.find(function (v) { return v.site === 'YouTube'; });
+      if (trl) {
+        trailerKey = trl.key;
+        $('playThumb').style.backgroundImage = 'url("https://img.youtube.com/vi/' + trl.key + '/hqdefault.jpg")';
+      } else {
+        $('noTrailer').style.display = 'flex'; $('playBtn').style.display = 'none';
+      }
+    } catch (e) {
+      $('noTrailer').style.display = 'flex'; $('playBtn').style.display = 'none';
+    }
+  }
+
+  window.playTrailer = function () {
+    if (!trailerKey || trailerLoaded) return;
+    trailerLoaded = true;
+    var f = document.createElement('iframe');
+    f.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
+    f.setAttribute('allowfullscreen', '');
+    f.setAttribute('title', 'Trailer');
+    f.src = 'https://www.youtube.com/embed/' + trailerKey +
+      '?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3';
+    $('player').appendChild(f);
+    $('playThumb').style.display = 'none';
+    $('playBtn').style.display = 'none';
+  };
+
+  async function loadFit(m) {
+    if (!m || !m.movieId) return;
+    try {
+      var res = await fetch('/api/fit-summary', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: m.movieId, title: m.title, year: m.year, genres: [], overview: '' }),
+      });
+      if (!res.ok) return;
+      var d = await res.json();
+      if (!d.forYou && !d.skipIf && !d.experience) return;
+      $('fitFor').textContent = d.forYou || '';
+      $('fitSkip').textContent = d.skipIf || '';
+      $('fitVibe').textContent = d.experience || '';
+      $('fitBlock').style.display = 'block';
+    } catch (e) { /* fit is optional */ }
+  }
+
+  // Prefill remembered name.
+  try { var n = localStorage.getItem('ff_pitch_name'); if (n) document.addEventListener('DOMContentLoaded', function () { $('cmtName').value = n; }); } catch (e) {}
+
+  init();
+})();
+</script>
+</body>
+</html>
