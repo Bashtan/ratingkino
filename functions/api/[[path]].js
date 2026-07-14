@@ -43,6 +43,16 @@ export async function onRequest({ request, env, params, waitUntil }) {
     return handleAISearch(request, env, cors);
   }
 
+  /* ── /api/group-picker ── taste-overlap picks for a group via Cloudflare AI ── */
+  if (path === '/group-picker') {
+    return handleGroupPicker(request, env, cors);
+  }
+
+  /* ── /api/fit-summary ── spoiler-free "who's it for" summary (KV-cached) ── */
+  if (path === '/fit-summary') {
+    return handleFitSummary(request, env, cors, waitUntil);
+  }
+
   /* ── /api/geo-lang ── detect language from visitor country ── */
   if (path === '/geo-lang') {
     const country = request.cf?.country || '';
@@ -1045,5 +1055,254 @@ async function handleAISearch(request, env, cors) {
   } catch (e) {
     console.error('[ai-search] error:', e.message);
     return json({ error: 'AI search failed', detail: e.message }, 500);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   GROUP PICKER — taste-overlap movie matchmaking for 2-5 people.
+   Reuses the closed-world KV catalog (same as ai-search). Given each
+   person's free-text taste, the LLM returns the movies with the widest
+   SHARED appeal plus a one-line "overlap" explanation per pick.
+════════════════════════════════════════════════════════════════════ */
+async function handleGroupPicker(request, env, cors) {
+  const json = (body, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+
+  let people = [];
+  try {
+    const body = await request.json();
+    people = Array.isArray(body.people)
+      ? body.people
+          .filter(x => typeof x === 'string')
+          .map(x => x.trim().replace(/[|\n\r]+/g, ' ').slice(0, 120))
+          .filter(Boolean)
+          .slice(0, 5)
+      : [];
+  } catch {
+    return json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  if (people.length < 2) return json({ error: 'Need at least 2 people' }, 400);
+
+  if (!env.AI)           return json({ error: 'AI not available' }, 503);
+  if (!env.MOVIES_CACHE) return json({ error: 'Cache not available', hint: 'Run sync-worker first' }, 503);
+
+  const cached = await env.MOVIES_CACHE.get('new-releases');
+  if (!cached) return json({ error: 'Movie cache empty', hint: 'Daily sync has not run yet' }, 404);
+  const movies = JSON.parse(cached);
+
+  // Compact catalog string, identical format to ai-search.
+  const catalog = movies.map(m => {
+    const genres    = (m.genres || []).join(', ');
+    const desc      = (m.desc || '').slice(0, 140).replace(/[|\n]/g, ' ');
+    const dir       = m.director ? `Dir: ${m.director}. ` : '';
+    const titlePart = m.titleOrig && m.titleOrig !== m.title
+      ? `${m.title} / ${m.titleOrig}`
+      : m.title;
+    return `${m.id}|${titlePart} (${m.year || '?'})|${genres}|${dir}${desc}`;
+  }).join('\n');
+
+  const personLabels = people.map((_, i) => `Person ${i + 1}`);
+  const peopleBlock  = people.map((p, i) => `  ${personLabels[i]} likes: ${p}`).join('\n');
+
+  const systemPrompt =
+    'You are a group movie-night matchmaker. ' +
+    'Respond with valid JSON only — no markdown fences, no extra text. ' +
+    'You are given the individual tastes of several people and a movie catalog. ' +
+    'Pick the 4-6 movies from the catalog that MAXIMIZE SHARED appeal — the intersection ' +
+    'everyone in the group can enjoy together, not just one person\'s personal favorite. ' +
+    'Heavily penalize picks that would delight one person but bore or alienate another. ' +
+    'Favor crowd-pleasers that bridge the different tastes. ' +
+    'For every pick, write a short "overlap" sentence (max 15-20 words) explaining why it ' +
+    'works for the WHOLE group, and list which people it most appeals to. ' +
+    'Also give a one-line "groupSummary" reading the group\'s combined taste.';
+
+  const userPrompt =
+    `The group (${people.length} people):\n${peopleBlock}\n\n` +
+    `Catalog (format: id|title/orig (year)|genres|description):\n\n${catalog}\n\n` +
+    `Return JSON:\n` +
+    `{\n` +
+    `  "results": [\n` +
+    `    { "id": integer, "overlap": "why this works for the whole group", "appeals": ["Person 1", "Person 3"] },\n` +
+    `    ...\n` +
+    `  ],\n` +
+    `  "groupSummary": "one-line read of the group's combined taste"\n` +
+    `}\n` +
+    `Pick 4-6 movies, best shared match first. Only use IDs from the catalog. ` +
+    `"appeals" MUST be a subset of: ${personLabels.join(', ')}. ` +
+    `Never return an empty results array — if tastes clash, pick the safest crowd-pleasers.`;
+
+  try {
+    const aiResp = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userPrompt   },
+      ],
+      max_tokens:  1400,
+      temperature: 0.2,
+      stream:      false,
+    });
+
+    let text = '';
+    if (aiResp?.choices?.[0]?.message?.content) text = aiResp.choices[0].message.content;
+    else if (typeof aiResp?.response === 'string') text = aiResp.response;
+    else if (typeof aiResp === 'string') text = aiResp;
+    else throw new Error(`Unexpected AI response: ${JSON.stringify(aiResp).slice(0, 200)}`);
+
+    text = text.trim();
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON object found in AI response');
+    const result = JSON.parse(match[0]);
+
+    const validIds   = new Set(movies.map(m => m.id));
+    const labelSet    = new Set(personLabels);
+    const rawResults = Array.isArray(result.results) ? result.results : [];
+    const seen    = new Set();
+    const ids     = [];
+    const reasons = {};
+    const appeals = {};
+
+    for (const r of rawResults) {
+      const id = Number(r?.id);
+      if (!Number.isInteger(id) || !validIds.has(id) || seen.has(id)) continue;
+      seen.add(id);
+      ids.push(id);
+      if (typeof r.overlap === 'string' && r.overlap.trim()) {
+        reasons[id] = r.overlap.trim().replace(/[\n\r]+/g, ' ').slice(0, 160);
+      }
+      if (Array.isArray(r.appeals)) {
+        const clean = r.appeals
+          .filter(a => typeof a === 'string' && labelSet.has(a.trim()))
+          .map(a => a.trim())
+          .slice(0, 5);
+        if (clean.length) appeals[id] = clean;
+      }
+      if (ids.length >= 6) break;
+    }
+
+    const groupSummary = typeof result.groupSummary === 'string'
+      ? result.groupSummary.trim().replace(/[\n\r]+/g, ' ').slice(0, 160)
+      : null;
+
+    return json({ ids, reasons, appeals, groupSummary, message: null });
+
+  } catch (e) {
+    console.error('[group-picker] error:', e.message);
+    return json({ error: 'Group picker failed', detail: e.message }, 500);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   FIT SUMMARY — spoiler-free "who is this for / who should skip / what
+   experience it delivers" for ANY movie. Generated on demand by the LLM
+   and cached in KV (key fit:{id}) so repeat opens are instant.
+════════════════════════════════════════════════════════════════════ */
+async function handleFitSummary(request, env, cors, waitUntil) {
+  const json = (body, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+
+  let id, title, year, genres, overview;
+  try {
+    const body = await request.json();
+    id       = Number(body.id);
+    title    = (body.title || '').toString().trim().slice(0, 200);
+    year     = (body.year || '').toString().trim().slice(0, 8);
+    genres   = Array.isArray(body.genres)
+      ? body.genres.filter(g => typeof g === 'string').map(g => g.trim()).slice(0, 6).join(', ')
+      : (body.genres || '').toString().trim().slice(0, 80);
+    overview = (body.overview || '').toString().trim().replace(/[\n\r]+/g, ' ').slice(0, 600);
+  } catch {
+    return json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  if (!Number.isInteger(id) || !title) return json({ error: 'Missing id or title' }, 400);
+  if (!env.AI) return json({ error: 'AI not available' }, 503);
+
+  // ── KV cache lookup ──────────────────────────────────────────────
+  const cacheKey = `fit:${id}`;
+  if (env.MOVIES_CACHE) {
+    try {
+      const hit = await env.MOVIES_CACHE.get(cacheKey);
+      if (hit) {
+        const data = JSON.parse(hit);
+        return json({ ...data, cached: true });
+      }
+    } catch {}
+  }
+
+  const systemPrompt =
+    'You write spoiler-free viewing guidance for a movie discovery app. ' +
+    'Respond with valid JSON only — no markdown fences, no extra text. ' +
+    'NEVER reveal plot twists, character fates, surprises, or the ending. ' +
+    'Focus only on tone, pace, genre, mood, and who will enjoy it. ' +
+    'Return exactly this JSON: ' +
+    '{ "forYou": "who will love this, one concrete sentence", ' +
+    '"skipIf": "who should skip it, one honest sentence", ' +
+    '"experience": "the kind of experience it delivers (tone/pace/feel), one sentence" }. ' +
+    'Each value MUST be a single sentence, max 140 characters, concrete and punchy — ' +
+    'no generic filler like "if you like good movies".';
+
+  const userPrompt =
+    `Movie: "${title}"${year ? ` (${year})` : ''}\n` +
+    (genres ? `Genres: ${genres}\n` : '') +
+    (overview ? `Overview: ${overview}\n` : '') +
+    `\nWrite the spoiler-free fit guidance as JSON.`;
+
+  try {
+    const aiResp = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userPrompt   },
+      ],
+      max_tokens:  350,
+      temperature: 0.3,
+      stream:      false,
+    });
+
+    let text = '';
+    if (aiResp?.choices?.[0]?.message?.content) text = aiResp.choices[0].message.content;
+    else if (typeof aiResp?.response === 'string') text = aiResp.response;
+    else if (typeof aiResp === 'string') text = aiResp;
+    else throw new Error(`Unexpected AI response: ${JSON.stringify(aiResp).slice(0, 200)}`);
+
+    text = text.trim();
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON object found in AI response');
+    const result = JSON.parse(match[0]);
+
+    const clean = s => typeof s === 'string'
+      ? s.trim().replace(/[\n\r]+/g, ' ').slice(0, 160)
+      : '';
+    const forYou     = clean(result.forYou);
+    const skipIf     = clean(result.skipIf);
+    const experience = clean(result.experience);
+
+    if (!forYou && !skipIf && !experience) throw new Error('Empty fit summary');
+
+    const payload = { id, forYou, skipIf, experience };
+
+    // ── Cache write (30-day TTL), non-blocking ──────────────────────
+    if (env.MOVIES_CACHE) {
+      const write = env.MOVIES_CACHE.put(cacheKey, JSON.stringify(payload), {
+        expirationTtl: 60 * 60 * 24 * 30,
+      }).catch(() => {});
+      if (waitUntil) waitUntil(write);
+    }
+
+    return json({ ...payload, cached: false });
+
+  } catch (e) {
+    console.error('[fit-summary] error:', e.message);
+    return json({ error: 'Fit summary failed', detail: e.message }, 500);
   }
 }

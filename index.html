@@ -468,6 +468,19 @@ header {
 }
 .btn-tonight:hover { transform: translateY(-2px) scale(1.04); background: rgba(124,58,237,0.22); box-shadow: 0 6px 20px rgba(124,58,237,0.4); }
 
+/* Group Picker launcher — cyan accent, distinct from the purple Tonight? button. */
+.btn-group {
+  display: flex; align-items: center; gap: 6px;
+  height: 38px; padding: 0 14px;
+  background: rgba(34,211,238,0.10);
+  border: 1px solid rgba(34,211,238,0.42); border-radius: 9px;
+  color: #67e8f9; font-weight: 800; font-size: 11px;
+  letter-spacing: 1px; text-transform: uppercase;
+  font-family: 'Montserrat', sans-serif; cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s, background 0.2s;
+}
+.btn-group:hover { transform: translateY(-2px) scale(1.04); background: rgba(34,211,238,0.2); box-shadow: 0 6px 20px rgba(34,211,238,0.35); }
+
 /* ─── FILTER BAR (Netflix-style) ─────────────── */
 .filters-bar {
   position: sticky; top: 64px; z-index: 99;
@@ -884,6 +897,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), border-color 0.2s, background 0.2s;
 }
 .wiz-opt:hover { transform: translateY(-3px); border-color: var(--purple); background: rgba(124,58,237,0.12); }
+.wiz-opt.selected { border-color: var(--purple); background: rgba(124,58,237,0.18); box-shadow: 0 0 0 1px var(--purple) inset; }
 .wiz-opt-emoji { font-size: 28px; line-height: 1; }
 .wiz-opt-label { font-size: 13px; font-weight: 700; }
 .wiz-nav { display: flex; justify-content: center; gap: 12px; }
@@ -902,6 +916,94 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .wiz-restart:hover { background: rgba(124,58,237,0.24); }
 .wiz-loading { text-align: center; padding: 40px 0; color: var(--text-sub); font-size: 14px; }
+
+/* ─── GROUP PICKER ─── reuses .wiz-overlay/.wiz-modal, cyan-accented ── */
+.group-modal { border-color: rgba(34,211,238,0.25); }
+.group-head { text-align: center; margin-bottom: 6px; }
+.group-title { font-size: 22px; font-weight: 800; font-family: 'Montserrat', sans-serif; }
+.group-sub { font-size: 13px; color: var(--text-sub); text-align: center; margin-bottom: 22px; }
+.group-people { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.group-person { display: flex; align-items: center; gap: 9px; }
+.group-person-num {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(34,211,238,0.14); border: 1px solid rgba(34,211,238,0.4);
+  color: #67e8f9; font-size: 12px; font-weight: 800;
+}
+.group-person input {
+  flex: 1; height: 42px; padding: 0 13px;
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid rgba(255,255,255,0.1); border-radius: 10px;
+  color: var(--text); font-size: 14px; font-family: inherit;
+  transition: border-color 0.2s, background 0.2s;
+}
+.group-person input:focus { outline: none; border-color: rgba(34,211,238,0.55); background: rgba(34,211,238,0.06); }
+.group-person-rm {
+  flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px;
+  background: none; border: 1px solid rgba(255,255,255,0.12);
+  color: var(--text-sub); font-size: 15px; cursor: pointer; line-height: 1;
+  transition: color 0.18s, border-color 0.18s;
+}
+.group-person-rm:hover { color: #fca5a5; border-color: rgba(248,113,113,0.5); }
+.group-add {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 1px dashed rgba(34,211,238,0.4); border-radius: 9px;
+  color: #67e8f9; font-size: 12px; font-weight: 700; padding: 9px 16px; cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.group-add:hover { background: rgba(34,211,238,0.08); border-color: rgba(34,211,238,0.6); }
+.group-add:disabled { opacity: 0.4; cursor: not-allowed; }
+.group-actions { display: flex; justify-content: center; margin-top: 20px; }
+.group-find {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: linear-gradient(135deg, #06b6d4, #3b82f6);
+  border: none; border-radius: 11px;
+  color: #fff; font-size: 13px; font-weight: 800; letter-spacing: 0.5px;
+  padding: 13px 30px; cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s;
+}
+.group-find:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 8px 24px rgba(6,182,212,0.4); }
+.group-find:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.group-summary {
+  background: rgba(34,211,238,0.09); border: 1px solid rgba(34,211,238,0.3);
+  border-radius: 12px; padding: 12px 16px; margin-bottom: 18px;
+  font-size: 14px; line-height: 1.5; color: rgba(230,250,255,0.92); text-align: center;
+}
+.group-results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.group-loading { text-align: center; padding: 40px 0; color: var(--text-sub); font-size: 14px; }
+.group-restart {
+  display: block; margin: 22px auto 0;
+  background: rgba(34,211,238,0.12); border: 1px solid rgba(34,211,238,0.42); border-radius: 9px;
+  color: #67e8f9; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  padding: 10px 22px; cursor: pointer; transition: background 0.2s;
+}
+.group-restart:hover { background: rgba(34,211,238,0.22); }
+
+/* ─── TASTE ONBOARDING QUIZ ─── reuses .wiz-* option/question styles ── */
+.onboard-quiz-modal { border-color: rgba(124,58,237,0.3); }
+.onboard-done { text-align: center; padding: 8px 0 4px; }
+.onboard-done-emoji { font-size: 54px; line-height: 1; margin-bottom: 12px; animation: fitFade 0.5s ease; }
+.onboard-done-title { font-size: 22px; font-weight: 800; font-family: 'Montserrat', sans-serif; margin-bottom: 8px; }
+.onboard-done-sub { font-size: 14px; color: var(--text-sub); line-height: 1.5; margin-bottom: 20px; }
+.onboard-lb {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.14);
+  border-radius: 11px; padding: 12px 14px; margin: 0 0 20px;
+  opacity: 0.6; cursor: not-allowed;
+}
+.onboard-lb-ico { font-size: 20px; }
+.onboard-lb-txt { display: flex; flex-direction: column; gap: 1px; text-align: left; }
+.onboard-lb-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.onboard-lb-soon { font-size: 11px; color: var(--text-sub); }
+.onboard-finish {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: linear-gradient(135deg, #7c3aed, #22d3ee);
+  border: none; border-radius: 11px;
+  color: #fff; font-size: 13px; font-weight: 800; letter-spacing: 0.5px;
+  padding: 13px 32px; cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s;
+}
+.onboard-finish:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 8px 24px rgba(124,58,237,0.45); }
 
 /* ─── MOVIE MODAL ─────────────────────────────── */
 .modal {
@@ -1183,6 +1285,41 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   transition: color 0.18s;
 }
 .m-desc-toggle:hover { color: var(--text); }
+
+/* ── Spoiler-Free Fit summary ── indigo-tinted panel, visually distinct
+   from the plain synopsis above it. Three labelled rows. ── */
+.fit-lbl { display: flex; align-items: center; gap: 7px; }
+.fit-summary {
+  background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08));
+  border: 1px solid rgba(129,140,248,0.28);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 22px;
+  display: flex; flex-direction: column; gap: 12px;
+  animation: fitFade 0.4s ease;
+}
+@keyframes fitFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.fit-row { display: flex; align-items: flex-start; gap: 11px; }
+.fit-ico { font-size: 17px; line-height: 1.35; flex-shrink: 0; width: 22px; text-align: center; }
+.fit-text { display: flex; flex-direction: column; gap: 1px; }
+.fit-role {
+  font-size: 9px; letter-spacing: 1.6px; text-transform: uppercase;
+  font-weight: 700; color: #a5b4fc;
+}
+.fit-for  .fit-role { color: #86efac; }
+.fit-skip .fit-role { color: #fca5a5; }
+.fit-vibe .fit-role { color: #c4b5fd; }
+.fit-val { font-size: 13.5px; line-height: 1.55; color: rgba(240,230,255,0.9); }
+/* Loading skeleton: shimmering bars while the LLM responds. */
+.fit-summary.fit-loading .fit-val {
+  color: transparent; border-radius: 5px; min-height: 13px; width: 82%;
+  background: linear-gradient(90deg, rgba(129,140,248,0.14) 25%, rgba(129,140,248,0.28) 50%, rgba(129,140,248,0.14) 75%);
+  background-size: 200% 100%;
+  animation: fitShimmer 1.3s ease-in-out infinite;
+}
+.fit-summary.fit-loading .fit-row:nth-child(2) .fit-val { width: 68%; }
+.fit-summary.fit-loading .fit-row:nth-child(3) .fit-val { width: 74%; }
+@keyframes fitShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .meta-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-bottom: 22px;
 }
@@ -1946,6 +2083,8 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   /* Tonight? wizard stays reachable on mobile, but icon-only to save header space */
   .btn-tonight        { padding: 0 11px; }
   .btn-tonight span   { display: none; }
+  .btn-group          { padding: 0 11px; }
+  .btn-group span     { display: none; }
 
   /* Keep floating random button */
   .fab-random { display: flex; }
@@ -1994,6 +2133,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   .wiz-q { font-size: 19px; }
   .wiz-opt { width: calc(50% - 6px); }
   .wiz-results { grid-template-columns: 1fr; }
+  .group-results { grid-template-columns: 1fr; }
 
   /* Modal: sheet sliding up from bottom */
   .overlay { padding: 0; align-items: flex-end; }
@@ -2190,6 +2330,13 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   font-family: 'Montserrat', sans-serif; letter-spacing: 0.6px;
 }
 .feed-row-badge svg { opacity: 0.85; }
+.foryou-refine {
+  margin-left: auto; background: none; border: 1px solid rgba(124,58,237,0.4);
+  border-radius: 7px; color: #c4b5fd; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.5px; padding: 4px 10px; cursor: pointer;
+  font-family: 'Montserrat', sans-serif; transition: background 0.18s, border-color 0.18s;
+}
+.foryou-refine:hover { background: rgba(124,58,237,0.14); border-color: rgba(124,58,237,0.65); }
 .feed-scroll {
   display: flex; gap: 12px; overflow-x: auto;
   padding: 4px 18px 12px; scroll-behavior: smooth;
@@ -2971,6 +3118,13 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .fv-cta:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(229,9,20,0.55); }
 @keyframes fvDismissIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.fv-skip-link {
+  display: block; margin: 14px auto 0; background: none; border: none;
+  color: var(--text-sub); font-size: 12.5px; font-weight: 600; cursor: pointer;
+  letter-spacing: 0.3px; text-decoration: underline; text-underline-offset: 3px;
+  animation: fvDismissIn 0.5s ease 3.7s both; transition: color 0.18s;
+}
+.fv-skip-link:hover { color: var(--text); }
 
 /* ─── iOS PWA Install Prompt ─────────────────────── */
 .ios-pwa-prompt {
@@ -3147,6 +3301,10 @@ if ('serviceWorker' in navigator) {
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         <span data-i18n="tonight.launch">Tonight?</span>
       </button>
+      <button class="btn-group" onclick="openGroupPicker()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span data-i18n="group.launch">Group</span>
+      </button>
       <button class="btn-random" onclick="randomMovie()">
         <svg class="rnd-spark" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
         <span data-i18n="btn.random">RandomAI</span>
@@ -3231,7 +3389,8 @@ if ('serviceWorker' in navigator) {
         <span data-i18n-html="onboard.prop3">AI search that understands <strong>moods &amp; vibes</strong></span>
       </div>
     </div>
-    <button class="fv-cta" onclick="dismissFirstVisit()" data-i18n="onboard.cta">Let's go! →</button>
+    <button class="fv-cta" onclick="startOnboardFromIntro()" data-i18n="onboard.personalize">Personalize in 30s →</button>
+    <button class="fv-skip-link" onclick="dismissFirstVisit()" data-i18n="onboard.browseNow">Skip — just browse</button>
   </div>
 </div>
 
@@ -3395,6 +3554,7 @@ if ('serviceWorker' in navigator) {
         <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
         Based on your taste
       </span>
+      <button class="foryou-refine" onclick="openOnboardQuiz()" data-i18n="onboard.refine">Refine taste</button>
     </div>
     <div class="feed-scroll" id="scrollForYou"></div>
   </div>
@@ -3519,6 +3679,31 @@ if ('serviceWorker' in navigator) {
         <div class="m-desc" id="mDesc"></div>
         <button class="m-desc-toggle" id="mDescToggle" onclick="toggleSynopsis()" aria-expanded="false" style="display:none"></button>
 
+        <div class="section-lbl fit-lbl" id="mFitLbl" data-i18n="modal.fitSummary" style="display:none">Spoiler-Free Fit</div>
+        <div class="fit-summary" id="mFitSummary" style="display:none">
+          <div class="fit-row fit-for">
+            <span class="fit-ico">👍</span>
+            <div class="fit-text">
+              <span class="fit-role" data-i18n="modal.fitFor">For you if</span>
+              <span class="fit-val" id="fitFor"></span>
+            </div>
+          </div>
+          <div class="fit-row fit-skip">
+            <span class="fit-ico">⏭️</span>
+            <div class="fit-text">
+              <span class="fit-role" data-i18n="modal.fitSkip">Skip if</span>
+              <span class="fit-val" id="fitSkip"></span>
+            </div>
+          </div>
+          <div class="fit-row fit-vibe">
+            <span class="fit-ico">✨</span>
+            <div class="fit-text">
+              <span class="fit-role" data-i18n="modal.fitVibe">The experience</span>
+              <span class="fit-val" id="fitVibe"></span>
+            </div>
+          </div>
+        </div>
+
         <div class="section-lbl" data-i18n="modal.details">Details</div>
         <div class="meta-grid" id="mMeta"></div>
 
@@ -3620,6 +3805,23 @@ if ('serviceWorker' in navigator) {
     <button class="m-close" onclick="closeWizard()" aria-label="Close">✕</button>
     <div class="wiz-progress" id="wizProgress"></div>
     <div class="wiz-body" id="wizBody"></div>
+  </div>
+</div>
+
+<!-- ════════════ GROUP PICKER ════════════ -->
+<div class="wiz-overlay group-overlay" id="groupOverlay" onclick="groupOverlayClick(event)">
+  <div class="wiz-modal group-modal" id="groupModal">
+    <button class="m-close" onclick="closeGroupPicker()" aria-label="Close">✕</button>
+    <div class="group-body" id="groupBody"></div>
+  </div>
+</div>
+
+<!-- ════════════ TASTE ONBOARDING QUIZ ════════════ -->
+<div class="wiz-overlay onboard-quiz-overlay" id="onboardQuizOverlay" onclick="onboardOverlayClick(event)">
+  <div class="wiz-modal onboard-quiz-modal" id="onboardQuizModal">
+    <button class="m-close" onclick="closeOnboardQuiz()" aria-label="Close">✕</button>
+    <div class="wiz-progress" id="onboardProgress"></div>
+    <div class="wiz-body" id="onboardBody"></div>
   </div>
 </div>
 
@@ -3837,6 +4039,55 @@ const TRANSLATIONS = {
     'onboard.prop2':       'Instantly see where to stream <strong>in your region</strong>',
     'onboard.prop3':       'AI search that understands <strong>moods &amp; vibes</strong>',
     'onboard.cta':         'Let\'s go! →',
+    // Spoiler-Free Fit summary (movie modal)
+    'modal.fitSummary':    'Spoiler-Free Fit',
+    'modal.fitFor':        'For you if',
+    'modal.fitSkip':       'Skip if',
+    'modal.fitVibe':       'The experience',
+    'modal.fitLoading':    'Reading the vibe…',
+    // Group Picker
+    'group.launch':        'Group',
+    'group.title':         'Group Movie Night',
+    'group.sub':           'Add what each person loves — we\'ll find the perfect overlap.',
+    'group.personPh':      'e.g. loves heist thrillers & witty dialogue',
+    'group.addPerson':     'Add person',
+    'group.find':          'Find our movie',
+    'group.results':       'Your group picks',
+    'group.loading':       'Finding the perfect overlap…',
+    'group.empty':         'Couldn\'t find a match. Try describing tastes differently.',
+    'group.restart':       'Start over',
+    'group.needTwo':       'Add at least 2 people.',
+    'group.appealsLabel':  'Appeals to',
+    // Taste onboarding quiz
+    'onboard.personalize': 'Personalize in 30s →',
+    'onboard.browseNow':   'Skip — just browse',
+    'onboard.refine':      'Refine taste',
+    'onboard.step':        'Step {n} of {total}',
+    'onboard.finish':      'See my picks',
+    'onboard.doneTitle':   'All set!',
+    'onboard.doneSub':     'We\'ve tuned your "For You" row to match your taste.',
+    'onboard.letterboxd':  'Import from Letterboxd',
+    'onboard.letterboxdSoon': 'Coming soon',
+    'onboard.q.pace':      'Your ideal pace?',
+    'onboard.q.ending':    'Best kind of ending?',
+    'onboard.q.realism':   'How real should it feel?',
+    'onboard.q.tone':      'Pick a tone.',
+    'onboard.q.era':       'Which era?',
+    'onboard.pace.slow':       'Slow-burn',
+    'onboard.pace.balanced':   'Balanced',
+    'onboard.pace.nonstop':    'Non-stop',
+    'onboard.ending.happy':       'Happy',
+    'onboard.ending.twist':       'Twist',
+    'onboard.ending.bittersweet': 'Bittersweet',
+    'onboard.realism.grounded':    'Grounded',
+    'onboard.realism.someFantasy': 'A bit fantastical',
+    'onboard.realism.escapism':    'Full escapism',
+    'onboard.tone.light':   'Light & fun',
+    'onboard.tone.dark':    'Dark & intense',
+    'onboard.tone.thought': 'Thought-provoking',
+    'onboard.era.modern':   'Modern only',
+    'onboard.era.classics': 'Timeless classics',
+    'onboard.era.noPref':   'No preference',
     // AI thinking phrases
     'ai.thinking.0':       'Analyzing your prompt…',
     'ai.thinking.1':       'Scanning 240,000+ films…',
@@ -4036,6 +4287,55 @@ const TRANSLATIONS = {
     'onboard.prop2':       'Ve al instante dónde transmitir <strong>en tu región</strong>',
     'onboard.prop3':       'Búsqueda IA que entiende <strong>estados de ánimo</strong>',
     'onboard.cta':         '¡Vamos! →',
+    // Spoiler-Free Fit summary (movie modal)
+    'modal.fitSummary':    'Sin spoilers',
+    'modal.fitFor':        'Para ti si',
+    'modal.fitSkip':       'Sáltatela si',
+    'modal.fitVibe':       'La experiencia',
+    'modal.fitLoading':    'Captando la vibra…',
+    // Group Picker
+    'group.launch':        'Grupo',
+    'group.title':         'Noche de cine en grupo',
+    'group.sub':           'Añade lo que le encanta a cada uno: encontraremos la coincidencia perfecta.',
+    'group.personPh':      'p. ej. le encantan los thrillers de atracos y los diálogos ingeniosos',
+    'group.addPerson':     'Añadir persona',
+    'group.find':          'Encontrar nuestra película',
+    'group.results':       'Elecciones del grupo',
+    'group.loading':       'Buscando la coincidencia perfecta…',
+    'group.empty':         'No encontramos coincidencia. Intenta describir los gustos de otra forma.',
+    'group.restart':       'Empezar de nuevo',
+    'group.needTwo':       'Añade al menos 2 personas.',
+    'group.appealsLabel':  'Atrae a',
+    // Taste onboarding quiz
+    'onboard.personalize': 'Personalizar en 30s →',
+    'onboard.browseNow':   'Omitir — solo explorar',
+    'onboard.refine':      'Afinar gustos',
+    'onboard.step':        'Paso {n} de {total}',
+    'onboard.finish':      'Ver mis elecciones',
+    'onboard.doneTitle':   '¡Listo!',
+    'onboard.doneSub':     'Hemos ajustado tu fila "Para ti" a tu gusto.',
+    'onboard.letterboxd':  'Importar de Letterboxd',
+    'onboard.letterboxdSoon': 'Próximamente',
+    'onboard.q.pace':      '¿Tu ritmo ideal?',
+    'onboard.q.ending':    '¿Mejor tipo de final?',
+    'onboard.q.realism':   '¿Cuán real debe sentirse?',
+    'onboard.q.tone':      'Elige un tono.',
+    'onboard.q.era':       '¿Qué época?',
+    'onboard.pace.slow':       'Pausada',
+    'onboard.pace.balanced':   'Equilibrada',
+    'onboard.pace.nonstop':    'Sin parar',
+    'onboard.ending.happy':       'Feliz',
+    'onboard.ending.twist':       'Giro inesperado',
+    'onboard.ending.bittersweet': 'Agridulce',
+    'onboard.realism.grounded':    'Realista',
+    'onboard.realism.someFantasy': 'Algo fantástica',
+    'onboard.realism.escapism':    'Evasión total',
+    'onboard.tone.light':   'Ligero y divertido',
+    'onboard.tone.dark':    'Oscuro e intenso',
+    'onboard.tone.thought': 'Que da que pensar',
+    'onboard.era.modern':   'Solo moderno',
+    'onboard.era.classics': 'Clásicos atemporales',
+    'onboard.era.noPref':   'Sin preferencia',
     'ai.thinking.0':       'Analizando tu estado de ánimo…',
     'ai.thinking.1':       'Escaneando 240.000 películas…',
     'ai.thinking.2':       'Calculando puntuaciones de coincidencia…',
@@ -4230,6 +4530,55 @@ const TRANSLATIONS = {
     'onboard.prop2':       'Voyez instantanément où regarder <strong>dans votre région</strong>',
     'onboard.prop3':       'Recherche IA qui comprend <strong>les ambiances &amp; les vibes</strong>',
     'onboard.cta':         'C\'est parti ! →',
+    // Spoiler-Free Fit summary (movie modal)
+    'modal.fitSummary':    'Sans spoilers',
+    'modal.fitFor':        'Pour vous si',
+    'modal.fitSkip':       'À éviter si',
+    'modal.fitVibe':       'L\'expérience',
+    'modal.fitLoading':    'On capte l\'ambiance…',
+    // Group Picker
+    'group.launch':        'Groupe',
+    'group.title':         'Soirée ciné en groupe',
+    'group.sub':           'Indiquez ce que chacun adore — on trouvera le film parfait pour tous.',
+    'group.personPh':      'ex. adore les thrillers de casse et les dialogues malins',
+    'group.addPerson':     'Ajouter une personne',
+    'group.find':          'Trouver notre film',
+    'group.results':       'Vos choix de groupe',
+    'group.loading':       'Recherche du film idéal…',
+    'group.empty':         'Aucune correspondance. Décrivez les goûts autrement.',
+    'group.restart':       'Recommencer',
+    'group.needTwo':       'Ajoutez au moins 2 personnes.',
+    'group.appealsLabel':  'Plaît à',
+    // Taste onboarding quiz
+    'onboard.personalize': 'Personnaliser en 30s →',
+    'onboard.browseNow':   'Ignorer — juste explorer',
+    'onboard.refine':      'Affiner mes goûts',
+    'onboard.step':        'Étape {n} sur {total}',
+    'onboard.finish':      'Voir mes choix',
+    'onboard.doneTitle':   'C\'est prêt !',
+    'onboard.doneSub':     'Nous avons ajusté votre rangée « Pour vous » à vos goûts.',
+    'onboard.letterboxd':  'Importer depuis Letterboxd',
+    'onboard.letterboxdSoon': 'Bientôt disponible',
+    'onboard.q.pace':      'Votre rythme idéal ?',
+    'onboard.q.ending':    'Quel type de fin ?',
+    'onboard.q.realism':   'À quel point réaliste ?',
+    'onboard.q.tone':      'Choisissez un ton.',
+    'onboard.q.era':       'Quelle époque ?',
+    'onboard.pace.slow':       'Lent et posé',
+    'onboard.pace.balanced':   'Équilibré',
+    'onboard.pace.nonstop':    'Sans répit',
+    'onboard.ending.happy':       'Heureuse',
+    'onboard.ending.twist':       'Coup de théâtre',
+    'onboard.ending.bittersweet': 'Douce-amère',
+    'onboard.realism.grounded':    'Réaliste',
+    'onboard.realism.someFantasy': 'Un peu fantastique',
+    'onboard.realism.escapism':    'Évasion totale',
+    'onboard.tone.light':   'Léger et fun',
+    'onboard.tone.dark':    'Sombre et intense',
+    'onboard.tone.thought': 'Qui fait réfléchir',
+    'onboard.era.modern':   'Uniquement moderne',
+    'onboard.era.classics': 'Classiques intemporels',
+    'onboard.era.noPref':   'Peu importe',
     'ai.thinking.0':       'Analyse de votre humeur…',
     'ai.thinking.1':       'Scan de 240 000 films…',
     'ai.thinking.2':       'Calcul des scores de correspondance…',
@@ -4424,6 +4773,55 @@ const TRANSLATIONS = {
     'onboard.prop2':       '即时查看<strong>在你所在地区</strong>的播放平台',
     'onboard.prop3':       '懂得<strong>情绪与氛围</strong>的 AI 搜索',
     'onboard.cta':         '开始探索！→',
+    // Spoiler-Free Fit summary (movie modal)
+    'modal.fitSummary':    '无剧透匹配',
+    'modal.fitFor':        '适合你，如果',
+    'modal.fitSkip':       '跳过，如果',
+    'modal.fitVibe':       '观影体验',
+    'modal.fitLoading':    '正在感受氛围…',
+    // Group Picker
+    'group.launch':        '群组',
+    'group.title':         '群组电影之夜',
+    'group.sub':           '添加每个人喜欢的类型——我们会找到最合适的交集。',
+    'group.personPh':      '例如：喜欢劫案惊悚片和机智对白',
+    'group.addPerson':     '添加成员',
+    'group.find':          '找到我们的电影',
+    'group.results':       '你们的群组精选',
+    'group.loading':       '正在寻找最佳交集…',
+    'group.empty':         '未找到匹配。请换种方式描述口味。',
+    'group.restart':       '重新开始',
+    'group.needTwo':       '至少添加 2 人。',
+    'group.appealsLabel':  '吸引',
+    // Taste onboarding quiz
+    'onboard.personalize': '30秒个性化 →',
+    'onboard.browseNow':   '跳过——直接浏览',
+    'onboard.refine':      '调整口味',
+    'onboard.step':        '第 {n} 步，共 {total} 步',
+    'onboard.finish':      '查看我的精选',
+    'onboard.doneTitle':   '搞定！',
+    'onboard.doneSub':     '我们已根据你的口味调整了"为你推荐"行。',
+    'onboard.letterboxd':  '从 Letterboxd 导入',
+    'onboard.letterboxdSoon': '即将推出',
+    'onboard.q.pace':      '你理想的节奏？',
+    'onboard.q.ending':    '最喜欢哪种结局？',
+    'onboard.q.realism':   '要多真实？',
+    'onboard.q.tone':      '选择一种基调。',
+    'onboard.q.era':       '哪个年代？',
+    'onboard.pace.slow':       '缓慢铺陈',
+    'onboard.pace.balanced':   '均衡',
+    'onboard.pace.nonstop':    '一刻不停',
+    'onboard.ending.happy':       '圆满',
+    'onboard.ending.twist':       '反转',
+    'onboard.ending.bittersweet': '苦乐参半',
+    'onboard.realism.grounded':    '写实',
+    'onboard.realism.someFantasy': '略带奇幻',
+    'onboard.realism.escapism':    '完全逃离现实',
+    'onboard.tone.light':   '轻松有趣',
+    'onboard.tone.dark':    '黑暗强烈',
+    'onboard.tone.thought': '发人深省',
+    'onboard.era.modern':   '仅限现代',
+    'onboard.era.classics': '永恒经典',
+    'onboard.era.noPref':   '无偏好',
     'ai.thinking.0':       '正在分析你的心情…',
     'ai.thinking.1':       '正在扫描 24 万部电影…',
     'ai.thinking.2':       '正在计算匹配分数…',
@@ -4618,6 +5016,55 @@ const TRANSLATIONS = {
     'onboard.prop2':       'اعرف فوراً أين تشاهد <strong>في منطقتك</strong>',
     'onboard.prop3':       'بحث بالذكاء الاصطناعي يفهم <strong>المزاج والأجواء</strong>',
     'onboard.cta':         'هيا بنا! →',
+    // Spoiler-Free Fit summary (movie modal)
+    'modal.fitSummary':    'بلا حرق للأحداث',
+    'modal.fitFor':        'مناسب لك إذا',
+    'modal.fitSkip':       'تجاوزه إذا',
+    'modal.fitVibe':       'التجربة',
+    'modal.fitLoading':    'نستشعر الأجواء…',
+    // Group Picker
+    'group.launch':        'مجموعة',
+    'group.title':         'ليلة أفلام جماعية',
+    'group.sub':           'أضف ما يحبه كل شخص — وسنجد الفيلم المثالي للجميع.',
+    'group.personPh':      'مثال: يحب أفلام السطو المثيرة والحوارات الذكية',
+    'group.addPerson':     'إضافة شخص',
+    'group.find':          'ابحث عن فيلمنا',
+    'group.results':       'اختيارات مجموعتك',
+    'group.loading':       'نبحث عن التطابق المثالي…',
+    'group.empty':         'لم نجد تطابقًا. جرّب وصف الأذواق بطريقة أخرى.',
+    'group.restart':       'البدء من جديد',
+    'group.needTwo':       'أضف شخصين على الأقل.',
+    'group.appealsLabel':  'يعجب',
+    // Taste onboarding quiz
+    'onboard.personalize': 'التخصيص في 30 ثانية →',
+    'onboard.browseNow':   'تخطَّ — تصفّح فقط',
+    'onboard.refine':      'ضبط الأذواق',
+    'onboard.step':        'الخطوة {n} من {total}',
+    'onboard.finish':      'شاهد اختياراتي',
+    'onboard.doneTitle':   'تم الضبط!',
+    'onboard.doneSub':     'لقد ضبطنا صف "لك" ليطابق ذوقك.',
+    'onboard.letterboxd':  'استيراد من Letterboxd',
+    'onboard.letterboxdSoon': 'قريبًا',
+    'onboard.q.pace':      'إيقاعك المثالي؟',
+    'onboard.q.ending':    'أفضل نوع نهاية؟',
+    'onboard.q.realism':   'ما مدى الواقعية؟',
+    'onboard.q.tone':      'اختر نبرة.',
+    'onboard.q.era':       'أي حقبة؟',
+    'onboard.pace.slow':       'إيقاع بطيء',
+    'onboard.pace.balanced':   'متوازن',
+    'onboard.pace.nonstop':    'بلا توقف',
+    'onboard.ending.happy':       'سعيدة',
+    'onboard.ending.twist':       'مفاجئة',
+    'onboard.ending.bittersweet': 'حلوة ومرة',
+    'onboard.realism.grounded':    'واقعية',
+    'onboard.realism.someFantasy': 'خيالية قليلاً',
+    'onboard.realism.escapism':    'هروب كامل',
+    'onboard.tone.light':   'خفيفة وممتعة',
+    'onboard.tone.dark':    'مظلمة وقوية',
+    'onboard.tone.thought': 'مثيرة للتفكير',
+    'onboard.era.modern':   'حديثة فقط',
+    'onboard.era.classics': 'كلاسيكيات خالدة',
+    'onboard.era.noPref':   'لا تفضيل',
     'ai.thinking.0':       'جارٍ تحليل مزاجك…',
     'ai.thinking.1':       'جارٍ مسح 240,000 فيلم…',
     'ai.thinking.2':       'جارٍ حساب نقاط التطابق…',
@@ -4812,6 +5259,55 @@ const TRANSLATIONS = {
     'onboard.prop2':       'Миттєво бачте, де дивитися <strong>у вашому регіоні</strong>',
     'onboard.prop3':       'ШІ-пошук, що розуміє <strong>настрої та атмосферу</strong>',
     'onboard.cta':         'Поїхали! →',
+    // Spoiler-Free Fit summary (movie modal)
+    'modal.fitSummary':    'Без спойлерів',
+    'modal.fitFor':        'Вам підійде, якщо',
+    'modal.fitSkip':       'Пропустіть, якщо',
+    'modal.fitVibe':       'Враження',
+    'modal.fitLoading':    'Вловлюємо настрій…',
+    // Group Picker
+    'group.launch':        'Група',
+    'group.title':         'Груповий кіновечір',
+    'group.sub':           'Додайте, що любить кожен — ми знайдемо ідеальний спільний вибір.',
+    'group.personPh':      'напр. любить трилери про пограбування та дотепні діалоги',
+    'group.addPerson':     'Додати людину',
+    'group.find':          'Знайти наш фільм',
+    'group.results':       'Вибір вашої групи',
+    'group.loading':       'Шукаємо ідеальний збіг…',
+    'group.empty':         'Збігів не знайдено. Спробуйте описати смаки інакше.',
+    'group.restart':       'Почати спочатку',
+    'group.needTwo':       'Додайте щонайменше 2 людей.',
+    'group.appealsLabel':  'Сподобається',
+    // Taste onboarding quiz
+    'onboard.personalize': 'Персоналізувати за 30с →',
+    'onboard.browseNow':   'Пропустити — просто огляд',
+    'onboard.refine':      'Уточнити смаки',
+    'onboard.step':        'Крок {n} з {total}',
+    'onboard.finish':      'Показати мій вибір',
+    'onboard.doneTitle':   'Готово!',
+    'onboard.doneSub':     'Ми налаштували ваш рядок «Для вас» під ваш смак.',
+    'onboard.letterboxd':  'Імпорт із Letterboxd',
+    'onboard.letterboxdSoon': 'Незабаром',
+    'onboard.q.pace':      'Ваш ідеальний темп?',
+    'onboard.q.ending':    'Найкращий фінал?',
+    'onboard.q.realism':   'Наскільки реалістично?',
+    'onboard.q.tone':      'Оберіть тон.',
+    'onboard.q.era':       'Яка епоха?',
+    'onboard.pace.slow':       'Повільний',
+    'onboard.pace.balanced':   'Збалансований',
+    'onboard.pace.nonstop':    'Безперервний',
+    'onboard.ending.happy':       'Щасливий',
+    'onboard.ending.twist':       'Несподіваний',
+    'onboard.ending.bittersweet': 'Гірко-солодкий',
+    'onboard.realism.grounded':    'Реалістично',
+    'onboard.realism.someFantasy': 'Трохи фентезі',
+    'onboard.realism.escapism':    'Повний ескапізм',
+    'onboard.tone.light':   'Легкий і веселий',
+    'onboard.tone.dark':    'Похмурий та інтенсивний',
+    'onboard.tone.thought': 'Спонукає до роздумів',
+    'onboard.era.modern':   'Лише сучасне',
+    'onboard.era.classics': 'Позачасова класика',
+    'onboard.era.noPref':   'Без переваг',
     'ai.thinking.0':       'Аналізуємо ваш настрій…',
     'ai.thinking.1':       'Скануємо 240 000 фільмів…',
     'ai.thinking.2':       'Розраховуємо рейтинги збігів…',
@@ -5102,8 +5598,14 @@ const TASTE_KEY = 'rk_taste_v1';
 const TASTE_THRESHOLD = 3; // interactions needed before showing "For You"
 
 function getTasteProfile() {
-  try { return JSON.parse(localStorage.getItem(TASTE_KEY)) || { genres: {}, directors: {}, total: 0 }; }
-  catch { return { genres: {}, directors: {}, total: 0 }; }
+  let p;
+  try { p = JSON.parse(localStorage.getItem(TASTE_KEY)); } catch { p = null; }
+  if (!p || typeof p !== 'object') p = {};
+  if (!p.genres    || typeof p.genres    !== 'object') p.genres    = {};
+  if (!p.directors || typeof p.directors !== 'object') p.directors = {};
+  if (!p.prefs     || typeof p.prefs     !== 'object') p.prefs     = {}; // explicit onboarding answers
+  if (typeof p.total !== 'number') p.total = 0;
+  return p;
 }
 
 function saveTasteProfile(p) {
@@ -6975,6 +7477,7 @@ async function openMovie(tmdbId, listName = '') {
   PENDING_STARS = 0;
   recordInteraction(m); // taste tracking
   populateModal(m);
+  refreshFitSummary(m); // spoiler-free "who's it for" block (async, KV-cached)
   document.querySelector('.m-body')?.scrollTo({ top: 0, behavior: 'instant' });
   loadSimilarMovies(m); // async — renders after modal opens
   document.getElementById('overlay').classList.add('open');
@@ -7024,6 +7527,78 @@ async function openMovie(tmdbId, listName = '') {
         refreshModalDetails(m);
       })
       .catch(() => {});
+  }
+}
+
+/* ── Spoiler-Free Fit summary ── on-demand LLM block (KV-cached server-side,
+   sessionStorage-cached client-side). Fills #fitFor/#fitSkip/#fitVibe or hides
+   the whole block on error. Race-guarded against fast movie switches. ── */
+function _renderFitSummary(m, data) {
+  if (!ACTIVE_MOVIE || ACTIVE_MOVIE.id !== m.id) return; // stale response
+  const lbl  = document.getElementById('mFitLbl');
+  const box  = document.getElementById('mFitSummary');
+  if (!box || !lbl) return;
+  const f = (data.forYou || '').trim();
+  const s = (data.skipIf || '').trim();
+  const v = (data.experience || '').trim();
+  if (!f && !s && !v) { lbl.style.display = 'none'; box.style.display = 'none'; return; }
+  box.classList.remove('fit-loading');
+  document.getElementById('fitFor').textContent  = f;
+  document.getElementById('fitSkip').textContent = s;
+  document.getElementById('fitVibe').textContent = v;
+  // Hide any row whose field came back empty.
+  box.querySelector('.fit-for').style.display  = f ? '' : 'none';
+  box.querySelector('.fit-skip').style.display = s ? '' : 'none';
+  box.querySelector('.fit-vibe').style.display = v ? '' : 'none';
+  lbl.style.display = '';
+  box.style.display = '';
+}
+
+async function refreshFitSummary(m) {
+  const lbl = document.getElementById('mFitLbl');
+  const box = document.getElementById('mFitSummary');
+  if (!box || !lbl || !m) return;
+  // Reset to hidden until we have data (prevents previous movie's text flashing).
+  lbl.style.display = 'none';
+  box.style.display = 'none';
+  box.classList.remove('fit-loading');
+
+  // Client session cache — instant on repeat opens within a session.
+  try {
+    const cached = sessionStorage.getItem('ff_fit_' + m.id);
+    if (cached) { _renderFitSummary(m, JSON.parse(cached)); return; }
+  } catch {}
+
+  // Show skeleton while the LLM responds.
+  ['fitFor', 'fitSkip', 'fitVibe'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ''; });
+  box.querySelectorAll('.fit-row').forEach(r => { r.style.display = ''; });
+  box.classList.add('fit-loading');
+  lbl.style.display = '';
+  box.style.display = '';
+
+  try {
+    const r = await fetch('/api/fit-summary', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id:       m.id,
+        title:    m.title || m.titleOrig || '',
+        year:     m.year || '',
+        genres:   Array.isArray(m.genres) ? m.genres : [],
+        overview: m.desc || '',
+      }),
+    });
+    if (!r.ok) throw new Error('fit-summary ' + r.status);
+    const data = await r.json();
+    if (data.error) throw new Error(data.error);
+    try { sessionStorage.setItem('ff_fit_' + m.id, JSON.stringify(data)); } catch {}
+    _renderFitSummary(m, data);
+  } catch (e) {
+    if (ACTIVE_MOVIE && ACTIVE_MOVIE.id === m.id) {
+      lbl.style.display = 'none';
+      box.style.display = 'none';
+      box.classList.remove('fit-loading');
+    }
   }
 }
 
@@ -7859,6 +8434,286 @@ async function runWizard() {
       `<div class="wiz-loading">${esc(t('wiz.empty'))}</div>` +
       `<button class="wiz-restart" onclick="wizardRestart()">${esc(t('wiz.restart'))}</button>`;
   }
+}
+
+/* ═══════════════════════════════════
+   GROUP PICKER — taste-overlap for 2-5 people
+   POSTs free-text tastes to /api/group-picker; the LLM returns catalog ids
+   that maximise SHARED appeal. Cards reuse the ai-search reason/tag maps.
+═══════════════════════════════════ */
+let GROUP_PEOPLE = ['', ''];   // start with 2 empty inputs
+
+function openGroupPicker() {
+  if (!GROUP_PEOPLE.length || GROUP_PEOPLE.length < 2) GROUP_PEOPLE = ['', ''];
+  document.getElementById('groupOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  renderGroupInputs();
+}
+
+function closeGroupPicker() {
+  document.getElementById('groupOverlay').classList.remove('open');
+  if (!document.getElementById('overlay').classList.contains('open')) {
+    document.body.style.overflow = '';
+  }
+}
+
+function groupOverlayClick(e) {
+  if (e.target === document.getElementById('groupOverlay')) closeGroupPicker();
+}
+
+// Persist current field values into GROUP_PEOPLE before any re-render.
+function _syncGroupInputs() {
+  const inputs = document.querySelectorAll('#groupBody .group-person input');
+  if (inputs.length) GROUP_PEOPLE = Array.from(inputs).map(el => el.value);
+}
+
+function addGroupPerson() {
+  _syncGroupInputs();
+  if (GROUP_PEOPLE.length >= 5) return;
+  GROUP_PEOPLE.push('');
+  renderGroupInputs(true);
+}
+
+function removeGroupPerson(i) {
+  _syncGroupInputs();
+  if (GROUP_PEOPLE.length <= 2) return;
+  GROUP_PEOPLE.splice(i, 1);
+  renderGroupInputs();
+}
+
+function renderGroupInputs(focusLast) {
+  const rows = GROUP_PEOPLE.map((val, i) => {
+    const rm = GROUP_PEOPLE.length > 2
+      ? `<button class="group-person-rm" onclick="removeGroupPerson(${i})" aria-label="Remove">✕</button>`
+      : '';
+    return `<div class="group-person">
+        <span class="group-person-num">${i + 1}</span>
+        <input type="text" value="${esc(val)}" maxlength="120"
+          placeholder="${esc(t('group.personPh'))}"
+          oninput="_syncGroupInputs()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();runGroupPicker();}">
+        ${rm}
+      </div>`;
+  }).join('');
+  const addDisabled = GROUP_PEOPLE.length >= 5 ? 'disabled' : '';
+  document.getElementById('groupBody').innerHTML =
+    `<div class="group-head"><div class="group-title">${esc(t('group.title'))}</div></div>` +
+    `<div class="group-sub">${esc(t('group.sub'))}</div>` +
+    `<div class="group-people">${rows}</div>` +
+    `<button class="group-add" onclick="addGroupPerson()" ${addDisabled}>+ ${esc(t('group.addPerson'))}</button>` +
+    `<div class="group-actions"><button class="group-find" onclick="runGroupPicker()">✨ ${esc(t('group.find'))}</button></div>`;
+  if (focusLast) {
+    const inputs = document.querySelectorAll('#groupBody .group-person input');
+    inputs[inputs.length - 1]?.focus();
+  }
+}
+
+async function runGroupPicker() {
+  _syncGroupInputs();
+  const people = GROUP_PEOPLE.map(p => (p || '').trim()).filter(Boolean).slice(0, 5);
+  if (people.length < 2) {
+    // Not enough input — nudge the user rather than firing an empty request.
+    const body = document.getElementById('groupBody');
+    let warn = body.querySelector('.group-loading');
+    if (!warn) {
+      warn = document.createElement('div');
+      warn.className = 'group-loading';
+      body.appendChild(warn);
+    }
+    warn.textContent = t('group.needTwo');
+    return;
+  }
+
+  document.getElementById('groupBody').innerHTML =
+    `<div class="group-loading">${esc(t('group.loading'))}</div>`;
+
+  try {
+    const r = await fetch('/api/group-picker', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ people }),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+
+    const picks = (data.ids || [])
+      .map(id => CACHE_MOVIES.find(m => m.id === id))
+      .filter(Boolean);
+    if (!picks.length) throw new Error('no picks');
+
+    // Register picks in MOVIES so a result-card click resolves in openMovie().
+    picks.forEach(m => { if (!MOVIES.find(x => x.id === m.id)) MOVIES.push(m); });
+
+    // Overlap text → reason line; appeals → chips (reuse ai-search card maps).
+    _aiMatchScores.clear();
+    _aiMatchReasons.clear();
+    _aiMatchTags.clear();
+    Object.entries(data.reasons || {}).forEach(([id, reason]) => _aiMatchReasons.set(Number(id), reason));
+    Object.entries(data.appeals || {}).forEach(([id, arr])    => _aiMatchTags.set(Number(id), arr));
+
+    const summaryHTML = data.groupSummary
+      ? `<div class="group-summary">${esc(data.groupSummary)}</div>`
+      : '';
+    document.getElementById('groupBody').innerHTML =
+      `<div class="group-head"><div class="group-title">${esc(t('group.results'))}</div></div>` +
+      summaryHTML +
+      `<div class="group-results">${picks.map(m => renderCardHTML(m)).join('')}</div>` +
+      `<button class="group-restart" onclick="renderGroupInputs()">${esc(t('group.restart'))}</button>`;
+  } catch (e) {
+    console.warn('[group-picker] failed:', e.message);
+    document.getElementById('groupBody').innerHTML =
+      `<div class="group-loading">${esc(t('group.empty'))}</div>` +
+      `<button class="group-restart" onclick="renderGroupInputs()">${esc(t('group.restart'))}</button>`;
+  }
+}
+
+/* ═══════════════════════════════════
+   TASTE ONBOARDING QUIZ — cold-start personalization
+   5 fast single-choice questions; each answer nudges genre weights + stores an
+   explicit prefs block so "For You" lights up on the very first session.
+═══════════════════════════════════ */
+// Each option's `genres` map adds weight to the taste profile. `q` keys are English;
+// labels are localised via t('onboard.<question>.<opt>').
+const ONBOARD_QUESTIONS = [
+  { key: 'pace', options: [
+    { key: 'slow',     emoji: '🐢', genres: { Drama: 2, Romance: 1 } },
+    { key: 'balanced', emoji: '⚖️', genres: {} },
+    { key: 'nonstop',  emoji: '🚀', genres: { Action: 2, Thriller: 1 } },
+  ]},
+  { key: 'ending', options: [
+    { key: 'happy',       emoji: '😊', genres: { Comedy: 2, Romance: 1, Family: 1 } },
+    { key: 'twist',       emoji: '🌀', genres: { Thriller: 2, Mystery: 2 } },
+    { key: 'bittersweet', emoji: '🥲', genres: { Drama: 2 } },
+  ]},
+  { key: 'realism', options: [
+    { key: 'grounded',    emoji: '🌍', genres: { Drama: 2, Crime: 1 } },
+    { key: 'someFantasy', emoji: '🪄', genres: { Adventure: 1, Fantasy: 1 } },
+    { key: 'escapism',    emoji: '✨', genres: { Fantasy: 2, 'Science Fiction': 2 } },
+  ]},
+  { key: 'tone', options: [
+    { key: 'light',   emoji: '🎈', genres: { Comedy: 2, Family: 1, Animation: 1 } },
+    { key: 'dark',    emoji: '🌑', genres: { Thriller: 2, Crime: 2, Horror: 1 } },
+    { key: 'thought', emoji: '🧠', genres: { Drama: 2, Mystery: 1, 'Science Fiction': 1 } },
+  ]},
+  { key: 'era', options: [
+    { key: 'modern',   emoji: '🆕', genres: {} },
+    { key: 'classics', emoji: '🎞️', genres: {} },
+    { key: 'noPref',   emoji: '🤷', genres: {} },
+  ]},
+];
+
+let ONBOARD_STATE = {};   // { pace, ending, realism, tone, era }
+let ONBOARD_STEP  = 0;
+
+// Entry from the first-visit intro: dismiss the intro, then launch the quiz.
+function startOnboardFromIntro() {
+  localStorage.setItem('hasSeenOnboarding', 'true');
+  localStorage.setItem('rk_visited', '1');
+  const overlay = document.getElementById('fvOverlay');
+  if (overlay) { overlay.classList.add('hidden'); setTimeout(() => overlay.remove(), 400); }
+  document.dispatchEvent(new CustomEvent('ff:fv-dismissed'));
+  openOnboardQuiz();
+}
+
+function openOnboardQuiz() {
+  ONBOARD_STATE = {};
+  ONBOARD_STEP  = 0;
+  document.getElementById('onboardQuizOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  renderOnboardQuiz();
+}
+
+function closeOnboardQuiz() {
+  document.getElementById('onboardQuizOverlay').classList.remove('open');
+  if (!document.getElementById('overlay').classList.contains('open')) {
+    document.body.style.overflow = '';
+  }
+}
+
+function onboardOverlayClick(e) {
+  if (e.target === document.getElementById('onboardQuizOverlay')) closeOnboardQuiz();
+}
+
+function onboardSelect(qKey, optKey) {
+  ONBOARD_STATE[qKey] = optKey;
+  if (ONBOARD_STEP < ONBOARD_QUESTIONS.length - 1) {
+    ONBOARD_STEP++;
+    renderOnboardQuiz();
+  } else {
+    finishOnboardQuiz();
+  }
+}
+
+function onboardGoStep(n) {
+  ONBOARD_STEP = Math.max(0, Math.min(n, ONBOARD_QUESTIONS.length - 1));
+  renderOnboardQuiz();
+}
+
+function _onboardProgressHTML(activeStep) {
+  return ONBOARD_QUESTIONS.map((_, i) => `<div class="wiz-dot${i <= activeStep ? ' done' : ''}"></div>`).join('');
+}
+
+function renderOnboardQuiz() {
+  const q    = ONBOARD_QUESTIONS[ONBOARD_STEP];
+  const cur  = ONBOARD_STATE[q.key];
+  document.getElementById('onboardProgress').innerHTML = _onboardProgressHTML(ONBOARD_STEP);
+  const optsHTML = q.options.map(o =>
+    `<button class="wiz-opt${cur === o.key ? ' selected' : ''}" onclick="onboardSelect('${q.key}','${o.key}')">
+       <span class="wiz-opt-emoji">${o.emoji}</span>
+       <span class="wiz-opt-label">${esc(t('onboard.' + q.key + '.' + o.key))}</span>
+     </button>`).join('');
+  const back = ONBOARD_STEP > 0
+    ? `<div class="wiz-nav"><button class="wiz-back" onclick="onboardGoStep(${ONBOARD_STEP - 1})">${esc(t('wiz.back'))}</button></div>`
+    : '';
+  document.getElementById('onboardBody').innerHTML =
+    `<div class="wiz-q">${esc(t('onboard.q.' + q.key))}</div>` +
+    `<div class="wiz-sub">${esc(t('onboard.step', { n: ONBOARD_STEP + 1, total: ONBOARD_QUESTIONS.length }))}</div>` +
+    `<div class="wiz-opts">${optsHTML}</div>` +
+    back;
+}
+
+function finishOnboardQuiz() {
+  // Persist explicit prefs + seed genre weights so "For You" works immediately.
+  const p = getTasteProfile();
+  ONBOARD_QUESTIONS.forEach(q => {
+    const optKey = ONBOARD_STATE[q.key];
+    if (!optKey) return;
+    p.prefs[q.key] = optKey;
+    const opt = q.options.find(o => o.key === optKey);
+    if (opt && opt.genres) {
+      for (const [g, w] of Object.entries(opt.genres)) {
+        p.genres[g] = (p.genres[g] || 0) + w;
+      }
+    }
+  });
+  // Ensure the profile clears the "For You" threshold right away.
+  p.total = Math.max(p.total || 0, TASTE_THRESHOLD + 1);
+  saveTasteProfile(p);
+  localStorage.setItem('rk_onboard_quiz_done', '1');
+
+  // Results/done step with a disabled Letterboxd "coming soon" affordance.
+  document.getElementById('onboardProgress').innerHTML = _onboardProgressHTML(ONBOARD_QUESTIONS.length);
+  document.getElementById('onboardBody').innerHTML =
+    `<div class="onboard-done">
+       <div class="onboard-done-emoji">🎯</div>
+       <div class="onboard-done-title">${esc(t('onboard.doneTitle'))}</div>
+       <div class="onboard-done-sub">${esc(t('onboard.doneSub'))}</div>
+       <div class="onboard-lb" aria-disabled="true">
+         <span class="onboard-lb-ico">🎞️</span>
+         <span class="onboard-lb-txt">
+           <span class="onboard-lb-title">${esc(t('onboard.letterboxd'))}</span>
+           <span class="onboard-lb-soon">${esc(t('onboard.letterboxdSoon'))}</span>
+         </span>
+       </div>
+       <button class="onboard-finish" onclick="finishOnboardDone()">${esc(t('onboard.finish'))}</button>
+     </div>`;
+
+  // Light up the "For You" row now that the profile is seeded.
+  try { if (window._FEED_POOL?.length) renderForYouRow(); } catch {}
+}
+
+function finishOnboardDone() {
+  closeOnboardQuiz();
 }
 
 /* ─── Modal view-history: Back-button navigation ─────────────────── */
