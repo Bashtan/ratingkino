@@ -753,9 +753,21 @@ async function handleAISearch(request, env, cors) {
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   let query;
+  let exclude = [];
   try {
     const body = await request.json();
     query = (body.query || '').trim().slice(0, 300); // cap query length
+    // Natural negative filters: themes/traits the user wants to avoid.
+    // Parsed on the frontend (parseVibeQuery) from phrases like "no gore, not sad".
+    // NOTE: numeric/duration excludes (e.g. "under 100 min") are only soft hints —
+    // the closed-world KV catalog has no runtime field, so they can't be enforced.
+    exclude = Array.isArray(body.exclude)
+      ? body.exclude
+          .filter(x => typeof x === 'string')
+          .map(x => x.trim().replace(/[|\n\r]+/g, ' ').slice(0, 40))
+          .filter(Boolean)
+          .slice(0, 8)
+      : [];
   } catch {
     return json({ error: 'Invalid JSON body' }, 400);
   }
@@ -781,6 +793,7 @@ async function handleAISearch(request, env, cors) {
             'You are a movie recommendation engine focused on a specific actor. ' +
             'Respond with valid JSON only — no markdown fences, no extra text. ' +
             `For every movie, write a short, punchy "reason" (max 10-15 words) explaining why it's a great ${personName} performance or movie. ` +
+            'For every movie, ALSO provide "tags": 2-3 very short labels (1-3 words each) describing standout traits. ' +
             'Finally, suggest 3-4 short (1-3 word) follow-up refinements relevant to this actor\'s filmography.';
 
           const actorUserPrompt =
@@ -788,12 +801,13 @@ async function handleAISearch(request, env, cors) {
             `Movies (format: id|title (year)|description):\n\n${miniCatalog}\n\n` +
             `Return JSON:\n` +
             `{\n` +
-            `  "results": [ { "id": integer, "reason": "short punchy reason, max 10-15 words" }, ... ],\n` +
+            `  "results": [ { "id": integer, "reason": "short punchy reason, max 10-15 words", "tags": ["1-3 word trait", "..."] }, ... ],\n` +
             `  "suggestedRefinements": ["1-3 word refinement", "...", "...", "..."]\n` +
             `}\n` +
             `results ordered best-match first, include ALL provided movies.`;
 
           let reasons = {};
+          let tags = {};
           let suggestedRefinements = [];
           try {
             const aiResp = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
@@ -822,6 +836,14 @@ async function handleAISearch(request, env, cors) {
               if (typeof r.reason === 'string' && r.reason.trim()) {
                 reasons[id] = r.reason.trim().replace(/[\n\r]+/g, ' ').slice(0, 140);
               }
+              if (Array.isArray(r.tags)) {
+                const clean = r.tags
+                  .filter(t => typeof t === 'string')
+                  .map(t => t.trim().replace(/[\n\r]+/g, ' ').slice(0, 26))
+                  .filter(Boolean)
+                  .slice(0, 3);
+                if (clean.length) tags[id] = clean;
+              }
             }
 
             const seenRefinements = new Set();
@@ -844,6 +866,7 @@ async function handleAISearch(request, env, cors) {
             personName,
             movies: actorMovies,
             reasons,
+            tags,
             suggestedRefinements,
             message: null,
           });
@@ -890,13 +913,27 @@ async function handleAISearch(request, env, cors) {
     'For every result, also write a short, punchy, conversational "reason" ' +
     '(max 10-15 words) explaining specifically why THAT movie matches the ' +
     'user\'s exact query — a personalized match explanation, not a generic plot summary. ' +
+    'For every result, ALSO provide "tags": an array of 2-3 very short labels (1-3 words each) ' +
+    'capturing that movie\'s standout traits relevant to the query ' +
+    '(e.g. "Slow-burn mystery", "Strong female lead", "Twist ending", "Feel-good"). ' +
+    (exclude.length
+      ? 'The user listed HARD EXCLUSIONS — themes, tones, or content they do NOT want. ' +
+        'Never recommend a movie whose tone or content matches any hard exclusion; ' +
+        'prefer omitting a borderline title over including it. '
+      : '') +
     'Finally, based on the user\'s query and the movies you picked, suggest 3-4 short ' +
     'follow-up refinements the user might want next (e.g. "Darker tone", "More recent", ' +
     '"Based on true story", "Faster pace") — each MUST be 1-3 words, conversational, ' +
     'and a logical next tweak to the current search.';
 
+  const exclusionBlock = exclude.length
+    ? `HARD EXCLUSIONS (never recommend movies matching these themes/tones/content):\n` +
+      exclude.map(x => `  - ${x}`).join('\n') + `\n\n`
+    : '';
+
   const userPrompt =
     `User query: "${query}"\n\n` +
+    exclusionBlock +
     `MANDATORY ranking order:\n` +
     `  Tier 1 — title match: if any movie title contains the query words, it MUST appear before all others.\n` +
     `  Tier 2 — description match: query words found in the description/overview.\n` +
@@ -906,12 +943,13 @@ async function handleAISearch(request, env, cors) {
     `Return JSON:\n` +
     `{\n` +
     `  "results": [\n` +
-    `    { "id": integer, "reason": "short punchy match reason, max 10-15 words" },\n` +
+    `    { "id": integer, "reason": "short punchy match reason, max 10-15 words", "tags": ["1-3 word trait", "..."] },\n` +
     `    ...\n` +
     `  ],\n` +
     `  "suggestedRefinements": ["1-3 word refinement", "...", "...", "..."],\n` +
     `  "message": null\n` +
     `}\n` +
+    `Each result's "tags" MUST be 2-3 short labels (1-3 words each) describing that movie's standout traits.\n` +
     `results ordered best-match first, max 20 entries.\n` +
     `Example reason for query "crime movie like Zodiac but faster": ` +
     `"Maintains the dark, gritty tone of Zodiac but with a much faster, action-packed pace."\n` +
@@ -968,6 +1006,7 @@ async function handleAISearch(request, env, cors) {
     const seen    = new Set();
     const ids     = [];
     const reasons = {};
+    const tags    = {};
     for (const r of rawResults) {
       const id = Number(r?.id);
       if (!Number.isInteger(id) || !validIds.has(id) || seen.has(id)) continue;
@@ -975,6 +1014,14 @@ async function handleAISearch(request, env, cors) {
       ids.push(id);
       if (typeof r.reason === 'string' && r.reason.trim()) {
         reasons[id] = r.reason.trim().replace(/[\n\r]+/g, ' ').slice(0, 140);
+      }
+      if (Array.isArray(r.tags)) {
+        const clean = r.tags
+          .filter(t => typeof t === 'string')
+          .map(t => t.trim().replace(/[\n\r]+/g, ' ').slice(0, 26))
+          .filter(Boolean)
+          .slice(0, 3);
+        if (clean.length) tags[id] = clean;
       }
       if (ids.length >= 20) break;
     }
@@ -993,7 +1040,7 @@ async function handleAISearch(request, env, cors) {
       if (suggestedRefinements.length >= 4) break;
     }
 
-    return json({ ids, reasons, suggestedRefinements, message: result.message || null });
+    return json({ ids, reasons, tags, suggestedRefinements, message: result.message || null });
 
   } catch (e) {
     console.error('[ai-search] error:', e.message);
