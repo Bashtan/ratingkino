@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-15) — UI Polish: Neon Share Button + Cinematic Loader
+## ⚡ Most Recent Session (2026-07-15) — Trust Signals & UX Clarity (Stage 2 Final Polish)
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `421993f` | **Three trust/clarity polish features on the vanilla stack (`index.html` only; no Tailwind — implemented natively, Tailwind snippets handed to user separately). Deployed `71f6b127.ratingkino.pages.dev` → findfilm.ai; live curl confirms `confidenceBadgeHTML`/`conf-full`/`conf-early`/`has-tip`/`mcr-spark`/tooltip strings present.** **(1) Confidence badges (data-quality signal on cards + modal):** new helper `confidenceBadgeHTML(m)` (index.html ~L6527, just before `avgBadgeHTML`) returns a pill — `✓ Full Critic Data` (`.conf-full`, green) when `imdb\|rt\|mc > 0`; else `TMDB Rated` (`.conf-tmdb`, cyan) when `tmdbVotes >= FEED_QUALITY.minVotes` (60); else `Early Metadata` (`.conf-early`, gray). Each has a `title=` tooltip explaining the tier. Wired into `renderCardHTML()` movie-info block (after `.movie-meta`, before `whyReasonHTML`) and into `refreshModalRatings()` (appended as `<div class="mr-conf">` inside the populated `.mr-score-card`). CSS `.conf-badge`/`.conf-full`/`.conf-tmdb`/`.conf-early`/`.mr-conf` after the `.cr.mc-*` rules (~L778). **(2) Pure-CSS nav tooltips (zero JS):** `.has-tip` class + `data-tip` attr on the two header CTAs — `.btn-tonight` → "Find a movie for right now", `.btn-group` → "Pick a movie with friends" (markup ~L3393-3400). CSS `.has-tip{position:relative}` + `::after` (pill: dark `rgba(13,0,32,.97)` bg, violet border, Montserrat 10.5px) + `::before` (caret) shown on `:hover`/`:focus-visible`, after `.btn-group:hover` (~L482); `prefers-reduced-motion` guard. **(3) For You explanation sparkle:** the reason label already existed (`renderMiniCard` `opts.reason` → `.mini-card-reason`, fed by `genRecommendReason()` — only used by `renderForYouRow()`); added a `<span class="mcr-spark">✨</span>` prefix (index.html:5974) + `.mcr-spark` CSS (after `.mini-card:hover .mini-card-reason` ~L2529) so labels like "Fan of Nolan"/"Top Action Pick"/"90s Thriller" read as AI match explanations. **Verified on preview:** `confidenceBadgeHTML` returns conf-full (critic), conf-tmdb (120 votes), conf-early (12 votes / zero) with correct labels; demo `renderCardHTML` card shows green "✓ FULL CRITIC DATA" pill; tooltip `::after` resolves `content:"Find a movie for right now"` + `opacity:1` on hover (screenshotted); `renderMiniCard` output contains `mcr-spark`; console clean (only expected static-preview TMDb 404 noise). **Tailwind deliverable snippets** for badge/tooltip/reason handed to user. No backend/D1/sync-worker changes. |
+
+---
+
+## ⚡ Session (2026-07-15) — UI Polish: Neon Share Button + Cinematic Loader
 
 All commits on `main`, all live on https://findfilm.ai.
 
