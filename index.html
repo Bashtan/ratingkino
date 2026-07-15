@@ -481,6 +481,42 @@ header {
 }
 .btn-group:hover { transform: translateY(-2px) scale(1.04); background: rgba(34,211,238,0.2); box-shadow: 0 6px 20px rgba(34,211,238,0.35); }
 
+/* ─── Pure-CSS nav tooltips ─── zero-JS hover hints for icon CTAs. */
+.has-tip { position: relative; }
+.has-tip::after {
+  content: attr(data-tip);
+  position: absolute; top: calc(100% + 9px); left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  padding: 6px 10px;
+  background: rgba(13,0,32,0.97);
+  border: 1px solid rgba(124,58,237,0.4);
+  border-radius: 7px;
+  color: #e9d5ff;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.3px;
+  text-transform: none; white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  opacity: 0; pointer-events: none; z-index: 300;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.has-tip::before {
+  content: ''; position: absolute; top: calc(100% + 3px); left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  border: 5px solid transparent;
+  border-bottom-color: rgba(124,58,237,0.55);
+  opacity: 0; pointer-events: none; z-index: 300;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.has-tip:hover::after,
+.has-tip:focus-visible::after,
+.has-tip:hover::before,
+.has-tip:focus-visible::before {
+  opacity: 1; transform: translateX(-50%) translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .has-tip::after, .has-tip::before { transition: opacity 0.15s ease; transform: translateX(-50%); }
+}
+
 /* ─── FILTER BAR (Netflix-style) ─────────────── */
 .filters-bar {
   position: sticky; top: 64px; z-index: 99;
@@ -740,6 +776,21 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .cr.mc-good { background: rgba(74,222,128,0.12); color: #4ade80; }
 .cr.mc-mid  { background: rgba(251,191,36,0.12); color: #fbbf24; }
 .cr.mc-bad  { background: rgba(248,113,113,0.12); color: #f87171; }
+
+/* ─── Confidence badge ─── data-quality pill on cards + modal. */
+.conf-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  margin: 5px 0 1px;
+  padding: 2.5px 7px; border-radius: 999px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 8.5px; font-weight: 800; letter-spacing: 0.4px;
+  text-transform: uppercase; white-space: nowrap; cursor: help;
+  border: 1px solid transparent;
+}
+.conf-full  { background: rgba(74,222,128,0.13); color: #86efac; border-color: rgba(74,222,128,0.35); }
+.conf-tmdb  { background: rgba(1,180,228,0.12);  color: #67e8f9; border-color: rgba(1,180,228,0.32); }
+.conf-early { background: rgba(148,163,184,0.13); color: #cbd5e1; border-color: rgba(148,163,184,0.3); }
+.mr-conf { margin-top: 8px; }
 .card-hover-overlay {
   position: absolute; inset: 0;
   background: rgba(0,0,0,0.60);
@@ -2527,6 +2578,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   opacity: 1;
   transform: translateY(0);
 }
+.mcr-spark { margin-right: 3px; font-size: 8px; opacity: 0.95; }
 /* Mobile: static muted subtitle, always visible below title/meta */
 @media (max-width: 768px) {
   .mini-card-reason {
@@ -3390,11 +3442,11 @@ if ('serviceWorker' in navigator) {
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
       </button>
-      <button class="btn-tonight" onclick="openWizard()">
+      <button class="btn-tonight has-tip" data-tip="Find a movie for right now" onclick="openWizard()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         <span data-i18n="tonight.launch">Tonight?</span>
       </button>
-      <button class="btn-group" onclick="openGroupPicker()">
+      <button class="btn-group has-tip" data-tip="Pick a movie with friends" onclick="openGroupPicker()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span data-i18n="group.launch">Group</span>
       </button>
@@ -5920,7 +5972,7 @@ function renderMiniCard(m, opts = {}) {
                               `<div class="mini-card-img-placeholder">🎬</div>`;
   const score    = m.avg ? `<div class="mini-card-score">★ ${m.avg}</div>` : '';
   const newBadge = opts.showNew ? `<div class="mini-card-new-badge">${t('card.new')}</div>` : '';
-  const reason   = opts.reason  ? `<div class="mini-card-reason">${esc(opts.reason)}</div>` : '';
+  const reason   = opts.reason  ? `<div class="mini-card-reason"><span class="mcr-spark">✨</span>${esc(opts.reason)}</div>` : '';
   const listArg  = opts.listName ? `,'${opts.listName}'` : '';
   const styleAttr = opts.style ? ` style="${opts.style}"` : '';
   return `<div class="mini-card" onclick="openMovie(${m.id}${listArg})" title="${esc(m.title)}"${styleAttr}>
@@ -6524,6 +6576,21 @@ function skeletonCard() {
 }
 
 // Avg pill for poster overlay (top-right)
+// Data-quality signal — tells the user how much to trust a card's rating.
+// Full Critic Data = OMDb aggregates present · TMDB Rated = enough audience
+// votes to be meaningful · Early Metadata = sparse data, treat as provisional.
+function confidenceBadgeHTML(m) {
+  const hasCritic = (parseFloat(m.imdb) > 0) || (parseInt(m.rt) > 0) || (parseInt(m.mc) > 0);
+  const votes = m.tmdbVotes || 0;
+  if (hasCritic) {
+    return `<span class="conf-badge conf-full" title="Backed by critic aggregates (IMDb / Rotten Tomatoes / Metacritic)">✓ Full Critic Data</span>`;
+  }
+  if (votes >= FEED_QUALITY.minVotes) {
+    return `<span class="conf-badge conf-tmdb" title="Audience score from ${votes.toLocaleString()} TMDB votes">TMDB Rated</span>`;
+  }
+  return `<span class="conf-badge conf-early" title="Limited data so far — few audience votes, treat as provisional">Early Metadata</span>`;
+}
+
 function avgBadgeHTML(m) {
   return `<span class="rb avg" data-mid="${m.id}"
     onmouseenter="showRatingTooltip(${m.id},this)"
@@ -6587,6 +6654,7 @@ function renderCardHTML(m) {
         ${m.year ? '<span class="mdot">·</span>' : ''}
         <span>${esc(m.genre)}</span>
       </div>
+      ${confidenceBadgeHTML(m)}
       ${whyReasonHTML}
       ${whyTagsHTML}
     </div>
@@ -8138,6 +8206,7 @@ function refreshModalRatings(m) {
     <div class="mr-hero-avg"><span class="mr-star">★</span><span class="mr-avg-num">${avg}</span></div>
     <div class="mr-hero-lbl">${srcLbl}</div>
     ${breakdown}
+    <div class="mr-conf">${confidenceBadgeHTML(m)}</div>
   </div>${localBadge}`;
 }
 
