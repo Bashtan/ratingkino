@@ -3588,12 +3588,13 @@ if ('serviceWorker' in navigator) {
     <div class="feed-scroll" id="scrollForYou"></div>
   </div>
 
-  <!-- Fresh Additions row -->
-  <div class="feed-row" id="rowFresh">
+  <!-- Best Available Now — high-confidence, critic/vote-weighted -->
+  <div class="feed-row" id="rowBest">
     <div class="feed-row-header">
-      <span class="feed-row-title">🔥 Fresh Additions</span>
+      <span class="feed-row-title">🏅 Best Available Now</span>
+      <span class="feed-row-badge">Certified by ratings &amp; votes</span>
     </div>
-    <div class="feed-scroll" id="scrollFresh"></div>
+    <div class="feed-scroll" id="scrollBest"></div>
   </div>
 
   <!-- AI Curated row — title is updated dynamically by loadFeedSections() -->
@@ -3602,6 +3603,14 @@ if ('serviceWorker' in navigator) {
       <span class="feed-row-title" id="rowPopularTitle">🏆 Masterpieces</span>
     </div>
     <div class="feed-scroll" id="scrollPopular"></div>
+  </div>
+
+  <!-- Fresh Additions row — recency view, newly added titles -->
+  <div class="feed-row" id="rowFresh">
+    <div class="feed-row-header">
+      <span class="feed-row-title">🔥 Fresh Additions</span>
+    </div>
+    <div class="feed-scroll" id="scrollFresh"></div>
   </div>
 
 </div>
@@ -5707,6 +5716,44 @@ function scoredForProfile(movies) {
 }
 
 /* ═══════════════════════════════════
+   FEED QUALITY GATE
+   Tune these to adjust what counts as "high-confidence" everywhere.
+═══════════════════════════════════ */
+const FEED_QUALITY = {
+  minVotes:        60,    // TMDB vote-count floor when there is no critic data
+  minScore:        6.0,   // minimum score (critic or TMDB) to be considered "good"
+  requireDirector: true,  // blank director => thin
+  priorVotes:      60,    // Bayesian damping strength for low-vote titles
+  priorMean:       6.3,   // score the damping pulls toward
+};
+
+// A record is "thin" (low-confidence) when it lacks the metadata needed to trust it.
+function isThinRecord(m, cfg = FEED_QUALITY) {
+  if (cfg.requireDirector && !(m.director && String(m.director).trim())) return true;
+  const hasCritic = (m.imdb > 0) || (m.rt > 0) || (m.mc > 0);
+  if (hasCritic) return false;                       // real critic data => trusted
+  const votes = m.tmdbVotes || 0;
+  const score = m.tmdbScore != null ? m.tmdbScore : (parseFloat(m.avg) || 0);
+  if (votes < cfg.minVotes) return true;             // TMDB-only + too few votes => thin
+  if (score && score < cfg.minScore) return true;    // TMDB-only + weak score => thin
+  return false;
+}
+
+// Confidence-weighted quality score for ranking the "Best Available Now" row.
+function qualityScore(m, cfg = FEED_QUALITY) {
+  const critic = [];
+  if (m.imdb > 0) critic.push(m.imdb);
+  if (m.rt   > 0) critic.push(m.rt / 10);
+  if (m.mc   > 0) critic.push(m.mc / 10);
+  const base  = critic.length ? critic.reduce((a,b)=>a+b,0)/critic.length
+              : (m.tmdbScore != null ? m.tmdbScore : (parseFloat(m.avg) || 0));
+  const votes = m.tmdbVotes || 0;
+  const conf  = votes / (votes + cfg.priorVotes);          // 0..1
+  const adjusted = base * conf + cfg.priorMean * (1 - conf); // damp low-vote titles
+  return adjusted + (critic.length ? 0.5 : 0);              // reward real critic data
+}
+
+/* ═══════════════════════════════════
    STATE
 ═══════════════════════════════════ */
 let CONTENT_TYPE = 'movie';   // 'movie' | 'tv'
@@ -5844,6 +5891,8 @@ function fromKV(m) {
     imdb:     m.imdb ?? null,
     rt:       m.rt   ?? null,
     mc:       m.mc   ?? null,
+    tmdbScore: m.tmdbScore ?? null,
+    tmdbVotes: m.tmdbVotes ?? 0,
     director: m.director || '',
     country:  m.country  || '',
     trailer:  m.trailer  || null,
@@ -5864,6 +5913,8 @@ function fromDiscover(raw) {
     genre:    (raw.genre_ids || []).map(id => GENRES[id]).filter(Boolean)[0] || '',
     desc:     raw.overview || '',
     avg:      raw.vote_average ? parseFloat(raw.vote_average.toFixed(1)) : null,
+    tmdbScore: raw.vote_average ?? null,
+    tmdbVotes: raw.vote_count ?? 0,
     imdb: null, rt: null, mc: null, director: '', country: '', trailer: null,
     actors: [], castPhotos: [],
     isTV: false, enriched: false,
@@ -5945,6 +5996,7 @@ function renderForYouRow() {
   const profile = getTasteProfile();
   if (profile.total < TASTE_THRESHOLD || !window._FEED_POOL.length) return;
   const scored = scoredForProfile(window._FEED_POOL)
+    .filter(m => !isThinRecord(m))             // strict: high-confidence recs only
     .filter(m => !renderedMovieIds.has(m.id))  // global dedup — no repeats from other rows
     .slice(0, 20);
   if (!scored.length) return;
@@ -5962,8 +6014,9 @@ async function loadFeedSections() {
     return;
   }
   document.getElementById('feedSections').style.display = '';
-  renderFeedSkeletons('scrollFresh', 8);
+  renderFeedSkeletons('scrollBest', 8);
   renderFeedSkeletons('scrollPopular', 8);
+  renderFeedSkeletons('scrollFresh', 8);
 
   // Reset global deduplication for this render pass
   renderedMovieIds = new Set();
@@ -5985,39 +6038,60 @@ async function loadFeedSections() {
     }),
   ]);
 
-  // ── Fresh Additions ────────────────────────────────────────────────────
-  if (freshRes.status === 'fulfilled' && Array.isArray(freshRes.value)) {
-    const fresh = freshRes.value
-      .map(fromKV)
-      .filter(m => !renderedMovieIds.has(m.id));
-    fresh.slice(0, 20).forEach(m => renderedMovieIds.add(m.id));
-    document.getElementById('scrollFresh').innerHTML =
-      fresh.slice(0, 20).map(m => renderMiniCard(m, { showNew: true, listName: 'Fresh Additions' })).join('');
-    for (const m of fresh) {
-      if (!window._FEED_POOL.find(x => x.id === m.id)) window._FEED_POOL.push(m);
-    }
-  } else {
-    document.getElementById('rowFresh').style.display = 'none';
+  // ── Build the shared pool FIRST so every row can dedup against it ──────
+  const fresh = (freshRes.status === 'fulfilled' && Array.isArray(freshRes.value))
+    ? freshRes.value.map(fromKV) : [];
+  const curated = (curatedRes.status === 'fulfilled' ? (curatedRes.value?.results || []) : [])
+    .map(fromDiscover).filter(m => m.id);
+
+  window._FEED_POOL = [];
+  for (const m of [...fresh, ...curated]) {
+    if (!window._FEED_POOL.find(x => x.id === m.id)) window._FEED_POOL.push(m);
   }
 
-  // ── AI Curated row (TMDB Discover, deduplicated against Fresh) ─────────
-  const rawResults = curatedRes.status === 'fulfilled' ? (curatedRes.value?.results || []) : [];
-  if (rawResults.length) {
-    const curated = rawResults
-      .map(fromDiscover)
-      .filter(m => m.id && !renderedMovieIds.has(m.id));
-    curated.slice(0, 20).forEach(m => renderedMovieIds.add(m.id));
+  // ── 1. For You (personalized, top priority; strict-filtered) ──────────
+  renderForYouRow();
+
+  // ── 2. Best Available Now (high-confidence subset of the added catalog) ─
+  const best = fresh
+    .filter(m => !isThinRecord(m))
+    .filter(m => !renderedMovieIds.has(m.id))
+    .sort((a, b) => qualityScore(b) - qualityScore(a))
+    .slice(0, 20);
+  if (best.length) {
+    best.forEach(m => renderedMovieIds.add(m.id));
+    document.getElementById('rowBest').style.display = '';
+    document.getElementById('scrollBest').innerHTML = best.map(m =>
+      renderMiniCard({ ...m, avg: m.tmdbScore != null ? m.tmdbScore.toFixed(1) : m.avg },
+                     { listName: 'Best Available Now' })).join('');
+  } else {
+    document.getElementById('rowBest').style.display = 'none';
+  }
+
+  // ── 3. AI Curated row (TMDB Discover, independent themed source) ───────
+  const curatedRow = curated.filter(m => !renderedMovieIds.has(m.id)).slice(0, 20);
+  if (curatedRow.length) {
+    curatedRow.forEach(m => renderedMovieIds.add(m.id));
+    document.getElementById('rowPopular').style.display = '';
     document.getElementById('scrollPopular').innerHTML =
-      curated.slice(0, 20).map(m => renderMiniCard(m, { listName: 'AI Curated' })).join('');
-    for (const m of curated) {
-      if (!window._FEED_POOL.find(x => x.id === m.id)) window._FEED_POOL.push(m);
-    }
+      curatedRow.map(m => renderMiniCard(m, { listName: 'AI Curated' })).join('');
   } else {
     document.getElementById('rowPopular').style.display = 'none';
   }
 
-  // Render "For You" if taste profile already exists (also deduplicates)
-  renderForYouRow();
+  // ── 4. Fresh Additions (same catalog, recency view, thin allowed) ─────
+  const freshSorted = [...fresh]
+    .sort((a, b) => (parseInt(b.year) || 0) - (parseInt(a.year) || 0))
+    .filter(m => !renderedMovieIds.has(m.id))
+    .slice(0, 20);
+  if (freshSorted.length) {
+    freshSorted.forEach(m => renderedMovieIds.add(m.id));
+    document.getElementById('rowFresh').style.display = '';
+    document.getElementById('scrollFresh').innerHTML =
+      freshSorted.map(m => renderMiniCard(m, { showNew: true, listName: 'Fresh Additions' })).join('');
+  } else {
+    document.getElementById('rowFresh').style.display = 'none';
+  }
 }
 
 /* ═══════════════════════════════════
