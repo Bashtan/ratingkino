@@ -917,6 +917,30 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .wiz-restart:hover { background: rgba(124,58,237,0.24); }
 .wiz-loading { text-align: center; padding: 40px 0; color: var(--text-sub); font-size: 14px; }
 
+/* ─── Cinematic loader: glowing film reel + flickering "projector" caption.
+      Reused by the Tonight wizard + Group Picker while the LLM responds. ─── */
+.cine-loader { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 40px 0; }
+.cine-reel {
+  width: 58px; height: 58px; animation: cineSpin 2.6s linear infinite;
+  filter: drop-shadow(0 0 5px rgba(34,211,238,0.65)) drop-shadow(0 0 12px rgba(168,85,247,0.5));
+}
+.cine-reel svg { width: 100%; height: 100%; display: block; }
+.cine-text {
+  font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 700;
+  letter-spacing: 0.4px; color: #eef2f7; animation: cineFlicker 2.4s ease-in-out infinite;
+}
+@keyframes cineSpin { to { transform: rotate(360deg); } }
+@keyframes cineFlicker {
+  0%, 100% { opacity: 1;    text-shadow: 0 0 8px rgba(34,211,238,0.55), 0 0 18px rgba(168,85,247,0.4); }
+  48%      { opacity: 0.9;  }
+  50%      { opacity: 0.55; text-shadow: 0 0 3px rgba(34,211,238,0.3); }   /* film-gate flicker */
+  52%      { opacity: 0.95; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cine-reel { animation-duration: 6s; }
+  .cine-text { animation: none; text-shadow: 0 0 8px rgba(34,211,238,0.5); }
+}
+
 /* ─── GROUP PICKER ─── reuses .wiz-overlay/.wiz-modal, cyan-accented ── */
 .group-modal { border-color: rgba(34,211,238,0.25); }
 .group-head { text-align: center; margin-bottom: 6px; }
@@ -1241,15 +1265,55 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 }
 /* Mobile-only sticky NordVPN footer — hidden on desktop */
 .m-nordvpn-footer { display: none; }
+/* ── Share: charismatic neon "AI action" — cyan→magenta gradient, outer glow,
+      continuous breathing + gradient-flow + light-sheen sweep. Breathing lives on
+      box-shadow (always on); hover intensifies via filter (independent property, so
+      no animation/hover specificity clash) + scale-up. Dark text for max contrast. */
 .btn-shr {
-  display: flex; align-items: center; gap: 6px;
-  height: 38px; padding: 0 16px;
-  background: rgba(124,58,237,0.18); border: 1.5px solid var(--purple);
-  border-radius: 8px; color: var(--text);
-  font-weight: 600; font-size: 12px; cursor: pointer;
-  transition: all 0.18s;
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 7px;
+  height: 38px; padding: 0 20px;
+  border: none; border-radius: 10px;
+  background: linear-gradient(120deg, #22d3ee 0%, #7c3aed 52%, #d946ef 100%);
+  background-size: 200% 200%;
+  color: #0b0713;                      /* near-black on the bright gradient */
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 800; font-size: 12px; letter-spacing: 0.5px;
+  text-transform: uppercase; cursor: pointer;
+  transition: transform 0.22s cubic-bezier(0.16,1,0.3,1), filter 0.22s ease;
+  animation: shrGlow 3.4s ease-in-out infinite, shrFlow 7s ease-in-out infinite;
 }
-.btn-shr:hover { background: rgba(124,58,237,0.35); }
+/* moving light-sheen — the "magical" highlight sweep */
+.btn-shr::before {
+  content: ''; position: absolute; top: 0; left: -75%;
+  width: 55%; height: 100%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.5), transparent);
+  transform: skewX(-18deg);
+  animation: shrSheen 5s ease-in-out infinite;
+}
+.btn-shr:hover {
+  transform: scale(1.06);
+  filter: brightness(1.08) saturate(1.15);
+}
+.btn-shr:active { transform: scale(0.98); }
+.btn-shr:focus-visible { outline: 2px solid #a5f3fc; outline-offset: 3px; }
+
+@keyframes shrGlow {
+  0%, 100% { box-shadow: 0 3px 16px rgba(34,211,238,0.42), 0 3px 22px rgba(217,70,239,0.34); }
+  50%      { box-shadow: 0 5px 26px rgba(34,211,238,0.72), 0 5px 34px rgba(217,70,239,0.60); }
+}
+@keyframes shrFlow {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+@keyframes shrSheen {
+  0%, 55% { left: -75%; }
+  100%    { left: 135%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-shr { animation: none; box-shadow: 0 3px 20px rgba(34,211,238,0.5), 0 3px 26px rgba(217,70,239,0.42); }
+  .btn-shr::before { display: none; }
+}
 
 /* Modal body grid */
 .m-body {
@@ -2072,7 +2136,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   .gpill.active { background: var(--purple); border-color: var(--purple); color: #fff; }
   .btn-random:hover { transform: none; box-shadow: none; }
   .btn-trailer:hover { background: var(--orange); }
-  .btn-shr:hover { background: rgba(124,58,237,0.18); }
+  .btn-shr:hover { transform: none; filter: none; }  /* keep neon gradient, no scale on touch */
   .btn-more:hover { background: transparent; color: var(--purple); box-shadow: none; }
   .settings-save:hover { transform: none; box-shadow: none; }
   .review-submit:hover { transform: none; }
@@ -8500,6 +8564,34 @@ function _wizProgressHTML(activeStep) {
   return WIZ_STEPS.map((_, i) => `<div class="wiz-dot${i <= activeStep ? ' done' : ''}"></div>`).join('');
 }
 
+// Cinematic loading spinner — a smoothly spinning, glowing film reel above a
+// flickering neon caption. SVG + CSS only (no external assets).
+function cineLoaderHTML(label) {
+  return `<div class="cine-loader" role="status" aria-live="polite">
+    <div class="cine-reel">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <defs>
+          <linearGradient id="cineGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#22d3ee"/>
+            <stop offset="1" stop-color="#a855f7"/>
+          </linearGradient>
+        </defs>
+        <circle cx="50" cy="50" r="45" fill="none" stroke="url(#cineGrad)" stroke-width="7"/>
+        <circle cx="50" cy="50" r="11" fill="url(#cineGrad)"/>
+        <g fill="url(#cineGrad)">
+          <circle cx="50" cy="21"   r="7"/>
+          <circle cx="75" cy="35.5" r="7"/>
+          <circle cx="75" cy="64.5" r="7"/>
+          <circle cx="50" cy="79"   r="7"/>
+          <circle cx="25" cy="64.5" r="7"/>
+          <circle cx="25" cy="35.5" r="7"/>
+        </g>
+      </svg>
+    </div>
+    <div class="cine-text">${esc(label)}</div>
+  </div>`;
+}
+
 function renderWizard() {
   const stepKey = WIZ_STEPS[WIZARD_STEP];
   const opts    = WIZ_OPTIONS[stepKey];
@@ -8522,7 +8614,7 @@ function renderWizard() {
 
 async function runWizard() {
   document.getElementById('wizProgress').innerHTML = _wizProgressHTML(WIZ_STEPS.length);
-  document.getElementById('wizBody').innerHTML = `<div class="wiz-loading">${esc(t('wiz.loading'))}</div>`;
+  document.getElementById('wizBody').innerHTML = cineLoaderHTML(t('wiz.loading'));
 
   const mood    = WIZ_OPTIONS.mood.find(o => o.key === WIZARD_STATE.mood);
   const time    = WIZ_OPTIONS.time.find(o => o.key === WIZARD_STATE.time);
@@ -8659,8 +8751,7 @@ async function runGroupPicker() {
     return;
   }
 
-  document.getElementById('groupBody').innerHTML =
-    `<div class="group-loading">${esc(t('group.loading'))}</div>`;
+  document.getElementById('groupBody').innerHTML = cineLoaderHTML(t('group.loading'));
 
   try {
     const r = await fetch('/api/group-picker', {
