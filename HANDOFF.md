@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-14) — Feed Quality Gate: "Best Available Now" vs "Fresh Additions"
+## ⚡ Most Recent Session (2026-07-15) — UI Polish: Neon Share Button + Cinematic Loader
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `15494ef` | **Two visual upgrades on the vanilla-CSS stack (`index.html` only; project has no Tailwind — implemented natively, Tailwind snippets handed to user separately).** **(1) Charismatic Share button (`.btn-shr`, CSS ~L1244, markup L3699 `<button class="btn-shr" onclick="openShare()">`):** replaced the muted purple-outline pill (the core viral-loop CTA that was blending in) with a neon "AI action" — `linear-gradient(120deg,#22d3ee,#7c3aed,#d946ef)` (cyan→violet→magenta) w/ `background-size:200% 200%`, near-black text `#0b0713` for contrast, uppercase Montserrat 800. **Always-on** `@keyframes shrGlow` (breathing dual cyan+magenta `box-shadow`) + `shrFlow` (gradient drift) + `shrSheen` (light-sweep via `::before`). **Hover** = `transform:scale(1.06)` + `filter:brightness(1.08) saturate(1.15)` — deliberately on `filter` (not box-shadow) so it never clashes with the breathing animation's box-shadow. Adds `:active` scale-down, `:focus-visible` cyan ring, `@media (prefers-reduced-motion)` guard (static glow), and touch override (`@media (hover:none)` ~L2075 now `transform:none;filter:none` to keep the gradient, not the old flat purple). **(2) Cinematic loader (replaces plain-text spinners):** new JS helper `cineLoaderHTML(label)` (before `renderWizard()` ~L8543) returns a glowing SVG **film reel** (ring + hub + 6 spoke-holes, `url(#cineGrad)` cyan→purple, dual `drop-shadow`) that spins via `@keyframes cineSpin` (2.6s linear) above a **flickering** neon caption (`@keyframes cineFlicker` — film-gate opacity dip + cyan/purple `text-shadow`); `role="status" aria-live="polite"`, label `esc()`-escaped (XSS-safe against i18n). CSS `.cine-loader`/`.cine-reel`/`.cine-text` after `.wiz-loading` (~L918) + `prefers-reduced-motion` guard. Wired into `runWizard()` (~L8565, "Finding your perfect picks…" `wiz.loading`) and `runGroupPicker()` (~L8703, "Finding the perfect overlap…" `group.loading`), replacing `<div class="wiz-loading">`/`<div class="group-loading">` text. SVG+CSS only, no external assets. Old `.wiz-loading`/`.group-loading` rules kept (still used for empty/`needTwo` text states). **Verified on preview:** computed styles (gradient/color/box-shadow/animation-name), both button states + loader screenshotted, `hasSvgCircles:8`, label HTML-escaping, no console errors. **Deployed** (`627b3cd1.ratingkino.pages.dev` → findfilm.ai); live curl confirms `shrGlow`/`shrSheen`/`cineLoaderHTML`/`cine-reel`/`@keyframes cineSpin` present. **Punchier caption alts offered (not applied):** "Rolling the reels…" / "Rolling cameras…" / "Now screening your matches…". |
+
+---
+
+## ⚡ Session (2026-07-14) — Feed Quality Gate: "Best Available Now" vs "Fresh Additions"
 
 All commits on `main`, all live on https://findfilm.ai.
 
