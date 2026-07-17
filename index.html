@@ -722,13 +722,30 @@ header {
   max-width: 1600px; margin: 0 auto;
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
 }
+.hero-band-copy { max-width: 720px; }
+.hero-h1 {
+  font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 15px; line-height: 1.25;
+  margin: 0 0 4px; letter-spacing: 0.2px;
+  color: #cbb9ff;
+}
 .hero-title {
   font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 20px; line-height: 1.15;
 }
 .c-p { color: var(--purple); }
 .c-o { color: var(--orange); }
 .c-y { color: var(--yellow); }
-.hero-sub { margin-top: 2px; font-size: 12px; color: var(--muted); }
+.hero-sub { margin-top: 4px; margin-bottom: 0; font-size: 12px; color: var(--muted); max-width: 640px; line-height: 1.45; }
+/* "How ratings work" trust affordance */
+.how-ratings-link {
+  display: inline-flex; align-items: center; gap: 5px; margin-top: 7px;
+  padding: 4px 10px; border-radius: 20px;
+  background: rgba(124,58,237,0.10); border: 1px solid rgba(124,58,237,0.35);
+  color: #c4b5fd; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700;
+  cursor: pointer; transition: background 0.2s, border-color 0.2s, transform 0.2s;
+}
+.how-ratings-link:hover { background: rgba(124,58,237,0.2); border-color: rgba(124,58,237,0.6); transform: translateY(-1px); }
+.how-ratings-link svg { opacity: 0.9; }
+.hero-updated { font-size: 10.5px; color: var(--muted); opacity: 0.75; width: 100%; margin-top: 2px; }
 .source-badges { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .sbadge {
   display: flex; align-items: center; gap: 5px;
@@ -737,6 +754,47 @@ header {
 .sbadge.imd { background: rgba(245,197,24,0.13); color: var(--imdb); border: 1px solid rgba(245,197,24,0.3); }
 .sbadge.rt  { background: rgba(250,50,10,0.13); color: var(--rt); border: 1px solid rgba(250,50,10,0.3); }
 .sbadge.mc  { background: rgba(255,204,52,0.13); color: var(--mc); border: 1px solid rgba(255,204,52,0.3); }
+
+/* ─── "HOW RATINGS WORK" MICRO-MODAL ──────────── */
+.ri-backdrop {
+  position: fixed; inset: 0; z-index: 998;
+  background: rgba(6,2,16,0.72); backdrop-filter: blur(4px);
+  opacity: 0; pointer-events: none; transition: opacity 0.25s;
+}
+.ri-backdrop.open { opacity: 1; pointer-events: auto; }
+.ri-modal {
+  position: fixed; z-index: 999;
+  top: 50%; left: 50%; transform: translate(-50%, -46%) scale(0.97);
+  width: min(440px, 92vw);
+  background: linear-gradient(160deg, #17102b, #0e0a1c);
+  border: 1px solid rgba(124,58,237,0.35); border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.6), 0 0 0 1px rgba(124,58,237,0.08);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+}
+.ri-modal.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+.ri-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px 12px; border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.ri-title { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 15px; color: #fff; }
+.ri-close {
+  background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer;
+  width: 28px; height: 28px; border-radius: 8px; transition: background 0.2s, color 0.2s;
+}
+.ri-close:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.ri-body { padding: 14px 18px 18px; }
+.ri-body p { font-size: 13px; line-height: 1.5; color: #cfc8e0; margin: 0 0 12px; }
+.ri-body strong { color: #fff; font-weight: 700; }
+.ri-tiers { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 12px; }
+.ri-tier { display: flex; align-items: flex-start; gap: 9px; font-size: 12.5px; line-height: 1.45; color: #bdb6cf; }
+.ri-dot { flex-shrink: 0; width: 9px; height: 9px; border-radius: 50%; margin-top: 4px; }
+.ri-dot-full  { background: #34d399; box-shadow: 0 0 8px rgba(52,211,153,0.6); }
+.ri-dot-early { background: #94a3b8; box-shadow: 0 0 8px rgba(148,163,184,0.4); }
+.ri-updated { font-size: 11px; color: var(--muted); opacity: 0.8; margin: 0; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); }
+@media (prefers-reduced-motion: reduce) {
+  .ri-modal, .ri-backdrop { transition: none; }
+}
 
 /* ─── MAIN ────────────────────────────────────── */
 main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
@@ -2540,6 +2598,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   padding: 0 18px 10px;
 }
 .feed-row-title {
+  margin: 0;
   font-size: 13px; font-weight: 800; letter-spacing: 0.8px;
   font-family: 'Montserrat', sans-serif; color: var(--text);
   text-transform: uppercase;
@@ -2624,6 +2683,28 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .feed-row.for-you .mini-card:hover {
   box-shadow: 0 12px 32px rgba(99,102,241,0.3);
+}
+/* Dominant primary row — "Start here tonight" gets extra visual weight so the
+   eye lands here first instead of treating every carousel equally. */
+.feed-row--primary {
+  background: linear-gradient(180deg, rgba(124,58,237,0.12), rgba(124,58,237,0));
+  border: 1px solid rgba(124,58,237,0.22);
+  border-radius: 16px;
+  padding: 14px 0 6px; margin: 0 12px 30px;
+  box-shadow: 0 10px 34px rgba(124,58,237,0.12);
+}
+.feed-row--primary .feed-row-header { padding-left: 20px; padding-right: 20px; }
+.feed-row--primary .feed-row-title {
+  font-size: 18px; text-transform: none; letter-spacing: 0.2px;
+  background: linear-gradient(90deg, #d6c8ff, #67e8f9);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.feed-row--primary .feed-scroll { padding-left: 20px; padding-right: 20px; }
+.feed-row--primary .mini-card { flex-basis: 158px; }
+@media (max-width: 768px) {
+  .feed-row--primary { margin-left: 8px; margin-right: 8px; }
+  .feed-row--primary .feed-row-title { font-size: 15px; }
+  .feed-row--primary .mini-card { flex-basis: 140px; }
 }
 /* Recommendation reason pill — shown on For You cards */
 /* Recommendation reason — hover tooltip on desktop, muted subtitle on mobile.
@@ -3728,29 +3809,52 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
-<!-- ════════════ HERO BAND ════════════ -->
+<!-- ════════════ HERO BAND (SEO content zone) ════════════ -->
 <div class="hero-band">
-  <div>
+  <div class="hero-band-copy">
+    <h1 class="hero-h1" data-i18n="hero.h1">FindFilm — AI Movie Assistant &amp; Unified Ratings</h1>
     <div class="hero-title" id="heroTitle">
       <span class="c-p">240,000</span> films.<br>
       <span class="c-o">3</span> sources. <span class="c-y">1</span> rating.
     </div>
-    <div class="hero-sub" data-i18n="hero.subtitle">We aggregate scores from IMDb, Rotten Tomatoes, and Metacritic into one weighted rating.</div>
+    <p class="hero-sub" data-i18n="hero.subtitle">We aggregate scores from IMDb, Rotten Tomatoes, and Metacritic into one weighted rating.</p>
+    <button class="how-ratings-link" onclick="openRatingsInfo()" aria-label="How ratings work">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <span data-i18n="ratings.howLink">How ratings work</span>
+    </button>
   </div>
   <div class="source-badges">
     <div class="sbadge imd">⭐ IMDb</div>
     <div class="sbadge rt">🍅 Rotten Tomatoes</div>
     <div class="sbadge mc">🎯 Metacritic</div>
+    <div class="hero-updated" id="heroUpdated" title="Catalog data freshness"></div>
+  </div>
+</div>
+
+<!-- ════════════ "HOW RATINGS WORK" MICRO-MODAL ════════════ -->
+<div class="ri-backdrop" id="ratingsInfoBackdrop" onclick="closeRatingsInfo()"></div>
+<div class="ri-modal" id="ratingsInfoModal" role="dialog" aria-modal="true" aria-labelledby="riTitle">
+  <div class="ri-head">
+    <span class="ri-title" id="riTitle" data-i18n="ratings.title">How our ratings work</span>
+    <button class="ri-close" onclick="closeRatingsInfo()" aria-label="Close">✕</button>
+  </div>
+  <div class="ri-body">
+    <p data-i18n-html="ratings.body1">Every score blends <strong>IMDb</strong>, <strong>Rotten Tomatoes</strong>, and <strong>Metacritic</strong> into one weighted verdict — so you get the full critical picture at a glance.</p>
+    <div class="ri-tiers">
+      <div class="ri-tier"><span class="ri-dot ri-dot-full"></span><span data-i18n-html="ratings.tierFull"><strong>Full Critic Data</strong> — blended from all three sources once reviews are in.</span></div>
+      <div class="ri-tier"><span class="ri-dot ri-dot-early"></span><span data-i18n-html="ratings.tierEarly"><strong>Early Metadata</strong> — newer titles may temporarily show TMDB-only scores until full reviews drop.</span></div>
+    </div>
+    <p class="ri-updated" id="riUpdated"></p>
   </div>
 </div>
 
 <!-- ════════════ FEED SECTIONS (horizontal rows) ════════════ -->
 <div class="feed-sections" id="feedSections">
 
-  <!-- "For You" row — only shown after enough interactions -->
-  <div class="feed-row for-you" id="rowForYou" style="display:none">
+  <!-- "Start here tonight" — dominant personalized row (shown after enough interactions) -->
+  <div class="feed-row for-you feed-row--primary" id="rowForYou" style="display:none">
     <div class="feed-row-header">
-      <span class="feed-row-title">✨ For You</span>
+      <h2 class="feed-row-title">🌙 Start here tonight</h2>
       <span class="feed-row-badge">
         <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
         Based on your taste
@@ -3763,16 +3867,17 @@ if ('serviceWorker' in navigator) {
   <!-- Best Available Now — high-confidence, critic/vote-weighted -->
   <div class="feed-row" id="rowBest">
     <div class="feed-row-header">
-      <span class="feed-row-title">🏅 Best Available Now</span>
-      <span class="feed-row-badge">Certified by ratings &amp; votes</span>
+      <h2 class="feed-row-title" data-i18n="feed.best">🏅 Best Available Now</h2>
+      <span class="feed-row-badge" data-i18n="feed.bestBadge">Certified by ratings &amp; votes</span>
     </div>
     <div class="feed-scroll" id="scrollBest"></div>
   </div>
 
-  <!-- AI Curated row — title is updated dynamically by loadFeedSections() -->
+  <!-- Hidden Gems — under-the-radar high-quality picks (daily theme shown as a badge) -->
   <div class="feed-row" id="rowPopular">
     <div class="feed-row-header">
-      <span class="feed-row-title" id="rowPopularTitle">🏆 Masterpieces</span>
+      <h2 class="feed-row-title" data-i18n="feed.hiddenGems">💎 Hidden Gems</h2>
+      <span class="feed-row-badge" id="rowPopularTheme"></span>
     </div>
     <div class="feed-scroll" id="scrollPopular"></div>
   </div>
@@ -3780,7 +3885,7 @@ if ('serviceWorker' in navigator) {
   <!-- Fresh Additions row — recency view, newly added titles -->
   <div class="feed-row" id="rowFresh">
     <div class="feed-row-header">
-      <span class="feed-row-title">🔥 Fresh Additions</span>
+      <h2 class="feed-row-title">🔥 Fresh Additions</h2>
     </div>
     <div class="feed-scroll" id="scrollFresh"></div>
   </div>
@@ -4101,7 +4206,17 @@ const TRANSLATIONS = {
     'filter.minRating':     'Min Rating',
     'filter.any':           'Any',
     'filter.sort':          'Sort',
-    'hero.subtitle':        'Find your movie using AI — scores from IMDb, Rotten Tomatoes & Metacritic in one rating.',
+    'hero.h1':              'FindFilm — AI Movie Assistant & Unified Ratings',
+    'hero.subtitle':        'Describe any mood, plot, or vibe and our AI finds your next watch — with IMDb, Rotten Tomatoes & Metacritic blended into one trustworthy score.',
+    'ratings.howLink':      'How ratings work',
+    'ratings.title':        'How our ratings work',
+    'ratings.body1':        'Every score blends <strong>IMDb</strong>, <strong>Rotten Tomatoes</strong>, and <strong>Metacritic</strong> into one weighted verdict — so you get the full critical picture at a glance.',
+    'ratings.tierFull':     '<strong>Full Critic Data</strong> — blended from all three sources once reviews are in.',
+    'ratings.tierEarly':    '<strong>Early Metadata</strong> — newer titles may temporarily show TMDB-only scores until full reviews drop.',
+    'ratings.updated':      'Catalog refreshed {when}.',
+    'ratings.updatedMins':  '{n} min ago',
+    'ratings.updatedHrs':   '{n} h ago',
+    'ratings.updatedDays':  '{n} d ago',
     'hero.aiPowered':       'AI Powered Search',
     'hero.films':           'films',
     'hero.shows':           'shows',
@@ -4225,9 +4340,12 @@ const TRANSLATIONS = {
     'time.yearsAgo':       '{n}y ago',
     'fv.skip':             'Tap anywhere to continue',
     // Feed rows
-    'feed.forYou':         '✨ For You',
+    'feed.forYou':         '🌙 Start here tonight',
     'feed.fresh':          '🔥 Fresh Additions',
     'feed.forYouBadge':    'Based on your taste',
+    'feed.best':           '🏅 Best Available Now',
+    'feed.bestBadge':      'Certified by ratings & votes',
+    'feed.hiddenGems':     '💎 Hidden Gems',
     // Grid header
     'grid.explore':        '🍿 Explore Collection',
     // Watchlist
@@ -6203,8 +6321,8 @@ async function loadFeedSections() {
   // Pick today's AI curated theme (stable for the calendar day via UTC day index)
   const dayIdx  = Math.floor(Date.now() / 86400000);
   const theme   = CURATED_THEMES[dayIdx % CURATED_THEMES.length];
-  const titleEl = document.getElementById('rowPopularTitle');
-  if (titleEl) titleEl.textContent = `🧠 AI Curated: ${theme.label}`;
+  const themeEl = document.getElementById('rowPopularTheme');
+  if (themeEl) themeEl.textContent = theme.label; // daily curation theme, shown as a badge next to "Hidden Gems"
 
   const [freshRes, curatedRes] = await Promise.allSettled([
     fetch('/api/cache/new-releases').then(r => r.json()),
@@ -8133,6 +8251,44 @@ function updateFilterCount() {
   el.classList.toggle('on', n > 0);
 }
 
+/* ─── "How ratings work" micro-modal + catalog-freshness stamp ─── */
+function openRatingsInfo() {
+  document.getElementById('ratingsInfoModal')?.classList.add('open');
+  document.getElementById('ratingsInfoBackdrop')?.classList.add('open');
+}
+function closeRatingsInfo() {
+  document.getElementById('ratingsInfoModal')?.classList.remove('open');
+  document.getElementById('ratingsInfoBackdrop')?.classList.remove('open');
+}
+
+// Fetch the nightly-sync timestamp and render a friendly "updated" stamp
+// in the hero band + the ratings modal. Silent no-op if the cache is empty.
+async function loadCatalogFreshness() {
+  try {
+    const r = await fetch('/api/cache/status');
+    if (!r.ok) return;
+    const data = await r.json();
+    const iso = data?.timestamp || data?.updatedAt;
+    if (!iso) return;
+    const d = new Date(iso);
+    if (isNaN(d)) return;
+    const stamp = relativeUpdated(d);
+    const heroEl = document.getElementById('heroUpdated');
+    if (heroEl) heroEl.textContent = '↻ ' + stamp;
+    const riEl = document.getElementById('riUpdated');
+    if (riEl) riEl.textContent = t('ratings.updated').replace('{when}', stamp);
+  } catch { /* freshness is best-effort */ }
+}
+function relativeUpdated(d) {
+  const mins = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (mins < 60)    return t('ratings.updatedMins').replace('{n}', Math.max(1, mins));
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24)     return t('ratings.updatedHrs').replace('{n}', hrs);
+  const days = Math.floor(hrs / 24);
+  if (days < 7)     return t('ratings.updatedDays').replace('{n}', days);
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
 function renderWatchlistDrawer() {
   const body = document.getElementById('wlBody');
   const chip = document.getElementById('wlCountChip');
@@ -9551,6 +9707,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closeSearch(); closeMobSearch();
     if (document.getElementById('filtersDrawer')?.classList.contains('open')) closeFilters();
+    if (document.getElementById('ratingsInfoModal')?.classList.contains('open')) closeRatingsInfo();
   }
 });
 
@@ -10106,6 +10263,7 @@ async function init() {
   await loadGenres();
   restoreSession(); // re-populate inputs before the first loadMovies call
   loadFeedSections(); // fire and forget — loads KV rows in parallel
+  loadCatalogFreshness(); // fire and forget — stamps the hero + ratings modal
   await loadMovies(1, false);
 
   // ── Deep-link: open ?movie=<id> on direct navigation ──────
