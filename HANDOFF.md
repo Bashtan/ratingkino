@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-15) — Hero Declutter & UI Hierarchy (UX Polish)
+## ⚡ Most Recent Session (2026-07-15) — Trust Signals, Feed Hierarchy & SEO (UX Audit Part 2)
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| _pending_ | **Rating transparency + feed hierarchy + SEO semantics (frontend-only, `index.html`; no Tailwind — native CSS, Tailwind snippets handed to user).** Deployed `e01dd88d.ratingkino.pages.dev` → findfilm.ai; live curl confirms `hero-h1`/"Start here tonight"/"Hidden Gems"/"How ratings work" + `/api/cache/status` returns a real `timestamp`. **(1) Rating transparency — "How ratings work" micro-modal:** new `.how-ratings-link` (ⓘ pill) in the `.hero-band` opens `#ratingsInfoModal` (+ `#ratingsInfoBackdrop`) via `openRatingsInfo()`/`closeRatingsInfo()` (added after `updateFilterCount` ~L8236). Modal explains the IMDb+RT+Metacritic blend with two tiers — `.ri-dot-full` "Full Critic Data" (green) / `.ri-dot-early` "Early Metadata" (gray, "newer titles may temporarily show TMDB-only scores until full reviews drop"). ESC listener (~L9670) extended to close it. **Catalog-freshness stamp:** `loadCatalogFreshness()` (fire-and-forget in `init()` ~L10230) fetches `/api/cache/status` (KV `last-sync`), parses `.timestamp`, renders `↻ {relative}` in `#heroUpdated` (hero band) + fills `#riUpdated` in the modal via `relativeUpdated(d)` (mins/hrs/days/date buckets). CSS `.ri-backdrop`/`.ri-modal`/`.ri-head`/`.ri-title`/`.ri-close`/`.ri-body`/`.ri-tiers`/`.ri-tier`/`.ri-dot*`/`.ri-updated` after `.sbadge.mc` (~L738); `.how-ratings-link`/`.hero-updated` after `.hero-sub`. **(2) Feed hierarchy — dominant primary row + rename:** top row `#rowForYou` renamed **"🌙 Start here tonight"** (i18n `feed.forYou` EN updated; applyTranslations L5629 sets it) and given class `.feed-row--primary` (framed purple gradient band, 18px gradient-clip title, 158px cards) so it dominates. Middle row `#rowPopular` renamed **"💎 Hidden Gems"** (`feed.hiddenGems`): removed old `#rowPopularTitle` dynamic "🧠 AI Curated: {theme}" title; the daily `CURATED_THEMES[dayIdx].label` now shows in a `#rowPopularTheme` badge (set in `loadFeedSections` ~L6270). Visual order = Start here tonight → Best Available Now → Hidden Gems → Fresh Additions. **(3) SEO semantics:** added one `<h1 class="hero-h1" data-i18n="hero.h1">FindFilm — AI Movie Assistant & Unified Ratings</h1>` in the hero band (kept `#heroTitle` "240,000 films…" as the JS-driven tagline below it); all four feed-row titles converted `<span>`→`<h2 class="feed-row-title">` (added `margin:0` reset); `hero.subtitle` EN rewritten to a stronger value-prop paragraph. New i18n EN keys: `hero.h1`, `ratings.howLink/title/body1/tierFull/tierEarly/updated/updatedMins/updatedHrs/updatedDays`, `feed.best/bestBadge/hiddenGems` (other langs fall back to EN via `t()`). `ratings.body1/tierFull/tierEarly` use `data-i18n-html` (contain `<strong>`). **Verified on preview:** exactly 1 `<h1>`, 4 feed `<h2>`s in order, `.feed-row--primary` on rowForYou, modal opens/closes (ESC + backdrop + X) with `<strong>` rendered + 2 tiers, seeded-card screenshot shows the framed dominant "Start here tonight" vs plain "Best Available Now". |
+
+---
+
+## ⚡ Session (2026-07-15) — Hero Declutter & UI Hierarchy (UX Polish)
 
 All commits on `main`, all live on https://findfilm.ai.
 
