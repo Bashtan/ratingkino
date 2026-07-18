@@ -2613,7 +2613,10 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .ai-match-pill.show { display: inline-flex; }
 
 /* ─── FEED SECTIONS (horizontal rows) ────────── */
-.feed-sections { padding: 0 0 4px; }
+/* Centered max-width wrapper anchors feed content on ultra-wide monitors
+   instead of letting rows float left into a black void. Has NO effect below
+   1400px (all mobile/tablet), so the mobile experience is untouched. */
+.feed-sections { max-width: 1400px; margin: 0 auto; padding: 0 0 4px; }
 
 .feed-row { margin-bottom: 28px; }
 .feed-row-header {
@@ -2647,6 +2650,13 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   -webkit-overflow-scrolling: touch; scrollbar-width: none;
 }
 .feed-scroll::-webkit-scrollbar { display: none; }
+
+/* Roomier gutters on desktop (≈ md:px-8) so the centered feed breathes;
+   mobile keeps its original 18px gutters (rule scoped to ≥992px only). */
+@media (min-width: 992px) {
+  .feed-row-header { padding-left: 28px; padding-right: 28px; }
+  .feed-scroll     { padding-left: 28px; padding-right: 28px; }
+}
 
 /* Mini card for horizontal rows */
 .mini-card {
@@ -2739,11 +2749,11 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   color: #fff; font-family: 'Montserrat', sans-serif;
   letter-spacing: 0.5px;
 }
-/* "Explore Top Rated" CTA — dynamically grows to fill the dead space left
-   when a feed row has too few cards to fill wide screens. flex-grow eats
-   remaining horizontal space; on overflow it collapses to an end-cap. */
+/* "Explore Top Rated" CTA — a sleek fixed-width end-cap card at the end of the
+   Best row. No flex-grow, so it never stretches into a giant banner on wide
+   screens; desktop gives it a touch more width, capped at 320px. */
 .feed-cta {
-  flex: 1 1 240px; min-width: 200px; align-self: stretch;
+  flex: 0 0 240px; align-self: stretch;
   display: flex; flex-direction: column; justify-content: center;
   gap: 8px; padding: 18px 22px; cursor: pointer;
   border-radius: 12px; text-align: left;
@@ -2771,6 +2781,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .feed-cta-arrow svg { transition: transform 0.22s; }
 .feed-cta:hover .feed-cta-arrow svg { transform: translateX(4px); }
+@media (min-width: 992px) { .feed-cta { flex-basis: 300px; max-width: 320px; } }
 /* Slim "See all" end-cap — reveals the rest of a truncated horizontal row in place */
 .feed-seemore {
   flex: 0 0 98px; align-self: stretch; cursor: pointer;
@@ -6591,7 +6602,13 @@ function genRecommendReason(m, profile) {
 
 // Homepage collection rows are truncated to a single scannable row to avoid
 // scroll fatigue; a "See all" end-cap reveals the rest in place.
-const FEED_ROW_LIMIT = 6;
+// Mobile/tablet stays lean at 6; wide desktop (≥992px) shows up to 10 so the
+// row gracefully fills the screen instead of leaving a dead void on the right.
+const FEED_ROW_LIMIT         = 6;   // mobile / tablet base
+const FEED_ROW_LIMIT_DESKTOP = 10;  // lg / xl
+function feedRowLimit() {
+  return (window.innerWidth >= 992) ? FEED_ROW_LIMIT_DESKTOP : FEED_ROW_LIMIT;
+}
 window._FEED_FULL = window._FEED_FULL || {};
 
 function feedSeeMoreCard(key) {
@@ -6609,16 +6626,42 @@ function expandFeedRow(key) {
   if (el) el.innerHTML = f.cards.join('');
 }
 
-// Inject a row's cards, truncated to FEED_ROW_LIMIT with a "See all" end-cap
-// when there are more; stashes the full list for in-place expansion.
+// Truncate one stashed row to the current responsive limit. Best row keeps its
+// "Explore Top Rated" CTA end-cap; other rows get the "See all" affordance.
+function renderTruncatedRow(key) {
+  const f = window._FEED_FULL[key];
+  if (!f) return;
+  const el = document.getElementById(f.elId);
+  if (!el) return;
+  const lim = feedRowLimit();
+  if (f.cta) {
+    el.innerHTML = f.cards.slice(0, lim).join('') + feedCtaCard();
+  } else {
+    el.innerHTML = f.cards.length > lim
+      ? f.cards.slice(0, lim).join('') + feedSeeMoreCard(key)
+      : f.cards.join('');
+  }
+}
+
+// Inject a row's cards, truncated to the responsive limit with a "See all"
+// end-cap when there are more; stashes the full list for in-place expansion.
 function renderFeedRow(elId, key, cards) {
   window._FEED_FULL[key] = { elId, cards };
-  const el = document.getElementById(elId);
-  if (!el) return;
-  el.innerHTML = cards.length > FEED_ROW_LIMIT
-    ? cards.slice(0, FEED_ROW_LIMIT).join('') + feedSeeMoreCard(key)
-    : cards.join('');
+  renderTruncatedRow(key);
 }
+
+// Re-truncate every stashed row when the viewport crosses the desktop
+// breakpoint (e.g. rotate / resize), so counts adapt without a re-fetch.
+let _feedBP = (typeof window !== 'undefined' && window.innerWidth >= 992) ? 'desktop' : 'mobile';
+window.addEventListener('resize', () => {
+  const bp = (window.innerWidth >= 992) ? 'desktop' : 'mobile';
+  if (bp === _feedBP) return;
+  _feedBP = bp;
+  clearTimeout(window._feedResizeTimer);
+  window._feedResizeTimer = setTimeout(() => {
+    Object.keys(window._FEED_FULL).forEach(renderTruncatedRow);
+  }, 150);
+});
 
 function renderForYouRow() {
   const profile = getTasteProfile();
@@ -6681,18 +6724,22 @@ async function loadFeedSections() {
   renderForYouRow();
 
   // ── 2. Best Available Now (high-confidence subset of the added catalog) ─
+  // Keep up to the desktop max so wide screens can fill the row; the row is
+  // then truncated to the responsive limit (and re-truncated on resize).
   const best = fresh
     .filter(m => !isThinRecord(m))
     .filter(m => !renderedMovieIds.has(m.id))
     .sort((a, b) => qualityScore(b) - qualityScore(a))
-    .slice(0, FEED_ROW_LIMIT);
+    .slice(0, FEED_ROW_LIMIT_DESKTOP);
   if (best.length) {
     best.forEach(m => renderedMovieIds.add(m.id));
     document.getElementById('rowBest').style.display = '';
     // Best row keeps its own "Explore Top Rated" CTA end-cap (its See-More affordance)
-    document.getElementById('scrollBest').innerHTML = best.map(m =>
+    const bestCards = best.map(m =>
       renderMiniCard({ ...m, avg: m.tmdbScore != null ? m.tmdbScore.toFixed(1) : m.avg },
-                     { listName: 'Best Available Now' })).join('') + feedCtaCard();
+                     { listName: 'Best Available Now' }));
+    window._FEED_FULL['best'] = { elId: 'scrollBest', cards: bestCards, cta: true };
+    renderTruncatedRow('best');
   } else {
     document.getElementById('rowBest').style.display = 'none';
   }
