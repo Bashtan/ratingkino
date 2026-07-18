@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — AI Status Line (replaces 3-Pillar Trust Row)
+## ⚡ Most Recent Session (2026-07-18) — Feed "See all" End-Cap: Mobile-Only
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `1e50e45` | **Made the horizontal-feed "See all" end-cap (`.feed-seemore`, dashed border + `→` icon, rendered by `feedSeeMoreCard(key)` L6532) mobile-only** — it read as a clunky extra tile in the desktop feed rows. Deployed `eace94a2.ratingkino.pages.dev` → findfilm.ai. Single CSS addition after `.feed-seemore-label` (~L2760): **`@media (min-width: 769px) { .feed-seemore { display: none; } }`** (exact complement of the site's `max-width:768px` mobile breakpoint). `display:none` removes the flex item from the row entirely, so no trailing empty gap on desktop; on ≤768px it stays `display:flex` (`flex:0 0 98px`). No JS/markup change — `renderFeedRow()` still appends the end-cap, CSS just governs visibility. **Verified on preview:** desktop 1280 → `getComputedStyle('.feed-seemore').display === 'none'`; mobile 375 → `display:flex`, 98×200px visible. (Note: the richer `.feed-cta` trophy card on Best Available Now is untouched — different component.) |
+
+---
+
+## ⚡ Session (2026-07-18) — AI Status Line (replaces 3-Pillar Trust Row)
 
 All commits on `main`, all live on https://findfilm.ai.
 
