@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — Search-Mode Toggle (Title vs Plot/AI) + Voice
+## ⚡ Most Recent Session (2026-07-18) — Balanced Desktop Feed Layout (Eliminate Void)
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `2d05e53` | **Fixed the wide-monitor feed layout: rows were capped at 6 cards → massive black void on the right, and the "Explore Top Rated" CTA stretched into a giant banner via `flex-grow`.** Deployed `9e98f93b.ratingkino.pages.dev` → findfilm.ai. **(1) Centered max-width wrapper:** `.feed-sections` (~L2616) now `max-width:1400px; margin:0 auto` — anchors feed content on ultra-wide screens (verified 1920px → 1400px band, symmetric ~260px gutters). Zero effect <1400px so **mobile untouched**. Desktop-only gutter bump `@media (min-width:992px){ .feed-row-header, .feed-scroll { padding-left/right:28px } }` (≈ md:px-8). **(2) Responsive truncation:** new `feedRowLimit()` returns `FEED_ROW_LIMIT_DESKTOP=10` at `innerWidth>=992` else `FEED_ROW_LIMIT=6` (~L6607). New **`renderTruncatedRow(key)`** truncates a stashed `_FEED_FULL[key]` row to `feedRowLimit()` (Best row uses `cta:true` → `feedCtaCard()` end-cap; others → `feedSeeMoreCard()`). `renderFeedRow()` now stashes + delegates to it. Best row (`loadFeedSections` ~L6730) now keeps up to `FEED_ROW_LIMIT_DESKTOP` cards, marks them all in `renderedMovieIds` (dedup), stashes `_FEED_FULL['best']={elId:'scrollBest',cards,cta:true}`, calls `renderTruncatedRow('best')`. A debounced `resize` listener (`_feedBP`, ~L6656) re-truncates every stashed row when crossing the 992px breakpoint — no re-fetch. **(3) Non-stretch CTA:** `.feed-cta` (~L2755) `flex:1 1 240px; min-width:200px` → **`flex:0 0 240px`** (kills `flex-grow` stretch; mobile basis unchanged at 240px); `@media (min-width:992px){ .feed-cta { flex-basis:300px; max-width:320px } }` → sleek 300px card on desktop. **Verified on preview:** desktop 1280/1920 → 10 cards fill row, CTA 300px (≤320), feed centered no void; mobile 375 → fresh render 6 cards + visible see-more (`display:flex`) + 240px CTA; firing a real `resize` event re-truncates 10→6. `.feed-seemore` stays desktop-hidden (`@media min-width:769px`). (Note: `main` results grid remains its own `max-width:1200px` L825 — feed intentionally wider at 1400px per request.) |
+
+---
+
+## ⚡ Session (2026-07-18) — Search-Mode Toggle (Title vs Plot/AI) + Voice
 
 All commits on `main`, all live on https://findfilm.ai.
 
