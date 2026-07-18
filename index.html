@@ -3431,69 +3431,176 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 .fv-skip-link:hover { color: var(--text); }
 
 /* ─── iOS PWA Install Prompt ─────────────────────── */
+/* ═══ iOS PWA — Stage 1: native-look centered "OS alert" ═══ */
+.ios-pwa-backdrop {
+  position: fixed; inset: 0; z-index: 10490;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.28s ease;
+}
+.ios-pwa-backdrop.visible { opacity: 1; pointer-events: auto; }
+
 .ios-pwa-prompt {
-  position: fixed; bottom: 0; left: 0; right: 0;
-  z-index: 10500;
-  display: flex; align-items: center; gap: 14px;
-  padding: 16px 48px max(22px, calc(env(safe-area-inset-bottom) + 10px)) 18px;
-  background: rgba(26,26,26,0.97);
-  backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
-  border-top: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 -8px 40px rgba(0,0,0,0.6);
-  transform: translateY(110%);
-  transition: transform 0.42s cubic-bezier(0.34,1.56,0.64,1);
+  position: fixed; z-index: 10500;
+  left: 50%; top: 50%;
+  width: min(290px, calc(100vw - 56px));
+  transform: translate(-50%, -50%) scale(0.9);
+  background: rgba(44,44,46,0.86);
+  backdrop-filter: blur(40px) saturate(1.7);
+  -webkit-backdrop-filter: blur(40px) saturate(1.7);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 22px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.6);
+  padding: 24px 20px 0;
+  text-align: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.36s cubic-bezier(0.34,1.56,0.64,1);
 }
-.ios-pwa-prompt.visible { transform: translateY(0); }
-.ios-pwa-close {
-  position: absolute; top: 12px; right: 14px;
-  width: 26px; height: 26px;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.11);
-  border-radius: 50%;
-  color: rgba(255,255,255,0.45);
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  transition: background 0.2s, color 0.2s;
+.ios-pwa-prompt.visible { opacity: 1; pointer-events: auto; transform: translate(-50%,-50%) scale(1); }
+.ios-pwa-icon {
+  width: 62px; height: 62px; margin: 0 auto 15px;
+  border-radius: 14px; overflow: hidden;
+  background: rgba(124,58,237,0.16);
+  box-shadow: 0 6px 20px rgba(124,58,237,0.42);
 }
-.ios-pwa-close:hover { background: rgba(255,255,255,0.15); color: #fff; }
-.ios-pwa-icon { flex-shrink: 0; }
-.ios-pwa-body { flex: 1; min-width: 0; }
+.ios-pwa-icon svg { width: 100%; height: 100%; display: block; }
 .ios-pwa-title {
   font-family: 'Montserrat', sans-serif;
-  font-weight: 800; font-size: 14px; letter-spacing: -0.3px;
-  color: #fff; margin-bottom: 6px;
+  font-weight: 700; font-size: 16.5px; letter-spacing: -0.3px;
+  color: #fff; line-height: 1.32; margin-bottom: 20px;
+  padding: 0 2px;
 }
 .ios-pwa-title span { color: #a78bfa; }
-.ios-pwa-desc {
-  font-size: 12px; color: rgba(255,255,255,0.5);
-  line-height: 1.45; margin-bottom: 7px;
+.ios-pwa-add {
+  display: block; width: calc(100% + 40px); margin: 0 -20px;
+  background: none; border: none;
+  border-top: 1px solid rgba(255,255,255,0.13);
+  padding: 14px 0; cursor: pointer;
+  font-family: inherit; font-size: 17px; font-weight: 600; color: #0a84ff;
+  transition: background 0.15s;
 }
-.ios-pwa-steps {
-  font-size: 12.5px; color: rgba(255,255,255,0.62);
-  line-height: 1.9;
-}
-.ios-pwa-steps strong { color: rgba(255,255,255,0.9); font-weight: 600; }
-.ios-pwa-share-icon,
-.ios-pwa-add-icon { display: inline-block; vertical-align: middle; margin: 0 3px; }
-.ios-pwa-share-icon { color: #22D3EE; }
-.ios-pwa-add-icon   { color: #a78bfa; }
-.ios-pwa-browser-tag {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 10px; font-family: 'DM Mono', monospace; font-weight: 600;
-  padding: 2px 6px; border-radius: 5px; letter-spacing: 0.4px;
-  background: rgba(124,58,237,0.18);
-  border: 1px solid rgba(124,58,237,0.32);
-  color: #a78bfa; vertical-align: middle; margin-left: 5px;
-}
+.ios-pwa-add:active { background: rgba(255,255,255,0.06); }
 .ios-pwa-not-now {
-  display: inline-block; margin-top: 9px;
-  font-size: 11.5px; color: rgba(255,255,255,0.3);
-  background: none; border: none; padding: 0; cursor: pointer;
-  text-decoration: underline; text-underline-offset: 2px;
-  font-family: inherit; transition: color 0.2s;
+  display: block; width: calc(100% + 40px); margin: 0 -20px;
+  background: none; border: none;
+  border-top: 1px solid rgba(255,255,255,0.13);
+  padding: 12px 0 13px; cursor: pointer;
+  font-family: inherit; font-size: 13px; font-weight: 400;
+  color: rgba(235,235,245,0.42);
+  transition: background 0.15s;
 }
-.ios-pwa-not-now:hover { color: rgba(255,255,255,0.6); }
+.ios-pwa-not-now:active { background: rgba(255,255,255,0.04); }
+
+/* ═══ iOS PWA — Stage 2: text-free visual simulation ═══ */
+.ios-sim {
+  position: fixed; inset: 0; z-index: 10600;
+  background: rgba(0,0,0,0.82);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  display: none; align-items: center; justify-content: center;
+}
+.ios-sim.visible { display: flex; animation: simFade 0.32s ease; }
+@keyframes simFade { from { opacity: 0; } to { opacity: 1; } }
+.ios-sim-close {
+  position: absolute; top: max(18px, env(safe-area-inset-top)); right: 18px;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18);
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.ios-sim-phone {
+  position: relative;
+  width: min(300px, 82vw); height: min(480px, 74vh);
+  background: #000; border-radius: 36px; border: 5px solid #1c1c1e;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.7); overflow: hidden;
+}
+.sim-screen {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg,#171029,#0d0b14);
+  padding-top: 46px;
+}
+.sim-appbar {
+  margin: 0 auto; width: 66%; height: 30px;
+  background: rgba(255,255,255,0.08); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,0.5); font-size: 12px; font-family: 'DM Mono', monospace;
+}
+.sim-safaribar {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 50px;
+  background: rgba(30,30,32,0.96);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: space-around;
+  color: rgba(255,255,255,0.32); font-size: 18px;
+}
+.sim-share {
+  color: #0a84ff; display: flex;
+  transform-origin: center;
+  animation: simSharePulse 5s ease-in-out infinite;
+}
+@keyframes simSharePulse {
+  0%,18%   { transform: scale(1); filter: none; }
+  23%,29%  { transform: scale(1.35); filter: drop-shadow(0 0 8px #0a84ff); }
+  34%,100% { transform: scale(1); filter: none; }
+}
+.sim-sheet {
+  position: absolute; left: 6px; right: 6px; bottom: 6px;
+  background: rgba(46,46,48,0.98);
+  border-radius: 18px; padding: 10px 0 8px;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+  transform: translateY(115%);
+  animation: simSheet 5s ease-in-out infinite;
+}
+@keyframes simSheet {
+  0%,30%   { transform: translateY(115%); }
+  40%,88%  { transform: translateY(0); }
+  96%,100% { transform: translateY(115%); }
+}
+.sim-sheet-grip { width: 36px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.25); margin: 2px auto 12px; }
+.sim-sheet-apps { display: flex; gap: 13px; padding: 0 16px 12px; overflow: hidden; }
+.sim-sheet-apps span { width: 46px; height: 46px; border-radius: 12px; background: rgba(255,255,255,0.09); flex-shrink: 0; }
+.sim-sheet-list { border-top: 1px solid rgba(255,255,255,0.08); padding-top: 4px; }
+.sim-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px; color: #fff; font-size: 15px;
+  font-family: -apple-system, 'Segoe UI', sans-serif;
+}
+.sim-row-add {
+  border-radius: 10px; margin: 0 6px;
+  animation: simRowHi 5s ease-in-out infinite;
+}
+@keyframes simRowHi {
+  0%,58%   { background: transparent; }
+  66%,84%  { background: rgba(10,132,255,0.3); }
+  90%,100% { background: transparent; }
+}
+.sim-add-plus {
+  width: 26px; height: 26px; border: 1.5px solid rgba(255,255,255,0.75);
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; line-height: 1; color: #fff;
+}
+.sim-tap {
+  position: absolute; left: 50%; top: 0;
+  width: 34px; height: 34px; margin: -17px 0 0 -17px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.32); border: 2px solid rgba(255,255,255,0.85);
+  pointer-events: none; opacity: 0;
+  animation: simTap 5s ease-in-out infinite;
+}
+@keyframes simTap {
+  0%      { transform: translate(60px, 430px) scale(1.4); opacity: 0; }
+  8%      { transform: translate(0, 430px) scale(1.4);   opacity: 1; }
+  22%     { transform: translate(0, 430px) scale(0.8);   opacity: 1; }
+  30%     { transform: translate(0, 430px) scale(1.4);   opacity: 1; }
+  34%     { opacity: 0; }
+  56%     { transform: translate(0, 336px) scale(1.4);   opacity: 0; }
+  62%     { transform: translate(0, 336px) scale(1.4);   opacity: 1; }
+  72%     { transform: translate(0, 336px) scale(0.8);   opacity: 1; }
+  82%     { transform: translate(0, 336px) scale(1.4);   opacity: 1; }
+  88%,100% { transform: translate(0, 336px) scale(1.4); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sim-share, .sim-sheet, .sim-row-add, .sim-tap { animation: none; }
+  .sim-sheet { transform: translateY(0); }
+}
 </style>
 <!-- Service Worker registration — scope / covers entire origin -->
 <script>
@@ -4376,11 +4483,9 @@ const TRANSLATIONS = {
     // Card badge
     'card.new':            'NEW',
     // PWA install prompt
-    'pwa.title':           'Install FindFilm.ai',
-    'pwa.desc':            'For faster access and to keep your watchlist on your home screen.',
+    'pwa.addToHome':       'Add <span>FindFilm.ai</span> to Home Screen',
+    'pwa.addBtn':          'Add',
     'pwa.notNow':          'Not now',
-    'pwa.chromeTip':       'Tap {share} in the address bar, then select <strong>Add to Home Screen</strong> {add}',
-    'pwa.safariTip':       'Tap {share} below, then select <strong>Add to Home Screen</strong> {add}',
     // First-visit onboarding
     'onboard.prop1':       'Unified scores from <strong>IMDb + RT + Metacritic</strong>',
     'onboard.prop2':       'Instantly see where to stream <strong>in your region</strong>',
@@ -4629,11 +4734,9 @@ const TRANSLATIONS = {
     'search.sug4':         'Película familiar para animar el ánimo',
     'modal.reviewName':    'Tu nombre (opcional)',
     'card.new':            'NUEVO',
-    'pwa.title':           'Instalar FindFilm.ai',
-    'pwa.desc':            'Para acceso rápido y para guardar tu lista en la pantalla de inicio.',
+    'pwa.addToHome':       'Añadir <span>FindFilm.ai</span> a la pantalla de inicio',
+    'pwa.addBtn':          'Añadir',
     'pwa.notNow':          'Ahora no',
-    'pwa.chromeTip':       'Toca {share} en la barra de direcciones, luego selecciona <strong>Agregar a inicio</strong> {add}',
-    'pwa.safariTip':       'Toca {share} abajo, luego selecciona <strong>Agregar a inicio</strong> {add}',
     'onboard.prop1':       'Puntuaciones unificadas de <strong>IMDb + RT + Metacritic</strong>',
     'onboard.prop2':       'Ve al instante dónde transmitir <strong>en tu región</strong>',
     'onboard.prop3':       'Búsqueda IA que entiende <strong>estados de ánimo</strong>',
@@ -4876,11 +4979,9 @@ const TRANSLATIONS = {
     'search.sug4':         'Film feel-good en famille',
     'modal.reviewName':    'Votre nom (facultatif)',
     'card.new':            'NOUVEAU',
-    'pwa.title':           'Installer FindFilm.ai',
-    'pwa.desc':            'Pour un accès rapide et garder votre liste sur l\'écran d\'accueil.',
+    'pwa.addToHome':       'Ajouter <span>FindFilm.ai</span> à l\'écran d\'accueil',
+    'pwa.addBtn':          'Ajouter',
     'pwa.notNow':          'Pas maintenant',
-    'pwa.chromeTip':       'Appuyez sur {share} dans la barre d\'adresse, puis choisissez <strong>Ajouter à l\'écran d\'accueil</strong> {add}',
-    'pwa.safariTip':       'Appuyez sur {share} en bas, puis choisissez <strong>Ajouter à l\'écran d\'accueil</strong> {add}',
     'onboard.prop1':       'Scores unifiés de <strong>IMDb + RT + Metacritic</strong>',
     'onboard.prop2':       'Voyez instantanément où regarder <strong>dans votre région</strong>',
     'onboard.prop3':       'Recherche IA qui comprend <strong>les ambiances &amp; les vibes</strong>',
@@ -5123,11 +5224,9 @@ const TRANSLATIONS = {
     'search.sug4':         '适合全家观看的温馨电影',
     'modal.reviewName':    '你的名字（可选）',
     'card.new':            '新片',
-    'pwa.title':           '安装 FindFilm.ai',
-    'pwa.desc':            '快速访问并将观看列表保存到主屏幕。',
+    'pwa.addToHome':       '将 <span>FindFilm.ai</span> 添加到主屏幕',
+    'pwa.addBtn':          '添加',
     'pwa.notNow':          '暂不安装',
-    'pwa.chromeTip':       '点击地址栏中的 {share}，然后选择<strong>添加到主屏幕</strong> {add}',
-    'pwa.safariTip':       '点击下方的 {share}，然后选择<strong>添加到主屏幕</strong> {add}',
     'onboard.prop1':       '汇聚 <strong>IMDb + RT + Metacritic</strong> 的综合评分',
     'onboard.prop2':       '即时查看<strong>在你所在地区</strong>的播放平台',
     'onboard.prop3':       '懂得<strong>情绪与氛围</strong>的 AI 搜索',
@@ -5370,11 +5469,9 @@ const TRANSLATIONS = {
     'search.sug4':         'فيلم عائلي مبهج',
     'modal.reviewName':    'اسمك (اختياري)',
     'card.new':            'جديد',
-    'pwa.title':           'تثبيت FindFilm.ai',
-    'pwa.desc':            'للوصول السريع والاحتفاظ بقائمتك على الشاشة الرئيسية.',
+    'pwa.addToHome':       'أضف <span>FindFilm.ai</span> إلى الشاشة الرئيسية',
+    'pwa.addBtn':          'إضافة',
     'pwa.notNow':          'ليس الآن',
-    'pwa.chromeTip':       'انقر {share} في شريط العنوان، ثم اختر <strong>إضافة إلى الشاشة الرئيسية</strong> {add}',
-    'pwa.safariTip':       'انقر {share} في الأسفل، ثم اختر <strong>إضافة إلى الشاشة الرئيسية</strong> {add}',
     'onboard.prop1':       'تقييمات موحدة من <strong>IMDb + RT + Metacritic</strong>',
     'onboard.prop2':       'اعرف فوراً أين تشاهد <strong>في منطقتك</strong>',
     'onboard.prop3':       'بحث بالذكاء الاصطناعي يفهم <strong>المزاج والأجواء</strong>',
@@ -5617,11 +5714,9 @@ const TRANSLATIONS = {
     'search.sug4':         'Добре кіно для всієї родини',
     'modal.reviewName':    'Ваше ім\'я (необов\'язково)',
     'card.new':            'НОВИНКА',
-    'pwa.title':           'Встановити FindFilm.ai',
-    'pwa.desc':            'Для швидкого доступу та збереження списку перегляду на головному екрані.',
+    'pwa.addToHome':       'Додати <span>FindFilm.ai</span> на головний екран',
+    'pwa.addBtn':          'Додати',
     'pwa.notNow':          'Не зараз',
-    'pwa.chromeTip':       'Натисніть {share} в адресному рядку, потім виберіть <strong>Додати на головний екран</strong> {add}',
-    'pwa.safariTip':       'Натисніть {share} знизу, потім виберіть <strong>Додати на головний екран</strong> {add}',
     'onboard.prop1':       'Єдиний рейтинг від <strong>IMDb + RT + Metacritic</strong>',
     'onboard.prop2':       'Миттєво бачте, де дивитися <strong>у вашому регіоні</strong>',
     'onboard.prop3':       'ШІ-пошук, що розуміє <strong>настрої та атмосферу</strong>',
@@ -9708,6 +9803,8 @@ document.addEventListener('keydown', e => {
     closeSearch(); closeMobSearch();
     if (document.getElementById('filtersDrawer')?.classList.contains('open')) closeFilters();
     if (document.getElementById('ratingsInfoModal')?.classList.contains('open')) closeRatingsInfo();
+    if (document.getElementById('iosPwaSim')?.classList.contains('visible')) closeIosSim();
+    else if (document.getElementById('iosPwaPrompt')?.classList.contains('visible')) hideIosPwaPrompt();
   }
 });
 
@@ -10017,10 +10114,28 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
 /* ═══════════════════════════════════
    iOS PWA INSTALL PROMPT
 ═══════════════════════════════════ */
-// Show the iOS install bottom-bar from anywhere (header button or auto-timer)
+// Stage 1 — show the native-look install alert (header button or auto-timer)
 function showIosPwaPrompt() {
-  const p = document.getElementById('iosPwaPrompt');
-  if (p) p.classList.add('visible');
+  document.getElementById('iosPwaPrompt')?.classList.add('visible');
+  document.getElementById('iosPwaBackdrop')?.classList.add('visible');
+}
+function hideIosPwaPrompt() {
+  document.getElementById('iosPwaPrompt')?.classList.remove('visible');
+  document.getElementById('iosPwaBackdrop')?.classList.remove('visible');
+}
+// Stage 2 — text-free visual simulation of the Share → Add to Home Screen flow
+function openIosSim() {
+  hideIosPwaPrompt();
+  document.getElementById('iosPwaSim')?.classList.add('visible');
+}
+function closeIosSim() {
+  document.getElementById('iosPwaSim')?.classList.remove('visible');
+}
+// Dismiss Stage 1 with 15-day cooldown (bound inline so it survives DOM re-renders)
+function dismissIosPwa(e) {
+  if (e) e.stopPropagation();
+  localStorage.setItem('rk_ios_pwa_dismissed', Date.now().toString());
+  hideIosPwaPrompt();
 }
 
 function initIOSPrompt() {
@@ -10044,45 +10159,13 @@ function initIOSPrompt() {
     window.matchMedia('(display-mode: standalone)').matches;
   if (isStandalone && !debugMode) return;
 
-  // ── 4. DOM elements ────────────────────────────────────────────────────────
-  const prompt   = document.getElementById('iosPwaPrompt');
-  const closeBtn = document.getElementById('iosPwaClose');
-  const stepsEl  = document.getElementById('iosPwaSteps');
-  const notNow   = document.getElementById('iosPwaNotNow');
-  if (!prompt || !closeBtn || !stepsEl) return;
+  // ── 4. DOM element (interactions are wired via inline onclick in markup so
+  //        they survive the Skimlinks affiliate script re-rendering the DOM) ─
+  const prompt = document.getElementById('iosPwaPrompt');
+  if (!prompt) return;
+  prompt.setAttribute('data-browser', isChromeIOS ? 'chrome' : 'safari');
 
-  // ── 5. Dynamic instructions per browser ───────────────────────────────────
-  //    Always inject so header-button triggered show() always has content
-  const shareIcon = `<svg class="ios-pwa-share-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-    <polyline points="16 6 12 2 8 6"/>
-    <line x1="12" y1="2" x2="12" y2="15"/>
-  </svg>`;
-  const addIcon = `<svg class="ios-pwa-add-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="3" y="3" width="18" height="18" rx="4"/>
-    <line x1="12" y1="8" x2="12" y2="16"/>
-    <line x1="8" y1="12" x2="16" y2="12"/>
-  </svg>`;
-
-  if (isChromeIOS) {
-    prompt.setAttribute('data-browser', 'chrome');
-    stepsEl.innerHTML = t('pwa.chromeTip', { share: shareIcon, add: addIcon });
-  } else {
-    prompt.setAttribute('data-browser', 'safari');
-    stepsEl.innerHTML = t('pwa.safariTip', { share: shareIcon, add: addIcon });
-  }
-
-  // ── 6. Dismiss handler — keep element in DOM so header button can re-show ─
-  const dismiss = () => {
-    localStorage.setItem('rk_ios_pwa_dismissed', Date.now().toString());
-    prompt.classList.remove('visible');
-  };
-  closeBtn.addEventListener('click', dismiss);
-  if (notNow) notNow.addEventListener('click', dismiss);
-
-  // ── 7. 15-day cooldown blocks auto-show only (header button ignores this) ─
+  // ── 5. 15-day cooldown blocks auto-show only (header button ignores this) ─
   const COOLDOWN_MS = 15 * 24 * 60 * 60 * 1000;
   const dismissed = localStorage.getItem('rk_ios_pwa_dismissed');
   if (!debugMode && dismissed && (Date.now() - parseInt(dismissed, 10)) < COOLDOWN_MS) return;
@@ -10345,17 +10428,12 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
   FindFilm.ai is an official NordVPN affiliate partner — we may earn a commission if you subscribe through our links.
 </footer>
 
-<!-- ════════════ iOS PWA INSTALL PROMPT ════════════ -->
-<div class="ios-pwa-prompt" id="iosPwaPrompt" role="dialog" aria-labelledby="iosPwaTitle" aria-live="polite">
-  <button class="ios-pwa-close" id="iosPwaClose" aria-label="Dismiss">
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-      <path d="M18 6L6 18M6 6l12 12"/>
-    </svg>
-  </button>
-
+<!-- ════════════ iOS PWA INSTALL — Stage 1: native-look alert ════════════ -->
+<div class="ios-pwa-backdrop" id="iosPwaBackdrop" onclick="dismissIosPwa()"></div>
+<div class="ios-pwa-prompt" id="iosPwaPrompt" role="dialog" aria-labelledby="iosPwaTitle" aria-live="polite" onclick="openIosSim()">
   <!-- App icon -->
   <div class="ios-pwa-icon">
-    <svg width="40" height="40" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="iosG" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stop-color="#7C3AED"/>
@@ -10368,13 +10446,50 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
       <path d="M19 20.5L30 25.5L19 30.5Z" fill="url(#iosG)"/>
     </svg>
   </div>
+  <div class="ios-pwa-title" id="iosPwaTitle" data-i18n-html="pwa.addToHome">Add <span>FindFilm.ai</span> to Home Screen</div>
+  <button class="ios-pwa-add" id="iosPwaAdd" data-i18n="pwa.addBtn" onclick="event.stopPropagation(); openIosSim()">Add</button>
+  <button class="ios-pwa-not-now" id="iosPwaNotNow" data-i18n="pwa.notNow" onclick="dismissIosPwa(event)">Not now</button>
+</div>
 
-  <!-- Body text — steps injected dynamically by initIOSPrompt() -->
-  <div class="ios-pwa-body">
-    <div class="ios-pwa-title" id="iosPwaTitle" data-i18n="pwa.title">Install FindFilm.ai</div>
-    <div class="ios-pwa-desc" data-i18n="pwa.desc">For faster access and to keep your watchlist on your home screen.</div>
-    <div class="ios-pwa-steps" id="iosPwaSteps"></div>
-    <button class="ios-pwa-not-now" id="iosPwaNotNow" data-i18n="pwa.notNow">Not now</button>
+<!-- ════════════ iOS PWA INSTALL — Stage 2: text-free visual simulation ════════════ -->
+<div class="ios-sim" id="iosPwaSim" role="dialog" aria-label="Add to Home Screen tutorial">
+  <button class="ios-sim-close" id="iosSimClose" aria-label="Close" onclick="closeIosSim()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+      <path d="M18 6L6 18M6 6l12 12"/>
+    </svg>
+  </button>
+  <div class="ios-sim-phone">
+    <div class="sim-screen">
+      <div class="sim-appbar">findfilm.ai</div>
+    </div>
+    <!-- Safari bottom toolbar with highlighted Share icon -->
+    <div class="sim-safaribar">
+      <span>‹</span>
+      <span>›</span>
+      <span class="sim-share">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+          <polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+        </svg>
+      </span>
+      <span>▤</span>
+      <span>⧉</span>
+    </div>
+    <!-- Share sheet that slides up, "Add to Home Screen" row highlighted -->
+    <div class="sim-sheet">
+      <div class="sim-sheet-grip"></div>
+      <div class="sim-sheet-apps"><span></span><span></span><span></span><span></span></div>
+      <div class="sim-sheet-list">
+        <div class="sim-row">Copy</div>
+        <div class="sim-row sim-row-add">
+          <span>Add to Home Screen</span>
+          <span class="sim-add-plus">+</span>
+        </div>
+        <div class="sim-row">Add to Favorites</div>
+      </div>
+    </div>
+    <!-- animated tap indicator -->
+    <div class="sim-tap"></div>
   </div>
 </div>
 
