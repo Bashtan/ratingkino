@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — Rating-Transparency Trust Pills
+## ⚡ Most Recent Session (2026-07-18) — Value-Prop Microcopy Refresh (EN + UK i18n)
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `d33858f` | **Sharpened the homepage value-proposition copy through the i18n system (no hardcoded English), EN + UK baseline (frontend-only, `index.html`).** Deployed `efcfe96f.ratingkino.pages.dev` → findfilm.ai. Four label changes, all via existing `data-i18n` keys / `t()` so languages still switch dynamically: **(1) Search placeholder** `search.ph0` — EN `"Describe a movie in your own words…"`, UK `"Опишіть фільм своїми словами…"` (the on-load resting placeholder in the `#searchPhOverlay` cycler `getDesktopPlaceholders()` L7418; ph1–ph3 examples unchanged). **(2) Hero trust text** `hero.unified` — EN `"One score from IMDb, Rotten Tomatoes, and Metacritic."`, UK `"Єдиний рейтинг з IMDb, Rotten Tomatoes та Metacritic."` (**added a NEW `uk` `hero.unified` key** — UK previously fell back to EN). Because the sources now live inside the string, **removed the redundant hardcoded `<span class="ht-src">(IMDb, RT, Metacritic)</span>` suffix** from the static `#heroTitle` markup (L3971) **and all 3 JS heroTitle renders** (`heroTitle.innerHTML = …` at L5929 + L6658/L6660). **(3) Discovery pills** (`.hero-utils`): `tonight.launch` EN `"Find a movie for tonight"` / UK `"Фільм на вечір"`; `btn.random` EN `"Surprise me with a movie"` / UK `"Здивуй мене фільмом"`. **(4) For-You refine button** `onboard.refine` (`.foryou-refine`, `onClick=openOnboardQuiz()` L4014) EN `"Improve recommendations"` / UK `"Покращити рекомендації"`. Other locales (es/fr/zh/ar) keep their own existing values or fall back via `t()`. **Verified on preview:** `t()` returns correct EN strings + `#heroTitle`.textContent = "240K+ films • One score from IMDb, Rotten Tomatoes, and Metacritic."; after `switchLang('uk')` all four render Ukrainian (heroTitle = "240K+ фільмів • Єдиний рейтинг з IMDb, Rotten Tomatoes та Metacritic.", ph0 = "Опишіть фільм своїми словами…", pills + refine localized); screenshot confirms the new pills + trust line. |
+
+---
+
+## ⚡ Session (2026-07-18) — Rating-Transparency Trust Pills
 
 All commits on `main`, all live on https://findfilm.ai.
 
