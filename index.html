@@ -493,18 +493,25 @@ header {
 .search-wrap--hero .search-icon { right: 16px; }
 .search-wrap--hero.has-mic .search-icon { right: 46px; }
 
-/* Secondary utility row — compact quick actions under the search */
+/* Secondary utility row — sleek chip slider (YouTube/Spotify style):
+   single no-wrap horizontal scroll, scrollbar hidden, centered when it fits. */
 .hero-utils {
-  display: flex; align-items: center; justify-content: center;
-  flex-wrap: wrap; gap: 8px;
+  display: flex; align-items: center; justify-content: safe center;
+  flex-wrap: nowrap; gap: 8px;
+  max-width: 100%; padding: 2px 4px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* legacy Edge/IE */
 }
+.hero-utils::-webkit-scrollbar { display: none; }  /* Chrome / Safari */
 .util-pill {
-  display: inline-flex; align-items: center; gap: 7px;
-  height: 36px; padding: 0 15px;
+  display: inline-flex; align-items: center; gap: 6px;
+  flex-shrink: 0;               /* never squish inside the scroll row */
+  height: 30px; padding: 0 12px;
   background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 16px;
   color: #cbd5e1; font-family: 'Montserrat', sans-serif;
-  font-weight: 700; font-size: 12px; letter-spacing: 0.2px;
+  font-weight: 700; font-size: 12px; letter-spacing: 0.2px; white-space: nowrap;
   cursor: pointer;
   transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), background 0.2s, border-color 0.2s, color 0.2s;
 }
@@ -2366,13 +2373,13 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   .btn-search-toggle  { display: flex; }
   .mob-search-overlay { display: none; }
 
-  /* Hero search: comfortable size on phones, utility pills wrap */
+  /* Hero search: comfortable size on phones; utility chips scroll horizontally */
   .hero-search { padding: 22px 16px 16px; gap: 13px; }
   .hero-eyebrow { font-size: 12px; }
   .search-wrap--hero { max-width: none; }
   .search-wrap--hero .search-input { height: 50px; font-size: 15px; }
-  .hero-utils { gap: 7px; }
-  .util-pill  { height: 34px; padding: 0 12px; font-size: 11px; }
+  .hero-utils { gap: 7px; justify-content: safe center; }
+  .util-pill  { height: 29px; padding: 0 11px; font-size: 11.5px; }
 
   /* Keep floating random button */
   .fab-random { display: flex; }
@@ -3758,27 +3765,19 @@ if ('serviceWorker' in navigator) {
     </div>
   </div>
 
-  <!-- Secondary utility row — compact quick actions below the primary search -->
-  <div class="hero-utils">
-    <button class="util-pill" onclick="toggleDesktopVoice()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 19v3M9 22h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
-      <span data-i18n="util.voice">Voice</span>
-    </button>
+  <!-- Secondary utility row — 3 compact discovery chips, single no-wrap horizontal scroll -->
+  <div class="hero-utils" role="group" aria-label="Quick discovery actions">
     <button class="util-pill" onclick="openWizard()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       <span data-i18n="tonight.launch">Pick for tonight</span>
     </button>
     <button class="util-pill" onclick="openGroupPicker()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       <span data-i18n="group.launch">Choose with friends</span>
     </button>
     <button class="util-pill util-pill--accent" onclick="randomMovie()">
-      <svg class="rnd-spark" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+      <svg class="rnd-spark" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
       <span data-i18n="btn.random">Surprise me</span>
-    </button>
-    <button class="util-pill" onclick="openWatchlist()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-      <span data-i18n="util.watchlist">Watchlist</span>
     </button>
   </div>
 </section>
