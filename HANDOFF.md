@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — Compact FindFilm Rating Pill (Movie Details)
+## ⚡ Most Recent Session (2026-07-18) — AI Status Line (replaces 3-Pillar Trust Row)
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `a120447` | **Replaced the bulky 3-column "Why trust FindFilm?" proof grid with an ultra-subtle single-line "AI status" pill** (felt too much like a marketing banner mid-scroll). Deployed `836083e5.ratingkino.pages.dev` → findfilm.ai. Markup at ~L4083 (inside `#feedSections`, between `#rowBest` and `#rowPopular`) is now `<div class="ai-status" id="trustProof" role="status" aria-live="off">` → `.ai-status-dot` (pulsing) + `.ai-status-text[data-i18n="ai.status"]`. Kept `id="trustProof"` for stability. **Copy** condensed to one string: EN **`✨ AI Engine Active: 3 Sources Merged • Unbiased Data • 100% Ad-Free`**, UK **`✨ ШІ Активний: 3 Джерела Зведені • Неупереджені Дані • Без Реклами`** — new i18n key **`ai.status`** (replaced the old `trust.title`/`trust.p1-3Title`/`trust.p1-3Text` keys in both EN + UK, now removed). **CSS** (replaced all `.trust-proof*`/`.trust-pillar*` rules ~L2760): `.ai-status` (`width:fit-content; margin:2px auto 26px` centered; glassmorphism `bg rgba(255,255,255,.02)` + `1px rgba(255,255,255,.055)` + `backdrop-filter:blur(6px)`; `border-radius:999px`; **`DM Mono` 11px**, `color:#64748b` slate-500) + `.ai-status-dot` (6px indigo-400 `#818cf8` dot, glow, `@keyframes aiStatusPulse` 1.8s — respects `prefers-reduced-motion`) + `.ai-status-text` (nowrap desktop). **@768px**: font 10px, `white-space:normal` (wraps 2 lines), dot top-aligned. **Verified on preview:** desktop pill 523×27px, mono, slate-500, centered (equal 376px gaps), pulsing indigo dot; `switchLang('uk')` swaps to Ukrainian string; mobile 375 → 351px wide, wraps to 42px, 10px, no overflow; screenshot confirms the terminal-status-bar aesthetic. |
+
+---
+
+## ⚡ Session (2026-07-18) — Compact FindFilm Rating Pill (Movie Details)
 
 All commits on `main`, all live on https://findfilm.ai.
 
