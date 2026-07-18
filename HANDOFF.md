@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — Compact Hero Trust Badge (Stats Condense)
+## ⚡ Most Recent Session (2026-07-18) — Desktop Hero Layout Polish (Overlap · Whitespace · Max-Width)
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `22321d2` | **Refined the desktop hero layout — 3 fixes (frontend-only, `index.html`; no Tailwind — native CSS, Tailwind snippet handed to user).** Deployed `d59336a9.ratingkino.pages.dev` → findfilm.ai. **(1) Removed text overlap:** deleted the absolutely-positioned NLP helper hint `#searchNlpHint` (`.search-nlp-hint`, `data-i18n="search.nlpHint"`, "✨ Can't remember the title? Just describe the plot!") — it sat `top:calc(100% + 7px)` below the search bar and overlapped the `.hero-utils` chip row. Removed the element **and** its dead CSS (`.search-nlp-hint`, the `.search-wrap.typing/.ai-active` fade rules, and the 768px `display:none`). Added `margin-top:6px` on `.hero-utils` for breathing room below the search bar. (`search.nlpHint` i18n keys left in all 7 langs, now unused/harmless.) **(2) Reduced vertical whitespace:** `.hero-search` padding `34px 24px 22px`→`18px 24px 14px`, `gap:16px`→`14px` so eyebrow + search + chips + Movies/TV tabs read as one compact group and the feed rises above the fold. **(3) Constrained max-width for wide screens:** changed ALL 5 content containers from `max-width:1600px`→**`1280px`** (max-w-7xl) — `.header-inner`, `.hero-band` (H1 + trust badge + IMDb/RT/MC source badges), `.filter-row-1` (Movies/TV + Filters), `.filter-row-2`, and `main` (feeds + grid) — so the H1 and rating badges no longer splay to the extreme edges; everything now shares one centered column. **Verified on preview:** at 1600px viewport all four rows compute to width 1280 / left 158 / right 1438 (perfectly aligned & centered); `#searchNlpHint` gone; `.hero-utils` margin-top 6px; `.hero-search` padding 18/24/14; mobile 375 intact (3 chips, no overlap, own media-query padding preserved); wide-desktop + mobile screenshots. |
+
+---
+
+## ⚡ Session (2026-07-18) — Compact Hero Trust Badge (Stats Condense)
 
 All commits on `main`, all live on https://findfilm.ai.
 
