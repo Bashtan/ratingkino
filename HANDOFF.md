@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — iOS PWA Install UX (2-Stage Native-Look Flow)
+## ⚡ Most Recent Session (2026-07-18) — Compact Utility Chips (Hero Discovery Row)
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `0a5a180` | **Refactored the hero `.hero-utils` utility row into a modern compact chip slider (frontend-only, `index.html`; no Tailwind — native CSS, Tailwind snippet handed to user).** Deployed `9bcf5d3f.ratingkino.pages.dev` → findfilm.ai. **(1) Dedup:** removed the **Voice** pill (`toggleDesktopVoice()` — mic already lives in `#searchMicBtn`) and **Watchlist** pill (`openWatchlist()` — bookmark already in header) from `.hero-utils`, leaving **3 discovery chips**: Pick for tonight (`openWizard()`), Choose with friends (`openGroupPicker()`), **Surprise me** (`.util-pill--accent` → `randomMovie()`, keeps `.rnd-spark`). Both removed handlers are still invoked elsewhere (search mic, header bookmark) so nothing breaks. Added `role="group" aria-label="Quick discovery actions"` on the row; chip SVG icons shrunk to 13–14px. **(2) Single scrollable row:** `.hero-utils` now `flex-wrap:nowrap` + `overflow-x:auto` + `-webkit-overflow-scrolling:touch` + `justify-content:safe center` (centers when the 3 chips fit, scrolls without left-clip when they overflow on narrow screens); **scrollbar fully hidden** (`scrollbar-width:none`, `-ms-overflow-style:none`, `.hero-utils::-webkit-scrollbar{display:none}`) — YouTube/Spotify chip-slider feel. **(3) Compact chip styling:** `.util-pill` → `flex-shrink:0` + `white-space:nowrap`, height 30px (was 36px), padding `0 12px` (was `0 15px`), border-radius 16px (was 20px), gap 6px, font 12px; `.util-pill--accent` neon gradient preserved. Mobile `@media(max-width:768px)`: `.hero-utils{gap:7px;justify-content:safe center}`, `.util-pill{height:29px;padding:0 11px;font-size:11.5px}`. `randomMovie()` (~L7916) spin selector `.util-pill--accent` unchanged. **Verified on preview:** exactly 3 chips render, `flex-nowrap`/`overflow-x:auto`/`scrollbar-width:none`/`safe center` computed; desktop (1280) row centered & fits (not overflowing), mobile (375) overflows to horizontal scroll with 0px scrollbar height (Surprise me peeks off the right edge); Surprise me retains accent; desktop + mobile screenshots. |
+
+---
+
+## ⚡ Session (2026-07-18) — iOS PWA Install UX (2-Stage Native-Look Flow)
 
 All commits on `main`, all live on https://findfilm.ai.
 
