@@ -2651,12 +2651,51 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   font-size: 10px; color: var(--muted);
   font-family: 'DM Mono', monospace;
 }
-.mini-card-score {
-  position: absolute; top: 7px; right: 7px;
-  background: rgba(10,0,28,0.82); backdrop-filter: blur(6px);
-  border-radius: 6px; padding: 2px 6px;
-  font-size: 10px; font-weight: 700; color: #f5c518;
-  font-family: 'DM Mono', monospace;
+/* Trust-transparency rating pill (feed mini-cards) — two states + CSS tooltip */
+.mc-rating {
+  position: absolute; top: 7px; right: 7px; z-index: 4;
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 5px; border-radius: 6px;
+  font-family: 'DM Mono', monospace; font-size: 9.5px; font-weight: 700;
+  line-height: 1; white-space: nowrap; cursor: help;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.mc-rating-star { font-size: 9px; }
+.mc-rating-tag {
+  font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 7.5px;
+  letter-spacing: 0.4px; text-transform: uppercase; opacity: 0.9;
+}
+.mc-rating-info {
+  display: inline-grid; place-items: center; width: 11px; height: 11px;
+  border-radius: 50%; border: 1px solid currentColor; opacity: 0.65;
+  font-family: 'Montserrat', sans-serif; font-style: normal;
+  font-size: 7px; font-weight: 800;
+}
+.mc-rating--unified {
+  color: #4ade80; background: rgba(34,197,94,0.15);
+  border: 1px solid rgba(34,197,94,0.32);
+  box-shadow: 0 0 0 1px rgba(34,197,94,0.06), 0 2px 10px rgba(34,197,94,0.14);
+}
+.mc-rating--unified .mc-rating-star { color: #fde047; }
+.mc-rating--tmdb {
+  color: #94a3b8; background: rgba(15,23,42,0.86);
+  border: 1px solid rgba(51,65,85,0.95);
+}
+.mc-rating-tip {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  width: max-content; max-width: 116px; padding: 6px 8px; border-radius: 7px;
+  text-align: left; background: #0b1120; color: #e2e8f0;
+  border: 1px solid rgba(148,163,184,0.22);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.55);
+  font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 9px;
+  line-height: 1.35; white-space: normal;
+  opacity: 0; transform: translateY(-4px); pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease; z-index: 50;
+}
+.mc-rating:hover .mc-rating-tip,
+.mc-rating:focus-visible .mc-rating-tip,
+.mc-rating:focus-within .mc-rating-tip {
+  opacity: 1; transform: translateY(0);
 }
 .mini-card-new-badge {
   position: absolute; top: 7px; left: 7px;
@@ -4454,6 +4493,11 @@ const TRANSLATIONS = {
     'best.exploreTitle':   'Explore Top Rated',
     'best.exploreSub':     'Discover 50+ more highly-rated films, ranked by IMDb, RT & Metacritic.',
     'best.exploreCta':     'Browse top rated',
+    // Rating transparency (trust pill)
+    'rating.unified':      'Unified',
+    'rating.tmdb':         'TMDB',
+    'rating.unifiedTip':   'Combined critic score (IMDb, RT, Metacritic)',
+    'rating.tmdbTip':      'Temporary TMDB score until critic reviews arrive',
     // Grid header
     'grid.explore':        '🍿 Explore Collection',
     // Watchlist
@@ -6237,10 +6281,23 @@ const MAX_ENRICHERS    = 3;
 // All movies fetched for feed rows — shared pool for recommendations
 window._FEED_POOL = [];
 
+function miniRatingPill(m) {
+  if (m.avg == null || m.avg === '') return '';
+  const hasCritic = (parseFloat(m.imdb) > 0) || (parseInt(m.rt) > 0) || (parseInt(m.mc) > 0);
+  const s = hasCritic
+    ? { cls: 'mc-rating--unified', tag: t('rating.unified'), tip: t('rating.unifiedTip') }
+    : { cls: 'mc-rating--tmdb',    tag: t('rating.tmdb'),    tip: t('rating.tmdbTip') };
+  return `<div class="mc-rating ${s.cls}" tabindex="0" role="img" aria-label="${esc(s.tag)} score ${m.avg}. ${esc(s.tip)}">`
+    + `<span class="mc-rating-star">★</span><span class="mc-rating-score">${m.avg}</span>`
+    + `<span class="mc-rating-tag">${esc(s.tag)}</span>`
+    + `<span class="mc-rating-info" aria-hidden="true">i</span>`
+    + `<span class="mc-rating-tip" role="tooltip">${esc(s.tip)}</span>`
+    + `</div>`;
+}
 function renderMiniCard(m, opts = {}) {
   const img      = m.poster ? `<img class="mini-card-img" src="${m.poster}" alt="${esc(m.title)}" loading="lazy">` :
                               `<div class="mini-card-img-placeholder">🎬</div>`;
-  const score    = m.avg ? `<div class="mini-card-score">★ ${m.avg}</div>` : '';
+  const score    = miniRatingPill(m);
   const newBadge = opts.showNew ? `<div class="mini-card-new-badge">${t('card.new')}</div>` : '';
   const reason   = opts.reason  ? `<div class="mini-card-reason"><span class="mcr-spark">✨</span>${esc(opts.reason)}</div>` : '';
   const listArg  = opts.listName ? `,'${opts.listName}'` : '';
