@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — "Why Trust FindFilm?" 3-Pillar Proof Row
+## ⚡ Most Recent Session (2026-07-18) — Compact FindFilm Rating Pill (Movie Details)
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `f9a4086` | **Refactored the bulky full-width FindFilm local-rating badge in the movie-details modal into a compact, centered secondary pill.** Deployed `e0f71109.ratingkino.pages.dev` → findfilm.ai. In `refreshModalRatings(m)` (~L8712) the `localBadge` template was rewritten from the old `.mr.ff-local` block (`★ 5.0` + `FindFilm · 1 review`) to `<div class="ff-local-wrap"><span class="ff-local-pill"><span class="ffp-star">★</span>{avg}<span class="ffp-count">({count} {word})</span></span></div>`. Copy simplified to **"★ 5.0 (1 User Review)"**, i18n singular/plural via **`review.userReview`/`review.userReviews`** (EN `User Review`/`User Reviews`, UK `Відгук`/`Відгуки`; other locales fall back). **CSS:** removed old `.mr`, `.mr.loading`, `.mr.ff-local` rules; added `.ff-local-wrap` (`flex-basis:100%; display:flex; justify-content:center; margin-top:2px` — forces the pill onto its own line under `.mr-score-card` and centers it) + `.ff-local-pill` (`inline-flex; width:fit-content; padding:5px 12px; border-radius:999px; bg rgba(255,255,255,.05); 1px rgba(139,92,246,.32); 13px/800`) + `.ffp-star` (accent glow) + `.ffp-count` (11px cyan `#67e8f9`). **Verified on preview:** pill renders `★ 5.0 (1 User Review)`, sits below the score card (`pillBelowCard:true`), fit-content 128px centered in the 266px ratings row, no mobile overflow at 375; EN plural → "3 User Reviews", UK → "1 Відгук"/"3 Відгуки". |
+
+---
+
+## ⚡ Session (2026-07-18) — "Why Trust FindFilm?" 3-Pillar Proof Row
 
 All commits on `main`, all live on https://findfilm.ai.
 
