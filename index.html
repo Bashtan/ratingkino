@@ -2757,6 +2757,9 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .feed-seemore:hover .feed-seemore-icon { transform: translateX(3px); }
 .feed-seemore-label { font-size: 11px; font-weight: 700; line-height: 1.3; }
+/* End-cap is a mobile-only affordance for horizontal scrolling — hide on desktop
+   (display:none removes it from the flex row entirely, so no trailing gap). */
+@media (min-width: 769px) { .feed-seemore { display: none; } }
 /* ── AI status line — ultra-subtle single-line trust signal between two feeds ── */
 .ai-status {
   width: fit-content; max-width: calc(100% - 24px); margin: 2px auto 26px;
