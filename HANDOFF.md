@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — Feed "See all" End-Cap: Mobile-Only
+## ⚡ Most Recent Session (2026-07-18) — Search-Mode Toggle (Title vs Plot/AI) + Voice
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `1a411ac` | **Added a hero segmented control to switch between exact-title search and semantic plot/mood ("AI") search, plus made the existing voice dictation more prominent.** Deployed `48bc44c4.ratingkino.pages.dev` → findfilm.ai. **Markup:** `.search-mode#searchMode` (role=tablist) is the first child of `.hero-search`, holding `.sm-btn#smTitle` (`onclick="setSearchMode('title')"`, magnifier svg, `data-i18n="search.modeTitle"`) + `.sm-btn#smPlot` (`onclick="setSearchMode('ai')"`, sparkle svg, `data-i18n="search.modePlot"`). Active btn gets `.active` (purple gradient `#7c3aed→#4f46e5`). **State:** global `let SEARCH_MODE = 'title'` (~L6278). **`setSearchMode(mode)`** toggles `.active`/`aria-selected` on both btns, toggles `.mode-ai` on `#searchWrap`, swaps the placeholder (native + `#searchPhOverlay`), persists to `localStorage['rk_searchMode']`. **`searchModePlaceholder()`** returns `t('search.modePlotPh')` in ai mode else `t('search.modeTitlePh')`. **`initSearchMode()`** IIFE restores the saved mode on load. `_cycleDeskPh` now early-returns in title mode (static placeholder); rotates hints only in ai mode. **Enter-key handler** branches: ai mode + `CACHE_MOVIES.length` + `CONTENT_TYPE==='movie'` → `aiSearch(q)`, else `loadMovies(1,false)`. `applyTranslations` refreshes the mode placeholder on language change. **Voice** (already built via `toggleDesktopVoice()`/`#searchMicBtn`): in ai mode the idle mic turns purple `#a78bfa` with `@keyframes micInvite` pulse; `.search-wrap.mode-ai .search-mic-btn:not(.listening)` scoping ensures the red `#ef4444` `.listening` state always wins. **i18n** (EN + UK): `search.modeTitle` ("By Title"/"За назвою"), `search.modePlot` ("By Plot"/"За сюжетом"), `search.modeTitlePh` ("Search movies by title..."/"Пошук за назвою..."), `search.modePlotPh` ("e.g., DiCaprio on a sinking ship..."/"напр., Дікапріо на кораблі, що тоне..."). **Verified on preview:** toggle defaults to Title active; switching to Plot activates `#smPlot`, adds `.mode-ai`, placeholder → plot hint, mic goes purple-invite; Enter branches correctly (title→loadMovies, ai→aiSearch); mic listening state reads red `rgb(239,68,68)` in both modes (transition disabled before read); UK labels/placeholders swap on `switchLang('uk')`; desktop + AI-mode screenshots confirm clean segmented control. |
+
+---
+
+## ⚡ Session (2026-07-18) — Feed "See all" End-Cap: Mobile-Only
 
 All commits on `main`, all live on https://findfilm.ai.
 
