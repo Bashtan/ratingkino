@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — Value-Prop Microcopy Refresh (EN + UK i18n)
+## ⚡ Most Recent Session (2026-07-18) — Feed-Row Truncation + "See all" End-Cap (Scroll-Fatigue Fix)
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `b39b4aa` | **Capped the homepage horizontal collection rows to a single scannable row + in-place "See all" expander to cure scroll fatigue (frontend-only, `index.html`).** Deployed `703804bc.ratingkino.pages.dev` → findfilm.ai. New top-level const **`FEED_ROW_LIMIT = 6`**. Each of the 3 horizontal rows now builds its full card-HTML array, injects only the first 6 via the new reusable **`renderFeedRow(elId, key, cards)`** (stashes the full list in **`window._FEED_FULL[key] = {elId, cards}`**, reset at the top of `loadFeedSections` L6488), and when `cards.length > FEED_ROW_LIMIT` appends **`feedSeeMoreCard(key)`** — a slim dashed ghost end-cap `<button class="feed-seemore" onclick="expandFeedRow('<key>')">` (→ icon + "See all" label). **`expandFeedRow(key)`** re-renders the container from the stashed `cards` (no re-fetch, no pagination router). Wired into: **For You** (`renderForYouRow` → `renderFeedRow('scrollForYou','forYou',cards)`), **Hidden Gems / AI Curated** (`renderFeedRow('scrollPopular','popular',cards)`); **Best Available Now** slice reduced `20`→`FEED_ROW_LIMIT` and keeps its existing `feedCtaCard()` "Explore Top Rated" CTA as its own See-More affordance. The main `#movieGrid` browse grid (paginated "Showing X of Y") is deliberately left intact. **New CSS** `.feed-seemore` / `.feed-seemore-icon` / `.feed-seemore-label` (after `.feed-cta:hover .feed-cta-arrow svg`, ~L2739): `flex:0 0 98px; align-self:stretch` so the end-cap matches card height, dashed `rgba(148,163,184,.3)` border, muted→text hover with `translateY(-2px)` + icon nudge. **New i18n** `feed.seeMore` (EN "See all" / UK "Усі") + `feed.seeMoreAria` (EN/UK); other locales fall back via `t()`. **Verified on preview via mock injection:** 12 mock cards → 6 `.mini-card` + 1 `.feed-seemore` (7 children), `_FEED_FULL.popular.cards`=12; clicking `expandFeedRow('popular')` → 12 cards, end-cap gone; desktop screenshot shows the 6-card Hidden Gems row + dashed "→ See all" end-cap; mobile 375 → end-cap 98×225px (stretch-matched), row horizontally scrollable, no page-level horizontal overflow; console only TMDb-404 static noise. **Deliverable helpers to grep:** `FEED_ROW_LIMIT`, `renderFeedRow`, `feedSeeMoreCard`, `expandFeedRow`, `window._FEED_FULL`. |
+
+---
+
+## ⚡ Session (2026-07-18) — Value-Prop Microcopy Refresh (EN + UK i18n)
 
 All commits on `main`, all live on https://findfilm.ai.
 
