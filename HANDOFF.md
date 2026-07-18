@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — Ultra-Compact Modern Desktop Hero
+## ⚡ Most Recent Session (2026-07-18) — "Explore Top Rated" CTA Fills Best-Row Dead Space
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `9234d6c` | **Killed the wide-screen dead space in the "Best Available Now" row with a dynamically-sizing CTA card (frontend-only, `index.html`).** Deployed `503a72bd.ratingkino.pages.dev` → findfilm.ai. On wide monitors only ~6 cards populated `#scrollBest`, leaving ~60% of the row blank/black. Appended a **`.feed-cta` "🏆 Explore Top Rated"** card that uses `flex: 1 1 240px; min-width: 200px` to **grow and consume the leftover horizontal space** (premium `linear-gradient(135deg, rgba(49,46,129,.42), rgba(88,28,135,.20))` indigo→purple fill, `rgba(124,58,237,.28)` border, `-2px` hover lift + `.feed-cta-arrow` SVG nudge). On mobile the `.feed-scroll` overflows and the CTA collapses to a 200px end-cap in the horizontal scroller (no page-level horizontal overflow). **New JS:** `feedCtaCard()` (returns the CTA markup, near `renderMiniCard` L6236) and `exploreTopRated()` — sets `#fMinRating='8'`, enables `SORT_SRC='avg'` via `toggleSrc('avg')`, calls `applyFilters()`, and smooth-scrolls to `<main>` (reuses existing filter wiring, no new data path). Appended to the render at `#scrollBest.innerHTML = best.map(...).join('') + feedCtaCard()` (loadFeedSections L6413). New EN i18n keys `best.exploreTitle`/`best.exploreSub`/`best.exploreCta` (others fall back via `t()`). CSS block: `.feed-cta`, `.feed-cta-icon`, `.feed-cta-title`, `.feed-cta-sub`, `.feed-cta-arrow` (after `.mini-card-new-badge`). **Verified on preview:** desktop 1280 → 6 mock cards + CTA grows to 387px, row spans full 1275px container (no overflow); `exploreTopRated()` sets minRating 8 + Avg sort with no error; mobile 390 → CTA is 200px end-cap, no horizontal page bleed; screenshot shows the premium gradient CTA filling the right side. Note: `#feedSections` is `display:none` on the static preview when the feed API 404s (expected) — mock injection used to verify layout. |
+
+---
+
+## ⚡ Session (2026-07-18) — Ultra-Compact Modern Desktop Hero
 
 All commits on `main`, all live on https://findfilm.ai.
 
