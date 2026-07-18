@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — Compact Utility Chips (Hero Discovery Row)
+## ⚡ Most Recent Session (2026-07-18) — Compact Hero Trust Badge (Stats Condense)
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `e4d7de0` | **Condensed the hero stats/trust block into a single-line muted trust badge (frontend-only, `index.html`; no Tailwind — native CSS, Tailwind snippet handed to user).** Deployed `dadab867.ratingkino.pages.dev` → findfilm.ai. Replaced the old 4-line `.hero-band-copy` block — `.hero-title` (`#heroTitle`, big 900-weight "240,000 films. / 3 sources. 1 rating." with `.c-p`/`.c-o`/`.c-y` colored numerals) **plus** the `.hero-sub` explanatory paragraph (`data-i18n="hero.subtitle"`) — with one ultra-compact row: **`240K+ films • Unified AI Rating (IMDb, RT, Metacritic)`**. `#heroTitle` **kept** (JS rewrites it) but restyled: `.hero-title` now `font-weight:700`, `font-size:13px` (desktop) / 12/11.5/11px at the 768/430/375 breakpoints, `color:var(--muted)`, `display:inline-flex; flex-wrap:wrap` single line. Accents kept subtle: `.c-p` "240K+" purple (weight 800), `.c-o` "Unified AI Rating" orange; new `.ht-dot` (faint `rgba(148,163,184,.45)` bullet separator) + `.ht-src` (dim `rgba(148,163,184,.6)` "(IMDb, RT, Metacritic)"). `.hero-sub` element **removed** (its `hero.subtitle` i18n keys left in place, now unused/harmless). **JS:** both `#heroTitle` rewrite sites updated to emit the compact format — the language/`applyTranslations` path (~L5890, `240K+`/`150K+` + `t('hero.films')`/`t('hero.shows')` + `t('hero.unified')`) and `setContentType()` (~L6597/6599 Movies/TV branches). New EN i18n key `hero.unified`="Unified AI Rating" (other langs fall back via `t()`). `.how-ratings-link` ("How ratings work" micro-modal trigger) retained directly beneath. **Verified on preview:** desktop 1280 → 13px single line (18px tall); mobile 375 → 11px single line (15px tall, fits, no wrap); Movies↔TV toggle keeps compact copy ("240K+ films…"/"150K+ shows…"); `.hero-sub` gone; purple/orange accents confirmed; desktop + mobile screenshots show the tight above-the-fold hierarchy (feed rises higher). |
+
+---
+
+## ⚡ Session (2026-07-18) — Compact Utility Chips (Hero Discovery Row)
 
 All commits on `main`, all live on https://findfilm.ai.
 
