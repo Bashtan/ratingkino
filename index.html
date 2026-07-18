@@ -472,6 +472,41 @@ header {
 .search-wrap--hero .search-icon { right: 16px; }
 .search-wrap--hero.has-mic .search-icon { right: 46px; }
 
+/* ── Search-mode segmented control (Title vs Plot/AI) ─────────────── */
+.search-mode {
+  display: inline-flex; align-self: center; gap: 2px;
+  margin: 2px auto 4px; padding: 3px;
+  background: rgba(124,58,237,0.09);
+  border: 1px solid rgba(139,92,246,0.22);
+  border-radius: 999px;
+}
+.sm-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 16px;
+  border: none; cursor: pointer; border-radius: 999px;
+  background: transparent; color: var(--muted);
+  font-family: 'Montserrat', sans-serif; font-size: 11.5px; font-weight: 700;
+  letter-spacing: 0.3px; white-space: nowrap;
+  transition: color 0.22s, background 0.22s, box-shadow 0.22s;
+}
+.sm-btn svg { width: 12px; height: 12px; flex-shrink: 0; opacity: 0.9; }
+.sm-btn:hover { color: #c4b5fd; }
+.sm-btn.active {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff;
+  box-shadow: 0 2px 12px rgba(124,58,237,0.4);
+}
+
+/* Plot/AI mode: make the mic more inviting (mic is the star of plot search).
+   Scoped to :not(.listening) so the red recording state always wins. */
+.search-wrap.mode-ai .search-mic-btn:not(.listening) {
+  color: #a78bfa;
+  animation: micInvite 2.4s ease-in-out infinite;
+}
+@keyframes micInvite {
+  0%, 100% { transform: translateY(-50%) scale(1); filter: none; }
+  50% { transform: translateY(-50%) scale(1.12); filter: drop-shadow(0 0 6px rgba(167,139,250,0.6)); }
+}
+
 /* Secondary utility row — sleek chip slider (YouTube/Spotify style):
    single no-wrap horizontal scroll, scrollbar hidden, centered when it fits. */
 .hero-utils {
@@ -3834,6 +3869,17 @@ if ('serviceWorker' in navigator) {
 
 <!-- ════════════ HERO SEARCH (dominant primary CTA) ════════════ -->
 <section class="hero-search" id="heroSearch">
+  <!-- Search-mode segmented control: Title (default) vs Plot/AI (advanced) -->
+  <div class="search-mode" id="searchMode" role="tablist" aria-label="Search mode">
+    <button class="sm-btn active" id="smTitle" type="button" role="tab" aria-selected="true" onclick="setSearchMode('title')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <span data-i18n="search.modeTitle">By Title</span>
+    </button>
+    <button class="sm-btn" id="smPlot" type="button" role="tab" aria-selected="false" onclick="setSearchMode('ai')">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+      <span data-i18n="search.modePlot">By Plot</span>
+    </button>
+  </div>
   <!-- Relocated #searchWrap (inner IDs unchanged so all wiring keeps working), enlarged via .search-wrap--hero -->
   <div class="search-wrap search-wrap--hero" id="searchWrap">
     <!-- AI sparkle icon: dims when not in AI mode, glows purple when active -->
@@ -4577,6 +4623,11 @@ const TRANSLATIONS = {
     'search.ph2':          "Try: '90s thriller with a massive plot twist'",
     'search.ph3':          "Try: 'A light comedy for a Friday night'",
     'search.nlpHint':      "✨ Can't remember the title? Just describe the plot!",
+    // Search-mode toggle (Title vs Plot/AI)
+    'search.modeTitle':    'By Title',
+    'search.modePlot':     'By Plot',
+    'search.modeTitlePh':  'Search movies by title...',
+    'search.modePlotPh':   'e.g., DiCaprio on a sinking ship...',
     // Search suggestion pills
     'search.suggestLabel': 'Try searching for:',
     'search.sug0':         '80s sci-fi',
@@ -5813,6 +5864,11 @@ const TRANSLATIONS = {
     'search.ph2':          "Спробуй: 'Трилер 90-х із несподіваним поворотом'",
     'search.ph3':          "Спробуй: 'Легка комедія для п\\'ятничного вечора'",
     'search.nlpHint':      "✨ Не пам'ятаєш назву? Просто опиши сюжет!",
+    // Search-mode toggle (Title vs Plot/AI)
+    'search.modeTitle':    'За назвою',
+    'search.modePlot':     'За сюжетом',
+    'search.modeTitlePh':  'Пошук за назвою...',
+    'search.modePlotPh':   'напр., Дікапріо на кораблі, що тоне...',
     'search.suggestLabel': 'Спробуй пошукати:',
     'search.sug0':         'Наукова фантастика 80-х',
     'search.sug1':         'Несподівані повороти сюжету',
@@ -5968,9 +6024,14 @@ function applyTranslations() {
   if (document.getElementById('searchSuggestions')?.classList.contains('ss-visible')) {
     renderSuggestionPills();
   }
-  // Refresh desktop placeholder overlay after language change
+  // Refresh desktop placeholder overlay + native placeholder after language change
+  const _searchInp = document.getElementById('searchInput');
   const _phOverlay = document.getElementById('searchPhOverlay');
-  if (_phOverlay && !document.getElementById('searchInput')?.value) {
+  if (typeof SEARCH_MODE !== 'undefined') {
+    const _modePh = searchModePlaceholder();
+    if (_searchInp) _searchInp.placeholder = _modePh;
+    if (_phOverlay && !_searchInp?.value) _phOverlay.textContent = _modePh;
+  } else if (_phOverlay && !_searchInp?.value) {
     _phOverlay.textContent = getDesktopPlaceholders()[_deskPhIdx];
   }
   // Switcher button: show native name of current language
@@ -6275,6 +6336,7 @@ let DETECTED_COUNTRY = 'US';  // ISO-3166-1 from /api/geo-lang; used for watch p
 // ── AI search state ──────────────────────────────────────────
 let CACHE_MOVIES      = [];    // snapshot of the 119 KV movies for AI search
 let AI_SEARCH_ACTIVE  = false;
+let SEARCH_MODE       = 'title';   // 'title' = exact title search · 'ai' = plot/mood semantic search
 let AI_SEARCH_TIMER   = null;
 let _lastQuery        = '';        // last AI query for follow-up context
 let _aiMatchScores    = new Map(); // tmdbId → match % for current AI results
@@ -7524,6 +7586,7 @@ function _cycleDeskPh() {
   const inp     = document.getElementById('searchInput');
   const overlay = document.getElementById('searchPhOverlay');
   if (!overlay) return;
+  if (SEARCH_MODE === 'title') return; // Title mode uses a fixed placeholder — no rotation
   if (document.activeElement === inp || inp.value || IS_LOADING || AI_SEARCH_ACTIVE) return; // paused while focused / typing / fetching
   overlay.classList.add('ph-fading');
   setTimeout(() => {
@@ -7536,12 +7599,46 @@ function _cycleDeskPh() {
 function initDesktopPlaceholder() {
   const overlay = document.getElementById('searchPhOverlay');
   if (!overlay) return;
-  overlay.textContent = getDesktopPlaceholders()[0];
   _deskPhTimer = setInterval(_cycleDeskPh, 3800);
 }
-// Set static a11y placeholder (hidden visually by CSS)
-document.getElementById('searchInput').placeholder = t('search.placeholder');
+
+/* Returns the current mode's placeholder text (localized). */
+function searchModePlaceholder() {
+  return SEARCH_MODE === 'ai' ? t('search.modePlotPh') : t('search.modeTitlePh');
+}
+
+/* Switch between 'title' (exact-title) and 'ai' (plot/mood semantic) search modes.
+   Updates the segmented control, the input placeholder, and the mic emphasis.
+   The active mode is read by the Enter-key handler to pick the search logic. */
+function setSearchMode(mode) {
+  if (mode !== 'title' && mode !== 'ai') return;
+  SEARCH_MODE = mode;
+  const isAI = mode === 'ai';
+  const smTitle = document.getElementById('smTitle');
+  const smPlot  = document.getElementById('smPlot');
+  const wrap    = document.getElementById('searchWrap');
+  const overlay = document.getElementById('searchPhOverlay');
+  const inp     = document.getElementById('searchInput');
+  if (smTitle) { smTitle.classList.toggle('active', !isAI); smTitle.setAttribute('aria-selected', String(!isAI)); }
+  if (smPlot)  { smPlot.classList.toggle('active', isAI);   smPlot.setAttribute('aria-selected', String(isAI)); }
+  if (wrap)    wrap.classList.toggle('mode-ai', isAI);
+  // Fixed per-mode placeholder (supersedes the rotating hint once a mode is chosen)
+  const ph = searchModePlaceholder();
+  if (inp) inp.placeholder = ph;                       // a11y / native fallback
+  if (overlay && (!inp || !inp.value)) {               // visible custom overlay
+    _deskPhIdx = 0;
+    overlay.textContent = ph;
+  }
+  try { localStorage.setItem('rk_searchMode', mode); } catch(e) {}
+}
+
+// Restore saved mode (defaults to Title) and paint the initial placeholder
 initDesktopPlaceholder();
+(function initSearchMode() {
+  let saved = 'title';
+  try { saved = localStorage.getItem('rk_searchMode') || 'title'; } catch(e) {}
+  setSearchMode(saved === 'ai' ? 'ai' : 'title');
+})();
 
 /* ── Search suggestion pills ──────────────────────────────────────
    Shown on focus when the input is empty; each pill fires an AI
@@ -8038,18 +8135,18 @@ document.getElementById('searchInput').addEventListener('input', function() {
   applyFilters();
 });
 
-// Enter key triggers AI search immediately (no debounce wait)
+// Enter key runs the search using the logic for the active mode:
+//   • Plot/AI mode → semantic aiSearch()  • Title mode → exact-title loadMovies()
 document.getElementById('searchInput').addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   clearTimeout(filterTimer);
   clearTimeout(AI_SEARCH_TIMER);
   const q = e.target.value.trim();
-  if (q && CACHE_MOVIES.length && CONTENT_TYPE === 'movie') {
+  if (!q) { clearAISearch(); return; }
+  if (SEARCH_MODE === 'ai' && CACHE_MOVIES.length && CONTENT_TYPE === 'movie') {
     aiSearch(q);
-  } else if (q) {
-    loadMovies(1, false);
   } else {
-    clearAISearch();
+    loadMovies(1, false);
   }
 });
 
