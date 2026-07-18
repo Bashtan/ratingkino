@@ -1354,11 +1354,18 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .mrb-num.mrb-mc   { color: var(--mc); }
 .mrb-dot { color: rgba(255,255,255,0.18); font-size: 14px; line-height: 1; user-select: none; }
 
-/* ── Keep .mr for FindFilm local rating badge ─────────────── */
-.mr { display: flex; flex-direction: column; align-items: center; padding: 6px 12px; border-radius: 8px; font-family: 'Montserrat', sans-serif; }
-.mr .val { font-size: 18px; font-weight: 900; line-height: 1.1; }
-.mr .src { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.75; margin-top: 2px; }
-.mr.loading { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--muted); }
+/* ── FindFilm local rating — compact secondary pill ─────────── */
+.ff-local-wrap { flex-basis: 100%; display: flex; justify-content: center; margin-top: 2px; }
+.ff-local-pill {
+  display: inline-flex; align-items: center; gap: 5px; width: fit-content;
+  padding: 5px 12px; border-radius: 999px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(139,92,246,0.32);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px; font-weight: 800; color: #e9d5ff; line-height: 1;
+}
+.ff-local-pill .ffp-star { color: var(--accent); font-size: 13px; text-shadow: 0 0 8px rgba(139,92,246,0.65); }
+.ff-local-pill .ffp-count { font-size: 11px; font-weight: 600; color: #67e8f9; opacity: 0.9; }
 .m-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn-trailer {
   display: flex; align-items: center; gap: 6px;
@@ -1772,13 +1779,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   font-family: 'Montserrat', sans-serif;
 }
 .rev-success.show { display: block; }
-
-/* FindFilm Local Rating badge — distinct from external sources */
-.mr.ff-local {
-  background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(6,182,212,0.15));
-  border: 1px solid rgba(139,92,246,0.38); color: #e9d5ff;
-}
-.mr.ff-local .src { color: #67e8f9; opacity: 1; }
 
 .reviews-list {
   display: flex; flex-direction: column; gap: 9px;
@@ -4475,6 +4475,8 @@ const TRANSLATIONS = {
     'modal.smartMatch':     'Smart Match',
     'modal.reviewPlaceholder': 'Write your review...',
     'modal.noReviews':      'No reviews yet. Be the first!',
+    'review.userReview':    'User Review',
+    'review.userReviews':   'User Reviews',
     'modal.loading':        'Loading…',
     'modal.translating':    'Translating…',
     'modal.noAwards':       'No award data available.',
@@ -5739,6 +5741,8 @@ const TRANSLATIONS = {
     'modal.smartMatch':     'Збіг ШІ',
     'modal.reviewPlaceholder': 'Що ви думаєте? (необов\'язково)',
     'modal.noReviews':      'Відгуків ще немає. Будьте першим!',
+    'review.userReview':    'Відгук',
+    'review.userReviews':   'Відгуки',
     'modal.loading':        'Завантаження…',
     'modal.translating':    'Переклад…',
     'modal.noAwards':       'Дані про нагороди відсутні.',
@@ -8709,10 +8713,13 @@ function refreshModalRatings(m) {
   const el = document.getElementById('mRatings');
   if (!el) return;
 
-  // FindFilm local rating badge (always appended if reviews exist)
+  // FindFilm local rating badge — compact pill below the main aggregated score
   const local = calcLocalRating(m.id);
+  const revWord = local
+    ? (local.count === 1 ? t('review.userReview') : t('review.userReviews'))
+    : '';
   const localBadge = local
-    ? `<div class="mr ff-local"><div class="val">★ ${local.avg}</div><div class="src">FindFilm · ${local.count} ${local.count === 1 ? 'review' : 'reviews'}</div></div>`
+    ? `<div class="ff-local-wrap"><span class="ff-local-pill"><span class="ffp-star">★</span>${local.avg}<span class="ffp-count">(${local.count} ${revWord})</span></span></div>`
     : '';
 
   if (!m.enriched) {
