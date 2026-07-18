@@ -2665,6 +2665,38 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   color: #fff; font-family: 'Montserrat', sans-serif;
   letter-spacing: 0.5px;
 }
+/* "Explore Top Rated" CTA — dynamically grows to fill the dead space left
+   when a feed row has too few cards to fill wide screens. flex-grow eats
+   remaining horizontal space; on overflow it collapses to an end-cap. */
+.feed-cta {
+  flex: 1 1 240px; min-width: 200px; align-self: stretch;
+  display: flex; flex-direction: column; justify-content: center;
+  gap: 8px; padding: 18px 22px; cursor: pointer;
+  border-radius: 12px; text-align: left;
+  background: linear-gradient(135deg, rgba(49,46,129,0.42), rgba(88,28,135,0.20));
+  border: 1px solid rgba(124,58,237,0.28);
+  transition: border-color 0.22s, box-shadow 0.22s, transform 0.22s;
+}
+.feed-cta:hover {
+  border-color: rgba(124,58,237,0.6);
+  box-shadow: 0 12px 34px rgba(124,58,237,0.22);
+  transform: translateY(-2px);
+}
+.feed-cta-icon { font-size: 24px; line-height: 1; }
+.feed-cta-title {
+  font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 15px;
+  color: #e9d5ff; letter-spacing: 0.2px;
+}
+.feed-cta-sub {
+  font-size: 12px; color: var(--muted); line-height: 1.4; max-width: 220px;
+}
+.feed-cta-arrow {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 2px;
+  font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 12px;
+  color: #c4b5fd;
+}
+.feed-cta-arrow svg { transition: transform 0.22s; }
+.feed-cta:hover .feed-cta-arrow svg { transform: translateX(4px); }
 /* "For You" row: extra purple tint on cards */
 .feed-row.for-you .mini-card {
   border-color: rgba(99,102,241,0.22);
@@ -4418,6 +4450,10 @@ const TRANSLATIONS = {
     'feed.best':           '🏅 Best Available Now',
     'feed.bestBadge':      'Certified by ratings & votes',
     'feed.hiddenGems':     '💎 Hidden Gems',
+    // "Explore Top Rated" filler CTA (Best Available Now row)
+    'best.exploreTitle':   'Explore Top Rated',
+    'best.exploreSub':     'Discover 50+ more highly-rated films, ranked by IMDb, RT & Metacritic.',
+    'best.exploreCta':     'Browse top rated',
     // Grid header
     'grid.explore':        '🍿 Explore Collection',
     // Watchlist
@@ -6219,6 +6255,31 @@ function renderMiniCard(m, opts = {}) {
   </div>`;
 }
 
+// "Explore Top Rated" filler card — appended to a feed row so it grows (flex:1)
+// to consume the dead space left when there are too few cards for wide screens.
+function feedCtaCard() {
+  return `<div class="feed-cta" onclick="exploreTopRated()" role="button" tabindex="0"
+       title="${esc(t('best.exploreTitle'))}">
+    <div class="feed-cta-icon">🏆</div>
+    <div class="feed-cta-title">${esc(t('best.exploreTitle'))}</div>
+    <div class="feed-cta-sub">${esc(t('best.exploreSub'))}</div>
+    <span class="feed-cta-arrow">${esc(t('best.exploreCta'))}
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </span>
+  </div>`;
+}
+
+// Jump to the main grid filtered to the highest-rated titles (min 8.0, sorted by
+// average score). Reuses the existing filter wiring — no new data path.
+function exploreTopRated() {
+  const mr = document.getElementById('fMinRating');
+  if (mr) mr.value = '8';
+  if (SORT_SRC !== 'avg') toggleSrc('avg');   // enable Avg★ sort if not already
+  applyFilters();
+  const grid = document.querySelector('main');
+  if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function renderFeedSkeletons(containerId, count = 8) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -6412,7 +6473,7 @@ async function loadFeedSections() {
     document.getElementById('rowBest').style.display = '';
     document.getElementById('scrollBest').innerHTML = best.map(m =>
       renderMiniCard({ ...m, avg: m.tmdbScore != null ? m.tmdbScore.toFixed(1) : m.avg },
-                     { listName: 'Best Available Now' })).join('');
+                     { listName: 'Best Available Now' })).join('') + feedCtaCard();
   } else {
     document.getElementById('rowBest').style.display = 'none';
   }
