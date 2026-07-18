@@ -2757,6 +2757,39 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .feed-seemore:hover .feed-seemore-icon { transform: translateX(3px); }
 .feed-seemore-label { font-size: 11px; font-weight: 700; line-height: 1.3; }
+/* ── "Why trust FindFilm?" proof row — sits between two feeds ── */
+.trust-proof {
+  max-width: 1200px; margin: 6px auto 30px; padding: 26px 28px;
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgba(30,27,75,0.5), rgba(15,23,42,0.42));
+  border: 1px solid rgba(51,65,85,0.7);
+}
+.trust-proof-title {
+  text-align: center; font-family: 'Montserrat', sans-serif; font-weight: 700;
+  font-size: 22px; letter-spacing: 0.2px; color: var(--text); margin: 0 0 22px;
+}
+.trust-proof-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.trust-pillar { text-align: center; padding: 4px 6px; }
+.trust-pillar-icon {
+  width: 46px; height: 46px; margin: 0 auto 12px;
+  display: grid; place-items: center; border-radius: 12px;
+  background: rgba(124,58,237,0.14); border: 1px solid rgba(124,58,237,0.3);
+  color: #c4b5fd;
+}
+.trust-pillar-icon svg { width: 23px; height: 23px; }
+.trust-pillar-title {
+  font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 15px;
+  color: var(--text); margin: 0 0 6px;
+}
+.trust-pillar-text {
+  font-size: 12.5px; line-height: 1.5; color: var(--muted);
+  max-width: 300px; margin: 0 auto;
+}
+@media (max-width: 768px) {
+  .trust-proof { margin: 6px 8px 24px; padding: 22px 18px; }
+  .trust-proof-title { font-size: 18px; margin-bottom: 16px; }
+  .trust-proof-grid { grid-template-columns: 1fr; gap: 20px; }
+}
 /* "For You" row: extra purple tint on cards */
 .feed-row.for-you .mini-card {
   border-color: rgba(99,102,241,0.22);
@@ -4046,6 +4079,34 @@ if ('serviceWorker' in navigator) {
     <div class="feed-scroll" id="scrollBest"></div>
   </div>
 
+  <!-- "Why trust FindFilm?" proof row — value-prop pillars between two feeds -->
+  <section class="trust-proof" id="trustProof" aria-labelledby="trustProofTitle">
+    <h2 class="trust-proof-title" id="trustProofTitle" data-i18n="trust.title">Why trust FindFilm ratings?</h2>
+    <div class="trust-proof-grid">
+      <div class="trust-pillar">
+        <div class="trust-pillar-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        </div>
+        <h3 class="trust-pillar-title" data-i18n="trust.p1Title">3 Sources, 1 Score</h3>
+        <p class="trust-pillar-text" data-i18n="trust.p1Text">We unify ratings from IMDb, Rotten Tomatoes, and Metacritic into one definitive AI score.</p>
+      </div>
+      <div class="trust-pillar">
+        <div class="trust-pillar-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+        <h3 class="trust-pillar-title" data-i18n="trust.p2Title">Unbiased &amp; Pure</h3>
+        <p class="trust-pillar-text" data-i18n="trust.p2Text">No studio manipulation. Just real data processed by AI to find truly good movies.</p>
+      </div>
+      <div class="trust-pillar">
+        <div class="trust-pillar-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 10l-5 3.6L16.5 20 12 16.3 7.5 20 9 13.6 4 10l6.1-1.2z"/></svg>
+        </div>
+        <h3 class="trust-pillar-title" data-i18n="trust.p3Title">100% Ad-Free</h3>
+        <p class="trust-pillar-text" data-i18n="trust.p3Text">No pop-ups, no banners. Just a clean, premium movie discovery experience.</p>
+      </div>
+    </div>
+  </section>
+
   <!-- Hidden Gems — under-the-radar high-quality picks (daily theme shown as a badge) -->
   <div class="feed-row" id="rowPopular">
     <div class="feed-row-header">
@@ -4517,6 +4578,14 @@ const TRANSLATIONS = {
     // Truncated-row "See all" end-cap
     'feed.seeMore':        'See all',
     'feed.seeMoreAria':    'See all titles in this collection',
+    // "Why trust FindFilm?" proof row
+    'trust.title':         'Why trust FindFilm ratings?',
+    'trust.p1Title':       '3 Sources, 1 Score',
+    'trust.p1Text':        'We unify ratings from IMDb, Rotten Tomatoes, and Metacritic into one definitive AI score.',
+    'trust.p2Title':       'Unbiased & Pure',
+    'trust.p2Text':        'No studio manipulation. Just real data processed by AI to find truly good movies.',
+    'trust.p3Title':       '100% Ad-Free',
+    'trust.p3Text':        'No pop-ups, no banners. Just a clean, premium movie discovery experience.',
     // Rating transparency (trust pill)
     'rating.unified':      'Unified',
     'rating.tmdb':         'TMDB',
@@ -5709,6 +5778,13 @@ const TRANSLATIONS = {
     'hero.unified':         'Єдиний рейтинг з IMDb, Rotten Tomatoes та Metacritic.',
     'feed.seeMore':         'Усі',
     'feed.seeMoreAria':     'Показати всі фільми цієї добірки',
+    'trust.title':          'Чому варто довіряти рейтингам FindFilm?',
+    'trust.p1Title':        '3 джерела, 1 оцінка',
+    'trust.p1Text':         'Ми об’єднуємо рейтинги IMDb, Rotten Tomatoes та Metacritic в одну остаточну AI-оцінку.',
+    'trust.p2Title':        'Неупереджено та чесно',
+    'trust.p2Text':         'Без маніпуляцій студій. Лише реальні дані, оброблені AI, щоб знайти справді хороші фільми.',
+    'trust.p3Title':        '100% без реклами',
+    'trust.p3Text':         'Жодних спливаючих вікон і банерів. Лише чистий, преміальний досвід пошуку фільмів.',
     'wiz.qMood':            'Що вам до настрою?',
     'wiz.qTime':            'Скільки у вас часу?',
     'wiz.qCompany':         'З ким дивитесь?',
