@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — Desktop Density Pass 2 (Tighter Spacing · 1200px)
+## ⚡ Most Recent Session (2026-07-18) — Remove Fresh Additions Feed Row
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `f72feae` | **Removed the "🔥 Fresh Additions" horizontal carousel entirely (frontend-only, `index.html`).** Deployed `e59ce13c.ratingkino.pages.dev` → findfilm.ai. Deleted the full `#rowFresh`/`#scrollFresh` markup block (comment + `.feed-row`), its `renderFeedSkeletons('scrollFresh', 8)` skeleton call, the `freshSorted` render block inside `loadFeedSections()`, the `freshTitle` translation line in `applyTranslations()`, and the `feed.fresh` i18n key from **all 6 language blocks** (en/es/fr/zh/ar/uk). **Preserved** the shared `const fresh` KV pool (L6401, `freshRes.value.map(fromKV)`) — it still feeds "Best Available Now" (`#rowBest`/`#scrollBest`) and `window._FEED_POOL` dedup. `#feedSections` now holds exactly **3 rows**: For You (`#rowForYou`), Best Available Now (`#rowBest`), Hidden Gems (`#rowPopular`) — clean single blank-line spacing, no orphaned wrapper divs. Updated stale comment ("For You" and discovery rows). **Verified on preview:** `preview_eval` confirms 3 feed rows, `#rowFresh`/`#scrollFresh` gone, console only TMDb-404 static noise (no JS ReferenceErrors). |
+
+---
+
+## ⚡ Session (2026-07-18) — Desktop Density Pass 2 (Tighter Spacing · 1200px)
 
 All commits on `main`, all live on https://findfilm.ai.
 
