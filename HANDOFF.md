@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — "Explore Top Rated" CTA Fills Best-Row Dead Space
+## ⚡ Most Recent Session (2026-07-18) — Rating-Transparency Trust Pills
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `788d4f7` | **Two-state "trust pill" on feed mini-cards so users can tell a real critic-blended score from a TMDB placeholder (frontend-only, `index.html`).** Deployed `d7368944.ratingkino.pages.dev` → findfilm.ai. Replaced the old `.mini-card-score` (`★ 8.4`, plain yellow) with a stateful **`.mc-rating`** pill built by new helper **`miniRatingPill(m)`** (wired into `renderMiniCard` L6243: `const score = miniRatingPill(m)`). State detection reuses the `confidenceBadgeHTML` rule: `hasCritic = parseFloat(m.imdb)>0 || parseInt(m.rt)>0 || parseInt(m.mc)>0`. **State A — Unified** (`.mc-rating--unified`, green `#4ade80` on `rgba(34,197,94,.15)`, green border + soft glow, gold `#fde047` star, `UNIFIED` tag); **State B — TMDB fallback** (`.mc-rating--tmdb`, muted slate `#94a3b8` on `rgba(15,23,42,.86)`, `TMDB` tag). Each pill has an `.mc-rating-info` glyph (`i` in a circle) + a **contained CSS-only tooltip `.mc-rating-tip`** (shown on `:hover`/`:focus-within`, `max-width:116px` so it never triggers the `.feed-scroll overflow-x:auto` both-axis clip; `z-index:50`, dark `#0b1120` bg). Copy: Unified → "Combined critic score (IMDb, RT, Metacritic)", TMDB → "Temporary TMDB score until critic reviews arrive". Pill is keyboard-focusable (`tabindex="0"`, `role="img"`, full `aria-label`). New EN i18n keys `rating.unified`/`rating.tmdb`/`rating.unifiedTip`/`rating.tmdbTip` (others fall back via `t()`). **CSS selectors added** (replacing `.mini-card-score` block ~L2654): `.mc-rating`, `.mc-rating-star`, `.mc-rating-tag`, `.mc-rating-info`, `.mc-rating--unified`, `.mc-rating--tmdb`, `.mc-rating-tip`, `.mc-rating:hover/:focus-within .mc-rating-tip`. **Verified on preview via mock injection:** unified card → green pill + tooltip "Combined critic score (IMDb, RT, Metacritic)"; tmdb card → slate pill + "Temporary TMDB score…"; `matches(':focus-within')` true and tooltip opacity resolves to 1 (transition-disabled read); at mobile 375 both pills stay within their `.mini-card` bounds and the right-anchored tooltip stays within the viewport (no clip/overflow). |
+
+---
+
+## ⚡ Session (2026-07-18) — "Explore Top Rated" CTA Fills Best-Row Dead Space
 
 All commits on `main`, all live on https://findfilm.ai.
 
