@@ -3968,7 +3968,7 @@ if ('serviceWorker' in navigator) {
   <div class="hero-band-copy">
     <h1 class="hero-h1" data-i18n="hero.h1">FindFilm — AI Movie Assistant &amp; Unified Ratings</h1>
     <div class="hero-title" id="heroTitle">
-      <span class="c-p">240K+</span> films <span class="ht-dot">•</span> <span class="c-o">Unified AI Rating</span> <span class="ht-src">(IMDb, RT, Metacritic)</span>
+      <span class="c-p">240K+</span> films <span class="ht-dot">•</span> <span class="c-o">One score from IMDb, Rotten Tomatoes, and Metacritic.</span>
     </div>
     <button class="how-ratings-link" onclick="openRatingsInfo()" aria-label="How ratings work">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -4366,7 +4366,7 @@ const TRANSLATIONS = {
     'hero.shows':           'shows',
     'hero.sources':         'sources',
     'hero.rating':          'rating',
-    'hero.unified':         'Unified AI Rating',
+    'hero.unified':         'One score from IMDb, Rotten Tomatoes, and Metacritic.',
     'grid.showing':         'Showing:',
     'grid.of':              'of',
     'grid.aiResults':       'AI Results',
@@ -4427,8 +4427,8 @@ const TRANSLATIONS = {
     'cast.qrTitle':          'Cannot find your TV?',
     'cast.qrSub':            'Open the browser on your Smart TV and scan this code to watch.',
     'cast.qrCopy':           'Copy TV link',
-    'btn.random':           'Surprise me',
-    'tonight.launch':       'Pick for tonight',
+    'btn.random':           'Surprise me with a movie',
+    'tonight.launch':       'Find a movie for tonight',
     'util.voice':           'Voice',
     'util.watchlist':       'Watchlist',
     'filter.filters':       'Filters',
@@ -4511,7 +4511,7 @@ const TRANSLATIONS = {
     'search.listening':    'Listening…',
     'search.micDenied':    'Mic permission denied — type your search',
     // Animated placeholder cycling strings
-    'search.ph0':          "✨ Try AI search — e.g., 'A 90s thriller with a massive plot twist'",
+    'search.ph0':          'Describe a movie in your own words…',
     'search.ph1':          "Try: 'A movie about space with Matthew McConaughey'",
     'search.ph2':          "Try: '90s thriller with a massive plot twist'",
     'search.ph3':          "Try: 'A light comedy for a Friday night'",
@@ -4558,7 +4558,7 @@ const TRANSLATIONS = {
     // Taste onboarding quiz
     'onboard.personalize': 'Personalize in 30s →',
     'onboard.browseNow':   'Skip — just browse',
-    'onboard.refine':      'Refine taste',
+    'onboard.refine':      'Improve recommendations',
     'onboard.step':        'Step {n} of {total}',
     'onboard.finish':      'See my picks',
     'onboard.doneTitle':   'All set!',
@@ -5680,8 +5680,9 @@ const TRANSLATIONS = {
     'cast.qrTitle':          'Не можете знайти свій TV?',
     'cast.qrSub':            'Відкрийте браузер на Smart TV і відскануйте цей код, щоб дивитися.',
     'cast.qrCopy':           'Копіювати посилання TV',
-    'btn.random':           'RandomAI',
-    'tonight.launch':       'Сьогодні?',
+    'btn.random':           'Здивуй мене фільмом',
+    'tonight.launch':       'Фільм на вечір',
+    'hero.unified':         'Єдиний рейтинг з IMDb, Rotten Tomatoes та Metacritic.',
     'wiz.qMood':            'Що вам до настрою?',
     'wiz.qTime':            'Скільки у вас часу?',
     'wiz.qCompany':         'З ким дивитесь?',
@@ -5741,7 +5742,7 @@ const TRANSLATIONS = {
     'search.noMatchHint':  'Перегляньте ці назви натомість.',
     'search.listening':    'Слухаю…',
     'search.micDenied':    'Мікрофон заблоковано — введіть пошук вручну',
-    'search.ph0':          'Шукай за назвою, жанром або роком…',
+    'search.ph0':          'Опишіть фільм своїми словами…',
     'search.ph1':          "Спробуй: 'Фільм про космос з Меттью МакКонахі'",
     'search.ph2':          "Спробуй: 'Трилер 90-х із несподіваним поворотом'",
     'search.ph3':          "Спробуй: 'Легка комедія для п\\'ятничного вечора'",
@@ -5783,7 +5784,7 @@ const TRANSLATIONS = {
     // Taste onboarding quiz
     'onboard.personalize': 'Персоналізувати за 30с →',
     'onboard.browseNow':   'Пропустити — просто огляд',
-    'onboard.refine':      'Уточнити смаки',
+    'onboard.refine':      'Покращити рекомендації',
     'onboard.step':        'Крок {n} з {total}',
     'onboard.finish':      'Показати мій вибір',
     'onboard.doneTitle':   'Готово!',
@@ -5926,7 +5927,7 @@ function applyTranslations() {
     const isTV  = typeof CONTENT_TYPE !== 'undefined' && CONTENT_TYPE === 'tv';
     const count = isTV ? '150K+' : '240K+';
     const item  = isTV ? t('hero.shows') : t('hero.films');
-    heroTitle.innerHTML = `<span class="c-p">${count}</span> ${item} <span class="ht-dot">•</span> <span class="c-o">${t('hero.unified')}</span> <span class="ht-src">(IMDb, RT, Metacritic)</span>`;
+    heroTitle.innerHTML = `<span class="c-p">${count}</span> ${item} <span class="ht-dot">•</span> <span class="c-o">${t('hero.unified')}</span>`;
   }
   // Re-translate any open modal description
   if (typeof ACTIVE_MOVIE !== 'undefined' && ACTIVE_MOVIE?.desc) {
@@ -6655,9 +6656,9 @@ function setContentType(type) {
   // Update hero
   const heroTitle = document.getElementById('heroTitle');
   if (type === 'tv') {
-    heroTitle.innerHTML = `<span class="c-p">150K+</span> ${t('hero.shows')} <span class="ht-dot">•</span> <span class="c-o">${t('hero.unified')}</span> <span class="ht-src">(IMDb, RT, Metacritic)</span>`;
+    heroTitle.innerHTML = `<span class="c-p">150K+</span> ${t('hero.shows')} <span class="ht-dot">•</span> <span class="c-o">${t('hero.unified')}</span>`;
   } else {
-    heroTitle.innerHTML = `<span class="c-p">240K+</span> ${t('hero.films')} <span class="ht-dot">•</span> <span class="c-o">${t('hero.unified')}</span> <span class="ht-src">(IMDb, RT, Metacritic)</span>`;
+    heroTitle.innerHTML = `<span class="c-p">240K+</span> ${t('hero.films')} <span class="ht-dot">•</span> <span class="c-o">${t('hero.unified')}</span>`;
   }
   // Feed sections: only shown for movies
   document.getElementById('feedSections').style.display = type === 'movie' ? '' : 'none';
