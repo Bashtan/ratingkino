@@ -736,12 +736,15 @@ header {
   color: #cbb9ff;
 }
 .hero-title {
-  font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 20px; line-height: 1.15;
+  font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 13px; line-height: 1.4;
+  color: var(--muted); letter-spacing: 0.2px;
+  display: inline-flex; align-items: baseline; flex-wrap: wrap; column-gap: 6px; row-gap: 2px;
 }
-.c-p { color: var(--purple); }
+.c-p { color: var(--purple); font-weight: 800; }
 .c-o { color: var(--orange); }
 .c-y { color: var(--yellow); }
-.hero-sub { margin-top: 4px; margin-bottom: 0; font-size: 12px; color: var(--muted); max-width: 640px; line-height: 1.45; }
+.ht-dot { color: rgba(148,163,184,0.45); }
+.ht-src { color: rgba(148,163,184,0.6); font-weight: 600; }
 /* "How ratings work" trust affordance */
 .how-ratings-link {
   display: inline-flex; align-items: center; gap: 5px; margin-top: 7px;
@@ -2395,8 +2398,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 
   /* Compact hero band — get cards above the fold */
   .hero-band   { padding: 10px 14px 8px; flex-direction: column; gap: 4px; align-items: flex-start; }
-  .hero-title  { font-size: 20px; line-height: 1.15; }
-  .hero-sub    { font-size: 11px; margin-top: 2px; }
+  .hero-title  { font-size: 12px; line-height: 1.35; }
   .source-badges { display: none; }
 
   /* 2-column movie grid */
@@ -2531,7 +2533,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
 @media (max-width: 430px) {
   /* Hide language label — globe icon + chevron is enough on small row-1 */
   .lang-btn-name { display: none; }
-  .hero-title   { font-size: 18px; }
+  .hero-title   { font-size: 11.5px; }
   .movie-grid   { gap: 8px; }
   .filter-row-1 { padding: 7px 12px 0; }
   .filter-row-2 { padding: 5px 12px 7px; }
@@ -2545,7 +2547,7 @@ main { max-width: 1600px; margin: 0 auto; padding: 0 24px 60px; }
   .logo-icon     { width: 28px; height: 28px; }
   .logo-motto    { display: none; }
   .hero-band     { padding: 8px 12px 6px; }
-  .hero-title    { font-size: 16px; }
+  .hero-title    { font-size: 11px; }
   main           { padding: 0 10px 90px; }
   .movie-grid    { gap: 7px; }
   .gpill         { height: 36px; padding: 0 11px; font-size: 12px; }
@@ -3920,10 +3922,8 @@ if ('serviceWorker' in navigator) {
   <div class="hero-band-copy">
     <h1 class="hero-h1" data-i18n="hero.h1">FindFilm — AI Movie Assistant &amp; Unified Ratings</h1>
     <div class="hero-title" id="heroTitle">
-      <span class="c-p">240,000</span> films.<br>
-      <span class="c-o">3</span> sources. <span class="c-y">1</span> rating.
+      <span class="c-p">240K+</span> films <span class="ht-dot">•</span> <span class="c-o">Unified AI Rating</span> <span class="ht-src">(IMDb, RT, Metacritic)</span>
     </div>
-    <p class="hero-sub" data-i18n="hero.subtitle">We aggregate scores from IMDb, Rotten Tomatoes, and Metacritic into one weighted rating.</p>
     <button class="how-ratings-link" onclick="openRatingsInfo()" aria-label="How ratings work">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
       <span data-i18n="ratings.howLink">How ratings work</span>
@@ -4328,6 +4328,7 @@ const TRANSLATIONS = {
     'hero.shows':           'shows',
     'hero.sources':         'sources',
     'hero.rating':          'rating',
+    'hero.unified':         'Unified AI Rating',
     'grid.showing':         'Showing:',
     'grid.of':              'of',
     'grid.aiResults':       'AI Results',
@@ -5885,9 +5886,9 @@ function applyTranslations() {
   const heroTitle = document.getElementById('heroTitle');
   if (heroTitle) {
     const isTV  = typeof CONTENT_TYPE !== 'undefined' && CONTENT_TYPE === 'tv';
-    const count = isTV ? '150,000' : '240,000';
+    const count = isTV ? '150K+' : '240K+';
     const item  = isTV ? t('hero.shows') : t('hero.films');
-    heroTitle.innerHTML = `<span class="c-p">${count}</span> ${item}.<br><span class="c-o">3</span> ${t('hero.sources')}. <span class="c-y">1</span> ${t('hero.rating')}.`;
+    heroTitle.innerHTML = `<span class="c-p">${count}</span> ${item} <span class="ht-dot">•</span> <span class="c-o">${t('hero.unified')}</span> <span class="ht-src">(IMDb, RT, Metacritic)</span>`;
   }
   // Re-translate any open modal description
   if (typeof ACTIVE_MOVIE !== 'undefined' && ACTIVE_MOVIE?.desc) {
@@ -6593,9 +6594,9 @@ function setContentType(type) {
   // Update hero
   const heroTitle = document.getElementById('heroTitle');
   if (type === 'tv') {
-    heroTitle.innerHTML = `<span class="c-p">150,000</span> ${t('hero.shows')}.<br><span class="c-o">3</span> ${t('hero.sources')}. <span class="c-y">1</span> ${t('hero.rating')}.`;
+    heroTitle.innerHTML = `<span class="c-p">150K+</span> ${t('hero.shows')} <span class="ht-dot">•</span> <span class="c-o">${t('hero.unified')}</span> <span class="ht-src">(IMDb, RT, Metacritic)</span>`;
   } else {
-    heroTitle.innerHTML = `<span class="c-p">240,000</span> ${t('hero.films')}.<br><span class="c-o">3</span> ${t('hero.sources')}. <span class="c-y">1</span> ${t('hero.rating')}.`;
+    heroTitle.innerHTML = `<span class="c-p">240K+</span> ${t('hero.films')} <span class="ht-dot">•</span> <span class="c-o">${t('hero.unified')}</span> <span class="ht-src">(IMDb, RT, Metacritic)</span>`;
   }
   // Feed sections: only shown for movies
   document.getElementById('feedSections').style.display = type === 'movie' ? '' : 'none';
