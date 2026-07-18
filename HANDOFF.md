@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — Feed-Row Truncation + "See all" End-Cap (Scroll-Fatigue Fix)
+## ⚡ Most Recent Session (2026-07-18) — "Why Trust FindFilm?" 3-Pillar Proof Row
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `362f88e` | **Added a compact "Why trust FindFilm ratings?" value-prop proof row between two homepage feeds (frontend-only, `index.html`).** Deployed `b8428bfc.ratingkino.pages.dev` → findfilm.ai. New `<section class="trust-proof" id="trustProof">` inserted **inside `#feedSections`, between `#rowBest` (Best Available Now) and `#rowPopular` (Hidden Gems)** so it catches the eye mid-scroll (confirmed DOM order `rowBest → trustProof → rowPopular`). Subtle indigo→slate gradient container `linear-gradient(160deg, rgba(30,27,75,.5), rgba(15,23,42,.42))` + `1px rgba(51,65,85,.7)` border, `max-width:1200px; margin:auto` (matches `<main>`). Centered `h2.trust-proof-title` (22px) over a **3-column `.trust-proof-grid` (`repeat(3,1fr)`, collapses to 1 col ≤768px)**; each `.trust-pillar` = purple icon tile (`.trust-pillar-icon`, 46px, feather SVG — layers / shield-check / sparkle-star) + `.trust-pillar-title` + `.trust-pillar-text`. Pillars: **"3 Sources, 1 Score"**, **"Unbiased & Pure"**, **"100% Ad-Free"**. All copy i18n-keyed: **`trust.title`, `trust.p1Title`/`p1Text`, `trust.p2Title`/`p2Text`, `trust.p3Title`/`p3Text`** with EN + UK values (other locales fall back via `t()`). **New CSS** (after `.feed-seemore-label`, ~L2760): `.trust-proof`, `.trust-proof-title`, `.trust-proof-grid`, `.trust-pillar`, `.trust-pillar-icon`, `.trust-pillar-title`, `.trust-pillar-text` + `@media(max-width:768px)`. **Verified on preview:** section exists between the two feed rows, `max-width:1200px`, desktop grid = 3×364px cols with all EN pillar copy; `switchLang('uk')` swaps headline + pillar titles to Ukrainian; mobile 375 collapses to a single 321px column, section 359px wide, no page horizontal overflow; screenshots (desktop 3-col + mobile stacked) confirm the premium gradient card; console only TMDb-404 static noise. **Note:** section lives inside `#feedSections`, so it hides in TV mode / on feed-API error (same as the feed rows) — intended, it's a movies-feed proof row. |
+
+---
+
+## ⚡ Session (2026-07-18) — Feed-Row Truncation + "See all" End-Cap (Scroll-Fatigue Fix)
 
 All commits on `main`, all live on https://findfilm.ai.
 
