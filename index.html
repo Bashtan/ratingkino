@@ -3972,14 +3972,6 @@ if ('serviceWorker' in navigator) {
     <div class="feed-scroll" id="scrollPopular"></div>
   </div>
 
-  <!-- Fresh Additions row — recency view, newly added titles -->
-  <div class="feed-row" id="rowFresh">
-    <div class="feed-row-header">
-      <h2 class="feed-row-title">🔥 Fresh Additions</h2>
-    </div>
-    <div class="feed-scroll" id="scrollFresh"></div>
-  </div>
-
 </div>
 
 <!-- ════════════ MAIN GRID ════════════ -->
@@ -4432,7 +4424,6 @@ const TRANSLATIONS = {
     'fv.skip':             'Tap anywhere to continue',
     // Feed rows
     'feed.forYou':         '🌙 Start here tonight',
-    'feed.fresh':          '🔥 Fresh Additions',
     'feed.forYouBadge':    'Based on your taste',
     'feed.best':           '🏅 Best Available Now',
     'feed.bestBadge':      'Certified by ratings & votes',
@@ -4694,7 +4685,6 @@ const TRANSLATIONS = {
     'time.yearsAgo':       'hace {n}año',
     'fv.skip':             'Toca para continuar',
     'feed.forYou':         '✨ Para Ti',
-    'feed.fresh':          '🔥 Nuevas Adiciones',
     'feed.forYouBadge':    'Basado en tu gusto',
     'grid.explore':        '🍿 Explorar Colección',
     'wl.empty':            'Tu lista está vacía',
@@ -4939,7 +4929,6 @@ const TRANSLATIONS = {
     'time.yearsAgo':       'il y a {n}ans',
     'fv.skip':             'Appuyez pour continuer',
     'feed.forYou':         '✨ Pour Vous',
-    'feed.fresh':          '🔥 Nouveautés',
     'feed.forYouBadge':    'Selon vos goûts',
     'grid.explore':        '🍿 Explorer la Collection',
     'wl.empty':            'Votre liste est vide',
@@ -5184,7 +5173,6 @@ const TRANSLATIONS = {
     'time.yearsAgo':       '{n}年前',
     'fv.skip':             '点击继续',
     'feed.forYou':         '✨ 为你推荐',
-    'feed.fresh':          '🔥 最新上映',
     'feed.forYouBadge':    '根据你的品味',
     'grid.explore':        '🍿 探索合集',
     'wl.empty':            '你的观看列表是空的',
@@ -5429,7 +5417,6 @@ const TRANSLATIONS = {
     'time.yearsAgo':       'منذ {n}سنة',
     'fv.skip':             'انقر للمتابعة',
     'feed.forYou':         '✨ لك',
-    'feed.fresh':          '🔥 أحدث الإضافات',
     'feed.forYouBadge':    'بناءً على ذوقك',
     'grid.explore':        '🍿 استكشاف المجموعة',
     'wl.empty':            'قائمة المشاهدة فارغة',
@@ -5674,7 +5661,6 @@ const TRANSLATIONS = {
     'time.yearsAgo':       '{n}р тому',
     'fv.skip':             'Натисніть будь-де',
     'feed.forYou':         '✨ Для Тебе',
-    'feed.fresh':          '🔥 Нові Надходження',
     'feed.forYouBadge':    'На основі вашого смаку',
     'grid.explore':        '🍿 Дослідити Колекцію',
     'wl.empty':            'Список перегляду порожній',
@@ -5827,8 +5813,6 @@ function applyTranslations() {
   if (forYouTitle) forYouTitle.textContent = t('feed.forYou');
   const forYouBadge = document.querySelector('#rowForYou .feed-row-badge');
   if (forYouBadge) { const svg = forYouBadge.querySelector('svg'); forYouBadge.textContent = ' ' + t('feed.forYouBadge'); if (svg) forYouBadge.prepend(svg); }
-  const freshTitle = document.querySelector('#rowFresh .feed-row-title');
-  if (freshTitle) freshTitle.textContent = t('feed.fresh');
   // Watchlist drawer title
   const wlTitleSpan = document.getElementById('wlTitleText');
   if (wlTitleSpan) wlTitleSpan.textContent = t('wl.title');
@@ -6392,7 +6376,6 @@ async function loadFeedSections() {
   document.getElementById('feedSections').style.display = '';
   renderFeedSkeletons('scrollBest', 8);
   renderFeedSkeletons('scrollPopular', 8);
-  renderFeedSkeletons('scrollFresh', 8);
 
   // Reset global deduplication for this render pass
   renderedMovieIds = new Set();
@@ -6453,20 +6436,6 @@ async function loadFeedSections() {
       curatedRow.map(m => renderMiniCard(m, { listName: 'AI Curated' })).join('');
   } else {
     document.getElementById('rowPopular').style.display = 'none';
-  }
-
-  // ── 4. Fresh Additions (same catalog, recency view, thin allowed) ─────
-  const freshSorted = [...fresh]
-    .sort((a, b) => (parseInt(b.year) || 0) - (parseInt(a.year) || 0))
-    .filter(m => !renderedMovieIds.has(m.id))
-    .slice(0, 20);
-  if (freshSorted.length) {
-    freshSorted.forEach(m => renderedMovieIds.add(m.id));
-    document.getElementById('rowFresh').style.display = '';
-    document.getElementById('scrollFresh').innerHTML =
-      freshSorted.map(m => renderMiniCard(m, { showNew: true, listName: 'Fresh Additions' })).join('');
-  } else {
-    document.getElementById('rowFresh').style.display = 'none';
   }
 }
 
@@ -7179,7 +7148,7 @@ async function loadMovies(page = 1, append = false) {
   IS_LOADING = true;
 
   // ── Show/hide discovery rows based on whether a search query is active ──
-  // feedSections holds "For You" and "Fresh Additions" rows.
+  // feedSections holds the "For You" and discovery rows.
   // They are hidden whenever the user has typed a query so the viewport stays
   // focused on search results.  Clearing the input (q='') restores them with
   // a fade-in animation so the state change is clearly communicated.
