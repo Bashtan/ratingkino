@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — Desktop Hero Layout Polish (Overlap · Whitespace · Max-Width)
+## ⚡ Most Recent Session (2026-07-18) — Desktop Density Pass 2 (Tighter Spacing · 1200px)
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `d620ef1` | **Second desktop-compaction pass — tighter vertical rhythm + narrower content column (frontend-only, `index.html`; no Tailwind — native CSS, Tailwind snippet handed to user).** Deployed `49fac5b8.ratingkino.pages.dev` → findfilm.ai. Builds on the prior polish session (`22321d2`). **(1) Condensed hero:** `.hero-search` padding `18px 24px 14px`→`10px 24px 12px` (top 18→10 so the search bar sits just under the 64px sticky nav with minimal breathing room), `gap:14px`→`12px`. **(2) Stricter max-width:** all 5 content containers `max-width:1280px`→**`1200px`** (`.header-inner`, `.hero-band`, `.filter-row-1`, `.filter-row-2`, `main`) — pulls H1 + IMDb/RT/MC badges further in from ultra-wide edges. **(3) Compacted title/stats block:** `.hero-h1` `line-height:1.25`→`1.15` + `margin:0 0 4px`→`0 0 2px`; `.hero-title` (trust badge row) `line-height:1.4`→`1.25`; `.hero-band` padding `10px 24px 8px`→`6px 24px 8px`, `gap:16px`→`14px`. **Verified on preview (reload required — server caches file):** at 1600px viewport all four rows compute width 1200 / left 198 / right 1398 (centered & aligned); `.hero-search` padding `10px 24px 12px`, gap 12px; `.hero-h1` line-height 17.25px + margin-bottom 2px; `.hero-band` padding `6px 24px 8px`; mobile 375 intact (own media-query padding preserved, 3 chips, no overlap); wide-desktop + mobile screenshots confirm the denser above-the-fold group. |
+
+---
+
+## ⚡ Session (2026-07-18) — Desktop Hero Layout Polish (Overlap · Whitespace · Max-Width)
 
 All commits on `main`, all live on https://findfilm.ai.
 
