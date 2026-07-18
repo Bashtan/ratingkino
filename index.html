@@ -2736,6 +2736,27 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .feed-cta-arrow svg { transition: transform 0.22s; }
 .feed-cta:hover .feed-cta-arrow svg { transform: translateX(4px); }
+/* Slim "See all" end-cap — reveals the rest of a truncated horizontal row in place */
+.feed-seemore {
+  flex: 0 0 98px; align-self: stretch; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 9px; padding: 12px; border-radius: 10px; text-align: center;
+  background: rgba(255,255,255,0.02);
+  border: 1px dashed rgba(148,163,184,0.30);
+  color: var(--muted); font-family: 'Montserrat', sans-serif;
+  transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.2s;
+}
+.feed-seemore:hover, .feed-seemore:focus-visible {
+  color: var(--text); border-color: rgba(148,163,184,0.6);
+  background: rgba(255,255,255,0.05); transform: translateY(-2px); outline: none;
+}
+.feed-seemore-icon {
+  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  border: 1px solid currentColor; font-size: 16px; line-height: 1;
+  transition: transform 0.2s;
+}
+.feed-seemore:hover .feed-seemore-icon { transform: translateX(3px); }
+.feed-seemore-label { font-size: 11px; font-weight: 700; line-height: 1.3; }
 /* "For You" row: extra purple tint on cards */
 .feed-row.for-you .mini-card {
   border-color: rgba(99,102,241,0.22);
@@ -4493,6 +4514,9 @@ const TRANSLATIONS = {
     'best.exploreTitle':   'Explore Top Rated',
     'best.exploreSub':     'Discover 50+ more highly-rated films, ranked by IMDb, RT & Metacritic.',
     'best.exploreCta':     'Browse top rated',
+    // Truncated-row "See all" end-cap
+    'feed.seeMore':        'See all',
+    'feed.seeMoreAria':    'See all titles in this collection',
     // Rating transparency (trust pill)
     'rating.unified':      'Unified',
     'rating.tmdb':         'TMDB',
@@ -5683,6 +5707,8 @@ const TRANSLATIONS = {
     'btn.random':           'Здивуй мене фільмом',
     'tonight.launch':       'Фільм на вечір',
     'hero.unified':         'Єдиний рейтинг з IMDb, Rotten Tomatoes та Metacritic.',
+    'feed.seeMore':         'Усі',
+    'feed.seeMoreAria':     'Показати всі фільми цієї добірки',
     'wiz.qMood':            'Що вам до настрою?',
     'wiz.qTime':            'Скільки у вас часу?',
     'wiz.qCompany':         'З ким дивитесь?',
@@ -6461,6 +6487,37 @@ function genRecommendReason(m, profile) {
   return primaryGenre ? `${primaryGenre} Pick` : 'Recommended';
 }
 
+// Homepage collection rows are truncated to a single scannable row to avoid
+// scroll fatigue; a "See all" end-cap reveals the rest in place.
+const FEED_ROW_LIMIT = 6;
+window._FEED_FULL = window._FEED_FULL || {};
+
+function feedSeeMoreCard(key) {
+  return `<button class="feed-seemore" type="button" onclick="expandFeedRow('${key}')" aria-label="${esc(t('feed.seeMoreAria'))}">
+    <span class="feed-seemore-icon" aria-hidden="true">→</span>
+    <span class="feed-seemore-label">${esc(t('feed.seeMore'))}</span>
+  </button>`;
+}
+
+// Re-render a truncated row with its full pre-built card list (no re-fetch).
+function expandFeedRow(key) {
+  const f = window._FEED_FULL[key];
+  if (!f) return;
+  const el = document.getElementById(f.elId);
+  if (el) el.innerHTML = f.cards.join('');
+}
+
+// Inject a row's cards, truncated to FEED_ROW_LIMIT with a "See all" end-cap
+// when there are more; stashes the full list for in-place expansion.
+function renderFeedRow(elId, key, cards) {
+  window._FEED_FULL[key] = { elId, cards };
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = cards.length > FEED_ROW_LIMIT
+    ? cards.slice(0, FEED_ROW_LIMIT).join('') + feedSeeMoreCard(key)
+    : cards.join('');
+}
+
 function renderForYouRow() {
   const profile = getTasteProfile();
   if (profile.total < TASTE_THRESHOLD || !window._FEED_POOL.length) return;
@@ -6471,9 +6528,9 @@ function renderForYouRow() {
   if (!scored.length) return;
   scored.forEach(m => renderedMovieIds.add(m.id));
   document.getElementById('rowForYou').style.display = '';
-  document.getElementById('scrollForYou').innerHTML = scored.map(m =>
-    renderMiniCard(m, { reason: genRecommendReason(m, profile), listName: 'For You' })
-  ).join('');
+  const cards = scored.map(m =>
+    renderMiniCard(m, { reason: genRecommendReason(m, profile), listName: 'For You' }));
+  renderFeedRow('scrollForYou', 'forYou', cards);
 }
 
 async function loadFeedSections() {
@@ -6488,6 +6545,7 @@ async function loadFeedSections() {
 
   // Reset global deduplication for this render pass
   renderedMovieIds = new Set();
+  window._FEED_FULL = {};   // reset truncated-row expansion store
 
   // Pick today's AI curated theme (stable for the calendar day via UTC day index)
   const dayIdx  = Math.floor(Date.now() / 86400000);
@@ -6525,10 +6583,11 @@ async function loadFeedSections() {
     .filter(m => !isThinRecord(m))
     .filter(m => !renderedMovieIds.has(m.id))
     .sort((a, b) => qualityScore(b) - qualityScore(a))
-    .slice(0, 20);
+    .slice(0, FEED_ROW_LIMIT);
   if (best.length) {
     best.forEach(m => renderedMovieIds.add(m.id));
     document.getElementById('rowBest').style.display = '';
+    // Best row keeps its own "Explore Top Rated" CTA end-cap (its See-More affordance)
     document.getElementById('scrollBest').innerHTML = best.map(m =>
       renderMiniCard({ ...m, avg: m.tmdbScore != null ? m.tmdbScore.toFixed(1) : m.avg },
                      { listName: 'Best Available Now' })).join('') + feedCtaCard();
@@ -6541,8 +6600,8 @@ async function loadFeedSections() {
   if (curatedRow.length) {
     curatedRow.forEach(m => renderedMovieIds.add(m.id));
     document.getElementById('rowPopular').style.display = '';
-    document.getElementById('scrollPopular').innerHTML =
-      curatedRow.map(m => renderMiniCard(m, { listName: 'AI Curated' })).join('');
+    const cards = curatedRow.map(m => renderMiniCard(m, { listName: 'AI Curated' }));
+    renderFeedRow('scrollPopular', 'popular', cards);
   } else {
     document.getElementById('rowPopular').style.display = 'none';
   }
