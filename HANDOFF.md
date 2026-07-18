@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — Remove Fresh Additions Feed Row
+## ⚡ Most Recent Session (2026-07-18) — Ultra-Compact Modern Desktop Hero
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `c317b91` | **Ultra-compact "command-palette" hero polish — reclaim vertical space so feeds sit higher (frontend-only, `index.html`).** Deployed `1b970a13.ratingkino.pages.dev` → findfilm.ai. **(1) Removed the floating `.hero-eyebrow` label** ("✨ Try AI search — describe any movie, mood, or plot"): deleted the `<p>` from `#heroSearch`, its `.hero-eyebrow` CSS (desktop L458 + mobile media-query rule), and the `hero.eyebrow` i18n key (EN only). Its intent is now merged into the **resting search placeholder** — `search.ph0` (EN) changed to `"✨ Try AI search — e.g., 'A 90s thriller with a massive plot twist'"` (the JS-driven `#searchPhOverlay` cycles ph0→ph3; ph0 is the on-load default). **(2) Slimmed the hero search input:** `.search-wrap--hero .search-input` height `56px`→**`46px`**, radius `14px`→`13px`; font-size stays 16px (readable); neon glow/box-shadow preserved. **(3) Tightened vertical rhythm:** `.hero-search` padding `10px 24px 12px`→**`4px 24px 8px`** (search now sits ~4px under the 64px sticky nav; `heroTop`=64 confirmed), gap `12px`→`10px`; `.hero-utils` margin-top `6px`→**`2px`** so the pills hug the search bar. **(4) Sleeker util pills** (`.util-pill`, "Pick for tonight"/"Choose with friends"/"Surprise me"): height `30px`→**`28px`**, border-radius `16px`→`999px` (full pill), font-weight `700`→`600`, icons pinned to 12px, hover lift softened to `-1px`. Mobile `.hero-search` also compacted (`22px 16px 16px`→`12px 16px 14px`) + dead `.hero-eyebrow` mobile rule removed. **Verified on preview (1280px desktop):** eyebrow gone, input 46px/16px, hero padding 4/8, gap 10, utils margin-top 2, pill 28px/999px/w600, `ph0` = new copy; console only TMDb-404 static noise; desktop screenshot shows the tight above-the-fold stack (search → pills → Movies/TV tabs → feed). |
+
+---
+
+## ⚡ Session (2026-07-18) — Remove Fresh Additions Feed Row
 
 All commits on `main`, all live on https://findfilm.ai.
 
