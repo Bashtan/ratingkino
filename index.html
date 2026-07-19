@@ -544,24 +544,24 @@ header {
 .util-pill--accent:hover { background: linear-gradient(90deg, rgba(124,58,237,0.34), rgba(34,211,238,0.28)); color: #fff; }
 
 /* ── Desktop: condense the hero into one tight, cohesive search hub ──
-   Tighter max-width (~max-w-3xl), a deliberate spacing rhythm (toggle hugs the
-   bar like a tab; pills get real breathing room below), and pill wrap+center
-   instead of the mobile horizontal scroll. Mobile stays untouched. */
+   Ultra-tight spacing so the toggle, bar and pills read as ONE grouped unit.
+   !important defeats the base uniform column gap + element margins. Mobile
+   (< 992px) keeps its own looser spacing + horizontal-scroll pill rail. */
 @media (min-width: 992px) {
   .hero-search {
-    max-width: 760px;          /* ≈ max-w-3xl — a compact, centered hub */
-    padding-top: 2px;
-    padding-bottom: 6px;       /* trim overall vertical py on desktop */
-    gap: 0;                    /* spacing is controlled per-element below */
+    max-width: 720px;                 /* ≈ max-w-3xl — a compact, centered hub */
+    padding-top: 0 !important;        /* trim overall vertical py on desktop */
+    padding-bottom: 4px !important;
+    gap: 0 !important;                /* kill the uniform 10px column gap */
   }
   .search-mode {
-    margin: 0 auto 9px;        /* toggle hugs the bar, tab-like (≈ mb-2) */
+    margin: 0 auto 6px !important;    /* toggle hugs the bar, tab-like (≈ mb-1.5) */
   }
   .hero-utils {
-    margin-top: 18px;          /* clear breathing room under the bar (≈ mt-4/5) */
-    flex-wrap: wrap;           /* 3 pills wrap + stay centered — no scroll needed */
+    margin-top: 12px !important;      /* tight but grouped under the bar (≈ mt-3) */
+    flex-wrap: wrap;                  /* 3 pills wrap + stay centered — no scroll needed */
     overflow-x: visible;
-    gap: 10px;                 /* harmonized pill gap (≈ gap-2.5) */
+    gap: 10px;                        /* harmonized pill gap (≈ gap-2.5) */
   }
 }
 
