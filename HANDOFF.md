@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-18) — Balanced Desktop Feed Layout (Eliminate Void)
+## ⚡ Most Recent Session (2026-07-19) — FindFilm Rating Pill: Full i18n (all 6 languages)
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `dcdd782` | **Localized the compact FindFilm local-rating pill across all 6 supported languages.** Deployed `9e516260.ratingkino.pages.dev` → findfilm.ai. The pill markup/CSS/layout were already compact from a prior session (`.ff-local-wrap` + `.ff-local-pill` ~L1392, built by `localBadge` in `refreshModalRatings` ~L8816: `★ {avg} ({count} {word})`, a centered `<span>` chip — NOT a button — under `.mr-score-card`). Gap fixed this session: the `review.userReview` / `review.userReviews` keys existed only in **en** + **uk**, so **es/fr/zh/ar fell back to English**. Added translations to all 4 missing `TRANSLATIONS` blocks (each inserted right after that language's `'modal.noReviews'`): **es** `Reseña de usuario` / `Reseñas de usuarios`; **fr** `Avis utilisateur` / `Avis utilisateurs`; **zh** `用户评价` / `用户评价` (no plural form); **ar** `مراجعة مستخدم` / `مراجعات مستخدمين`. Also updated **uk** plural `Відгуки` → **`Відгуків`** (genitive) per the requested format `★ 5.0 (X Відгуків)`. Count-aware selection stays dynamic via `local.count === 1 ? t('review.userReview') : t('review.userReviews')` (L8822-8823). **Verified on preview** (seeded `rk_rev_<id>` reviews, drove real `refreshModalRatings`): pill renders as a 162px `<span>` (`isButton:false`), `bg rgba(255,255,255,.05)`, violet border `rgba(139,92,246,.32)`, `.ff-local-wrap` centered under the score card; all 6 languages output correctly — en `(3 User Reviews)`, es `(3 Reseñas de usuarios)`, fr `(3 Avis utilisateurs)`, zh `(3 用户评价)`, ar `(3 مراجعات مستخدمين)`, uk `(3 Відгуків)`; singular forms all correct too. (Note: uk uses a 2-form simplification per the requested spec — grammatically `2–4` would be `відгуки`; can add full 3-form Slavic rules on request.) |
+
+---
+
+## ⚡ Session (2026-07-18) — Balanced Desktop Feed Layout (Eliminate Void)
 
 All commits on `main`, all live on https://findfilm.ai.
 
