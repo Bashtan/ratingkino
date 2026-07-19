@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-19) — FindFilm Rating Pill: Full i18n (all 6 languages)
+## ⚡ Most Recent Session (2026-07-19) — Condense Desktop Hero Search Hub
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `f77c344` | **Condensed the desktop hero (`.hero-search` #heroSearch, ~L3882 markup / ~L451 CSS) into one tight, cohesive search hub — desktop-only, mobile untouched.** Deployed `cff1238f.ratingkino.pages.dev` → findfilm.ai. Added a single `@media (min-width:992px)` block right after `.util-pill--accent:hover` (~L544): `.hero-search { max-width:760px (≈max-w-3xl); padding:2px 24px 6px; gap:0 }` (spacing now controlled per-element, not the uniform 10px column gap); `.search-mode { margin:0 auto 9px }` so the By Title/By Plot toggle **hugs the bar tab-like** (9px); `.hero-utils { margin-top:18px; flex-wrap:wrap; overflow-x:visible; gap:10px }` so the 3 discovery pills get **real breathing room** below the bar and **wrap+center** instead of the mobile horizontal-scroll. Base `.hero-utils` still `justify-content:safe center`. **Verified on preview** (1280px): heroWidth 760, toggle→bar 9px, bar→pills 18px, pills `flex-wrap:wrap`; (375px mobile) unchanged — padding 12/14, gap 11px, pills `nowrap` + `overflow-x:auto`, margin-top 2px. No JS/markup changes — pure CSS, all `#searchInput`/`setSearchMode`/util-pill wiring intact. |
+
+---
+
+## ⚡ Session (2026-07-19) — FindFilm Rating Pill: Full i18n (all 6 languages)
 
 All commits on `main`, all live on https://findfilm.ai.
 
