@@ -455,56 +455,117 @@ header {
   display: flex; flex-direction: column; align-items: center; gap: 10px;
   text-align: center;
 }
-/* Enlarged hero variant of the search bar — commands attention */
+/* ══ Unified "super search bar" (hero) ══════════════════════════════
+   A single flex row: embedded mode selector · input · clear · AI-voice ·
+   search. The wrap itself paints the glass + gradient ring; every control
+   is a normal-flow flex child (no fragile absolute positioning). */
 .search-wrap--hero {
   width: 100%; max-width: 680px; flex: none;
-}
-.search-wrap--hero::before { opacity: 0.30; inset: -3px; }
-.search-wrap--hero .search-input {
-  height: 46px; font-size: 16px; border-radius: 13px;
-  padding: 0 52px 0 46px;
+  display: flex; align-items: center; gap: 4px;
+  height: 52px; padding: 0 8px 0 5px;
+  border-radius: 15px;
+  background: rgba(20,5,42,0.9);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.06),
               0 0 0 1px rgba(124,58,237,0.24),
               0 4px 34px rgba(124,58,237,0.18);
+  transition: background 0.25s, box-shadow 0.25s;
 }
-.search-wrap--hero .search-ph-overlay { font-size: 16px; left: 46px; right: 52px; }
-.search-wrap--hero .ai-icon { left: 16px; }
-.search-wrap--hero .search-icon { right: 16px; }
-.search-wrap--hero.has-mic .search-icon { right: 46px; }
+.search-wrap--hero::before { opacity: 0.30; inset: -3px; }
+.search-wrap--hero:focus-within {
+  background: rgba(22,6,48,0.97);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08),
+              0 0 0 1px rgba(99,102,241,0.45),
+              0 0 40px rgba(99,102,241,0.28),
+              0 0 80px rgba(6,182,212,0.12);
+}
+/* Input is transparent inside the bar (wrap paints the glass now) */
+.sw-input-zone { position: relative; flex: 1; display: flex; align-items: center; min-width: 0; }
+.search-wrap--hero .search-input {
+  width: 100%; height: 44px; font-size: 16px;
+  border-radius: 0; background: transparent; box-shadow: none;
+  padding: 0 4px;
+}
+.search-wrap--hero .search-input:focus { background: transparent; box-shadow: none; }
+.search-wrap--hero.has-mic .search-input { padding: 0 4px; }   /* neutralize base has-mic padding */
+.search-wrap--hero .search-ph-overlay { left: 6px; right: 6px; font-size: 16px; }
 
-/* ── Search-mode segmented control (Title vs Plot/AI) ─────────────── */
-.search-mode {
-  display: inline-flex; align-self: center; gap: 2px;
-  margin: 2px auto 4px; padding: 3px;
-  background: rgba(124,58,237,0.09);
-  border: 1px solid rgba(139,92,246,0.22);
-  border-radius: 999px;
-}
-.sm-btn {
+/* ── Embedded mode selector (dropdown inside the bar's left edge) ──── */
+.sw-mode { position: relative; flex: none; align-self: stretch; display: flex; align-items: center; }
+.sw-mode-trigger {
   display: inline-flex; align-items: center; gap: 6px;
-  height: 30px; padding: 0 16px;
-  border: none; cursor: pointer; border-radius: 999px;
-  background: transparent; color: var(--muted);
-  font-family: 'Montserrat', sans-serif; font-size: 11.5px; font-weight: 700;
-  letter-spacing: 0.3px; white-space: nowrap;
-  transition: color 0.22s, background 0.22s, box-shadow 0.22s;
+  height: 42px; padding: 0 11px 0 12px;
+  background: rgba(255,255,255,0.05); color: #cbd5e1;
+  border: none; border-right: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px 3px 3px 12px; cursor: pointer;
+  font-family: 'Montserrat', sans-serif; font-size: 12.5px; font-weight: 600;
+  letter-spacing: 0.2px; white-space: nowrap;
+  transition: background 0.2s, color 0.2s;
 }
-.sm-btn svg { width: 12px; height: 12px; flex-shrink: 0; opacity: 0.9; }
-.sm-btn:hover { color: #c4b5fd; }
-.sm-btn.active {
-  background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff;
-  box-shadow: 0 2px 12px rgba(124,58,237,0.4);
+.sw-mode-trigger:hover { background: rgba(255,255,255,0.1); color: #e9d5ff; }
+.sw-mode-ic { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.9; }
+.sw-mode .ic-plot { display: none; }
+.sw-mode.is-ai .ic-title { display: none; }
+.sw-mode.is-ai .ic-plot  { display: inline; }
+.sw-mode.is-ai .sw-mode-trigger { color: #c4b5fd; }
+.sw-mode-chev { width: 10px; height: 10px; opacity: 0.55; transition: transform 0.2s; }
+.sw-mode.open .sw-mode-chev { transform: rotate(180deg); }
+.sw-mode-menu {
+  position: absolute; top: calc(100% + 9px); left: 0; z-index: 40;
+  min-width: 196px; padding: 6px;
+  background: rgba(12,3,28,0.98);
+  border: 1px solid rgba(139,92,246,0.28); border-radius: 13px;
+  box-shadow: 0 14px 44px rgba(0,0,0,0.55);
+  opacity: 0; transform: translateY(-6px) scale(0.98);
+  transform-origin: top left; pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.sw-mode.open .sw-mode-menu { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.sw-mode-opt {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 10px 11px; border: none; border-radius: 9px;
+  background: transparent; color: var(--muted); cursor: pointer;
+  font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 600;
+  text-align: left; white-space: nowrap;
+  transition: background 0.16s, color 0.16s;
+}
+.sw-mode-opt svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.75; }
+.sw-mode-opt:hover { background: rgba(124,58,237,0.14); color: #e9d5ff; }
+.sw-mode-opt.active { background: rgba(124,58,237,0.18); color: #fff; }
+.sw-mode-opt.active svg { color: #a78bfa; opacity: 1; }
+
+/* ── Clear (X): only visible when the field has text (.typing) ─────── */
+.search-clear-btn {
+  flex: none; display: none;
+  align-items: center; justify-content: center;
+  width: 26px; height: 26px; padding: 0;
+  background: rgba(255,255,255,0.07); border: none; border-radius: 50%;
+  color: #9aa4b2; cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+.search-clear-btn svg { width: 11px; height: 11px; }
+.search-clear-btn:hover { background: rgba(255,255,255,0.16); color: #fff; }
+.search-wrap--hero.typing .search-clear-btn { display: inline-flex; }
+
+/* AI-voice + search magnifier become inline flex children (no absolute pos) */
+.search-wrap--hero .search-mic-btn {
+  position: static; transform: none; flex: none;
+  width: 34px; height: 34px; border-radius: 9px;
+}
+.search-wrap--hero .search-icon {
+  position: static; transform: none; flex: none;
+  width: 18px; height: 18px; margin-right: 4px;
+  color: rgba(167,139,250,0.6);
 }
 
-/* Plot/AI mode: make the mic more inviting (mic is the star of plot search).
-   Scoped to :not(.listening) so the red recording state always wins. */
+/* Plot/AI mode: make the AI-voice icon more inviting (it's the star of plot
+   search). Scoped to :not(.listening) so the red recording state always wins. */
 .search-wrap.mode-ai .search-mic-btn:not(.listening) {
   color: #a78bfa;
   animation: micInvite 2.4s ease-in-out infinite;
 }
 @keyframes micInvite {
-  0%, 100% { transform: translateY(-50%) scale(1); filter: none; }
-  50% { transform: translateY(-50%) scale(1.12); filter: drop-shadow(0 0 6px rgba(167,139,250,0.6)); }
+  0%, 100% { transform: scale(1); filter: none; }
+  50% { transform: scale(1.12); filter: drop-shadow(0 0 6px rgba(167,139,250,0.6)); }
 }
 
 /* Secondary utility row — sleek chip slider (YouTube/Spotify style):
@@ -544,21 +605,18 @@ header {
 .util-pill--accent:hover { background: linear-gradient(90deg, rgba(124,58,237,0.34), rgba(34,211,238,0.28)); color: #fff; }
 
 /* ── Desktop: condense the hero into one tight, cohesive search hub ──
-   Ultra-tight spacing so the toggle, bar and pills read as ONE grouped unit.
-   !important defeats the base uniform column gap + element margins. Mobile
+   The mode toggle is now embedded INSIDE the bar, so the hero has just two
+   stacked children (bar + pills). Keep them tight and grouped. Mobile
    (< 992px) keeps its own looser spacing + horizontal-scroll pill rail. */
 @media (min-width: 992px) {
   .hero-search {
     max-width: 720px;                 /* ≈ max-w-3xl — a compact, centered hub */
-    padding-top: 0 !important;        /* trim overall vertical py on desktop */
-    padding-bottom: 4px !important;
-    gap: 0 !important;                /* kill the uniform 10px column gap */
-  }
-  .search-mode {
-    margin: 0 auto 6px !important;    /* toggle hugs the bar, tab-like (≈ mb-1.5) */
+    padding-top: 2px;                 /* trim overall vertical py on desktop */
+    padding-bottom: 4px;
+    gap: 0;                           /* spacing controlled per-element below */
   }
   .hero-utils {
-    margin-top: 12px !important;      /* tight but grouped under the bar (≈ mt-3) */
+    margin-top: 14px;                 /* tight, pleasing gap under the bar (≈ mt-4) */
     flex-wrap: wrap;                  /* 3 pills wrap + stay centered — no scroll needed */
     overflow-x: visible;
     gap: 10px;                        /* harmonized pill gap (≈ gap-2.5) */
@@ -2415,8 +2473,10 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 
   /* Hero search: comfortable size on phones; utility chips scroll horizontally */
   .hero-search { padding: 12px 16px 14px; gap: 11px; }
-  .search-wrap--hero { max-width: none; }
-  .search-wrap--hero .search-input { height: 50px; font-size: 15px; }
+  .search-wrap--hero { max-width: none; height: 54px; }
+  .search-wrap--hero .search-input { height: 46px; font-size: 15px; }
+  .search-wrap--hero .sw-mode-trigger { height: 44px; font-size: 12px; padding: 0 9px 0 10px; }
+  .search-wrap--hero .search-icon { display: none; }  /* drop the decorative magnifier — save room */
   .hero-utils { gap: 7px; justify-content: safe center; }
   .util-pill  { height: 29px; padding: 0 11px; font-size: 11.5px; }
 
@@ -3522,8 +3582,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .search-mic-btn:hover { color: #a78bfa; background: rgba(124,58,237,0.12); }
 .search-mic-btn.listening { color: #ef4444; animation: micPulse 1s ease-in-out infinite; }
 @keyframes micPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-.search-wrap.has-mic .search-icon { right: 42px; }
-.search-wrap.has-mic .search-input { padding-right: 70px; }
 
 /* ─── First-visit onboarding overlay ──────────────────── */
 .fv-overlay {
@@ -3902,37 +3960,49 @@ if ('serviceWorker' in navigator) {
 
 <!-- ════════════ HERO SEARCH (dominant primary CTA) ════════════ -->
 <section class="hero-search" id="heroSearch">
-  <!-- Search-mode segmented control: Title (default) vs Plot/AI (advanced) -->
-  <div class="search-mode" id="searchMode" role="tablist" aria-label="Search mode">
-    <button class="sm-btn active" id="smTitle" type="button" role="tab" aria-selected="true" onclick="setSearchMode('title')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <span data-i18n="search.modeTitle">By Title</span>
-    </button>
-    <button class="sm-btn" id="smPlot" type="button" role="tab" aria-selected="false" onclick="setSearchMode('ai')">
-      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
-      <span data-i18n="search.modePlot">By Plot</span>
-    </button>
-  </div>
-  <!-- Relocated #searchWrap (inner IDs unchanged so all wiring keeps working), enlarged via .search-wrap--hero -->
+  <!-- Unified "super search bar": embedded mode selector · input · clear · AI voice · magnifier -->
   <div class="search-wrap search-wrap--hero" id="searchWrap">
-    <!-- AI sparkle icon: dims when not in AI mode, glows purple when active -->
-    <span class="ai-icon" id="aiIcon" title="AI semantic search">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+    <!-- Embedded mode selector (replaces the old external segmented control) -->
+    <div class="sw-mode" id="swMode">
+      <button class="sw-mode-trigger" id="smTrigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Search mode" onclick="toggleModeMenu(event)">
+        <svg class="sw-mode-ic ic-title" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <svg class="sw-mode-ic ic-plot" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+        <span class="sw-mode-label" id="smLabel">By Title</span>
+        <svg class="sw-mode-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="sw-mode-menu" id="smMenu" role="listbox" aria-label="Search mode">
+        <button class="sw-mode-opt active" id="smTitle" type="button" role="option" aria-selected="true" onclick="setSearchMode('title')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <span data-i18n="search.modeTitle">By Title</span>
+        </button>
+        <button class="sw-mode-opt" id="smPlot" type="button" role="option" aria-selected="false" onclick="setSearchMode('ai')">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+          <span data-i18n="search.modePlot">By Plot</span>
+        </button>
+      </div>
+    </div>
+    <!-- Input zone: input + animated placeholder overlay share a stable positioning context -->
+    <div class="sw-input-zone">
+      <input class="search-input" id="searchInput" type="text" autocomplete="off" spellcheck="false" maxlength="100">
+      <!-- Animated placeholder overlay — replaces native ::placeholder for fade cycling -->
+      <span class="search-ph-overlay" id="searchPhOverlay" aria-hidden="true"></span>
+    </div>
+    <!-- Clear (X) — only visible when the field has text (.typing) -->
+    <button class="search-clear-btn" id="searchClearBtn" type="button" onclick="clearSearchInput()" aria-label="Clear search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <!-- AI voice: sparkle-topped mic — pulses purple idle in AI mode, red while recording -->
+    <button class="search-mic-btn" id="searchMicBtn" onclick="toggleDesktopVoice()" aria-label="AI voice search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="7" width="6" height="10" rx="3" fill="currentColor" stroke="none"/>
+        <path d="M6 13a6 6 0 0 0 12 0M12 19v2.5M9.5 21.5h5"/>
+        <path d="M18.5 2.2l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7z" fill="currentColor" stroke="none"/>
       </svg>
-    </span>
-    <input class="search-input" id="searchInput" type="text" autocomplete="off" spellcheck="false" maxlength="100">
-    <!-- Animated placeholder overlay — replaces native ::placeholder for fade cycling -->
-    <span class="search-ph-overlay" id="searchPhOverlay" aria-hidden="true"></span>
+    </button>
+    <!-- Decorative magnifier (hidden on mobile) -->
     <svg class="search-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
     </svg>
-    <button class="search-mic-btn" id="searchMicBtn" onclick="toggleDesktopVoice()" aria-label="Voice search">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-        <rect x="9" y="2" width="6" height="12" rx="3"/>
-        <path d="M5 11a7 7 0 0 0 14 0M12 19v3M9 22h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
-      </svg>
-    </button>
     <!-- Clickable suggestion pills — shown on focus when input is empty -->
     <div class="search-suggestions" id="searchSuggestions" role="listbox" aria-label="Search suggestions" aria-hidden="true">
       <span class="ss-label" data-i18n="search.suggestLabel">Try searching for:</span>
@@ -6072,6 +6142,9 @@ function applyTranslations() {
     const _modePh = searchModePlaceholder();
     if (_searchInp) _searchInp.placeholder = _modePh;
     if (_phOverlay && !_searchInp?.value) _phOverlay.textContent = _modePh;
+    // Embedded mode-selector trigger label (no data-i18n so it tracks SEARCH_MODE, not a fixed key)
+    const _smLabel = document.getElementById('smLabel');
+    if (_smLabel) _smLabel.textContent = SEARCH_MODE === 'ai' ? t('search.modePlot') : t('search.modeTitle');
   } else if (_phOverlay && !_searchInp?.value) {
     _phOverlay.textContent = getDesktopPlaceholders()[_deskPhIdx];
   }
@@ -7699,6 +7772,12 @@ function setSearchMode(mode) {
   if (smTitle) { smTitle.classList.toggle('active', !isAI); smTitle.setAttribute('aria-selected', String(!isAI)); }
   if (smPlot)  { smPlot.classList.toggle('active', isAI);   smPlot.setAttribute('aria-selected', String(isAI)); }
   if (wrap)    wrap.classList.toggle('mode-ai', isAI);
+  // Embedded dropdown: swap trigger icon (via .is-ai) + trigger label, then close the menu
+  const swMode = document.getElementById('swMode');
+  const smLabel = document.getElementById('smLabel');
+  if (swMode)  swMode.classList.toggle('is-ai', isAI);
+  if (smLabel) smLabel.textContent = isAI ? t('search.modePlot') : t('search.modeTitle');
+  closeModeMenu();
   // Fixed per-mode placeholder (supersedes the rotating hint once a mode is chosen)
   const ph = searchModePlaceholder();
   if (inp) inp.placeholder = ph;                       // a11y / native fallback
@@ -7707,6 +7786,42 @@ function setSearchMode(mode) {
     overlay.textContent = ph;
   }
   try { localStorage.setItem('rk_searchMode', mode); } catch(e) {}
+}
+
+/* ── Embedded mode-selector dropdown (open/close) ──────────────────
+   The trigger toggles a small listbox; setSearchMode() closes it. */
+function toggleModeMenu(e) {
+  if (e) e.stopPropagation();
+  const swMode = document.getElementById('swMode');
+  if (!swMode) return;
+  const open = swMode.classList.toggle('open');
+  const trig = document.getElementById('smTrigger');
+  if (trig) trig.setAttribute('aria-expanded', String(open));
+}
+function closeModeMenu() {
+  const swMode = document.getElementById('swMode');
+  if (!swMode || !swMode.classList.contains('open')) return;
+  swMode.classList.remove('open');
+  const trig = document.getElementById('smTrigger');
+  if (trig) trig.setAttribute('aria-expanded', 'false');
+}
+// Close on outside-click / ESC
+document.addEventListener('click', (e) => {
+  const swMode = document.getElementById('swMode');
+  if (swMode && swMode.classList.contains('open') && !swMode.contains(e.target)) closeModeMenu();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModeMenu(); });
+
+/* ── Clear (X) button — clears the field, resets UI, refocuses ──── */
+function clearSearchInput() {
+  const inp = document.getElementById('searchInput');
+  if (AI_SEARCH_ACTIVE) {
+    clearAISearch();                 // full AI reset (value, ai-active/typing, restores feed)
+  } else if (inp) {
+    inp.value = '';
+    inp.dispatchEvent(new Event('input', { bubbles: true }));  // drop .typing + re-run applyFilters
+  }
+  if (inp) inp.focus();
 }
 
 // Restore saved mode (defaults to Title) and paint the initial placeholder
