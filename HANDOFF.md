@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-19) — Condense Desktop Hero Search Hub
+## ⚡ Most Recent Session (2026-07-19) — Unified "Super Search Bar" (Embedded Selector · Clear · AI Voice)
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `c341e8c` | **Ultimate search-bar redesign — folded the standalone By Title/By Plot toggle + input + icons into one cohesive flex bar (`.search-wrap--hero` #searchWrap, ~L462 CSS / ~L3962 markup).** Deployed `e9d88663.ratingkino.pages.dev` → findfilm.ai. **(1) Embedded mode selector:** deleted the external `.search-mode` #searchMode segmented control; the mode now lives inside the bar's left as a dropdown — `.sw-mode` **#swMode** > `.sw-mode-trigger` **#smTrigger** (holds `.ic-title`/`.ic-plot` swap-icons + `.sw-mode-label` **#smLabel** + chevron) and `.sw-mode-menu` **#smMenu** listbox keeping the original `#smTitle`/`#smPlot` option IDs so `setSearchMode` wiring is unchanged. New JS **`toggleModeMenu(e)`** / **`closeModeMenu()`** (~L7782) toggle `.open` on #swMode; global outside-click + ESC listeners close it. `setSearchMode` extended to toggle `.is-ai` on #swMode + set #smLabel text + `closeModeMenu()`; `applyTranslations` (~L6144) now also refreshes #smLabel from `SEARCH_MODE` (#smLabel has **no** `data-i18n` so it tracks mode, not a fixed key). **(2) Clear (X) button:** new `.search-clear-btn` **#searchClearBtn** → **`clearSearchInput()`** (~L7810) — hidden by default, shown only when `#searchWrap.typing` (driven by the existing input handler L8326). Clears via `clearAISearch()` when `AI_SEARCH_ACTIVE` else dispatches an `input` event, then refocuses. **(3) AI voice icon:** `#searchMicBtn` mic upgraded to a sparkle-topped mic SVG; keeps the `.mode-ai` purple `micInvite` idle pulse + `.listening` red state (keyframe fixed to `scale()` only — mic is now static-flex, not absolute). **(4) Layout:** bar is `display:flex; height:52px; gap:4px` with children [mode · `.sw-input-zone`(input+overlay) · clear · mic · magnifier]; base `.search-wrap.has-mic` padding rules removed (conflicted). Desktop `@media(min-width:992px)`: `.hero-search max-width:720px`, bar→pills **14px** (`.hero-utils margin-top:14px`). Mobile `@media(max-width:768px)`: bar 54px, magnifier hidden. **Verified on preview** (1440 + 375): dropdown opens/closes (outside-click+ESC), mode switch updates #smLabel+`.is-ai`+closes menu, typing shows clear→clears+refocuses, mic 34px, bar→pills 14px; mobile bar 54px, magnifier `display:none`. Removed standalone `#aiIcon` (no JS refs). |
+
+---
+
+## ⚡ Session (2026-07-19) — Condense Desktop Hero Search Hub
 
 All commits on `main`, all live on https://findfilm.ai.
 
