@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-20) — Search Bar: Ultra-Wide Static Width + Prominent Mic
+## ⚡ Most Recent Session (2026-07-20) — Perf: KV-Cached AI Wizard/Group + Premium Skeleton Loader
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `2d02833` | **Cut perceived + actual latency for "Pick for tonight" (wizard) and "Choose with friends" (group picker).** Deployed `a887b0c4.ratingkino.pages.dev` → findfilm.ai. **(A) Backend KV response cache** (`functions/api/[[path]].js`): `handleAISearch` + `handleGroupPicker` now take `waitUntil` (wired in dispatch L43/L48). `handleAISearch` builds `cacheKey = ais:v1:{normalized-query}{|x:sorted-excludes}` (capped 480 chars) right after query validation, returns the cached JSON on hit (`{...,cached:true}`) — this skips **BOTH** the `_parseIntent` LLM call and the main generation call. Writes both the actor-path payload and the catalog-path payload via `cacheWrite()` → `waitUntil(env.MOVIES_CACHE.put(key, body, {expirationTtl:21600}))` (6h). `handleGroupPicker` mirrors it with `cacheKey = grp:v1:{sorted-lowercased-people joined |}` (order-independent). Pattern copied from existing `handleFitSummary` (`fit:{id}`). Wizard sends a **deterministic** query (`A {mood} movie, {time}, good for {company}`) so hit-rate is high. **(B) Premium frontend loader** (`index.html`): new `aiPremiumLoaderHTML(statusId,count)` (film-reel spinner via `cineReelSVG()` + `.ai-status-text` rotating caption + N `.ai-skel-card` glass skeletons), `startAiStatus(id)`/`stopAiStatus()` cycle 4 i18n captions (`ai.status.scan`/`analyze`/`verdict`/`posters`, all 6 langs) on a 1.65s interval with fade, single `_aiStatusTimer`. `runWizard` uses `aiPremiumLoaderHTML('wizStatus',3)`, `runGroupPicker` uses `('groupStatus',4)`; both call `stopAiStatus()` in success + catch. New CSS: `.ai-premium-loader`, `.ai-loader-head`, `.ai-status-text(.ai-status-out)`, `.ai-skel-grid/-card/-poster/-lines/-line(.w80/70/55/90)/-verdict`, `@keyframes aiSkelShimmer` (+ reduced-motion fallbacks). **Verified (static preview):** 4 fns defined; loader renders 3 skel cards + reel + gradient status; text rotates Scanning→Analyzing→Writing→Posters; `aiSkelShimmer` animation applied; `stopAiStatus` clears timer; desktop screenshot of the wizard modal shows the glass skeletons + spinner. |
+
+---
+
+## ⚡ Session (2026-07-20) — Search Bar: Ultra-Wide Static Width + Prominent Mic
 
 All commits on `main`, all live on https://findfilm.ai.
 
