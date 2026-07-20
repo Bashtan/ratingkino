@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-19) — Unified "Super Search Bar" (Embedded Selector · Clear · AI Voice)
+## ⚡ Most Recent Session (2026-07-20) — Header-Integrated Expanding Search · Dropdown Fix · Tech×Cinema Feature Buttons
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| _code_ | **Refactored the header + hero into a "command search" layout — the AI search bar now lives in the top nav on desktop and expands on focus; the 3 discovery actions became premium glass feature cards with Lucide icons.** Deployed `d35cc42c.ratingkino.pages.dev` → findfilm.ai. **(1) Header-integrated search (desktop ≥992px):** added an empty `.header-search-slot` **#headerSearchSlot** between the logo and `.header-btns`; new JS **`syncSearchPlacement()`** + `_searchDesktopMQ = matchMedia('(min-width:992px)')` (~L7940) **reparents the single `#searchWrap` node** into #headerSearchSlot on desktop (adds `.sw-in-header`) and back into `.hero-search-anchor` **#heroSearchAnchor** on mobile (removes it) — one DOM node, zero duplicate-ID breakage, all `#searchInput`/`setSearchMode`/`toggleModeMenu` wiring intact. Redundant header `.btn-search-toggle` is `display:none !important` on desktop (kept on mobile where the hero bar scrolls away). **(2) Expand-on-focus "AI effect":** `.search-wrap--hero.sw-in-header` rests at `max-width:360px`; on `:focus-within` / `.typing` / `.ai-active` it grows to **`max-width:620px !important`** with an indigo/cyan AI glow box-shadow (media block ~L642). ⚠️ **The `!important` is required** — with `flex:0 0 auto` + base `width:100%`, the flex-basis resolution pins the used width so a non-`!important` `max-width:620px` was silently overridden (rendered 360px); `!important` forces the expand. Transition on `max-width 0.5s cubic-bezier(0.22,1,0.36,1)`. **(3) Dropdown z-index fix (By Title/By Plot was unclickable):** raised `.sw-mode-menu` **z-index 40→250** (above `.search-suggestions` z-200 which covered it on focus) + `toggleModeMenu` now hides `#searchSuggestions` (`.ss-visible` removed) when the menu opens. **(4) Tech×Cinema feature buttons:** hero `.hero-utils` `.util-pill`→**`.feat-btn`** glass cards (`bg rgba(255,255,255,.05)`, `backdrop-blur(10px)`, `border rgba(255,255,255,.1)`, `.feat-btn--accent` for Surprise) each = `.feat-ic` badge + `.feat-copy`(`.feat-title`/`.feat-sub`). Icons swapped to thin-stroke (`stroke-width="1.5"`) **Lucide**: **monitor-play** (Pick for tonight/`openWizard`), **users** (Choose with friends/`openGroupPicker`), **shuffle** (Surprise me/`randomMovie`, keeps `.rnd-spark` class → `randomSpin` anim). Icon color **slate-400 #94a3b8 → indigo-400 #818cf8 on hover** (`.feat-btn:hover .feat-ic`). Added `.hero-eyebrow` caption (`hero.eyebrow` i18n) + `tonight.sub`/`group.sub`/`random.sub` subtitles across all 6 langs. Renamed refs: `.util-pill--accent`→`.feat-btn--accent` (spin anim L412, `randomMovie` querySelector ~L8418), touch + mobile media queries. **Verified on preview** (1440: search in header 360→620 on focus with glow, toggle hidden, dropdown clickable, 3 feat-btns with new icons; 375: search back in hero, toggle visible, buttons scroll). |
+
+---
+
+## ⚡ Session (2026-07-19) — Unified "Super Search Bar" (Embedded Selector · Clear · AI Voice)
 
 All commits on `main`, all live on https://findfilm.ai.
 
