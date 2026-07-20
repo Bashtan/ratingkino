@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-20) — Restore Button Affordance: AI Sub-Nav Glass Chips
+## ⚡ Most Recent Session (2026-07-20) — Clean Movie Cards + Score Trust Badges
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `3ad23e5` | **Decluttered the default movie card and split the score pill into two trust-badge states.** Deployed `76edf2b3.ratingkino.pages.dev` → findfilm.ai. **(1) Simplified default card** (`renderCardHTML` `index.html` ~L7483): removed the `${confidenceBadgeHTML(m)}` pill and the `${cardRatingsHTML(m)}` IMDb/RT/MC/TMDB chip row from the card body — a card now shows only Poster · Title · Year · Genre · one score badge (plus AI why-reason/tags when present). Deleted the now-dead `cardRatingsHTML()` fn and its `.card-ratings`/`.cr*` CSS (was L1120–1135); also stripped the fake ratings-row placeholders from `skeletonCard()` so the loading skeleton matches the leaner card (no layout shift). `confidenceBadgeHTML()` **kept** — still used by the movie modal (`.mr-conf` ~L9249). **(2) Score trust badges** (`avgBadgeHTML` ~L7457): branches on `hasCritic = (parseFloat(m.imdb)>0)||(parseInt(m.rt)>0)||(parseInt(m.mc)>0)`. Unified state → `<span class="rb avg unified" title="Unified score from IMDb, Rotten Tomatoes & Metacritic">★ {calcAvg}</span>`; TMDB-only state → `<span class="rb avg tmdb-only" title="TMDB-only score — critic reviews not in yet">{tmdbScore} · TMDB</span>`. Both keep the existing `showRatingTooltip`/`hideRatingTooltip`/`toggleRatingTooltip` handlers. **CSS** (~L1077): base `.rb.avg` now layout-only (`cursor:help`); `.rb.avg.unified { background:linear-gradient(135deg,#6366f1,#7c3aed); color:#fff }` (vibrant indigo→violet), `.rb.avg.tmdb-only { background:rgba(255,255,255,.12); color:#cbd5e1; font-weight:800; border:1px solid rgba(255,255,255,.24) }` (subdued neutral). **(3) Touch a11y** (`@media (hover:none)` ~L2576): added `.card-wl-btn { opacity:1 }` so the bookmark action stays reachable on touch (no hover to reveal it). **Verified (preview):** `avgBadgeHTML` emits `.unified`/`.tmdb-only` correctly; card HTML no longer contains `conf-badge` or `card-ratings`; `cardRatingsHTML` undefined, `confidenceBadgeHTML` still a fn; computed styles — unified = indigo gradient/white/no-border/cursor help, tmdb-only = rgba(255,255,255,.12)/`#cbd5e1`/1px border/cursor help; screenshot of both cards shows clean Poster/Title/Year·Genre + distinct badges, actions (bookmark + VIEW DETAILS overlay) only on hover. |
+
+---
+
+## ⚡ Session (2026-07-20) — Restore Button Affordance: AI Sub-Nav Glass Chips
 
 All commits on `main`, all live on https://findfilm.ai.
 
