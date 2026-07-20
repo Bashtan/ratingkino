@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-20) — Perf: KV-Cached AI Wizard/Group + Premium Skeleton Loader
+## ⚡ Most Recent Session (2026-07-20) — Merge AI Actions into the Sub-Nav Bar
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `e1bcc6a` | **Decluttered the hero: removed the standalone 3-glass-button row below the search and integrated the AI actions into the sub-navigation bar as text-link tabs.** Deployed `d6ff54e9.ratingkino.pages.dev` → findfilm.ai. **Markup** (`index.html`): deleted the `.hero-utils` block (the 3 `.feat-btn` glass buttons — Movie for Tonight/Watch with Friends/Surprise Me) from the `.hero-search` section; added a `.nav-feats` group inside `.filter-row-1` with 3 `.nav-feat` buttons (`.nav-feat--rnd` for Surprise Me), same `onclick`s (`openWizard()`/`openGroupPicker()`/`randomMovie()`) + i18n (`tonight.launch`/`group.launch`/`btn.random`). **Layout:** `.filter-row-1` children now `[.ct-toggle][.nav-feats][.btn-filters]` = **left [Movies/TV] · center features · right [Filters]**; `.nav-feats { flex:1 1 auto; justify-content:center }` grows to fill the middle so the features sit centered between the toggle and Filters (btn-filters `margin-left:auto` auto-collapses). **Styling:** `.nav-feat` copies the **inactive `.ct-btn`** typography exactly — `height:28px; 11px; weight700; letter-spacing:0.5px; text-transform:uppercase; color:#94a3b8; transparent bg`; hover `#f1f5f9`/`rgba(255,255,255,.06)`, `.nav-feat--rnd:hover` cyan `#22d3ee`. Icons dropped (pure text to match Movies/TV). **Responsive:** desktop/tablet (≥769px) show `.nav-feats`; `@media(max-width:768px)` hides `.nav-feats` and the existing header icon buttons (`.hdr-feats`) take over unchanged (mobile behavior preserved). Removed the now-dead `.hero-utils`/`.feat-btn`/`.feat-ic`/`.feat-title`/`.feat-btn--accent` CSS + the `@media(min-width:992px)` `.hero-utils` override + the `hover:none` `.feat-btn:hover` rule; `randomMovie()` spin selector `.feat-btn--accent` → `.nav-feat--rnd`. **Verified (preview):** `.hero-utils/.feat-btn` count 0; 3 `.nav-feat` with correct labels+onclicks; computed style of `.nav-feat` === `#ctTV` (font/weight/spacing/transform/color/bg all identical); row order left/center/right, Filters rightmost, no overflow; 768px→nav hidden+hdr-feats flex, 850px→nav flex+hdr hidden (no dup); clicking "Movie for Tonight" opens the wizard; full-width desktop screenshot shows the clean single sub-nav row. |
+
+---
+
+## ⚡ Session (2026-07-20) — Perf: KV-Cached AI Wizard/Group + Premium Skeleton Loader
 
 All commits on `main`, all live on https://findfilm.ai.
 
