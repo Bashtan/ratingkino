@@ -1373,6 +1373,43 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .cine-text { animation: none; text-shadow: 0 0 8px rgba(34,211,238,0.5); }
 }
 
+/* ── Premium AI loader: glass skeleton cards + rotating status text ── */
+.ai-premium-loader { display: flex; flex-direction: column; gap: 20px; padding: 22px 4px 8px; }
+.ai-loader-head { display: flex; align-items: center; justify-content: center; gap: 13px; }
+.ai-loader-head .cine-reel { width: 40px; height: 40px; }
+.ai-status-text {
+  font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.3px;
+  background: linear-gradient(90deg,#a5b4fc,#22d3ee); -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: #a5b4fc;
+  transition: opacity 0.26s ease, transform 0.26s ease; will-change: opacity, transform;
+}
+.ai-status-text.ai-status-out { opacity: 0; transform: translateY(-6px); }
+.ai-skel-grid { display: flex; flex-direction: column; gap: 12px; }
+.ai-skel-card {
+  display: flex; gap: 13px; padding: 12px; border-radius: 14px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.ai-skel-poster { flex: none; width: 62px; height: 92px; border-radius: 9px; }
+.ai-skel-lines { flex: 1; display: flex; flex-direction: column; gap: 9px; padding-top: 3px; }
+.ai-skel-line { height: 11px; border-radius: 6px; }
+.ai-skel-line.w80 { width: 80%; } .ai-skel-line.w70 { width: 70%; }
+.ai-skel-line.w55 { width: 55%; } .ai-skel-line.w90 { width: 90%; }
+.ai-skel-verdict {
+  margin-top: 5px; padding: 9px 10px; border-radius: 9px; display: flex; flex-direction: column; gap: 7px;
+  background: rgba(99,102,241,0.07); border: 1px solid rgba(99,102,241,0.18);
+}
+.ai-skel-poster, .ai-skel-line {
+  background: linear-gradient(100deg, rgba(255,255,255,0.05) 30%, rgba(129,140,248,0.22) 50%, rgba(255,255,255,0.05) 70%);
+  background-size: 220% 100%; animation: aiSkelShimmer 1.5s ease-in-out infinite;
+}
+@keyframes aiSkelShimmer { 0% { background-position: 180% 0; } 100% { background-position: -80% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .ai-skel-poster, .ai-skel-line { animation: none; background: rgba(129,140,248,0.12); }
+  .ai-status-text { transition: none; }
+}
+
 /* ─── GROUP PICKER ─── reuses .wiz-overlay/.wiz-modal, cyan-accented ── */
 .group-modal { border-color: rgba(34,211,238,0.25); }
 .group-head { text-align: center; margin-bottom: 6px; }
@@ -4801,6 +4838,10 @@ const TRANSLATIONS = {
     'wiz.results':          'Your 3 picks for tonight',
     'wiz.restart':          'Start over',
     'wiz.loading':          'Finding your perfect picks…',
+    'ai.status.scan':       'Scanning 240,000 films…',
+    'ai.status.analyze':    'Analyzing semantic matches…',
+    'ai.status.verdict':    'Writing AI verdicts…',
+    'ai.status.posters':    'Fetching high-res posters…',
     'wiz.empty':            'Couldn’t find a match — try different answers.',
     'wiz.mood.cozy':        'Cozy & warm',
     'wiz.mood.thrill':      'Thrilling',
@@ -5087,6 +5128,10 @@ const TRANSLATIONS = {
     'wiz.results':          'Tus 3 elecciones para esta noche',
     'wiz.restart':          'Empezar de nuevo',
     'wiz.loading':          'Buscando tus elecciones perfectas…',
+    'ai.status.scan':       'Explorando 240 000 películas…',
+    'ai.status.analyze':    'Analizando coincidencias semánticas…',
+    'ai.status.verdict':    'Redactando veredictos de IA…',
+    'ai.status.posters':    'Obteniendo pósters en alta resolución…',
     'wiz.empty':            'No se encontró coincidencia — prueba otras respuestas.',
     'wiz.mood.cozy':        'Acogedor',
     'wiz.mood.thrill':      'Emocionante',
@@ -5336,6 +5381,10 @@ const TRANSLATIONS = {
     'wiz.results':          'Vos 3 choix pour ce soir',
     'wiz.restart':          'Recommencer',
     'wiz.loading':          'Recherche de vos choix parfaits…',
+    'ai.status.scan':       'Analyse de 240 000 films…',
+    'ai.status.analyze':    'Recherche de correspondances sémantiques…',
+    'ai.status.verdict':    'Rédaction des verdicts IA…',
+    'ai.status.posters':    'Récupération des affiches HD…',
     'wiz.empty':            'Aucune correspondance — essayez d’autres réponses.',
     'wiz.mood.cozy':        'Cocooning',
     'wiz.mood.thrill':      'Palpitant',
@@ -5585,6 +5634,10 @@ const TRANSLATIONS = {
     'wiz.results':          '今晚为你精选的 3 部',
     'wiz.restart':          '重新开始',
     'wiz.loading':          '正在寻找最合适的影片…',
+    'ai.status.scan':       '正在扫描 240,000 部影片…',
+    'ai.status.analyze':    '正在分析语义匹配…',
+    'ai.status.verdict':    '正在撰写 AI 评定…',
+    'ai.status.posters':    '正在获取高清海报…',
     'wiz.empty':            '未找到匹配 — 换个答案试试。',
     'wiz.mood.cozy':        '温馨治愈',
     'wiz.mood.thrill':      '惊险刺激',
@@ -5834,6 +5887,10 @@ const TRANSLATIONS = {
     'wiz.results':          'اختياراتك الثلاثة لهذه الليلة',
     'wiz.restart':          'البدء من جديد',
     'wiz.loading':          'نبحث عن أفضل الاختيارات لك…',
+    'ai.status.scan':       'جارٍ فحص 240,000 فيلم…',
+    'ai.status.analyze':    'تحليل التطابقات الدلالية…',
+    'ai.status.verdict':    'كتابة أحكام الذكاء الاصطناعي…',
+    'ai.status.posters':    'جلب الملصقات عالية الدقة…',
     'wiz.empty':            'لم يتم العثور على تطابق — جرّب إجابات أخرى.',
     'wiz.mood.cozy':        'دافئ ومريح',
     'wiz.mood.thrill':      'مثير',
@@ -6087,6 +6144,10 @@ const TRANSLATIONS = {
     'wiz.results':          'Ваші 3 варіанти на сьогодні',
     'wiz.restart':          'Почати спочатку',
     'wiz.loading':          'Шукаємо ідеальні варіанти…',
+    'ai.status.scan':       'Сканування 240 000 фільмів…',
+    'ai.status.analyze':    'Аналіз семантичних збігів…',
+    'ai.status.verdict':    'Пишемо вердикти ШІ…',
+    'ai.status.posters':    'Отримання постерів у високій якості…',
     'wiz.empty':            'Збігів не знайдено — спробуйте інші відповіді.',
     'wiz.mood.cozy':        'Затишне',
     'wiz.mood.thrill':      'Напружене',
@@ -9666,6 +9727,69 @@ function cineLoaderHTML(label) {
   </div>`;
 }
 
+/* Reusable film-reel spinner SVG (shared by the premium loader). */
+function cineReelSVG() {
+  return `<div class="cine-reel">
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <defs><linearGradient id="cineGrad2" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#a855f7"/>
+      </linearGradient></defs>
+      <circle cx="50" cy="50" r="45" fill="none" stroke="url(#cineGrad2)" stroke-width="7"/>
+      <circle cx="50" cy="50" r="11" fill="url(#cineGrad2)"/>
+      <g fill="url(#cineGrad2)">
+        <circle cx="50" cy="21" r="7"/><circle cx="75" cy="35.5" r="7"/><circle cx="75" cy="64.5" r="7"/>
+        <circle cx="50" cy="79" r="7"/><circle cx="25" cy="64.5" r="7"/><circle cx="25" cy="35.5" r="7"/>
+      </g>
+    </svg>
+  </div>`;
+}
+
+/* Premium AI loader: film-reel spinner + rotating status text + glass skeleton
+   cards. `statusId` is the id for the rotating-text node; `count` = skeleton
+   cards to show (matches the number of picks each feature renders). */
+function aiPremiumLoaderHTML(statusId, count = 3) {
+  const card = `<div class="ai-skel-card">
+      <div class="ai-skel-poster"></div>
+      <div class="ai-skel-lines">
+        <div class="ai-skel-line w80"></div>
+        <div class="ai-skel-line w55"></div>
+        <div class="ai-skel-verdict">
+          <div class="ai-skel-line w90"></div>
+          <div class="ai-skel-line w70"></div>
+        </div>
+      </div>
+    </div>`;
+  return `<div class="ai-premium-loader" role="status" aria-live="polite">
+    <div class="ai-loader-head">${cineReelSVG()}<div class="ai-status-text" id="${statusId}"></div></div>
+    <div class="ai-skel-grid">${Array.from({ length: count }, () => card).join('')}</div>
+  </div>`;
+}
+
+/* Rotating status-text driver — cycles the "Scanning…/Analyzing…/Writing…"
+   messages while an AI request is in flight. One timer at a time. */
+let _aiStatusTimer = null;
+function startAiStatus(statusId) {
+  stopAiStatus();
+  const msgs = [t('ai.status.scan'), t('ai.status.analyze'), t('ai.status.verdict'), t('ai.status.posters')];
+  const el = document.getElementById(statusId);
+  if (!el) return;
+  el.textContent = msgs[0];
+  let i = 0;
+  _aiStatusTimer = setInterval(() => {
+    const node = document.getElementById(statusId);
+    if (!node) { stopAiStatus(); return; }
+    i = (i + 1) % msgs.length;
+    node.classList.add('ai-status-out');
+    setTimeout(() => {
+      const n = document.getElementById(statusId);
+      if (n) { n.textContent = msgs[i]; n.classList.remove('ai-status-out'); }
+    }, 260);
+  }, 1650);
+}
+function stopAiStatus() {
+  if (_aiStatusTimer) { clearInterval(_aiStatusTimer); _aiStatusTimer = null; }
+}
+
 function renderWizard() {
   const stepKey = WIZ_STEPS[WIZARD_STEP];
   const opts    = WIZ_OPTIONS[stepKey];
@@ -9688,7 +9812,8 @@ function renderWizard() {
 
 async function runWizard() {
   document.getElementById('wizProgress').innerHTML = _wizProgressHTML(WIZ_STEPS.length);
-  document.getElementById('wizBody').innerHTML = cineLoaderHTML(t('wiz.loading'));
+  document.getElementById('wizBody').innerHTML = aiPremiumLoaderHTML('wizStatus', 3);
+  startAiStatus('wizStatus');
 
   const mood    = WIZ_OPTIONS.mood.find(o => o.key === WIZARD_STATE.mood);
   const time    = WIZ_OPTIONS.time.find(o => o.key === WIZARD_STATE.time);
@@ -9724,12 +9849,14 @@ async function runWizard() {
     Object.entries(data.reasons || {}).forEach(([id, reason]) => _aiMatchReasons.set(Number(id), reason));
     Object.entries(data.tags    || {}).forEach(([id, arr])    => _aiMatchTags.set(Number(id), arr));
 
+    stopAiStatus();
     document.getElementById('wizProgress').innerHTML = '';
     document.getElementById('wizBody').innerHTML =
       `<div class="wiz-q">${esc(t('wiz.results'))}</div>` +
       `<div class="wiz-results">${picks.map(m => renderCardHTML(m)).join('')}</div>` +
       `<button class="wiz-restart" onclick="wizardRestart()">${esc(t('wiz.restart'))}</button>`;
   } catch (e) {
+    stopAiStatus();
     console.warn('[wizard] failed:', e.message);
     document.getElementById('wizBody').innerHTML =
       `<div class="wiz-loading">${esc(t('wiz.empty'))}</div>` +
@@ -9825,7 +9952,8 @@ async function runGroupPicker() {
     return;
   }
 
-  document.getElementById('groupBody').innerHTML = cineLoaderHTML(t('group.loading'));
+  document.getElementById('groupBody').innerHTML = aiPremiumLoaderHTML('groupStatus', 4);
+  startAiStatus('groupStatus');
 
   try {
     const r = await fetch('/api/group-picker', {
@@ -9851,6 +9979,7 @@ async function runGroupPicker() {
     Object.entries(data.reasons || {}).forEach(([id, reason]) => _aiMatchReasons.set(Number(id), reason));
     Object.entries(data.appeals || {}).forEach(([id, arr])    => _aiMatchTags.set(Number(id), arr));
 
+    stopAiStatus();
     const summaryHTML = data.groupSummary
       ? `<div class="group-summary">${esc(data.groupSummary)}</div>`
       : '';
@@ -9860,6 +9989,7 @@ async function runGroupPicker() {
       `<div class="group-results">${picks.map(m => renderCardHTML(m)).join('')}</div>` +
       `<button class="group-restart" onclick="renderGroupInputs()">${esc(t('group.restart'))}</button>`;
   } catch (e) {
+    stopAiStatus();
     console.warn('[group-picker] failed:', e.message);
     document.getElementById('groupBody').innerHTML =
       `<div class="group-loading">${esc(t('group.empty'))}</div>` +

@@ -40,12 +40,12 @@ export async function onRequest({ request, env, params, waitUntil }) {
 
   /* ── /api/ai-search ── semantic movie search via Cloudflare AI ── */
   if (path === '/ai-search') {
-    return handleAISearch(request, env, cors);
+    return handleAISearch(request, env, cors, waitUntil);
   }
 
   /* ── /api/group-picker ── taste-overlap picks for a group via Cloudflare AI ── */
   if (path === '/group-picker') {
-    return handleGroupPicker(request, env, cors);
+    return handleGroupPicker(request, env, cors, waitUntil);
   }
 
   /* ── /api/fit-summary ── spoiler-free "who's it for" summary (KV-cached) ── */
@@ -761,7 +761,7 @@ async function handleCache(key, env, cors) {
 
 /* ─── AI semantic search handler ───────────────────────────── */
 
-async function handleAISearch(request, env, cors) {
+async function handleAISearch(request, env, cors, waitUntil) {
   const json = (body, status = 200) =>
     new Response(JSON.stringify(body), {
       status,
@@ -791,6 +791,27 @@ async function handleAISearch(request, env, cors) {
   }
 
   if (!query) return json({ error: 'Missing query' }, 400);
+
+  // ── KV response cache ──────────────────────────────────────────────
+  // Deterministic queries (esp. the "Pick for tonight" wizard, which builds a
+  // fixed "A {mood} movie, {time}, good for {company}" string) repeat constantly.
+  // A hit here skips BOTH the intent-parse LLM call and the main generation call,
+  // turning a multi-second wait into an instant response. Keyed on the normalized
+  // query + hard exclusions; 6-hour TTL keeps it fresh against the daily catalog.
+  const _norm   = query.toLowerCase().replace(/\s+/g, ' ').trim();
+  const _exKey  = exclude.length ? '|x:' + exclude.map(x => x.toLowerCase()).sort().join(',') : '';
+  const cacheKey = `ais:v1:${_norm}${_exKey}`.slice(0, 480);
+  const cacheWrite = (payload) => {
+    if (!env.MOVIES_CACHE) return;
+    const w = env.MOVIES_CACHE.put(cacheKey, JSON.stringify(payload), { expirationTtl: 21600 }).catch(() => {});
+    if (waitUntil) waitUntil(w);
+  };
+  if (env.MOVIES_CACHE) {
+    try {
+      const hit = await env.MOVIES_CACHE.get(cacheKey);
+      if (hit) return json({ ...JSON.parse(hit), cached: true });
+    } catch {}
+  }
 
   // Actor-focused queries ("Best movies with Leonardo DiCaprio") bypass the
   // closed-world KV catalog entirely — they return real TMDB filmography data.
@@ -879,7 +900,7 @@ async function handleAISearch(request, env, cors) {
             console.error('[ai-search:actor] reason-gen failed:', e.message);
           }
 
-          return json({
+          const actorPayload = {
             actorQuery: true,
             personName,
             movies: actorMovies,
@@ -887,7 +908,9 @@ async function handleAISearch(request, env, cors) {
             tags,
             suggestedRefinements,
             message: null,
-          });
+          };
+          cacheWrite(actorPayload);
+          return json(actorPayload);
         }
         // actor not found in TMDB — fall through to the existing catalog-based flow
       }
@@ -1058,7 +1081,9 @@ async function handleAISearch(request, env, cors) {
       if (suggestedRefinements.length >= 4) break;
     }
 
-    return json({ ids, reasons, tags, suggestedRefinements, message: result.message || null });
+    const payload = { ids, reasons, tags, suggestedRefinements, message: result.message || null };
+    cacheWrite(payload);
+    return json(payload);
 
   } catch (e) {
     console.error('[ai-search] error:', e.message);
@@ -1072,7 +1097,7 @@ async function handleAISearch(request, env, cors) {
    person's free-text taste, the LLM returns the movies with the widest
    SHARED appeal plus a one-line "overlap" explanation per pick.
 ════════════════════════════════════════════════════════════════════ */
-async function handleGroupPicker(request, env, cors) {
+async function handleGroupPicker(request, env, cors, waitUntil) {
   const json = (body, status = 200) =>
     new Response(JSON.stringify(body), {
       status,
@@ -1099,6 +1124,18 @@ async function handleGroupPicker(request, env, cors) {
 
   if (!env.AI)           return json({ error: 'AI not available' }, 503);
   if (!env.MOVIES_CACHE) return json({ error: 'Cache not available', hint: 'Run sync-worker first' }, 503);
+
+  // ── KV response cache ──────────────────────────────────────────────
+  // Identical taste sets (order-independent) reuse the same picks — skip the LLM.
+  const cacheKey = ('grp:v1:' + people.map(p => p.toLowerCase()).sort().join('|')).slice(0, 480);
+  const cacheWrite = (payload) => {
+    const w = env.MOVIES_CACHE.put(cacheKey, JSON.stringify(payload), { expirationTtl: 21600 }).catch(() => {});
+    if (waitUntil) waitUntil(w);
+  };
+  try {
+    const hit = await env.MOVIES_CACHE.get(cacheKey);
+    if (hit) return json({ ...JSON.parse(hit), cached: true });
+  } catch {}
 
   const cached = await env.MOVIES_CACHE.get('new-releases');
   if (!cached) return json({ error: 'Movie cache empty', hint: 'Daily sync has not run yet' }, 404);
@@ -1197,7 +1234,9 @@ async function handleGroupPicker(request, env, cors) {
       ? result.groupSummary.trim().replace(/[\n\r]+/g, ' ').slice(0, 160)
       : null;
 
-    return json({ ids, reasons, appeals, groupSummary, message: null });
+    const payload = { ids, reasons, appeals, groupSummary, message: null };
+    cacheWrite(payload);
+    return json(payload);
 
   } catch (e) {
     console.error('[group-picker] error:', e.message);
