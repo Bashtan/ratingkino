@@ -674,6 +674,12 @@ header {
     padding-top: 6px; padding-bottom: 20px;   /* breathing room above the sub-nav bar */
     gap: 0;
   }
+  /* Declutter the desktop hero — drop the eyebrow tagline and the rating-source
+     legend so focus lands purely on the search bar + sub-nav. (The catalog
+     freshness stamp still surfaces in the "How ratings work" modal.)
+     .hero-band scope raises specificity above the base .source-badges rule. */
+  .hero-eyebrow            { display: none; }
+  .hero-band .source-badges { display: none; }
 }
 
 /* Filters launcher button in the (slim) filters bar */
