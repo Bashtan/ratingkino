@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-20) — Mobile Header: Discovery Icons Integrated, Search Icon Removed
+## ⚡ Most Recent Session (2026-07-20) — AI Results: Curated Summary Panel + Visible Card Verdict
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `c674873` | **Elevated the AI search results into a "curated report" — the AI's justification is now a core, visible UI element, not buried inline.** Site is a **SPA (no `results.html`)**; AI search renders into the existing `#movieGrid`, so this enhances the in-page experience. Deployed `4f9e7e1a.ratingkino.pages.dev` → findfilm.ai. **(1) `.ai-banner` → "AI Curated Summary" panel** (markup ~L4382): wrapped the spark into a new **`.ai-banner-head`** row (`.ai-banner-spark` + new **`.ai-banner-label`** gradient caption `data-i18n="ai.curatedSummary"` + `.ai-banner-clear` pushed right via `margin-left:auto`), with the verdict copy in `#aiBannerText` below. **CSS (~L298):** `.ai-banner` now `flex-direction:column`, padding 16/18, radius 14, `border rgba(99,102,241,.38)`, stronger glow `0 0 32px rgba(99,102,241,.18)` + backdrop-blur(10px); `.ai-banner-text` bumped to 15px `#e0e7ff`. **`typewriterBanner()` (~L8135)** now strips a leading `✦ ` (regex) so the head spark isn't duplicated in the body — the `ai.found*` i18n strings still embed `✦ `. **(2) Card `.ai-why-reason` → visible "AI Verdict" nested glass panel** (card template ~L7425): added an **`.ai-why-head`** row (`.ai-why-spark` + new **`.ai-why-label`** = `t('ai.verdictLabel')`) above `.ai-why-text`. **CSS (~L1172):** `.ai-why-reason` now `flex-direction:column`, padding 8/10, radius 9, inset+glow shadow; `.ai-why-text` 10→**11px**, dropped italic, `#dfe4ff`, line-clamp 2→**3**. **(3) i18n:** added **`ai.curatedSummary`** + **`ai.verdictLabel`** to all 6 langs (en/es/fr/zh/ar/uk, next to `ai.foundForActor`). **Wiring preserved:** `#aiBanner`/`#aiBannerText`/`#aiBannerSpark` IDs + `clearAISearch()` unchanged, so `showAIBanner`/`startThinkingText`/`aiSearch` untouched. **Verified (static preview, injected sample state):** "AI CURATED SUMMARY" gradient label + glowing panel renders; card shows "AI VERDICT" nested panel; `.ai-banner` computed `flex-direction:column` + 32px glow shadow; console only TMDb-404 noise. **NOTE:** the deliverable asked for `results.html` + Tailwind — clarified in-session that this is a vanilla-CSS SPA, so implemented natively in `index.html` (Tailwind = docs-only convention). |
+
+---
+
+## ⚡ Session (2026-07-20) — Mobile Header: Discovery Icons Integrated, Search Icon Removed
 
 All commits on `main`, all live on https://findfilm.ai.
 
