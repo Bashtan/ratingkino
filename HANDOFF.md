@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-20) — Filters Drawer: Tech×Cinema Glassmorphism Redesign
+## ⚡ Most Recent Session (2026-07-20) — Hero→Sub-Nav Vertical Spacing Harmonize
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `44b962e7` | **Harmonized the vertical gap between the 3 hero action buttons (`.hero-utils`) and the MOVIES/TV + FILTERS sub-nav bar (`.filters-bar` / `.filter-row-1`).** Deployed `44b962e7.ratingkino.pages.dev` → findfilm.ai. **Investigation finding (professional-objectivity correction):** the reported "too much whitespace" was NOT a large void — the gap measured only **6px** on desktop (already tighter than the requested 24–32px target), confirmed via `curl https://findfilm.ai` that live==local. Rather than blindly reducing margins, surfaced the measured data; per user confirmation (AskUserQuestion → "Set gap to ~28px") **increased** `.hero-search` bottom padding across all 3 breakpoints: **desktop ≥992px (~L666) `padding-bottom:6px→24px`**, **base/tablet 769–991px (~L451) `padding:4px 24px 8px → 4px 24px 22px`**, **mobile ≤768px (~L2554) `padding:12px 16px 14px → 12px 16px 20px`**. **Verified:** desktop 1440 gap = 24px (to bar bg) / 32px (to toggle), tablet 800 = 22/30px, mobile 375 = 20/30px with the 3 utility buttons stacking to 3 rows unbroken; console only TMDb-404 static noise. |
+
+---
+
+## ⚡ Session (2026-07-20) — Filters Drawer: Tech×Cinema Glassmorphism Redesign
 
 All commits on `main`, all live on https://findfilm.ai.
 
