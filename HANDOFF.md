@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-20) — Header-Integrated Expanding Search · Dropdown Fix · Tech×Cinema Feature Buttons
+## ⚡ Most Recent Session (2026-07-20) — Filters Drawer: Tech×Cinema Glassmorphism Redesign
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| _code_ | **Modernized the classic Filters UI to match the premium dark-glass "Tech×Cinema" aesthetic of the header/hero.** Deployed `8dd11e70.ratingkino.pages.dev` → findfilm.ai. All work is pure CSS on the **existing** right slide-out filters drawer (`#filtersDrawer` / `#filtersBackdrop`, markup ~L11051, opened by `openFilters()` from `.btn-filters` in `.filter-row-1` ~L4221) — **zero markup/JS/ID changes**, so `setGenre`/`applyFilters`/`toggleSrc`/`updateFilterCount` wiring is untouched. **(1) Drawer container** (~L708): `--panel-bg` solid → `linear-gradient(180deg, rgba(20,18,38,.86), rgba(11,10,24,.9))` + `backdrop-blur(26px)` + triple box-shadow incl. `inset 0 0 90px rgba(99,102,241,.06)` indigo inner glow; backdrop darker `rgba(3,2,10,.7)`+`blur(8px)`; open transition → `cubic-bezier(.22,1,.36,1)`. **(2) `.btn-filters` trigger** (~L680): glass `rgba(255,255,255,.05)` + `blur(10px)`, indigo hover glow; `.filters-count` badge → `#6366f1` + `box-shadow` glow. **(3) `.gpill` genre chips** (~L819): taller 26→32px; inactive `transparent` + `1px rgba(255,255,255,.2)` border + `#cbd5e1` slate-300 text; **active `#6366f1` indigo-500 + double glow** (`0 0 0 1px rgba(99,102,241,.5), 0 2px 14px rgba(99,102,241,.45)`). **(4) `.filter-sel` dropdowns** (Country/Min-Rating, ~L841): glass `rgba(255,255,255,.05)`+`blur`, radius 8→10px, new indigo `#818cf8` chevron polyline SVG, focus ring `0 0 0 3px rgba(99,102,241,.18)`. **(5) `.src-btn` sort chips** (~L857): glass base 27→32px, brand-color active states kept (IMDb/RT/MC) + glow, `.avg.on` purple→`#6366f1`; **fixed left-alignment** — `.fd-sort` `margin-left:0` was overridden by later `.sort-wrap{margin-left:auto}` (source order), re-scoped to `.fd-body .fd-sort` (higher specificity) + `justify-content:flex-start`. **(6) `.ct-toggle`/`.ct-btn`** Movies/TV (~L790): glass shell, active → indigo→violet gradient + glow. **(7) Footer** (~L754): `.fd-reset` now a **subtle ghost** (transparent, slate-400 → white/6% hover, flex 0 0 34%); `.fd-apply` **solid primary** `linear-gradient(135deg,#6366f1,#7c3aed)` + lift + `rgba(99,102,241,.5)` shadow; `.fd-label` headers → 11px/600 uppercase `#94a3b8` Montserrat. **Verified on preview** (1280 + 375 via injected mock genre chips + seeded active states): drawer reads as premium glass, Drama chip indigo-glow active, dropdowns glass w/ indigo chevron, sort chips left-aligned (IMDb yellow / Avg indigo), Reset ghost + Show-results indigo gradient; mobile drawer 345/375 near-full-width, chips wrap, no overflow; console only TMDb-404 static noise. **Note:** Country + Min-Rating stay discrete `<select>` dropdowns (not range sliders) — there is no Year filter, and Min-Rating's `''`/"Any" + reset + filter-count semantics rely on a select value, so converting to a range input would break the "Any" state; kept as sleek glass dropdowns per the "Minimal Dropdown" treatment. |
+
+---
+
+## ⚡ Session (2026-07-20) — Header-Integrated Expanding Search · Dropdown Fix · Tech×Cinema Feature Buttons
 
 All commits on `main`, all live on https://findfilm.ai.
 
