@@ -582,19 +582,19 @@ header {
    Glassmorphism cards: icon badge + stacked title/subtitle. On desktop
    they space evenly; on mobile they collapse into a horizontal scroller. */
 .hero-utils {
-  display: flex; align-items: stretch; justify-content: center;
-  flex-wrap: nowrap; gap: 12px;
-  margin-top: 2px; width: 100%; max-width: 100%; padding: 2px 4px;
+  display: flex; align-items: center; justify-content: center;
+  flex-wrap: wrap; gap: 14px;
+  margin-top: 4px; width: 100%; max-width: 100%; padding: 2px 4px;
   overflow-x: auto; -webkit-overflow-scrolling: touch;
   scrollbar-width: none; -ms-overflow-style: none;
 }
 .hero-utils::-webkit-scrollbar { display: none; }
 .feat-btn {
-  display: inline-flex; align-items: center; gap: 11px;
-  flex: 1 1 0; min-width: 210px; max-width: 260px;
-  padding: 11px 16px; text-align: left;
+  display: inline-flex; align-items: center; gap: 9px;
+  flex: 0 0 auto;                       /* hug content — no bulky stretched cards */
+  padding: 9px 16px; white-space: nowrap;
   background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1); border-radius: 15px;
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 11px;
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   color: #e2e8f0; cursor: pointer;
   transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1),
@@ -608,21 +608,15 @@ header {
 }
 .feat-ic {
   flex: none; display: inline-flex; align-items: center; justify-content: center;
-  width: 40px; height: 40px; border-radius: 11px;
+  width: 30px; height: 30px; border-radius: 9px;
   background: linear-gradient(135deg, rgba(124,58,237,0.22), rgba(34,211,238,0.14));
   border: 1px solid rgba(124,58,237,0.28);
   color: #94a3b8; transition: color 0.2s, border-color 0.2s;   /* slate-400 default → indigo-400 on hover */
 }
 .feat-btn:hover .feat-ic { color: #818cf8; border-color: rgba(99,102,241,0.55); }
-.feat-copy { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .feat-title {
-  font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 13.5px;
+  font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 13px;
   color: #f1f5f9; letter-spacing: 0.1px; white-space: nowrap;
-}
-.feat-sub {
-  font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500;
-  color: rgba(148,163,184,0.85); white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis;
 }
 /* Accent variant for "Surprise me" — the playful discovery action */
 .feat-btn--accent {
@@ -2536,11 +2530,10 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .search-wrap--hero .search-input { height: 46px; font-size: 15px; }
   .search-wrap--hero .sw-mode-trigger { height: 44px; font-size: 12px; padding: 0 9px 0 10px; }
   .search-wrap--hero .search-icon { display: none; }  /* drop the decorative magnifier — save room */
-  .hero-utils { gap: 9px; justify-content: safe start; }
-  .feat-btn   { min-width: 180px; padding: 9px 13px; gap: 9px; }
-  .feat-ic    { width: 34px; height: 34px; border-radius: 10px; }
+  .hero-utils { gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .feat-btn   { padding: 8px 13px; gap: 8px; }
+  .feat-ic    { width: 28px; height: 28px; border-radius: 8px; }
   .feat-title { font-size: 12.5px; }
-  .feat-sub   { font-size: 10.5px; }
   .hero-eyebrow { font-size: 10px; letter-spacing: 1.2px; white-space: normal; }
 
   /* Keep floating random button */
@@ -4081,37 +4074,28 @@ if ('serviceWorker' in navigator) {
   </div>
   </div><!-- /#heroSearchAnchor -->
 
-  <!-- Killer-feature dashboard — 3 premium glass action buttons -->
+  <!-- Killer-feature dashboard — 3 compact glass action buttons -->
   <div class="hero-utils" role="group" aria-label="Quick discovery actions">
     <button class="feat-btn" onclick="openWizard()">
       <span class="feat-ic">
         <!-- Lucide monitor-play: display + play button (tonight = watch a film) -->
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 7.75a.75.75 0 0 1 1.142-.638l3.664 2.249a.75.75 0 0 1 0 1.278l-3.664 2.25a.75.75 0 0 1-1.142-.639z"/><path d="M12 17v4"/><path d="M8 21h8"/><rect x="2" y="3" width="20" height="14" rx="2"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 7.75a.75.75 0 0 1 1.142-.638l3.664 2.249a.75.75 0 0 1 0 1.278l-3.664 2.25a.75.75 0 0 1-1.142-.639z"/><path d="M12 17v4"/><path d="M8 21h8"/><rect x="2" y="3" width="20" height="14" rx="2"/></svg>
       </span>
-      <span class="feat-copy">
-        <span class="feat-title" data-i18n="tonight.launch">Pick for tonight</span>
-        <span class="feat-sub" data-i18n="tonight.sub">One perfect pick, tonight</span>
-      </span>
+      <span class="feat-title" data-i18n="tonight.launch">Movie for Tonight</span>
     </button>
     <button class="feat-btn" onclick="openGroupPicker()">
       <span class="feat-ic">
         <!-- Lucide users: group of friends -->
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </span>
-      <span class="feat-copy">
-        <span class="feat-title" data-i18n="group.launch">Choose with friends</span>
-        <span class="feat-sub" data-i18n="group.sub">Match everyone's taste</span>
-      </span>
+      <span class="feat-title" data-i18n="group.launch">Watch with Friends</span>
     </button>
     <button class="feat-btn feat-btn--accent" onclick="randomMovie()">
       <span class="feat-ic">
         <!-- Lucide shuffle: crossed media-player arrows (random pick) -->
-        <svg class="rnd-spark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/></svg>
+        <svg class="rnd-spark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/></svg>
       </span>
-      <span class="feat-copy">
-        <span class="feat-title" data-i18n="btn.random">Surprise me</span>
-        <span class="feat-sub" data-i18n="random.sub">A bold pick, instantly</span>
-      </span>
+      <span class="feat-title" data-i18n="btn.random">Surprise Me</span>
     </button>
   </div>
 </section>
@@ -4721,11 +4705,8 @@ const TRANSLATIONS = {
     'cast.qrTitle':          'Cannot find your TV?',
     'cast.qrSub':            'Open the browser on your Smart TV and scan this code to watch.',
     'cast.qrCopy':           'Copy TV link',
-    'btn.random':           'Surprise me with a movie',
-    'tonight.launch':       'Find a movie for tonight',
-    'tonight.sub':          'One perfect pick, tonight',
-    'group.sub':            'Match everyone\'s taste',
-    'random.sub':           'A bold pick, instantly',
+    'btn.random':           'Surprise Me',
+    'tonight.launch':       'Movie for Tonight',
     'hero.eyebrow':         '240,000 films · 3 rating sources · 1 verdict',
     'util.voice':           'Voice',
     'util.watchlist':       'Watchlist',
@@ -4851,7 +4832,7 @@ const TRANSLATIONS = {
     'modal.fitVibe':       'The experience',
     'modal.fitLoading':    'Reading the vibe…',
     // Group Picker
-    'group.launch':        'Choose with friends',
+    'group.launch':        'Watch with Friends',
     'group.title':         'Group Movie Night',
     'group.sub':           'Add what each person loves — we\'ll find the perfect overlap.',
     'group.personPh':      'e.g. loves heist thrillers & witty dialogue',
@@ -5016,9 +4997,6 @@ const TRANSLATIONS = {
     'cast.qrCopy':           'Copiar enlace del TV',
     'btn.random':           'RandomAI',
     'tonight.launch':       '¿Esta noche?',
-    'tonight.sub':          'Una elección perfecta, esta noche',
-    'group.sub':            'Combina el gusto de todos',
-    'random.sub':           'Una elección atrevida, al instante',
     'hero.eyebrow':         '240.000 películas · 3 fuentes de puntuación · 1 veredicto',
     'wiz.qMood':            '¿Qué te apetece?',
     'wiz.qTime':            '¿Cuánto tiempo tienes?',
@@ -5266,9 +5244,6 @@ const TRANSLATIONS = {
     'cast.qrCopy':           'Copier le lien TV',
     'btn.random':           'RandomAI',
     'tonight.launch':       'Ce soir ?',
-    'tonight.sub':          'Un choix parfait, ce soir',
-    'group.sub':            'Plaisez à tout le monde',
-    'random.sub':           'Un choix audacieux, à l\'instant',
     'hero.eyebrow':         '240 000 films · 3 sources de notes · 1 verdict',
     'wiz.qMood':            'De quelle humeur êtes-vous ?',
     'wiz.qTime':            'Combien de temps avez-vous ?',
@@ -5516,9 +5491,6 @@ const TRANSLATIONS = {
     'cast.qrCopy':           '复制电视链接',
     'btn.random':           'RandomAI',
     'tonight.launch':       '今晚看？',
-    'tonight.sub':          '今晚，一个完美之选',
-    'group.sub':            '满足所有人的口味',
-    'random.sub':           '大胆之选，即刻呈现',
     'hero.eyebrow':         '240,000 部电影 · 3 个评分来源 · 1 个结论',
     'wiz.qMood':            '你想看什么类型？',
     'wiz.qTime':            '你有多少时间？',
@@ -5766,9 +5738,6 @@ const TRANSLATIONS = {
     'cast.qrCopy':           'نسخ رابط التلفاز',
     'btn.random':           'RandomAI',
     'tonight.launch':       'الليلة؟',
-    'tonight.sub':          'اختيار واحد مثالي، الليلة',
-    'group.sub':            'يناسب ذوق الجميع',
-    'random.sub':           'اختيار جريء، فوراً',
     'hero.eyebrow':         '240,000 فيلم · 3 مصادر تقييم · حكم واحد',
     'wiz.qMood':            'ما الذي ترغب في مشاهدته؟',
     'wiz.qTime':            'كم من الوقت لديك؟',
@@ -6014,11 +5983,8 @@ const TRANSLATIONS = {
     'cast.qrTitle':          'Не можете знайти свій TV?',
     'cast.qrSub':            'Відкрийте браузер на Smart TV і відскануйте цей код, щоб дивитися.',
     'cast.qrCopy':           'Копіювати посилання TV',
-    'btn.random':           'Здивуй мене фільмом',
+    'btn.random':           'Здивуй мене',
     'tonight.launch':       'Фільм на вечір',
-    'tonight.sub':          'Один ідеальний вибір на вечір',
-    'group.sub':            'Догодіть смаку кожного',
-    'random.sub':           'Сміливий вибір миттєво',
     'hero.eyebrow':         '240 000 фільмів · 3 джерела оцінок · 1 вердикт',
     'hero.unified':         'Єдиний рейтинг з IMDb, Rotten Tomatoes та Metacritic.',
     'feed.seeMore':         'Усі',
@@ -6115,7 +6081,7 @@ const TRANSLATIONS = {
     'modal.fitVibe':       'Враження',
     'modal.fitLoading':    'Вловлюємо настрій…',
     // Group Picker
-    'group.launch':        'Група',
+    'group.launch':        'Дивитись з друзями',
     'group.title':         'Груповий кіновечір',
     'group.sub':           'Додайте, що любить кожен — ми знайдемо ідеальний спільний вибір.',
     'group.personPh':      'напр. любить трилери про пограбування та дотепні діалоги',
