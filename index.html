@@ -576,7 +576,13 @@ header {
 /* AI-voice + search magnifier become inline flex children (no absolute pos) */
 .search-wrap--hero .search-mic-btn {
   position: static; transform: none; flex: none;
-  width: 34px; height: 34px; border-radius: 9px;
+  width: 40px; height: 40px; border-radius: 50%;
+  color: #818cf8;   /* indigo-400 — prominent, reads as a clickable button */
+}
+.search-wrap--hero .search-mic-btn svg { width: 24px; height: 24px; }
+.search-wrap--hero .search-mic-btn:hover {
+  color: #a5b4fc; background: rgba(99,102,241,0.16);
+  box-shadow: 0 0 14px rgba(99,102,241,0.35);
 }
 .search-wrap--hero .search-icon {
   position: static; transform: none; flex: none;
@@ -669,19 +675,18 @@ header {
     flex: 1 1 auto; display: flex; justify-content: center;
     min-width: 0; padding: 0 8px;
   }
-  /* Header-integrated search: expansive resting width (full placeholder, no truncation),
-     glows + grows subtly on focus (the "AI effect"). On narrower desktops it shrinks to
-     fill the available slot via flex:1, so it never overflows the header. */
+  /* Header-integrated search: ultra-wide STATIC width — no expand-on-focus.
+     Width stays identical when idle, focused, or typing. On narrower desktops it
+     shrinks to fill the available slot via flex:1, so it never overflows the header. */
   .search-wrap--hero.sw-in-header {
-    max-width: 600px; height: 44px; padding: 0 6px 0 4px;
+    max-width: 800px; height: 44px; padding: 0 6px 0 4px;
     border-radius: 12px;
-    transition: max-width 0.5s cubic-bezier(0.22,1,0.36,1),
-                background 0.25s, box-shadow 0.25s;
+    transition: background 0.25s, box-shadow 0.25s;   /* width is static — no max-width transition */
   }
+  /* Focus/typing/AI only change the glow, never the size */
   .search-wrap--hero.sw-in-header:focus-within,
   .search-wrap--hero.sw-in-header.typing,
   .search-wrap--hero.sw-in-header.ai-active {
-    max-width: 680px !important;      /* expand to command the header on focus */
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.08),
                 0 0 0 2px rgba(99,102,241,0.5),
                 0 0 15px rgba(99,102,241,0.35),
@@ -689,7 +694,7 @@ header {
   }
   .search-wrap--hero.sw-in-header .search-input { height: 38px; font-size: 14px; }
   .search-wrap--hero.sw-in-header .sw-mode-trigger { height: 36px; font-size: 12px; padding: 0 9px 0 10px; }
-  .search-wrap--hero.sw-in-header .search-mic-btn { width: 30px; height: 30px; }
+  .search-wrap--hero.sw-in-header .search-mic-btn { width: 40px; height: 40px; }
   .search-wrap--hero.sw-in-header .search-icon { display: none; }  /* drop magnifier in the slim header bar */
   /* When search lives in the header, the hero is a compact feature dashboard */
   .hero-search {
@@ -4127,7 +4132,7 @@ if ('serviceWorker' in navigator) {
     </button>
     <!-- AI voice: sparkle-topped mic — pulses purple idle in AI mode, red while recording -->
     <button class="search-mic-btn" id="searchMicBtn" onclick="toggleDesktopVoice()" aria-label="AI voice search">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="9" y="7" width="6" height="10" rx="3" fill="currentColor" stroke="none"/>
         <path d="M6 13a6 6 0 0 0 12 0M12 19v2.5M9.5 21.5h5"/>
         <path d="M18.5 2.2l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7z" fill="currentColor" stroke="none"/>
