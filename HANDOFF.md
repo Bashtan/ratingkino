@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-20) — Mobile: Icon-Only Hero Action Buttons
+## ⚡ Most Recent Session (2026-07-20) — Mobile Header: Discovery Icons Integrated, Search Icon Removed
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `1825796` | **Moved the 3 discovery actions into the mobile header and deleted the standalone search magnifier.** Deployed `ca2b2073.ratingkino.pages.dev` → findfilm.ai. Mobile (≤768px) header now reads **`[logo · 📺 · 👥 · 🎲 · bookmark · lang]`**. **(1) Removed** the `.btn-search-toggle` magnifier button from `.header-btns` markup (~L3995) — the hero search bar already covers this on mobile; `toggleSearch()` remains (unused by header now). **(2) New `.hdr-feats` cluster** (markup in `.header-btns`, ~L3996): 3 icon buttons `.hdr-feat` (monitor-play `openWizard()` / users `openGroupPicker()` / shuffle `.hdr-feat--rnd` `randomMovie()`), each with `aria-label` + `title` + `data-i18n-aria`/`data-i18n-title` (keys `tonight.launch`/`group.launch`/`btn.random`). **CSS** (~L409): `.hdr-feats { display:none }` by default (desktop keeps the hero pills); `.hdr-feat` = 32px glass square (`rgba(255,255,255,.05)` + `border rgba(255,255,255,.12)` + radius 9, 18px svg), `.hdr-feat--rnd` neon-tint accent. **(3) Mobile block** (`@media max-width:768px` ~L2560): `.hdr-feats{display:flex}`, `.hdr-feat` bumped to 34px, **`.hero-utils{display:none}`** (old hero button row hidden — the earlier icon-only `.feat-*` mobile overrides were removed), `.header-btns{gap:6px}`, and **`.header-btns .btn-watchlist{width:34px;height:34px}`** (higher specificity — base `.btn-watchlist` 38px is defined *later* in source at ~L3373, so a plain `.btn-watchlist` mobile rule would lose). **(4) Spin fix:** broadened `.feat-btn--accent.spinning .rnd-spark` → **`.spinning .rnd-spark`** (~L432) and changed `randomMovie()` (~L8529) to `querySelectorAll('.feat-btn--accent, .hdr-feat--rnd')` so whichever "Surprise Me" is visible spins. **(5) i18n:** `applyTranslations()` already handles `data-i18n-aria`/`data-i18n-title` (added prior session). **Verified:** 375px → no horizontal overflow (`scrollWidth==375`), 3 header icons + 34px bookmark + lang, search toggle gone (`searchToggleExists:false`), `.hero-utils` display:none; desktop 1440 → `.hdr-feats` display:none, hero pills full-text visible; header "Movie for Tonight" click opens `#wizardOverlay` (`wiz-overlay open`); console only TMDb-404 noise. |
+
+---
+
+## ⚡ Session (2026-07-20) — Mobile: Icon-Only Hero Action Buttons
 
 All commits on `main`, all live on https://findfilm.ai.
 
