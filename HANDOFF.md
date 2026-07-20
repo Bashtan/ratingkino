@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-20) — Hero→Sub-Nav Vertical Spacing Harmonize
+## ⚡ Most Recent Session (2026-07-20) — Filters: Touch-Device Genre-Chip Indigo Fix
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `236aeb3` | **Completed the Tech×Cinema filters modernization by fixing the one remaining inconsistency on touch devices.** Deployed `e5a7078b.ratingkino.pages.dev` → findfilm.ai. The desktop filters drawer was already fully modernized (glass container `#filtersDrawer` ~L716, indigo-500 `.gpill.active` ~L850, `appearance-none` glass `.filter-sel` + indigo chevron ~L865, ghost `.fd-reset` + solid `.fd-apply` ~L777) — but an `@media (hover: none)` override (~L2527) was **reverting `.gpill.active` to the old `--purple` (`#7C3AED`) with no glow**, so genre chips didn't match the indigo aesthetic on mobile/tablet. Fixed: touch `.gpill.active` → `#6366f1` indigo-500 + double glow (`0 0 0 1px rgba(99,102,241,.5), 0 2px 14px rgba(99,102,241,.45)`), matching the desktop rule; and `.gpill:hover` strip corrected from old `var(--muted)`/`var(--border)` to the new slate-300 inactive base (`#cbd5e1` / `rgba(255,255,255,.2)`). **Verified** via CSSOM read (confirmed the `@media (hover:none)` rule text now emits indigo) + mobile 375 screenshot: drawer reads as premium glass — GENRE/COUNTRY/MIN RATING/SORT uppercase slate headers, Drama chip indigo-glow active, glass dropdowns w/ indigo chevron, Avg★ sort chip indigo, ghost Reset + solid-indigo "Show results". |
+
+---
+
+## ⚡ Session (2026-07-20) — Hero→Sub-Nav Vertical Spacing Harmonize
 
 All commits on `main`, all live on https://findfilm.ai.
 
