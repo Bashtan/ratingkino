@@ -611,57 +611,28 @@ header {
 /* Anchor that holds #searchWrap on mobile (emptied when reparented into the header) */
 .hero-search-anchor { width: 100%; display: flex; justify-content: center; }
 
-/* ── Killer-feature dashboard — 3 premium glass buttons ──────────────
-   Glassmorphism cards: icon badge + stacked title/subtitle. On desktop
-   they space evenly; on mobile they collapse into a horizontal scroller. */
-.hero-utils {
-  display: flex; align-items: center; justify-content: center;
-  flex-wrap: wrap; gap: 14px;
-  margin-top: 4px; width: 100%; max-width: 100%; padding: 2px 4px;
-  overflow-x: auto; -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; -ms-overflow-style: none;
+/* ── AI discovery features — text-link tabs in the sub-navigation bar ──
+   The 3 AI actions (Movie for Tonight / Watch with Friends / Surprise Me)
+   live inline in the sub-nav (.filter-row-1) on desktop+tablet, styled to
+   match the inactive Movies/TV tabs. On ≤768px they collapse into the
+   header icon buttons (.hdr-feats) instead — see the mobile media query.
+   .nav-feats is the centered middle group; it grows to fill the space
+   between the [Movies/TV] toggle and the [Filters] button. */
+.nav-feats {
+  flex: 1 1 auto; min-width: 0;
+  display: flex; align-items: center; justify-content: center; gap: 2px;
 }
-.hero-utils::-webkit-scrollbar { display: none; }
-.feat-btn {
-  display: inline-flex; align-items: center; gap: 9px;
-  flex: 0 0 auto;                       /* hug content — no bulky stretched cards */
-  padding: 9px 16px; white-space: nowrap;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1); border-radius: 11px;
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  color: #e2e8f0; cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1),
-              background 0.2s, border-color 0.2s, box-shadow 0.2s;
+.nav-feat {
+  height: 28px; padding: 0 12px;
+  border: none; background: transparent; border-radius: 18px;
+  font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap;
+  color: #94a3b8; cursor: pointer;             /* slate-400 — identical to inactive .ct-btn */
+  transition: color 0.2s, background 0.2s;
 }
-.feat-btn:hover {
-  transform: translateY(-2px);
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(99,102,241,0.5);
-  box-shadow: 0 8px 26px rgba(99,102,241,0.18);
-}
-.feat-ic {
-  flex: none; display: inline-flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; border-radius: 9px;
-  background: linear-gradient(135deg, rgba(124,58,237,0.22), rgba(34,211,238,0.14));
-  border: 1px solid rgba(124,58,237,0.28);
-  color: #94a3b8; transition: color 0.2s, border-color 0.2s;   /* slate-400 default → indigo-400 on hover */
-}
-.feat-btn:hover .feat-ic { color: #818cf8; border-color: rgba(99,102,241,0.55); }
-.feat-title {
-  font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 13px;
-  color: #f1f5f9; letter-spacing: 0.1px; white-space: nowrap;
-}
-/* Accent variant for "Surprise me" — the playful discovery action */
-.feat-btn--accent {
-  background: linear-gradient(135deg, rgba(124,58,237,0.20), rgba(34,211,238,0.14));
-  border-color: rgba(124,58,237,0.4);
-}
-.feat-btn--accent .feat-ic {
-  background: linear-gradient(135deg, rgba(124,58,237,0.4), rgba(34,211,238,0.28));
-  border-color: rgba(124,58,237,0.5); color: #cbd5e1;   /* brighter slate resting, indigo on hover */
-}
-.feat-btn--accent:hover .feat-ic { color: #818cf8; }
-.feat-btn--accent:hover { border-color: rgba(34,211,238,0.55); box-shadow: 0 8px 26px rgba(34,211,238,0.2); }
+.nav-feat:hover { color: #f1f5f9; background: rgba(255,255,255,0.06); }
+.nav-feat--rnd:hover { color: #22d3ee; background: rgba(34,211,238,0.10); }
+.nav-feat--rnd.spinning { color: #22d3ee; }    /* micro flash on random pick */
 
 /* ── Desktop: condense the hero into one tight, cohesive search hub ──
    The mode toggle is now embedded INSIDE the bar, so the hero has just two
@@ -696,17 +667,12 @@ header {
   .search-wrap--hero.sw-in-header .sw-mode-trigger { height: 36px; font-size: 12px; padding: 0 9px 0 10px; }
   .search-wrap--hero.sw-in-header .search-mic-btn { width: 40px; height: 40px; }
   .search-wrap--hero.sw-in-header .search-icon { display: none; }  /* drop magnifier in the slim header bar */
-  /* When search lives in the header, the hero is a compact feature dashboard */
+  /* Search lives in the header → the hero collapses to just the search hub
+     (the 3 AI actions now live in the sub-nav bar below). */
   .hero-search {
     max-width: 720px;
-    padding-top: 6px; padding-bottom: 24px;   /* ~24px breathing room above the sub-nav bar */
+    padding-top: 6px; padding-bottom: 20px;   /* breathing room above the sub-nav bar */
     gap: 0;
-  }
-  .hero-utils {
-    margin-top: 0;
-    flex-wrap: wrap;                  /* 3 feature buttons wrap + stay centered — no scroll needed */
-    overflow-x: visible;
-    gap: 14px;
   }
 }
 
@@ -2604,7 +2570,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .movie-card:active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(229,9,20,0.25); }
   .gpill:hover { border-color: rgba(255,255,255,0.2); color: #cbd5e1; background: transparent; }
   .gpill.active { background: #6366f1; border-color: #6366f1; color: #fff; box-shadow: 0 0 0 1px rgba(99,102,241,0.5), 0 2px 14px rgba(99,102,241,0.45); }
-  .feat-btn:hover { transform: none; box-shadow: none; }
   .btn-trailer:hover { background: var(--orange); }
   .btn-shr:hover { transform: none; filter: none; }  /* keep neon gradient, no scale on touch */
   .btn-more:hover { background: transparent; color: var(--purple); box-shadow: none; }
@@ -2638,8 +2603,8 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .search-wrap--hero .search-input { height: 46px; font-size: 15px; }
   .search-wrap--hero .sw-mode-trigger { height: 44px; font-size: 12px; padding: 0 9px 0 10px; }
   .search-wrap--hero .search-icon { display: none; }  /* drop the decorative magnifier — save room */
-  /* Discovery actions now live in the header on mobile — hide the hero row */
-  .hero-utils { display: none; }
+  /* Discovery actions live in the header on mobile — hide the sub-nav links */
+  .nav-feats { display: none; }
   .hero-eyebrow { font-size: 10px; letter-spacing: 1.2px; white-space: normal; }
 
   /* Keep floating random button */
@@ -4073,7 +4038,7 @@ if ('serviceWorker' in navigator) {
 
     <div class="header-btns">
       <!-- Mobile-only: the 3 discovery actions live here as dense icon buttons
-           (≤768px). On desktop they stay as full-text pills in the hero (.hero-utils). -->
+           (≤768px). On desktop they live as text-link tabs in the sub-nav (.nav-feats). -->
       <div class="hdr-feats" role="group" aria-label="Quick discovery actions">
         <button class="hdr-feat" onclick="openWizard()" aria-label="Movie for Tonight" title="Movie for Tonight" data-i18n-aria="tonight.launch" data-i18n-title="tonight.launch">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 7.75a.75.75 0 0 1 1.142-.638l3.664 2.249a.75.75 0 0 1 0 1.278l-3.664 2.25a.75.75 0 0 1-1.142-.639z"/><path d="M12 17v4"/><path d="M8 21h8"/><rect x="2" y="3" width="20" height="14" rx="2"/></svg>
@@ -4186,31 +4151,6 @@ if ('serviceWorker' in navigator) {
     </div>
   </div>
   </div><!-- /#heroSearchAnchor -->
-
-  <!-- Killer-feature dashboard — 3 compact glass action buttons -->
-  <div class="hero-utils" role="group" aria-label="Quick discovery actions">
-    <button class="feat-btn" onclick="openWizard()" aria-label="Movie for Tonight" title="Movie for Tonight" data-i18n-aria="tonight.launch" data-i18n-title="tonight.launch">
-      <span class="feat-ic">
-        <!-- Lucide monitor-play: display + play button (tonight = watch a film) -->
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 7.75a.75.75 0 0 1 1.142-.638l3.664 2.249a.75.75 0 0 1 0 1.278l-3.664 2.25a.75.75 0 0 1-1.142-.639z"/><path d="M12 17v4"/><path d="M8 21h8"/><rect x="2" y="3" width="20" height="14" rx="2"/></svg>
-      </span>
-      <span class="feat-title" data-i18n="tonight.launch">Movie for Tonight</span>
-    </button>
-    <button class="feat-btn" onclick="openGroupPicker()" aria-label="Watch with Friends" title="Watch with Friends" data-i18n-aria="group.launch" data-i18n-title="group.launch">
-      <span class="feat-ic">
-        <!-- Lucide users: group of friends -->
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      </span>
-      <span class="feat-title" data-i18n="group.launch">Watch with Friends</span>
-    </button>
-    <button class="feat-btn feat-btn--accent" onclick="randomMovie()" aria-label="Surprise Me" title="Surprise Me" data-i18n-aria="btn.random" data-i18n-title="btn.random">
-      <span class="feat-ic">
-        <!-- Lucide shuffle: crossed media-player arrows (random pick) -->
-        <svg class="rnd-spark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/></svg>
-      </span>
-      <span class="feat-title" data-i18n="btn.random">Surprise Me</span>
-    </button>
-  </div>
 </section>
 
 <!-- ════════════ FIRST-VISIT ONBOARDING ════════════ -->
@@ -4336,6 +4276,14 @@ if ('serviceWorker' in navigator) {
     <div class="ct-toggle">
       <button class="ct-btn active" id="ctMovies" onclick="setContentType('movie')" data-i18n="nav.movies">Movies</button>
       <button class="ct-btn" id="ctTV" onclick="setContentType('tv')" data-i18n="nav.tvShows">TV Shows</button>
+    </div>
+    <!-- AI discovery features integrated as text-link tabs (desktop/tablet; on
+         ≤768px these collapse into the header icon buttons .hdr-feats). Styled
+         to match the inactive Movies/TV tabs. -->
+    <div class="nav-feats" role="group" aria-label="AI discovery actions">
+      <button class="nav-feat" onclick="openWizard()" aria-label="Movie for Tonight" title="Movie for Tonight" data-i18n="tonight.launch" data-i18n-aria="tonight.launch" data-i18n-title="tonight.launch">Movie for Tonight</button>
+      <button class="nav-feat" onclick="openGroupPicker()" aria-label="Watch with Friends" title="Watch with Friends" data-i18n="group.launch" data-i18n-aria="group.launch" data-i18n-title="group.launch">Watch with Friends</button>
+      <button class="nav-feat nav-feat--rnd" onclick="randomMovie()" aria-label="Surprise Me" title="Surprise Me" data-i18n="btn.random" data-i18n-aria="btn.random" data-i18n-title="btn.random">Surprise Me</button>
     </div>
     <!-- All genre / country / rating / sort controls collapse into the slide-out drawer -->
     <button class="btn-filters" onclick="openFilters()" aria-label="Open filters">
@@ -8627,7 +8575,7 @@ function toggleSrc(src) {
 async function randomMovie() {
   // Visual feedback: spin the spark icon on whichever "Surprise Me" is visible
   // (hero pill on desktop, header icon on mobile).
-  const spinEls = document.querySelectorAll('.feat-btn--accent, .hdr-feat--rnd');
+  const spinEls = document.querySelectorAll('.nav-feat--rnd, .hdr-feat--rnd');
   spinEls.forEach(el => el.classList.add('spinning'));
   setTimeout(() => spinEls.forEach(el => el.classList.remove('spinning')), 700);
 
