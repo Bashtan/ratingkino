@@ -297,17 +297,24 @@ header {
 /* ─── AI results banner ──────────────────────────────────────── */
 .ai-banner {
   display: none;
-  align-items: center; gap: 12px;
-  margin: 0 0 16px;
-  padding: 11px 16px;
-  background: linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(6,182,212,0.08) 100%);
-  border: 1px solid rgba(99,102,241,0.3);
-  border-radius: 12px;
+  flex-direction: column; gap: 8px;
+  margin: 0 0 18px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.16) 0%, rgba(6,182,212,0.09) 100%);
+  border: 1px solid rgba(99,102,241,0.38);
+  border-radius: 14px;
   font-size: 13px; color: #c4b5fd;
-  box-shadow: 0 0 20px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.04);
+  box-shadow: 0 0 32px rgba(99,102,241,0.18), 0 8px 30px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.06);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .ai-banner.show { display: flex; }
+.ai-banner-head { display: flex; align-items: center; gap: 9px; }
+.ai-banner-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase;
+  background: var(--ai-gradient);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
 .ai-banner-spark {
   font-size: 16px; flex-shrink: 0;
   background: var(--ai-gradient);
@@ -321,7 +328,7 @@ header {
 .ai-banner-clear {
   background: none; border: none; cursor: pointer;
   color: rgba(167,139,250,0.5); font-size: 17px; line-height: 1;
-  padding: 2px 4px; flex-shrink: 0;
+  padding: 2px 4px; flex-shrink: 0; margin-left: auto;
   border-radius: 6px;
   transition: color 0.15s, background 0.15s;
 }
@@ -360,7 +367,7 @@ header {
 }
 
 /* ─── AI thinking text fade transition ─────────────────────────── */
-.ai-banner-text { flex: 1; line-height: 1.45; transition: opacity 0.22s, transform 0.22s; }
+.ai-banner-text { flex: 1; font-size: 15px; line-height: 1.5; color: #e0e7ff; transition: opacity 0.22s, transform 0.22s; }
 .ai-banner-text.fading { opacity: 0; transform: translateY(5px); }
 
 /* ─── Typewriter cursor ─────────────────────────────────────────── */
@@ -1170,21 +1177,28 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 
 /* ─── AI "why recommended" insight pill ─────────────────────────── */
 .ai-why-reason {
-  display: flex; align-items: flex-start; gap: 5px;
-  margin-top: 6px; padding: 5px 8px;
-  background: linear-gradient(135deg, rgba(99,102,241,0.14), rgba(6,182,212,0.08));
-  border: 1px solid rgba(99,102,241,0.2);
-  border-radius: 7px;
+  display: flex; flex-direction: column; gap: 4px;
+  margin-top: 8px; padding: 8px 10px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.16), rgba(6,182,212,0.09));
+  border: 1px solid rgba(99,102,241,0.28);
+  border-radius: 9px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 0 14px rgba(99,102,241,0.10);
   animation: aiWhyFadeIn 0.35s ease both;
 }
+.ai-why-head { display: flex; align-items: center; gap: 5px; }
+.ai-why-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  background: var(--ai-gradient);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
 .ai-why-spark {
-  flex-shrink: 0; font-size: 10px; line-height: 1.45;
+  flex-shrink: 0; font-size: 10px; line-height: 1;
   filter: drop-shadow(0 0 3px rgba(167,139,250,0.6));
 }
 .ai-why-text {
-  font-size: 10px; font-style: italic; font-weight: 500; line-height: 1.4;
-  color: #c4b5fd;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  font-size: 11px; font-weight: 500; line-height: 1.45;
+  color: #dfe4ff;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
   overflow: hidden;
 }
 @keyframes aiWhyFadeIn {
@@ -4379,11 +4393,14 @@ if ('serviceWorker' in navigator) {
     </span>
   </div>
 
-  <!-- AI search result banner -->
+  <!-- AI Curated Summary panel -->
   <div class="ai-banner" id="aiBanner">
-    <span class="ai-banner-spark" id="aiBannerSpark">✦</span>
+    <div class="ai-banner-head">
+      <span class="ai-banner-spark" id="aiBannerSpark">✦</span>
+      <span class="ai-banner-label" data-i18n="ai.curatedSummary">AI Curated Summary</span>
+      <button class="ai-banner-clear" onclick="clearAISearch()" title="Clear AI search">✕</button>
+    </div>
     <span class="ai-banner-text" id="aiBannerText"></span>
-    <button class="ai-banner-clear" onclick="clearAISearch()" title="Clear AI search">✕</button>
   </div>
 
   <!-- AI follow-up suggestion chips -->
@@ -4797,6 +4814,8 @@ const TRANSLATIONS = {
     'ai.found':             '✦ AI found {n} match for "{q}"',
     'ai.foundPlural':       '✦ AI found {n} matches for "{q}"',
     'ai.foundForActor':     '✦ Top movies starring {name}',
+    'ai.curatedSummary':    'AI Curated Summary',
+    'ai.verdictLabel':      'AI Verdict',
     'search.placeholder':   'Search 240,000 films by title… or ↵ for AI',
     'search.mobileTitle':   'Search movies',
     'search.mobileHint':    'Describe a mood, plot, or vibe',
@@ -5081,6 +5100,8 @@ const TRANSLATIONS = {
     'ai.found':             '✦ La IA encontró {n} resultado para "{q}"',
     'ai.foundPlural':       '✦ La IA encontró {n} resultados para "{q}"',
     'ai.foundForActor':     '✦ Mejores películas con {name}',
+    'ai.curatedSummary':    'Resumen curado por IA',
+    'ai.verdictLabel':      'Veredicto IA',
     'search.placeholder':   'Buscar 240.000 películas por título… o ↵ para IA',
     'search.mobileTitle':   'Buscar películas',
     'search.mobileHint':    'Describe un ambiente, trama o sensación',
@@ -5328,6 +5349,8 @@ const TRANSLATIONS = {
     'ai.found':             '✦ L\'IA a trouvé {n} résultat pour "{q}"',
     'ai.foundPlural':       '✦ L\'IA a trouvé {n} résultats pour "{q}"',
     'ai.foundForActor':     '✦ Meilleurs films avec {name}',
+    'ai.curatedSummary':    'Sélection de l\'IA',
+    'ai.verdictLabel':      'Verdict IA',
     'search.placeholder':   'Chercher parmi 240 000 films… ou ↵ pour l\'IA',
     'search.mobileTitle':   'Rechercher des films',
     'search.mobileHint':    'Décrivez une ambiance, une intrigue ou une atmosphère',
@@ -5575,6 +5598,8 @@ const TRANSLATIONS = {
     'ai.found':             '✦ AI 为「{q}」找到 {n} 个结果',
     'ai.foundPlural':       '✦ AI 为「{q}」找到 {n} 个结果',
     'ai.foundForActor':     '✦ {name} 的代表作品',
+    'ai.curatedSummary':    'AI 精选摘要',
+    'ai.verdictLabel':      'AI 评定',
     'search.placeholder':   '搜索24万部电影… 或按↵进行AI搜索',
     'search.mobileTitle':   '搜索电影',
     'search.mobileHint':    '描述一种情绪、情节或氛围',
@@ -5822,6 +5847,8 @@ const TRANSLATIONS = {
     'ai.found':             '✦ وجد الذكاء الاصطناعي {n} نتيجة لـ "{q}"',
     'ai.foundPlural':       '✦ وجد الذكاء الاصطناعي {n} نتائج لـ "{q}"',
     'ai.foundForActor':     '✦ أفضل أفلام {name}',
+    'ai.curatedSummary':    'ملخص منسق بالذكاء الاصطناعي',
+    'ai.verdictLabel':      'حكم الذكاء الاصطناعي',
     'search.placeholder':   'ابحث في 240,000 فيلم بالعنوان… أو ↵ للذكاء الاصطناعي',
     'search.mobileTitle':   'بحث عن أفلام',
     'search.mobileHint':    'صف مزاجاً أو حبكة أو أجواءً',
@@ -6073,6 +6100,8 @@ const TRANSLATIONS = {
     'ai.found':             '✦ ШІ знайшов {n} результат для "{q}"',
     'ai.foundPlural':       '✦ ШІ знайшов {n} результати для "{q}"',
     'ai.foundForActor':     '✦ Кращі фільми з {name}',
+    'ai.curatedSummary':    'Добірка від ШІ',
+    'ai.verdictLabel':      'Вердикт ШІ',
     'search.placeholder':   'Пошук серед 240 000 фільмів… або ↵ для AI',
     'search.mobileTitle':   'Пошук фільмів',
     'search.mobileHint':    'Опиши настрій, сюжет або атмосферу',
@@ -7423,7 +7452,7 @@ function renderCardHTML(m) {
     : '';
   const matchReason = _aiMatchReasons.get(m.id);
   const whyReasonHTML = matchReason
-    ? `<div class="ai-why-reason"><span class="ai-why-spark">✨</span><span class="ai-why-text">${esc(matchReason)}</span></div>`
+    ? `<div class="ai-why-reason"><div class="ai-why-head"><span class="ai-why-spark">✦</span><span class="ai-why-label">${esc(t('ai.verdictLabel'))}</span></div><span class="ai-why-text">${esc(matchReason)}</span></div>`
     : '';
   const matchTags = _aiMatchTags.get(m.id);
   const whyTagsHTML = (matchTags && matchTags.length)
@@ -8112,6 +8141,8 @@ function stopThinkingText() {
 /* ── Typewriter effect on banner text ───────────────────────── */
 function typewriterBanner(text) {
   stopThinkingText();
+  // Head row already shows a ✦ spark + label, so strip any leading spark from the body copy.
+  text = String(text).replace(/^\s*✦\s*/, '');
   const el = document.getElementById('aiBannerText');
   el.innerHTML = '<span class="tw-cursor"></span>';
   const cursor = el.querySelector('.tw-cursor');
