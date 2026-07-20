@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-20) — Declutter Desktop Hero: Hide Eyebrow + Ratings Legend
+## ⚡ Most Recent Session (2026-07-20) — Restore Button Affordance: AI Sub-Nav Glass Chips
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `d525cad` | **Re-styled the 3 AI sub-nav actions from plain text-link tabs into compact glass action chips (icon + label) so they read as clickable tools.** Deployed `4ad41847.ratingkino.pages.dev` → findfilm.ai. **CSS** (`index.html` ~L621): `.nav-feat` now `display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 13px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.05); border-radius:999px; font 11px/700 uppercase 0.4px; color:#cbd5e1` (slate-300). New `.nav-feat svg { width:14px; height:14px; opacity:.85 }`; `.nav-feat:hover { color:#f1f5f9; background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.2) }` + `.nav-feat:hover svg { opacity:1 }`; `.nav-feat--rnd:hover` cyan (`#22d3ee` / `rgba(34,211,238,.1)` bg / `rgba(34,211,238,.35)` border). `.nav-feats` gap `2px`→`8px`. **Markup** (~L4289): each `.nav-feat` now wraps the crisp header SVG icon (Movie for Tonight = screen/play, Watch with Friends = users, Surprise Me = shuffle w/ `class="rnd-spark"` for the spin) + a `<span>` label. **i18n gotcha:** moved `data-i18n` from the `<button>` onto the inner `<span>` (button keeps `data-i18n-aria`/`data-i18n-title`) because `data-i18n` sets `textContent` and would otherwise wipe the SVG icon on `applyTranslations()`. **Verified (preview):** 3 chips, each `borderRadius:999px` + 1px border + glass bg + 14px svg + slate-300 text, `.nav-feats` gap 8px, chip gap 6px; left/center/right order intact (ct-toggle 62–239 · nav-feats 247–1102 · filters 1110–1214); `.rnd-spark` present for spin; i18n kept `svg,SPAN` children (icon not wiped); desktop screenshot shows ▶ MOVIE FOR TONIGHT · 👥 WATCH WITH FRIENDS · ⇄ SURPRISE ME as pills. Mobile unchanged (`.nav-feats{display:none}` ≤768px → `.hdr-feats` icons). |
+
+---
+
+## ⚡ Session (2026-07-20) — Declutter Desktop Hero: Hide Eyebrow + Ratings Legend
 
 All commits on `main`, all live on https://findfilm.ai.
 
