@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-20) — Merge AI Actions into the Sub-Nav Bar
+## ⚡ Most Recent Session (2026-07-20) — Declutter Desktop Hero: Hide Eyebrow + Ratings Legend
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `0cf724e` | **Removed two secondary UI elements from the hero on desktop only.** Deployed `b25e76b9.ratingkino.pages.dev` → findfilm.ai. **Scope:** desktop-only (`@media (min-width:992px)`) — mobile/tablet untouched. **(1) Eyebrow tagline** — `.hero-eyebrow` (the `"240,000 films · 3 rating sources · 1 verdict"` `<p>` in the `.hero-search` section, `data-i18n="hero.eyebrow"`) now `display:none` on desktop; still shown ≤991px (mobile keeps its existing smaller-type rule at L2608). **(2) Ratings legend** — `.hero-band .source-badges` (the ⭐ IMDb / 🍅 Rotten Tomatoes / 🎯 Metacritic `.sbadge` row + `#heroUpdated` freshness stamp, in `.hero-band`) now `display:none` on desktop. Kept DOM intact (no markup deletion) so the elements remain for <992px; badges were already `display:none` ≤768px. **Gotcha:** the hide rules live in the `@media (min-width:992px)` block at ~L672; the `.source-badges` rule needed the `.hero-band` parent scope to out-specify the base `.source-badges{display:flex}` at L933 (which is later in source order and would otherwise win at equal specificity). Catalog freshness still surfaces via `#riUpdated` in the "How ratings work" modal (`openRatingsInfo()`). **Verified (preview):** 1280px → eyebrow `display:none` (0×0 box) + source-badges `display:none`; 375/537px → eyebrow `display:block` with original text + source-badges `none` (unchanged); desktop screenshot shows the hero band with only the h1 / `240K+ films · One score…` line / "How ratings work" — no eyebrow, no badges, no leftover right-side gap. |
+
+---
+
+## ⚡ Session (2026-07-20) — Merge AI Actions into the Sub-Nav Bar
 
 All commits on `main`, all live on https://findfilm.ai.
 
