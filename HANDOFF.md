@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-20) — Filters: Touch-Device Genre-Chip Indigo Fix
+## ⚡ Most Recent Session (2026-07-20) — Mobile: Icon-Only Hero Action Buttons
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `b87b0d5` | **Collapsed the 3 hero action buttons (`.feat-btn` in `.hero-utils`, markup ~L4104) to icon-only squares on mobile** so they stop wrapping to two lines at 375px. Deployed `b7c769c0.ratingkino.pages.dev` → findfilm.ai. **CSS (`@media max-width:768px` ~L2559):** `.hero-utils` → `flex-wrap:nowrap` + `justify-content:center` + `gap:12px` (single elegant row); `.feat-btn` → `padding:11px; gap:0` (equal padding → ~48-50px square touch target); `.feat-ic` 26×26; **`.feat-title { display:none }`** hides the label. Full text+icon pills return unchanged at ≥769px (base `.feat-btn` ~L592, desktop ≥992 ~L671). **Accessibility:** each button gained `aria-label` + `title` (Movie for Tonight / Watch with Friends / Surprise Me) plus new **`data-i18n-aria` / `data-i18n-title`** attributes; `applyTranslations()` (~L6217) extended with two loops (mirroring the `data-i18n-placeholder` pattern) that set `el.title` / `el.setAttribute('aria-label', …)` from the existing keys `tonight.launch` / `group.launch` / `btn.random`, so tooltips + screen-reader names stay translated across all 6 languages. **Verified:** mobile 375 = three 50×50 icon squares, one row (`top:164` all, `flex-wrap:nowrap`), `.feat-title` display:none, aria/title populated; desktop 1280 = full pills (194/208/155px, `.feat-title` display:block). |
+
+---
+
+## ⚡ Session (2026-07-20) — Filters: Touch-Device Genre-Chip Indigo Fix
 
 All commits on `main`, all live on https://findfilm.ai.
 
