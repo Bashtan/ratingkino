@@ -235,7 +235,7 @@ header {
   transform: translateY(-50%);
   pointer-events: none; z-index: 2;
   font-size: 14px; font-family: 'Inter', sans-serif;
-  color: rgba(167,139,250,0.55);
+  color: rgba(203,213,225,0.85);   /* slate-300 — brighter, high-contrast placeholder */
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   opacity: 1;
   transition: opacity 0.35s ease;
@@ -669,9 +669,11 @@ header {
     flex: 1 1 auto; display: flex; justify-content: center;
     min-width: 0; padding: 0 8px;
   }
-  /* Header-integrated search: compact resting width, expands + glows on focus (the "AI effect") */
+  /* Header-integrated search: expansive resting width (full placeholder, no truncation),
+     glows + grows subtly on focus (the "AI effect"). On narrower desktops it shrinks to
+     fill the available slot via flex:1, so it never overflows the header. */
   .search-wrap--hero.sw-in-header {
-    max-width: 360px; height: 44px; padding: 0 6px 0 4px;
+    max-width: 600px; height: 44px; padding: 0 6px 0 4px;
     border-radius: 12px;
     transition: max-width 0.5s cubic-bezier(0.22,1,0.36,1),
                 background 0.25s, box-shadow 0.25s;
@@ -679,7 +681,7 @@ header {
   .search-wrap--hero.sw-in-header:focus-within,
   .search-wrap--hero.sw-in-header.typing,
   .search-wrap--hero.sw-in-header.ai-active {
-    max-width: 620px !important;      /* expand to command the header on focus */
+    max-width: 680px !important;      /* expand to command the header on focus */
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.08),
                 0 0 0 2px rgba(99,102,241,0.5),
                 0 0 15px rgba(99,102,241,0.35),
@@ -3692,7 +3694,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
   width: 26px; height: 26px;
   background: none; border: none; cursor: pointer;
-  color: rgba(167,139,250,0.5);
+  color: rgba(203,213,225,0.85);   /* slate-300 — match brighter placeholder */
   display: none; align-items: center; justify-content: center;
   border-radius: 6px; z-index: 2;
   transition: color 0.2s, background 0.2s;
