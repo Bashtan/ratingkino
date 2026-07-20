@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-20) — Search Bar: Expansive Default Width + Brighter Contrast
+## ⚡ Most Recent Session (2026-07-20) — Search Bar: Ultra-Wide Static Width + Prominent Mic
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `dbc95a2` | **Made the desktop header search bar ultra-wide + fully static (no expand-on-focus) and turned the mic into a prominent clickable button.** Deployed `3373692b.ratingkino.pages.dev` → findfilm.ai. **(1) Static ultra-wide width** `.search-wrap--hero.sw-in-header` (`@media min-width:992px` ~L673): resting `max-width 600px → 800px`; **removed** the `:focus-within/.typing/.ai-active` `max-width:680px !important` line entirely (kept the glow box-shadow there) so width never changes on focus/typing; dropped `max-width` from the `transition` (now just `background`/`box-shadow`). Width was **CSS-only** — no JS width listeners exist (verified). `flex:1` inside the centered `.header-search-slot` still shrinks it to fit narrower desktops. **(2) Prominent mic** `.search-wrap--hero .search-mic-btn` (~L577): `34px → 40px`, `border-radius 9px → 50%` (circle), color **`#818cf8` (indigo-400)**; new `.search-wrap--hero .search-mic-btn svg { width:24px;height:24px }` + hover rule `color:#a5b4fc; background:rgba(99,102,241,.16); box-shadow:0 0 14px rgba(99,102,241,.35)`. In-header override (~L697) mic `30px → 40px`. Mic **SVG markup** (`#searchMicBtn`, ~L4130): `width/height 15 → 24`, `stroke-width 2 → 2.2`. Existing `.search-wrap.mode-ai .search-mic-btn:not(.listening)` purple pulse + `.listening` red state unchanged. **Verified (preview 1500):** wrap `width==800` + `maxWidth 800px`; **idle==focused==typing==ai-active==800** (`allEqual:true`); mic computed `display:flex`, `40×40`, `border-radius 50%`, `color rgb(129,140,248)`, inner `svg 24px`; full-desktop screenshot shows the wide bar with the bright indigo mic at the right edge. |
+
+---
+
+## ⚡ Session (2026-07-20) — Search Bar: Expansive Default Width + Brighter Contrast
 
 All commits on `main`, all live on https://findfilm.ai.
 
