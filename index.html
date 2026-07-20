@@ -1075,11 +1075,21 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   font-size: 9px; font-weight: 800; font-family: 'Montserrat', sans-serif;
 }
 .rb.avg {
-  background: linear-gradient(135deg, rgba(91,33,182,0.92), rgba(109,40,217,0.88));
-  color: #fff; font-size: 11px; font-weight: 900; padding: 4px 9px;
+  font-size: 11px; font-weight: 900; padding: 4px 9px;
   border-radius: 9px; letter-spacing: -0.3px;
   box-shadow: 0 2px 14px rgba(0,0,0,0.65);
-  pointer-events: auto; cursor: default;
+  pointer-events: auto; cursor: help;
+}
+/* Unified trust badge — a real FindFilm verdict backed by critic aggregates. */
+.rb.avg.unified {
+  background: linear-gradient(135deg, #6366f1, #7c3aed);
+  color: #fff;
+}
+/* TMDB-only trust badge — subdued neutral; signals provisional single-source data. */
+.rb.avg.tmdb-only {
+  background: rgba(255,255,255,0.12);
+  color: #cbd5e1; font-weight: 800;
+  border: 1px solid rgba(255,255,255,0.24);
 }
 
 /* ─── Unified rating breakdown tooltip ─────────────────────────── */
@@ -1115,24 +1125,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .rtip-tmdb    { color: #01b4e4; }
 .rtip-val { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
 .rtip-denom { font-size: 10px; font-weight: 400; color: rgba(255,255,255,0.4); }
-
-/* Persistent ratings row — always visible below movie title */
-.card-ratings {
-  display: flex; align-items: center; gap: 4px;
-  padding: 0 10px 8px;
-}
-.cr {
-  display: inline-flex; align-items: center; gap: 2px;
-  padding: 2px 5px; border-radius: 4px;
-  font-size: 9px; font-weight: 700; font-family: 'Montserrat', sans-serif;
-  line-height: 1.4; white-space: nowrap;
-}
-.cr.imdb-v  { background: rgba(245,197,24,0.12); color: #F5C518; }
-.cr.tmdb-v  { background: rgba(1,180,228,0.1);  color: #01b4e4; }
-.cr.rt-v    { background: rgba(250,80,10,0.12);  color: #ff7055; }
-.cr.mc-good { background: rgba(74,222,128,0.12); color: #4ade80; }
-.cr.mc-mid  { background: rgba(251,191,36,0.12); color: #fbbf24; }
-.cr.mc-bad  { background: rgba(248,113,113,0.12); color: #f87171; }
 
 /* ─── Confidence badge ─── data-quality pill on cards + modal. */
 .conf-badge {
@@ -2584,6 +2576,8 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 @media (hover: none) {
   .movie-card:hover { transform: none; box-shadow: none; border-color: rgba(255,255,255,0.06); }
   .movie-card:hover .card-hover-overlay { opacity: 0; }
+  /* No hover on touch — keep the bookmark action always reachable. */
+  .card-wl-btn { opacity: 1; }
   .movie-card:active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(229,9,20,0.25); }
   .gpill:hover { border-color: rgba(255,255,255,0.2); color: #cbd5e1; background: transparent; }
   .gpill.active { background: #6366f1; border-color: #6366f1; color: #fff; box-shadow: 0 0 0 1px rgba(99,102,241,0.5), 0 2px 14px rgba(99,102,241,0.45); }
@@ -7430,11 +7424,6 @@ function skeletonCard() {
       <span class="skel-bg" style="width:75%;height:11px;margin-bottom:6px;display:block;border-radius:4px"></span>
       <span class="skel-bg" style="width:44%;height:9px;display:block;border-radius:4px"></span>
     </div>
-    <div class="card-ratings">
-      <span class="skel-bg" style="width:38px;height:16px;border-radius:4px;display:block"></span>
-      <span class="skel-bg" style="width:34px;height:16px;border-radius:4px;display:block"></span>
-      <span class="skel-bg" style="width:30px;height:16px;border-radius:4px;display:block"></span>
-    </div>
   </div>`;
 }
 
@@ -7455,29 +7444,18 @@ function confidenceBadgeHTML(m) {
 }
 
 function avgBadgeHTML(m) {
-  return `<span class="rb avg" data-mid="${m.id}"
+  const hasCritic = (parseFloat(m.imdb) > 0) || (parseInt(m.rt) > 0) || (parseInt(m.mc) > 0);
+  const handlers = `data-mid="${m.id}"
     onmouseenter="showRatingTooltip(${m.id},this)"
     onmouseleave="hideRatingTooltip()"
-    ontouchstart="event.stopPropagation();toggleRatingTooltip(${m.id},this)">★ ${calcAvg(m)}</span>`;
-}
-
-// Always-visible ratings row below card title
-function cardRatingsHTML(m) {
-  let parts = '';
-  // IMDb — fall back to TMDB score when OMDb hasn't enriched this movie
-  if (m.imdb) {
-    parts += `<span class="cr imdb-v">⭐ ${m.imdb}</span>`;
-  } else if (m.tmdbScore) {
-    parts += `<span class="cr tmdb-v">TMDB ${(+m.tmdbScore).toFixed(1)}</span>`;
+    ontouchstart="event.stopPropagation();toggleRatingTooltip(${m.id},this)"`;
+  if (hasCritic) {
+    return `<span class="rb avg unified" ${handlers}
+      title="Unified score from IMDb, Rotten Tomatoes &amp; Metacritic">★ ${calcAvg(m)}</span>`;
   }
-  // Rotten Tomatoes — only show when present
-  if (m.rt) parts += `<span class="cr rt-v">🍅 ${m.rt}%</span>`;
-  // Metacritic — color-coded by score, only show when present
-  if (m.mc) {
-    const cls = m.mc >= 61 ? 'mc-good' : m.mc >= 40 ? 'mc-mid' : 'mc-bad';
-    parts += `<span class="cr ${cls}">MC ${m.mc}</span>`;
-  }
-  return parts ? `<div class="card-ratings">${parts}</div>` : '';
+  const tmdb = m.tmdbScore != null ? (+m.tmdbScore).toFixed(1) : '—';
+  return `<span class="rb avg tmdb-only" ${handlers}
+    title="TMDB-only score — critic reviews (IMDb, RT, Metacritic) not in yet">${tmdb} · TMDB</span>`;
 }
 
 function renderCardHTML(m) {
@@ -7517,11 +7495,9 @@ function renderCardHTML(m) {
         ${m.year ? '<span class="mdot">·</span>' : ''}
         <span>${esc(m.genre)}</span>
       </div>
-      ${confidenceBadgeHTML(m)}
       ${whyReasonHTML}
       ${whyTagsHTML}
     </div>
-    ${cardRatingsHTML(m)}
   </div>`;
 }
 
