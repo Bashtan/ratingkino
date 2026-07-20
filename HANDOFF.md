@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-20) — AI Results: Curated Summary Panel + Visible Card Verdict
+## ⚡ Most Recent Session (2026-07-20) — Search Bar: Expansive Default Width + Brighter Contrast
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `d2fc8d5` | **Made the desktop header search bar expansive by default and higher-contrast** so the placeholder stops truncating (was "Try: 'A movie about spa…") and reads clearly on load. Deployed `f35c833a.ratingkino.pages.dev` → findfilm.ai. **(1) Resting width** `.search-wrap--hero.sw-in-header` (`@media min-width:992px` ~L673): `max-width 360px → 600px`; focus/typing/ai-active expand `620px → 680px`. Because `.search-wrap` is `flex:1` (base ~L152) inside the centered `.header-search-slot` (`flex:1 1 auto`), the bar shrinks to fill available space on narrower desktops → never overflows the header. **(2) Placeholder contrast:** `.search-ph-overlay` color (~L238) `rgba(167,139,250,0.55)` (dim purple) → **`rgba(203,213,225,0.85)`** (slate-300). This is the base overlay used everywhere (`#searchInput`'s native placeholder is transparent — the visible text is this overlay span). **(3) Mic icon:** `.search-mic-btn` color (~L3695) `rgba(167,139,250,0.5)` → **`rgba(203,213,225,0.85)`** to match; hover `#a78bfa` + `.listening` red unchanged. **Verified (preview 1440):** header search `getBoundingClientRect().width==600`, `phTruncated==false`, placeholder + mic computed color `rgb(203,213,225)` @ .85; full placeholder "Search movies by title…" visible; screenshot shows the wide, readable bar centered in the header. |
+
+---
+
+## ⚡ Session (2026-07-20) — AI Results: Curated Summary Panel + Visible Card Verdict
 
 All commits on `main`, all live on https://findfilm.ai.
 
