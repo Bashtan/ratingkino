@@ -2858,12 +2858,15 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .feed-row-badge svg { opacity: 0.85; }
 .foryou-refine {
-  margin-left: auto; background: none; border: 1px solid rgba(124,58,237,0.4);
+  margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+  background: none; border: 1px solid rgba(124,58,237,0.4);
   border-radius: 7px; color: #c4b5fd; font-size: 10px; font-weight: 700;
   letter-spacing: 0.5px; padding: 4px 10px; cursor: pointer;
   font-family: 'Montserrat', sans-serif; transition: background 0.18s, border-color 0.18s;
 }
+.foryou-refine-spark { flex-shrink: 0; color: #a78bfa; }
 .foryou-refine:hover { background: rgba(124,58,237,0.14); border-color: rgba(124,58,237,0.65); }
+.foryou-refine:hover .foryou-refine-spark { color: #c4b5fd; }
 .feed-scroll {
   display: flex; gap: 12px; overflow-x: auto;
   padding: 4px 18px 12px; scroll-behavior: smooth;
@@ -4362,7 +4365,10 @@ if ('serviceWorker' in navigator) {
         <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
         Based on your taste
       </span>
-      <button class="foryou-refine" onclick="openOnboardQuiz()" data-i18n="onboard.refine">Refine taste</button>
+      <button class="foryou-refine" onclick="openOnboardQuiz()" data-i18n-title="onboard.refineHint" title="Answer a few quick questions so our AI learns your taste.">
+        <svg class="foryou-refine-spark" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/><path d="M18.5 3.5l.7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7z"/></svg>
+        <span data-i18n="onboard.refine">Personalize your picks</span>
+      </button>
     </div>
     <div class="feed-scroll" id="scrollForYou"></div>
   </div>
@@ -4937,7 +4943,8 @@ const TRANSLATIONS = {
     // Taste onboarding quiz
     'onboard.personalize': 'Personalize in 30s →',
     'onboard.browseNow':   'Skip — just browse',
-    'onboard.refine':      'Improve recommendations',
+    'onboard.refine':      'Personalize your picks',
+    'onboard.refineHint':  'Answer a few quick questions so our AI learns your taste.',
     'onboard.step':        'Step {n} of {total}',
     'onboard.finish':      'See my picks',
     'onboard.doneTitle':   'All set!',
@@ -5195,7 +5202,8 @@ const TRANSLATIONS = {
     // Taste onboarding quiz
     'onboard.personalize': 'Personalizar en 30s →',
     'onboard.browseNow':   'Omitir — solo explorar',
-    'onboard.refine':      'Afinar gustos',
+    'onboard.refine':      'Personaliza tus recomendaciones',
+    'onboard.refineHint':  'Responde unas preguntas rápidas para que la IA aprenda tus gustos.',
     'onboard.step':        'Paso {n} de {total}',
     'onboard.finish':      'Ver mis elecciones',
     'onboard.doneTitle':   '¡Listo!',
@@ -5448,7 +5456,8 @@ const TRANSLATIONS = {
     // Taste onboarding quiz
     'onboard.personalize': 'Personnaliser en 30s →',
     'onboard.browseNow':   'Ignorer — juste explorer',
-    'onboard.refine':      'Affiner mes goûts',
+    'onboard.refine':      'Personnaliser vos choix',
+    'onboard.refineHint':  'Répondez à quelques questions pour que l\'IA apprenne vos goûts.',
     'onboard.step':        'Étape {n} sur {total}',
     'onboard.finish':      'Voir mes choix',
     'onboard.doneTitle':   'C\'est prêt !',
@@ -5701,7 +5710,8 @@ const TRANSLATIONS = {
     // Taste onboarding quiz
     'onboard.personalize': '30秒个性化 →',
     'onboard.browseNow':   '跳过——直接浏览',
-    'onboard.refine':      '调整口味',
+    'onboard.refine':      '个性化推荐',
+    'onboard.refineHint':  '回答几个小问题，让 AI 了解你的口味。',
     'onboard.step':        '第 {n} 步，共 {total} 步',
     'onboard.finish':      '查看我的精选',
     'onboard.doneTitle':   '搞定！',
@@ -5954,7 +5964,8 @@ const TRANSLATIONS = {
     // Taste onboarding quiz
     'onboard.personalize': 'التخصيص في 30 ثانية →',
     'onboard.browseNow':   'تخطَّ — تصفّح فقط',
-    'onboard.refine':      'ضبط الأذواق',
+    'onboard.refine':      'خصّص اختياراتك',
+    'onboard.refineHint':  'أجب عن بضعة أسئلة سريعة ليتعرّف الذكاء الاصطناعي على ذوقك.',
     'onboard.step':        'الخطوة {n} من {total}',
     'onboard.finish':      'شاهد اختياراتي',
     'onboard.doneTitle':   'تم الضبط!',
@@ -6216,7 +6227,8 @@ const TRANSLATIONS = {
     // Taste onboarding quiz
     'onboard.personalize': 'Персоналізувати за 30с →',
     'onboard.browseNow':   'Пропустити — просто огляд',
-    'onboard.refine':      'Покращити рекомендації',
+    'onboard.refine':      'Персоналізувати добірку',
+    'onboard.refineHint':  'Дайте відповідь на кілька запитань, щоб ШІ вивчив ваш смак.',
     'onboard.step':        'Крок {n} з {total}',
     'onboard.finish':      'Показати мій вибір',
     'onboard.doneTitle':   'Готово!',
