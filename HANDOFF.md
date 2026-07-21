@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-21) — Declutter Homepage: Collapse Explore Grid + Browse CTA + Trust Note
+## ⚡ Most Recent Session (2026-07-21) — Refine Movie Details: Branded FindFilm Rating Chip + Compact NordVPN
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `c8a5f9e` | **Refined the movie modal ratings panel + streaming action row.** Deployed `b6b9b22f.ratingkino.pages.dev` → findfilm.ai. **Phase 1 — Branded FindFilm rating chip:** replaced the old full-width secondary pill (`.ff-local-wrap`/`.ff-local-pill`/`.ffp-*`, now removed) with a glassmorphic **`.ff-score-card`** that sits **adjacent** to the aggregated `.mr-score-card` inside `#mRatings` (`.m-ratings-row` flex) for a unified ratings panel. Built in **`refreshModalRatings(m)`** (`index.html` ~L9309, `localBadge`): brand icon **`.ff-brand-ico`** (cyan→violet→magenta gradient rounded square) holding **`.ff-brand-f`** ("F") + **`.ff-brand-spark`** (sparkle SVG, top-right), large **`.ff-score-num`** (36px, matches `.mr-avg-num`), **`.ff-score-lbl`** (`rating.findfilmUser` = "FindFilm User Rating"), **`.ff-score-sub`** ("(N reviews)"). CSS ~L1604; mobile collapse to inline pill mirrors `.mr-score-card` (~L2720, row layout, 17px num, label hidden). **Phase 2 — Compact NordVPN button:** `.btn-nordvpn` CSS (~L1696) dropped `flex-basis:100%` (no longer forces its own row) → now a compact inline grey utility button (38px, uppercase Montserrat) complementing `.btn-shr`/`.btn-wl-modal`, living in the `.m-actions` row. Copy shortened via **new i18n key `vpn.nordvpnShort`** ("🌍 Unlock with NordVPN") used by **`_refreshStreamingCtAs(m)`** (~L9507) — which now always writes `container.innerHTML = nordvpnBtn` (into `#streamingCtAs`, inside the action row) and routes the stream label / provider buttons / "Streaming links not available yet" (`stream.disabled`) note into a **new `#streamingInfo` div below the action row** (markup after `.m-actions` ~L4548) via a `setInfo()` helper. New CSS `#streamingInfo`/base `.stream-row`/`.stream-on-lbl` (~L1628); mobile `.stream-row` given `flex-wrap:nowrap` to keep horizontal scroll. Sticky mobile footer `#mNordvpnFooter` (long `vpn.nordvpn`) unchanged. **i18n:** `vpn.nordvpnShort` + `rating.findfilmUser` added across all 6 langs (en/es/fr/zh/ar/uk). **Verified (preview eval = ground truth):** seeded 3 local reviews → chip renders adjacent to TMDB card (avg 3.7, "FindFilm User Rating", "(3 User Reviews)", F+spark); NordVPN in action row with `flex-basis:auto`, text "🌍 Unlock with NordVPN"; disabled note in `#streamingInfo` (not in `.m-actions`). Overlay screenshot confirms clean single action row `[▶ TRAILER][🌍 UNLOCK WITH NORDVPN][↗ SHARE][🔖 + WATCHLIST]` + note below. |
+
+---
+
+## ⚡ Session (2026-07-21) — Declutter Homepage: Collapse Explore Grid + Browse CTA + Trust Note
 
 All commits on `main`, all live on https://findfilm.ai.
 
