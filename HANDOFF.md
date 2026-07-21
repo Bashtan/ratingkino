@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-21) — Clarify "Personalize Your Picks" UX + Micro-copy
+## ⚡ Most Recent Session (2026-07-21) — Mobile Responsiveness Audit & Polish
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `866485b` | **Made the recent desktop UX overhaul translate cleanly to touch/mobile** (3-area audit). Deployed `a597afd2.ratingkino.pages.dev` → findfilm.ai. **Area 1 — Card touch-target / hover fallback:** the `.card-hover-overlay` (with `.card-ov-view` + `.card-ov-share`) was fully hidden on touch (`@media (hover:none)` set `opacity:0`), so **Share was unreachable on phones**. Rewrote that block (`index.html` ~L2627): on `@media (hover:none)` the overlay drops its full-poster blur (`background:none; backdrop-filter:none; opacity:1; pointer-events:none; inset:auto 7px 7px auto`), **`.card-ov-view` is hidden** (tap the card = View Details) and **`.card-ov-share` becomes a persistent 44×44 bottom-right corner button** (`pointer-events:auto`, glass `rgba(10,0,26,0.72)` + `blur(6px)`, violet border — mirrors the top-left `.card-wl-btn` which is already 44×44 on `≤768px`). Both secondary actions (Watchlist top-left, Share bottom-right) now reachable with ≥44px touch targets, poster art unobscured. **Area 2 — Swipeable rows:** `.feed-scroll` gained **`scroll-snap-type:x mandatory` + `scroll-padding-left:18px`** (~L2940) and `.mini-card` gained **`scroll-snap-align:start`** (~L2954, already `flex:0 0 130px` = shrink-0). Per-gutter `scroll-padding-left` overrides added: `20px` for `.feed-row--primary .feed-scroll` (~L3147), `28px` for `@media(min-width:992px) .feed-scroll` (~L2947). Cards now snap to the left gutter and never shrink. **Area 3 — Hero/nav compacting:** `body` already had `overflow-x:hidden`; added `.feed-row--primary .feed-row-header { flex-wrap:wrap; row-gap:6px }` inside `@media(max-width:768px)` (~L3153) so the right-aligned "✦ Personalize Your Picks" chip wraps to its own line instead of cramming/overflowing on narrow screens. **Verified (preview eval + CSSOM = ground truth; static preview can't emulate `hover:none`, so touch rules read back from `document.styleSheets` + simulated via forced classes for the screenshot):** feed-scroll `x mandatory`/mini-card `start`/shrink `0` confirmed via computed style; hover:none block confirms overlay `op:1 inset:auto 7px 7px auto bg:none`, share `44×44 pe:auto`, view `display:none`; 768 block confirms header `flex-wrap:wrap` + wl `44×44`; `documentElement.scrollWidth ≤ innerWidth` (no horizontal body scroll). Simulated-mobile screenshot shows the 3-card grid with watchlist corner + trust badge + persistent share corner, no blur overlay. **Tailwind deliverable equivalents** (docs-only — live site is vanilla CSS): swipe row `class="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-pl-[18px] [scrollbar-width:none] [-webkit-overflow-scrolling:touch]"`, each card `class="shrink-0 basis-[130px] snap-start"`; card `class="group relative"`, overlay desktop `class="... group-hover:opacity-100"` + mobile override `max-sm:opacity-100 max-sm:bg-transparent max-sm:backdrop-blur-none max-sm:inset-auto max-sm:bottom-1.5 max-sm:right-1.5`, view button `class="max-sm:hidden"`, share button `class="max-sm:h-11 max-sm:w-11 max-sm:pointer-events-auto max-sm:bg-[#0a001a]/70 max-sm:backdrop-blur"`, watchlist `class="h-11 w-11 sm:h-7 sm:w-7"`; For You header `class="flex flex-wrap items-center gap-2.5 gap-y-1.5"` with chip `class="ml-auto"`. |
+
+---
+
+## ⚡ Session (2026-07-21) — Clarify "Personalize Your Picks" UX + Micro-copy
 
 All commits on `main`, all live on https://findfilm.ai.
 
