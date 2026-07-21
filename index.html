@@ -3082,6 +3082,51 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .feed-row--primary .feed-row-title { font-size: 15px; }
   .feed-row--primary .mini-card { flex-basis: 140px; }
 }
+/* Rating transparency note — subdued, centered line under "Best Available Now" */
+.trust-note {
+  max-width: 460px;
+  margin: 4px auto 26px;
+  padding: 0 20px;
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #64748b;              /* slate-500 */
+  letter-spacing: 0.1px;
+}
+/* Curated-homepage "Browse full collection" CTA — glassmorphism ghost button */
+.browse-more-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 8px 12px 34px;
+}
+.browse-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.04);
+  color: #cbd5e1;             /* slate-300 */
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: color .2s ease, background .2s ease, border-color .2s ease, transform .2s ease;
+}
+.browse-more-btn svg { opacity: .8; transition: transform .2s ease, opacity .2s ease; }
+.browse-more-btn:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.32);
+}
+.browse-more-btn:hover svg { opacity: 1; transform: translateY(2px); }
+/* Default (unfiltered) homepage collapses the giant Explore grid behind the CTA */
+main.browse-collapsed > .count-row,
+main.browse-collapsed > .results-zone,
+main.browse-collapsed > .load-wrap { display: none !important; }
 /* Recommendation reason pill — shown on For You cards */
 /* Recommendation reason — hover tooltip on desktop, muted subtitle on mobile.
    Positioned absolute (relative to .mini-card which has position:relative),
@@ -4382,6 +4427,9 @@ if ('serviceWorker' in navigator) {
     <div class="feed-scroll" id="scrollBest"></div>
   </div>
 
+  <!-- Rating transparency note — reinforces the unbiased unified-score promise -->
+  <p class="trust-note" data-i18n="trust.aggregated">Ratings are aggregated independently. Ads do not affect scores.</p>
+
   <!-- "Why trust FindFilm?" proof row — value-prop pillars between two feeds -->
   <div class="ai-status" id="trustProof" role="status" aria-live="off">
     <span class="ai-status-dot" aria-hidden="true"></span>
@@ -4395,6 +4443,14 @@ if ('serviceWorker' in navigator) {
       <span class="feed-row-badge" id="rowPopularTheme"></span>
     </div>
     <div class="feed-scroll" id="scrollPopular"></div>
+  </div>
+
+  <!-- Curated-homepage CTA: reveals the full "Explore Collection" grid in place -->
+  <div class="browse-more-wrap" id="browseMoreWrap">
+    <button class="browse-more-btn" type="button" onclick="expandBrowse()">
+      <span data-i18n="browse.more">Browse full collection</span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
   </div>
 
 </div>
@@ -4880,6 +4936,9 @@ const TRANSLATIONS = {
     'rating.tmdbTip':      'Temporary TMDB score until critic reviews arrive',
     // Grid header
     'grid.explore':        '🍿 Explore Collection',
+    // Curated-homepage "Browse full collection" CTA + rating trust note
+    'browse.more':         'Browse full collection',
+    'trust.aggregated':    'Ratings are aggregated independently. Ads do not affect scores.',
     // Watchlist
     'wl.empty':            'Your watchlist is empty',
     'wl.emptyHint':        'Tap the bookmark on any movie to save it here',
@@ -5152,6 +5211,8 @@ const TRANSLATIONS = {
     'feed.forYou':         '✨ Para Ti',
     'feed.forYouBadge':    'Basado en tu gusto',
     'grid.explore':        '🍿 Explorar Colección',
+    'browse.more':         'Explorar colección completa',
+    'trust.aggregated':    'Las puntuaciones se agregan de forma independiente. La publicidad no afecta a las puntuaciones.',
     'wl.empty':            'Tu lista está vacía',
     'wl.emptyHint':        'Toca el marcador en cualquier película para guardarla aquí',
     'wl.saved':            '✓ Guardado',
@@ -5406,6 +5467,8 @@ const TRANSLATIONS = {
     'feed.forYou':         '✨ Pour Vous',
     'feed.forYouBadge':    'Selon vos goûts',
     'grid.explore':        '🍿 Explorer la Collection',
+    'browse.more':         'Parcourir toute la collection',
+    'trust.aggregated':    'Les notes sont agrégées de façon indépendante. La publicité n\'influence pas les scores.',
     'wl.empty':            'Votre liste est vide',
     'wl.emptyHint':        'Appuyez sur le signet de n\'importe quel film pour l\'enregistrer ici',
     'wl.saved':            '✓ Enregistré',
@@ -5660,6 +5723,8 @@ const TRANSLATIONS = {
     'feed.forYou':         '✨ 为你推荐',
     'feed.forYouBadge':    '根据你的品味',
     'grid.explore':        '🍿 探索合集',
+    'browse.more':         '浏览完整合集',
+    'trust.aggregated':    '评分独立聚合，广告不影响分数。',
     'wl.empty':            '你的观看列表是空的',
     'wl.emptyHint':        '点击任意电影上的书签图标即可保存',
     'wl.saved':            '✓ 已保存',
@@ -5914,6 +5979,8 @@ const TRANSLATIONS = {
     'feed.forYou':         '✨ لك',
     'feed.forYouBadge':    'بناءً على ذوقك',
     'grid.explore':        '🍿 استكشاف المجموعة',
+    'browse.more':         'تصفّح المجموعة كاملة',
+    'trust.aggregated':    'يتم تجميع التقييمات بشكل مستقل. الإعلانات لا تؤثر على النتائج.',
     'wl.empty':            'قائمة المشاهدة فارغة',
     'wl.emptyHint':        'انقر على الإشارة المرجعية في أي فيلم لحفظه هنا',
     'wl.saved':            '✓ محفوظ',
@@ -6172,6 +6239,8 @@ const TRANSLATIONS = {
     'feed.forYou':         '✨ Для Тебе',
     'feed.forYouBadge':    'На основі вашого смаку',
     'grid.explore':        '🍿 Дослідити Колекцію',
+    'browse.more':         'Переглянути всю колекцію',
+    'trust.aggregated':    'Оцінки агрегуються незалежно. Реклама не впливає на бали.',
     'wl.empty':            'Список перегляду порожній',
     'wl.emptyHint':        'Натисніть на закладку будь-якого фільму, щоб зберегти його тут',
     'wl.saved':            '✓ Збережено',
@@ -7801,6 +7870,9 @@ async function loadMovies(page = 1, append = false) {
       }
     }
   }
+  // Collapse the giant Explore grid on the default (unfiltered) movie homepage;
+  // any browse filter / AI search / expand click reveals it.
+  applyBrowseCollapse();
 
   const moreBtn = document.getElementById('btnMore');
   moreBtn.disabled = true;
@@ -7913,6 +7985,33 @@ async function loadMovies(page = 1, append = false) {
 
 function loadMore() {
   if (CUR_PAGE < TOTAL_PAGES) loadMovies(CUR_PAGE + 1, true);
+}
+
+/* ── "Browse full collection" declutter ──────────────────────────────
+   The default movie homepage leads with curated carousels only; the giant
+   "Explore Collection" grid is collapsed behind a CTA to reduce cognitive
+   load (Netflix/Apple TV feel). The grid re-appears whenever the user is
+   actively searching/filtering, on TV (which has no feed rows), or once they
+   click "Browse full collection". BROWSE_EXPANDED persists for the session. */
+let BROWSE_EXPANDED = false;
+
+function applyBrowseCollapse() {
+  const main = document.querySelector('main');
+  if (!main) return;
+  const feedVisible = document.getElementById('feedSections')?.style.display !== 'none';
+  // Collapse only on the clean movie homepage: feed rows showing, no AI search,
+  // and the user hasn't opted to expand.
+  const collapsed = feedVisible && !AI_SEARCH_ACTIVE && !BROWSE_EXPANDED;
+  main.classList.toggle('browse-collapsed', collapsed);
+  const cta = document.getElementById('browseMoreWrap');
+  if (cta) cta.style.display = collapsed ? '' : 'none';
+}
+
+function expandBrowse() {
+  BROWSE_EXPANDED = true;
+  applyBrowseCollapse();
+  // Reveal the freshly-shown grid without an abrupt jump.
+  document.getElementById('countRow')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* ═══════════════════════════════════
@@ -8282,6 +8381,7 @@ function _restoreFeedSections() {
   feedEl.classList.remove('feed-animate-in');
   void feedEl.offsetWidth;
   feedEl.classList.add('feed-animate-in');
+  applyBrowseCollapse(); // re-collapse the Explore grid behind the CTA on return
 }
 
 /* Reset to full catalog */
@@ -8407,6 +8507,7 @@ async function aiSearch(query) {
   _aiMatchTags.clear();
   document.getElementById('searchWrap').classList.add('ai-active');
   document.getElementById('feedSections').style.display = 'none';
+  applyBrowseCollapse(); // AI results always use the full grid
   showSkeletons(12);
   showAIBanner('', true); // triggers startThinkingText()
 
