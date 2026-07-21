@@ -2925,6 +2925,14 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .foryou-refine-spark { flex-shrink: 0; color: #a78bfa; }
 .foryou-refine:hover { background: rgba(124,58,237,0.14); border-color: rgba(124,58,237,0.65); }
 .foryou-refine:hover .foryou-refine-spark { color: #c4b5fd; }
+/* Explanatory micro-copy under the personalized row — how to activate AI personalization. */
+.foryou-hint {
+  display: flex; align-items: center; gap: 6px;
+  margin: -4px 18px 12px; padding: 0;
+  font-size: 12px; line-height: 1.4; color: #94a3b8; /* slate-400 */
+  font-family: 'Inter', system-ui, sans-serif; font-weight: 500;
+}
+.foryou-hint-spark { flex-shrink: 0; color: #a78bfa; opacity: 0.9; }
 .feed-scroll {
   display: flex; gap: 12px; overflow-x: auto;
   padding: 4px 18px 12px; scroll-behavior: smooth;
@@ -4470,9 +4478,13 @@ if ('serviceWorker' in navigator) {
       </span>
       <button class="foryou-refine" onclick="openOnboardQuiz()" data-i18n-title="onboard.refineHint" title="Answer a few quick questions so our AI learns your taste.">
         <svg class="foryou-refine-spark" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/><path d="M18.5 3.5l.7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7z"/></svg>
-        <span data-i18n="onboard.refine">Personalize your picks</span>
+        <span data-i18n="onboard.refine">Personalize Your Picks</span>
       </button>
     </div>
+    <p class="foryou-hint" id="forYouHint">
+      <svg class="foryou-hint-spark" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg>
+      <span data-i18n="onboard.refineSub">Rate at least 3 movies to let our AI learn your taste.</span>
+    </p>
     <div class="feed-scroll" id="scrollForYou"></div>
   </div>
 
@@ -5061,8 +5073,9 @@ const TRANSLATIONS = {
     // Taste onboarding quiz
     'onboard.personalize': 'Personalize in 30s →',
     'onboard.browseNow':   'Skip — just browse',
-    'onboard.refine':      'Personalize your picks',
+    'onboard.refine':      'Personalize Your Picks',
     'onboard.refineHint':  'Answer a few quick questions so our AI learns your taste.',
+    'onboard.refineSub':   'Rate at least 3 movies to let our AI learn your taste.',
     'onboard.step':        'Step {n} of {total}',
     'onboard.finish':      'See my picks',
     'onboard.doneTitle':   'All set!',
@@ -5324,8 +5337,9 @@ const TRANSLATIONS = {
     // Taste onboarding quiz
     'onboard.personalize': 'Personalizar en 30s →',
     'onboard.browseNow':   'Omitir — solo explorar',
-    'onboard.refine':      'Personaliza tus recomendaciones',
+    'onboard.refine':      'Personaliza tus elecciones',
     'onboard.refineHint':  'Responde unas preguntas rápidas para que la IA aprenda tus gustos.',
+    'onboard.refineSub':   'Valora al menos 3 películas para que nuestra IA aprenda tus gustos.',
     'onboard.step':        'Paso {n} de {total}',
     'onboard.finish':      'Ver mis elecciones',
     'onboard.doneTitle':   '¡Listo!',
@@ -5584,6 +5598,7 @@ const TRANSLATIONS = {
     'onboard.browseNow':   'Ignorer — juste explorer',
     'onboard.refine':      'Personnaliser vos choix',
     'onboard.refineHint':  'Répondez à quelques questions pour que l\'IA apprenne vos goûts.',
+    'onboard.refineSub':   'Notez au moins 3 films pour que notre IA apprenne vos goûts.',
     'onboard.step':        'Étape {n} sur {total}',
     'onboard.finish':      'Voir mes choix',
     'onboard.doneTitle':   'C\'est prêt !',
@@ -5840,8 +5855,9 @@ const TRANSLATIONS = {
     // Taste onboarding quiz
     'onboard.personalize': '30秒个性化 →',
     'onboard.browseNow':   '跳过——直接浏览',
-    'onboard.refine':      '个性化推荐',
+    'onboard.refine':      '个性化你的推荐',
     'onboard.refineHint':  '回答几个小问题，让 AI 了解你的口味。',
+    'onboard.refineSub':   '至少评分 3 部电影，让我们的 AI 了解你的口味。',
     'onboard.step':        '第 {n} 步，共 {total} 步',
     'onboard.finish':      '查看我的精选',
     'onboard.doneTitle':   '搞定！',
@@ -6100,6 +6116,7 @@ const TRANSLATIONS = {
     'onboard.browseNow':   'تخطَّ — تصفّح فقط',
     'onboard.refine':      'خصّص اختياراتك',
     'onboard.refineHint':  'أجب عن بضعة أسئلة سريعة ليتعرّف الذكاء الاصطناعي على ذوقك.',
+    'onboard.refineSub':   'قيّم 3 أفلام على الأقل ليتعرّف الذكاء الاصطناعي على ذوقك.',
     'onboard.step':        'الخطوة {n} من {total}',
     'onboard.finish':      'شاهد اختياراتي',
     'onboard.doneTitle':   'تم الضبط!',
@@ -6367,6 +6384,7 @@ const TRANSLATIONS = {
     'onboard.browseNow':   'Пропустити — просто огляд',
     'onboard.refine':      'Персоналізувати добірку',
     'onboard.refineHint':  'Дайте відповідь на кілька запитань, щоб ШІ вивчив ваш смак.',
+    'onboard.refineSub':   'Оцініть щонайменше 3 фільми, щоб ШІ вивчив ваш смак.',
     'onboard.step':        'Крок {n} з {total}',
     'onboard.finish':      'Показати мій вибір',
     'onboard.doneTitle':   'Готово!',
