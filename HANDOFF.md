@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-21) — Refine Movie Details: Branded FindFilm Rating Chip + Compact NordVPN
+## ⚡ Most Recent Session (2026-07-21) — Movie Card Hover Overlay: Backdrop-Blur Actions + Share
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `6fa943a` | **Upgraded the movie grid card hover state into a modern backdrop-blur action overlay with a new Share action.** Deployed `23ac9b36.ratingkino.pages.dev` → findfilm.ai. **Context:** a prior commit (`3ad23e5`, 2026-07-20) already delivered the *simplified card* (Poster/Title/Year/Genre + one badge — bulky metadata blocks removed) and the *color-coded trust badges* (`.rb.avg.unified` indigo gradient vs `.rb.avg.tmdb-only` neutral+border+"TMDB"+tooltip). This session filled the genuine gap: the hover state was just a corner watchlist icon + a plain "VIEW DETAILS" text label with **no Share action and no proper button overlay**. **(1) New `.card-hover-overlay`** (`index.html` CSS ~L1143) — now a `rgba(6,8,16,0.60)` + **`backdrop-filter:blur(4px)`** column overlay (`z-index:3`, `pointer-events:none` at rest → `auto` on `.movie-card:hover`) holding two compact buttons: **`.card-ov-view`** (primary indigo→violet gradient pill "View Details", `onclick=openMovie(id)`) + **`.card-ov-share`** (34px circular ghost icon button, share-nodes SVG, `onclick=shareMovie(id)`). Markup built in **`renderCardHTML(m)`** (~L7622, replaced the old `<span>` overlay). **(2) Trust badge stays above the overlay on hover** — `.poster-ratings` given **`z-index:4`** (~L1069) so the score badge (z3 overlay < z4 badge) remains visible + interactive (tooltip still fires). **(3) New `shareMovie(id)`** (~L10498, right before `openShare`): `navigator.share({title,url})` with deep link `${location.origin}${location.pathname}?movie=${id}` (title from `MOVIES.find(x=>x.id===id)`); desktop fallback = `openMovie(id)` then `setTimeout(openShare,380)` to open the full share panel. Both overlay buttons `event.stopPropagation()` so they don't trigger the card's `openMovie`. **Mobile fallback unchanged** — existing `@media (hover:none)` (~L2608) keeps `.card-hover-overlay` `opacity:0` on touch; corner `.card-wl-btn` stays `opacity:1` and tap-anywhere still opens the modal. **Verified (preview eval = ground truth; static preview, injected a fake card):** `typeof shareMovie==='function'`; overlay has `.card-ov-view`+`.card-ov-share`, computed `backdrop-filter:blur(4px)`, overlay `z-index:3` vs poster-ratings `z-index:4`; forced-open screenshot shows neutral "7.7 · TMDB" badge above the blurred overlay + purple VIEW DETAILS + share icon. **Tailwind deliverable equivalent** (docs-only — live site is vanilla CSS): card `class="group relative"`, poster `class="relative overflow-hidden rounded-xl"`, overlay `class="absolute inset-0 z-[3] flex flex-col items-center justify-center gap-2 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto"`, View button `class="px-4 py-2 rounded-lg text-[11px] font-extrabold uppercase tracking-wide bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/50"`, Share button `class="h-[34px] w-[34px] rounded-lg bg-white/15 border border-white/20 text-white hover:bg-white/25 flex items-center justify-center"`, unified badge `class="bg-indigo-500 text-white ..."`, tmdb-only badge `class="bg-white/10 text-slate-300 border border-white/20 ..."`. |
+
+---
+
+## ⚡ Session (2026-07-21) — Refine Movie Details: Branded FindFilm Rating Chip + Compact NordVPN
 
 All commits on `main`, all live on https://findfilm.ai.
 
