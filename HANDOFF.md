@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-21) — Movie Card Hover Overlay: Backdrop-Blur Actions + Share
+## ⚡ Most Recent Session (2026-07-21) — Clarify "Personalize Your Picks" UX + Micro-copy
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `49b3888` | **Made the "For You" personalization control action-oriented + self-explanatory** (UX-audit copy pass). Deployed `ddb32351.ratingkino.pages.dev` → findfilm.ai. The control is the **`.foryou-refine`** button inside the `#rowForYou` `.feed-row-header` (`index.html` ~L4471, `onclick="openOnboardQuiz()"`) — it already carried a sparkle icon (`.foryou-refine-spark`) but the label/guidance were vague. **(1) Action-oriented label** — i18n **`onboard.refine`** retitled to **"Personalize Your Picks"** (EN title-case; ES "Personaliza tus elecciones", ZH "个性化你的推荐" tightened; FR/AR/UK already imperative). **(2) New explanatory micro-copy** — new i18n key **`onboard.refineSub`** = **"Rate at least 3 movies to let our AI learn your taste."** added across all 6 langs (en/es/fr/zh/ar/uk, right after each `onboard.refineHint`). Rendered as a new subtitle **`<p class="foryou-hint" id="forYouHint">`** inserted directly under the header (~L4476, before `#scrollForYou`), leading with a small **`.foryou-hint-spark`** sparkle SVG + `<span data-i18n="onboard.refineSub">`. **(3) Visual cue** — sparkle on both the button (existing) and the new hint line signals AI personalization; doubles as the empty-state instruction (the row is `display:none` until enough interactions). **New CSS `.foryou-hint`** (~L2928, after `.foryou-refine` rules): `display:flex; gap:6px; margin:-4px 18px 12px; font-size:12px; color:#94a3b8` (**slate-400** per spec) + `.foryou-hint-spark { color:#a78bfa }`. **Verified (preview eval = ground truth; forced `#rowForYou` visible on static preview):** main label resolves "Personalize Your Picks"; hint text exact; computed `color:rgb(148,163,184)` (=slate-400), `font-size:12px`, `display:flex`; both button + hint sparkles present; all 6 langs resolve `onboard.refine` + `onboard.refineSub` via `TRANSLATIONS[l]`. Screenshot confirms clean header (`🌙 Start here tonight` · `Based on your taste` badge · right-aligned `✦ Personalize Your Picks`) with the muted micro-copy line beneath and no layout break. **Tailwind deliverable equivalent** (docs-only — live site is vanilla CSS): button `class="ml-auto inline-flex items-center gap-1.5 rounded-md border border-violet-600/40 px-2.5 py-1 text-[10px] font-bold tracking-wide text-violet-300 hover:bg-violet-600/15"` with a sparkle `<svg class="text-violet-400">` + `Personalize Your Picks`; micro-copy `<p class="flex items-center gap-1.5 -mt-1 mx-[18px] mb-3 text-sm text-slate-400"><svg class="shrink-0 text-violet-400">…</svg><span>Rate at least 3 movies to let our AI learn your taste.</span></p>`. |
+
+---
+
+## ⚡ Session (2026-07-21) — Movie Card Hover Overlay: Backdrop-Blur Actions + Share
 
 All commits on `main`, all live on https://findfilm.ai.
 
