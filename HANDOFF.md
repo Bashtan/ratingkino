@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-21) — LLM-First Open-World "By Plot" Search
+## ⚡ Most Recent Session (2026-07-21) — Declutter Homepage: Collapse Explore Grid + Browse CTA + Trust Note
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `adeda17` | **Curated the default movie homepage to a premium-streaming feel** — lead with the curated carousels only and hide the giant infinite "Explore Collection" grid behind a ghost CTA. Deployed `deda6166.ratingkino.pages.dev` → findfilm.ai. **The `#movieGrid` is dual-purpose** (homepage explore feed AND search/filter/AI results container), so it is **collapsed via a CSS class, not removed**. **(1) Browse CTA** — new `#browseMoreWrap`/`.browse-more-btn` ("Browse full collection", `onclick="expandBrowse()"`) injected at the bottom of `#feedSections` (after `#rowPopular`, `index.html` ~L4405); glassmorphism ghost pill (`border-radius:999px`, `rgba(255,255,255,.2)` border, slate-300 `#cbd5e1`→white hover, `rgba(255,255,255,.1)` hover bg, chevron nudges down on hover). **(2) Trust note** — new `.trust-note` `<p>` under "Best Available Now" (`#rowBest`, ~L4384): "Ratings are aggregated independently. Ads do not affect scores." (centered, `max-width:460px`, slate-500 `#64748b`). **(3) Collapse logic** (JS, after `loadMore()` ~L7990): `let BROWSE_EXPANDED=false`; **`applyBrowseCollapse()`** toggles `main.browse-collapsed` (CSS hides `main > .count-row`, `.results-zone`, `.load-wrap`) when `feedSections` is visible AND `!AI_SEARCH_ACTIVE` AND `!BROWSE_EXPANDED`, and shows/hides `#browseMoreWrap` inversely; **`expandBrowse()`** sets `BROWSE_EXPANDED=true` (session-persistent), re-applies, smooth-scrolls to `#countRow`. **Wired** into `loadMovies` (right after the feedSections toggle block ~L7873 — covers first load + browse filters + clearing search), `aiSearch` (after it hides feedSections ~L8509 — AI always uses full grid), and `_restoreFeedSections` (re-collapse on AI-clear / zero-result recovery ~L8285). Grid stays intact for search/filter/AI/TV; **only the clean movie homepage collapses**. **(4) i18n** — `browse.more` + `trust.aggregated` added across all 6 langs (en/es/fr/zh/ar/uk, after each `grid.explore`). **Requirement #1 (trim rows) was already satisfied** — the curated rows are single horizontal carousels truncated to `FEED_ROW_LIMIT` 6 mobile / `FEED_ROW_LIMIT_DESKTOP` 10 desktop with a "See all" end-cap (`renderTruncatedRow` L6952) — left unchanged. **Verified (preview eval = ground truth; static preview can't populate the KV feed so screenshots use the error state):** collapsed → `main.browse-collapsed=true`, CTA `flex`, countRow/results-zone/load-wrap all `none`; after `expandBrowse()` → class removed, CTA `none`, grid zone `flex`/`block`; all 6 langs resolve both keys; live curl confirms `browse-more-wrap`/`trust-note`/copy deployed. |
+
+---
+
+## ⚡ Session (2026-07-21) — LLM-First Open-World "By Plot" Search
 
 All commits on `main`, all live on https://findfilm.ai.
 
