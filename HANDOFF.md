@@ -2,7 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-20) — Clarify "For You" Refine CTA
+## ⚡ Most Recent Session (2026-07-21) — LLM-First Open-World "By Plot" Search
+
+All commits on `main`, all live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `95f9738` | **Rebuilt the "By Plot" (`SEARCH_MODE='ai'`) backend as an agentic, open-world "LLM-First" pipeline** so vibe/plot/trope queries are answered from the model's own deep film knowledge instead of the closed-world KV catalog. Deployed `5528c56a.ratingkino.pages.dev` → findfilm.ai. **Provider:** Cloudflare Workers AI `@cf/meta/llama-3.3-70b-instruct-fp8-fast` (no new secrets). **Backend** (`functions/api/[[path]].js`): **(1) `_CURATOR_SYSTEM_PROMPT`** (~L784) — elite-curator prompt forcing STRICT JSON `{picks:[{title,year,ai_verdict,tags}],suggestedRefinements,message}`, emphasises subtext/tone/scenes over plot recap, 5-7 real films, no invented titles. **(2) `_llmFirstCuration(query,exclude,env)`** (~L812) — Phase 1 brain: calls llama-3.3-70b (`max_tokens:900,temperature:0.4`), extracts JSON via `text.match(/\{[\s\S]*\}/)`, sanitizes picks (title≤120, year int, ai_verdict≤160, 2-3 tags) + up to 4 dedup refinements; throws on hard failure so caller can fall back. **(3) `_tmdbFindMovie(title,year,env)`** (~L874) — Phase 2 hydration: TMDB `/search/movie` with `primary_release_year`, retries w/o year if empty, scores exact-title(+4)/prefix(+2)/year-exact(+3)/±1(+1)+popularity, requires `poster_path`, returns best raw TMDB object or null. **(4) `handleAISearch`** (~L913): LLM-First block runs **after** the actor-search block, **before** the `if(!env.MOVIES_CACHE)` KV path; `Promise.all` hydrates picks, dedups by TMDB id, and **only returns `{aiCurated:true,movies,reasons,tags,suggestedRefinements,message}` when ≥3 films hydrate** — else logs + falls through to the closed-world KV catalog (never returns empty). **Cache key bumped `ais:v1:`→`ais:v2:`** (~L952) to avoid colliding with old closed-world payloads (6h TTL). **Client** (`index.html`, `aiSearch()` ~L8432): the open-world branch condition is now `(data.actorQuery \|\| data.aiCurated) && data.movies?.length` — reuses the proven `fromTMDb(raw)`→MOVIES hydration + `_aiMatchReasons`/`_aiMatchTags` maps; banner branches: actor→`ai.foundForActor`, aiCurated→`✦ `+`data.message` or `ai.found`/`ai.foundPlural`. **Live-tested (curl vs findfilm.ai):** "slow-burn neo-noir…rain-soaked and lonely" → Blade Runner/Chinatown/Se7en/The Big Sleep…; "feel-good unlikely friendships…happy tears" → Amélie/The Intouchables/Harold and Maude/The Straight Story/Central Station/My Life as a Zucchini/Marigold Hotel — 7 films each, real ai_verdict reasons + 2-3 tags per film + 4 refinements. **Note:** preview server is static (no API) so backend verification is curl-against-live; KV fallback keeps closed-world ranking intact for the "Pick for tonight" wizard + edge cases where <3 curated films resolve on TMDB. |
+
+---
+
+## ⚡ Session (2026-07-20) — Clarify "For You" Refine CTA
 
 All commits on `main`, all live on https://findfilm.ai.
 
