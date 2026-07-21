@@ -1065,7 +1065,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .poster-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 /* Poster overlay — avg pill top-right + optional TV badge */
 .poster-ratings {
-  position: absolute; top: 7px; right: 7px;
+  position: absolute; top: 7px; right: 7px; z-index: 4;
   display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
   pointer-events: none;
 }
@@ -1141,13 +1141,32 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .conf-early { background: rgba(148,163,184,0.13); color: #cbd5e1; border-color: rgba(148,163,184,0.3); }
 .mr-conf { margin-top: 8px; }
 .card-hover-overlay {
-  position: absolute; inset: 0;
-  background: rgba(0,0,0,0.60);
-  display: flex; align-items: center; justify-content: center;
-  opacity: 0; transition: opacity 0.2s;
+  position: absolute; inset: 0; z-index: 3;
+  background: rgba(6,8,16,0.60);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  opacity: 0; transition: opacity 0.22s ease;
+  pointer-events: none;
 }
-.movie-card:hover .card-hover-overlay { opacity: 1; }
-.card-hover-overlay span { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+.movie-card:hover .card-hover-overlay { opacity: 1; pointer-events: auto; }
+.card-ov-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: none; cursor: pointer; font-family: 'Montserrat', sans-serif;
+  border-radius: 8px; transition: transform 0.15s ease, background 0.15s ease;
+}
+.card-ov-btn:active { transform: scale(0.94); }
+.card-ov-view {
+  padding: 8px 16px; font-size: 11px; font-weight: 800; letter-spacing: 0.4px; text-transform: uppercase;
+  background: linear-gradient(135deg, #6366f1, #7c3aed); color: #fff;
+  box-shadow: 0 4px 18px rgba(99,102,241,0.5);
+}
+.card-ov-view:hover { background: linear-gradient(135deg, #7278f6, #8b45f0); }
+.card-ov-share {
+  width: 34px; height: 34px; padding: 0;
+  background: rgba(255,255,255,0.14); color: #fff;
+  border: 1px solid rgba(255,255,255,0.22);
+}
+.card-ov-share:hover { background: rgba(255,255,255,0.26); }
 .movie-info { padding: 9px 10px 5px; }
 .movie-title {
   font-size: 12px; font-weight: 700; font-family: 'Montserrat', sans-serif;
@@ -7619,7 +7638,12 @@ function renderCardHTML(m) {
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
       </button>
       <div class="poster-ratings">${tvBadge}${avgBadgeHTML(m)}</div>
-      <div class="card-hover-overlay"><span>${t('card.viewDetails')}</span></div>
+      <div class="card-hover-overlay">
+        <button class="card-ov-btn card-ov-view" onclick="event.stopPropagation();openMovie(${m.id})">${t('card.viewDetails')}</button>
+        <button class="card-ov-btn card-ov-share" onclick="event.stopPropagation();shareMovie(${m.id})" aria-label="Share" title="${esc(t('share.title')||'Share')}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+        </button>
+      </div>
     </div>
     <div class="movie-info">
       <div class="movie-title">${esc(m.title)}</div>
@@ -10495,6 +10519,20 @@ function submitReview() {
 /* ═══════════════════════════════════
    SHARE
 ═══════════════════════════════════ */
+// Share a movie directly from a grid card (native share sheet, or open modal + share panel as fallback).
+function shareMovie(id) {
+  const m = MOVIES.find(x => x.id === id);
+  const title = (m && m.title) ? m.title : (document.querySelector(`#card-${id} .movie-title`)?.textContent || 'FindFilm.ai');
+  const url = `${location.origin}${location.pathname}?movie=${id}`;
+  if (navigator.share) {
+    navigator.share({ title: `${title} — FindFilm.ai`, url }).catch(() => {});
+    return;
+  }
+  // Desktop fallback: open the movie modal, then its full share panel.
+  openMovie(id);
+  setTimeout(openShare, 380);
+}
+
 function openShare() {
   if (!ACTIVE_MOVIE) return;
   const m = ACTIVE_MOVIE;
