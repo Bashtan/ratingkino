@@ -1601,18 +1601,42 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .mrb-num.mrb-mc   { color: var(--mc); }
 .mrb-dot { color: rgba(255,255,255,0.18); font-size: 14px; line-height: 1; user-select: none; }
 
-/* ── FindFilm local rating — compact secondary pill ─────────── */
-.ff-local-wrap { flex-basis: 100%; display: flex; justify-content: center; margin-top: 2px; }
-.ff-local-pill {
-  display: inline-flex; align-items: center; gap: 5px; width: fit-content;
-  padding: 5px 12px; border-radius: 999px;
-  background: rgba(255,255,255,0.05);
+/* ── FindFilm user rating — branded glass chip, sits beside .mr-score-card ── */
+.ff-score-card {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 11px 16px 12px; border-radius: 12px;
+  background: linear-gradient(135deg, rgba(139,92,246,0.14), rgba(34,211,238,0.05));
   border: 1px solid rgba(139,92,246,0.32);
-  font-family: 'Montserrat', sans-serif;
-  font-size: 13px; font-weight: 800; color: #e9d5ff; line-height: 1;
 }
-.ff-local-pill .ffp-star { color: var(--accent); font-size: 13px; text-shadow: 0 0 8px rgba(139,92,246,0.65); }
-.ff-local-pill .ffp-count { font-size: 11px; font-weight: 600; color: #67e8f9; opacity: 0.9; }
+.ff-score-top { display: flex; align-items: center; gap: 8px; line-height: 1; }
+.ff-brand-ico {
+  position: relative; flex-shrink: 0;
+  width: 26px; height: 26px; border-radius: 7px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #22d3ee 0%, #7c3aed 55%, #d946ef 100%);
+  box-shadow: 0 2px 11px rgba(124,58,237,0.55);
+}
+.ff-brand-ico .ff-brand-f {
+  font-family: 'Montserrat', sans-serif; font-weight: 900;
+  font-size: 15px; color: #fff; line-height: 1;
+}
+.ff-brand-ico .ff-brand-spark {
+  position: absolute; top: -4px; right: -4px;
+  width: 11px; height: 11px; color: #a5f3fc;
+  filter: drop-shadow(0 0 4px rgba(103,232,249,0.85));
+}
+.ff-score-num {
+  font-size: 36px; font-weight: 900; font-family: 'Montserrat', sans-serif;
+  color: #fff; letter-spacing: -1.5px; line-height: 1;
+}
+.ff-score-lbl {
+  font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+  color: #c4b5fd; font-family: 'DM Mono', monospace;
+}
+.ff-score-sub {
+  font-size: 11px; font-weight: 600; color: #67e8f9; opacity: 0.9;
+  font-family: 'Montserrat', sans-serif; line-height: 1;
+}
 .m-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn-trailer {
   display: flex; align-items: center; gap: 6px;
@@ -1626,6 +1650,14 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .btn-trailer:hover { background: var(--accent-hover); box-shadow: 0 6px 22px rgba(229,9,20,0.55); transform: translateY(-1px); }
 /* .btn-amazon kept for reference — replaced in HTML by #streamingCtAs */
 #streamingCtAs { display: contents; }
+/* Streaming info row — provider buttons + availability note, below the action row */
+#streamingInfo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; }
+#streamingInfo:empty { display: none; margin-top: 0; }
+.stream-on-lbl {
+  font-size: 9.5px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); font-family: 'DM Mono', monospace;
+}
+.stream-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 /* Region-aware streaming transparency */
 .streaming-region-lbl {
   display: none;
@@ -1692,26 +1724,24 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   border-radius: 10px; color: var(--muted); font-size: 13px; font-family: 'Inter', sans-serif;
   white-space: nowrap; cursor: not-allowed; opacity: 0.6;
 }
-/* ── NordVPN affiliate CTA ─────────────────────────────────────────── */
+/* ── NordVPN affiliate CTA — compact utility button in the action row ─── */
 .btn-nordvpn {
-  display: flex; align-items: center; justify-content: center; gap: 7px;
-  flex-basis: 100%;               /* own row inside .m-actions flex-wrap */
-  height: 36px; padding: 0 16px;
-  background: rgba(70, 135, 255, 0.07);
-  border: 1.5px solid rgba(70, 135, 255, 0.30);
-  border-radius: 10px;
-  color: #7aaeff;
-  font-size: 12px; font-family: 'Inter', sans-serif; font-weight: 600;
-  letter-spacing: 0.1px;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 38px; padding: 0 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 9px;
+  color: rgba(255,255,255,0.62);
+  font-size: 12px; font-family: 'Montserrat', sans-serif; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.3px;
   text-decoration: none; white-space: nowrap;
-  transition: background 0.18s, border-color 0.18s, color 0.15s, box-shadow 0.18s, transform 0.15s;
+  transition: background 0.18s, border-color 0.18s, color 0.15s, transform 0.15s;
   cursor: pointer;
 }
 .btn-nordvpn:hover {
-  background: rgba(70, 135, 255, 0.16);
-  border-color: #4687FF;
+  background: rgba(70, 135, 255, 0.14);
+  border-color: rgba(70, 135, 255, 0.45);
   color: #c5d9ff;
-  box-shadow: 0 2px 14px rgba(70, 135, 255, 0.22);
   transform: translateY(-1px);
 }
 /* Mobile-only sticky NordVPN footer — hidden on desktop */
@@ -2717,6 +2747,15 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .mr-star       { font-size: 13px; }
   .mr-avg-num    { font-size: 17px; letter-spacing: -0.5px; }
   .mr-hero-lbl   { display: none; }
+  /* FindFilm chip: collapse to inline pill matching the aggregated card */
+  .ff-score-card { flex-direction: row; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; }
+  .ff-score-top  { gap: 5px; }
+  .ff-brand-ico  { width: 18px; height: 18px; border-radius: 5px; }
+  .ff-brand-ico .ff-brand-f { font-size: 10px; }
+  .ff-brand-ico .ff-brand-spark { width: 8px; height: 8px; top: -3px; right: -3px; }
+  .ff-score-num  { font-size: 17px; letter-spacing: -0.5px; }
+  .ff-score-lbl  { display: none; }
+  .ff-score-sub  { font-size: 10px; }
   .mr-breakdown  { margin-top: 0; gap: 5px; padding-left: 6px; border-left: 1px solid rgba(255,255,255,0.12); }
   .mrb-lbl       { font-size: 8.5px; }
   .mrb-num       { font-size: 11px; }
@@ -2729,7 +2768,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 
   .stream-on-lbl { order: 4; flex: 0 0 100%; font-size: 10px; color: var(--muted); margin: 2px 0 -2px; }
   .stream-row {
-    order: 5; flex: 0 0 100%; display: flex; gap: 8px;
+    order: 5; flex: 0 0 100%; display: flex; gap: 8px; flex-wrap: nowrap;
     overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px;
   }
   .stream-row .btn-stream {
@@ -4545,6 +4584,7 @@ if ('serviceWorker' in navigator) {
             <span id="btnWatchlistText" data-i18n="modal.watchlist">+ Watchlist</span>
           </button>
         </div>
+        <div id="streamingInfo"></div>
         <div id="streamingRegionLbl" class="streaming-region-lbl"></div>
       </div>
     </div>
@@ -5073,6 +5113,8 @@ const TRANSLATIONS = {
     'vpn.sub':             'Use a VPN to unlock it in seconds.',
     'vpn.unlock':          'Unlock with {name}',
     'vpn.nordvpn':         '🌍 Not available in your region? Unlock with NordVPN',
+    'vpn.nordvpnShort':    '🌍 Unlock with NordVPN',
+    'rating.findfilmUser': 'FindFilm User Rating',
   },
   es: {
     'nav.movies':           'Películas',
@@ -5329,6 +5371,8 @@ const TRANSLATIONS = {
     'vpn.sub':             'Usa una VPN para desbloquearlo en segundos.',
     'vpn.unlock':          'Desbloquear con {name}',
     'vpn.nordvpn':         '🌍 ¿No disponible en tu región? Desbloquea con NordVPN',
+    'vpn.nordvpnShort':    '🌍 Desbloquear con NordVPN',
+    'rating.findfilmUser': 'Valoración de usuarios FindFilm',
   },
   fr: {
     'nav.movies':           'Films',
@@ -5585,6 +5629,8 @@ const TRANSLATIONS = {
     'vpn.sub':             'Utilisez un VPN pour le débloquer en quelques secondes.',
     'vpn.unlock':          'Débloquer avec {name}',
     'vpn.nordvpn':         '🌍 Pas disponible dans votre région ? Débloquez avec NordVPN',
+    'vpn.nordvpnShort':    '🌍 Débloquer avec NordVPN',
+    'rating.findfilmUser': 'Note des utilisateurs FindFilm',
   },
   zh: {
     'nav.movies':           '电影',
@@ -5841,6 +5887,8 @@ const TRANSLATIONS = {
     'vpn.sub':             '使用 VPN 即可立即解锁。',
     'vpn.unlock':          '通过 {name} 解锁',
     'vpn.nordvpn':         '🌍 你所在地区无法观看？使用 NordVPN 解锁',
+    'vpn.nordvpnShort':    '🌍 使用 NordVPN 解锁',
+    'rating.findfilmUser': 'FindFilm 用户评分',
   },
   ar: {
     'nav.movies':           'أفلام',
@@ -6097,6 +6145,8 @@ const TRANSLATIONS = {
     'vpn.sub':             'استخدم VPN لإلغاء قفله في ثوانٍ.',
     'vpn.unlock':          'افتح مع {name}',
     'vpn.nordvpn':         '🌍 غير متاح في منطقتك؟ افتحه مع NordVPN',
+    'vpn.nordvpnShort':    '🌍 افتح مع NordVPN',
+    'rating.findfilmUser': 'تقييم مستخدمي FindFilm',
   },
   uk: {
     'nav.movies':           'Фільми',
@@ -6362,6 +6412,8 @@ const TRANSLATIONS = {
     'vpn.sub':             'Використайте VPN, щоб розблокувати за лічені секунди.',
     'vpn.unlock':          'Розблокувати через {name}',
     'vpn.nordvpn':         '🌍 Недоступно у вашому регіоні? Розблокуй з NordVPN',
+    'vpn.nordvpnShort':    '🌍 Розблокувати з NordVPN',
+    'rating.findfilmUser': 'Оцінка користувачів FindFilm',
   },
 };
 
@@ -9301,13 +9353,23 @@ function refreshModalRatings(m) {
   const el = document.getElementById('mRatings');
   if (!el) return;
 
-  // FindFilm local rating badge — compact pill below the main aggregated score
+  // FindFilm user rating — branded glass chip sitting beside the aggregated card
   const local = calcLocalRating(m.id);
   const revWord = local
     ? (local.count === 1 ? t('review.userReview') : t('review.userReviews'))
     : '';
   const localBadge = local
-    ? `<div class="ff-local-wrap"><span class="ff-local-pill"><span class="ffp-star">★</span>${local.avg}<span class="ffp-count">(${local.count} ${revWord})</span></span></div>`
+    ? `<div class="ff-score-card">
+        <div class="ff-score-top">
+          <span class="ff-brand-ico" aria-hidden="true">
+            <span class="ff-brand-f">F</span>
+            <svg class="ff-brand-spark" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+          </span>
+          <span class="ff-score-num">${local.avg}</span>
+        </div>
+        <div class="ff-score-lbl">${t('rating.findfilmUser')}</div>
+        <div class="ff-score-sub">(${local.count} ${revWord})</div>
+      </div>`
     : '';
 
   if (!m.enriched) {
@@ -9506,6 +9568,7 @@ function refreshVpnBanner(m) {
    Falls back to an Amazon Prime Video search link until TMDB data arrives. */
 function _refreshStreamingCtAs(m) {
   const container = document.getElementById('streamingCtAs');
+  const info      = document.getElementById('streamingInfo');
   const regionLbl = document.getElementById('streamingRegionLbl');
   if (!container) return;
 
@@ -9514,9 +9577,11 @@ function _refreshStreamingCtAs(m) {
   const wp      = m.watchProviders;
   const country = m.wpCountry || DETECTED_COUNTRY || 'US';
 
-  // NordVPN affiliate CTA — always shown below streaming provider buttons
+  // NordVPN affiliate CTA — compact utility button, sits in the action row
   const NORD_URL   = 'https://go.nordvpn.net/aff_c?offer_id=15&aff_id=151623&url_id=902';
-  const nordvpnBtn = `<a class="btn-nordvpn" href="${NORD_URL}" target="_blank" rel="noopener noreferrer sponsored">${t('vpn.nordvpn')}</a>`;
+  const nordvpnBtn = `<a class="btn-nordvpn" href="${NORD_URL}" target="_blank" rel="noopener noreferrer sponsored">${t('vpn.nordvpnShort')}</a>`;
+  container.innerHTML = nordvpnBtn;
+  const setInfo = html => { if (info) info.innerHTML = html; };
 
   // Show/hide the "Streaming in 🇺🇸 US" label under the action bar
   function setRegionLbl(show) {
@@ -9555,21 +9620,19 @@ function _refreshStreamingCtAs(m) {
     setRegionLbl(false);
     if (m.enriched) {
       // TMDB data arrived but no streaming providers in this region
-      container.innerHTML =
+      setInfo(
         `<button class="btn-stream-disabled" disabled>` +
           `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>` +
           t('stream.disabled') +
-        `</button>` +
-        nordvpnBtn;
+        `</button>`);
     } else {
       // Still loading — show Amazon Prime Video as featured affiliate fallback
       const url = `https://www.amazon.com/gp/video/search?phrase=${encodeURIComponent(title)}&tag=findfilm-20`;
-      container.innerHTML =
+      setInfo(
         `<a class="btn-stream btn-amazon" href="${url}" target="_blank" rel="noopener noreferrer sponsored">` +
           `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>` +
           t('stream.amazon') +
-        `</a>` +
-        nordvpnBtn;
+        `</a>`);
     }
     return;
   }
@@ -9589,7 +9652,7 @@ function _refreshStreamingCtAs(m) {
              `${logo}<span class="btn-stream-label">${label}</span>${badge}` +
            `</a>`;
   }).join('');
-  container.innerHTML = streamLbl + `<div class="stream-row">${providerBtns}</div>` + nordvpnBtn;
+  setInfo(streamLbl + `<div class="stream-row">${providerBtns}</div>`);
 }
 
 function refreshWatchProviders(m) {
