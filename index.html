@@ -8427,9 +8427,12 @@ async function aiSearch(query) {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
 
-    // Actor-focused queries return real TMDB filmography data directly —
-    // bypasses the closed-world CACHE_MOVIES filtering below entirely.
-    if (data.actorQuery && data.movies?.length) {
+    // Open-world results return real TMDB movie objects directly — bypasses the
+    // closed-world CACHE_MOVIES filtering below entirely. Two flavours:
+    //   • actorQuery — an actor's filmography ("movies with DiCaprio").
+    //   • aiCurated  — LLM-First "By Plot" curation: the model names real films
+    //     from its own deep knowledge, hydrated via TMDB (open-world vibe search).
+    if ((data.actorQuery || data.aiCurated) && data.movies?.length) {
       data.movies.forEach(raw => {
         if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromTMDb(raw));
       });
@@ -8447,7 +8450,16 @@ async function aiSearch(query) {
 
       const banner = document.getElementById('aiBanner');
       banner.classList.remove('loading');
-      typewriterBanner(t('ai.foundForActor', { name: data.personName }));
+      if (data.actorQuery) {
+        typewriterBanner(t('ai.foundForActor', { name: data.personName }));
+      } else {
+        const n = results.length;
+        typewriterBanner(
+          data.message
+            ? '✦ ' + data.message
+            : (n === 1 ? t('ai.found', { n, q: query }) : t('ai.foundPlural', { n, q: query }))
+        );
+      }
 
       renderGrid(results, false);
       document.getElementById('countTotal').textContent = results.length.toLocaleString();

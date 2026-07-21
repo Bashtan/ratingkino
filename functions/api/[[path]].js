@@ -759,6 +759,155 @@ async function handleCache(key, env, cors) {
   });
 }
 
+/* ════════════════════════════════════════════════════════════════════
+   LLM-FIRST "By Plot" CURATION — open-world, agentic two-step retrieval.
+
+   The old flow was closed-world: it handed the LLM a fixed KV catalog of
+   recent releases and asked it to rank WITHIN that list, so anything not in
+   the cache could never surface. This flips it:
+
+   Phase 1 (LLM brain): the user's raw vibe/plot/trope query goes straight to
+   a 70B film-curator model. It draws on its OWN deep cinema knowledge —
+   subtext, tone, visual style, character arcs, specific scenes — to name the
+   5-7 best-fitting REAL films, each with a bespoke "ai_verdict". Not limited
+   to any catalog.
+
+   Phase 2 (data hydration): every {title, year} the model returns is looked
+   up on TMDB to attach real metadata (id, poster, genres, TMDB score) so the
+   frontend renders standard Movie Cards. Unified IMDb/RT/Metacritic ratings
+   are filled in afterwards by the client's existing per-card enrichment.
+
+   Falls back to the closed-world KV search if the curator errors or too few
+   picks resolve to real TMDB movies.
+════════════════════════════════════════════════════════════════════ */
+
+const _CURATOR_SYSTEM_PROMPT =
+  'You are an elite film curator with encyclopaedic knowledge of world cinema — ' +
+  'arthouse, blockbusters, cult classics, festival winners and hidden gems across every era, ' +
+  'country and language. The user describes a vibe, plot, trope, mood, or a specific kind of scene. ' +
+  'Use your DEEP internal knowledge — subtext, emotional resonance, tone, cinematography, ' +
+  'character arcs, themes and memorable scenes — NOT just one-line plot summaries — ' +
+  'to name the films that fit the request most perfectly. ' +
+  'Recommend 5 to 7 real films, best match first. It is good to mix a well-known pick with a ' +
+  'deeper cut, but every film must genuinely fit and must actually exist. ' +
+  'Respond with STRICT JSON only — no markdown, no code fences, no prose outside the JSON. Schema:\n' +
+  '{\n' +
+  '  "picks": [\n' +
+  '    { "title": "Exact English film title", "year": 1999, ' +
+  '"ai_verdict": "one punchy sentence on WHY this nails the user\'s exact request (tone/subtext/a specific scene — not a plot recap)", ' +
+  '"tags": ["1-3 word trait", "..."] }\n' +
+  '  ],\n' +
+  '  "suggestedRefinements": ["1-3 word next tweak", "...", "..."],\n' +
+  '  "message": null\n' +
+  '}\n' +
+  'Rules: "year" is the 4-digit theatrical release year as an integer. ' +
+  'Each "ai_verdict" is at most 22 words and specific to THIS query. ' +
+  'Each pick has 2 to 3 short "tags". ' +
+  '"suggestedRefinements" is 3 to 4 short (1-3 word) follow-up tweaks. ' +
+  'Never invent films. Never output anything except the JSON object.';
+
+/* Phase 1 — ask the curator model for real films matching the query.
+ * Returns { picks:[{title,year,ai_verdict,tags}], suggestedRefinements, message }.
+ * Throws on hard failure so the caller can fall back to the KV catalog. */
+async function _llmFirstCuration(query, exclude, env) {
+  const exclusionBlock = exclude.length
+    ? `\n\nHARD EXCLUSIONS — never recommend films matching these themes/tones/content:\n` +
+      exclude.map(x => `  - ${x}`).join('\n')
+    : '';
+
+  const aiResp = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
+    messages: [
+      { role: 'system', content: _CURATOR_SYSTEM_PROMPT },
+      { role: 'user',   content: `Request: "${query}"${exclusionBlock}\n\nReturn the JSON now.` },
+    ],
+    max_tokens:  900,
+    temperature: 0.4,   // a little warmth for richer, less generic curation
+    stream:      false,
+  });
+
+  let text = '';
+  if (aiResp?.choices?.[0]?.message?.content) text = aiResp.choices[0].message.content;
+  else if (typeof aiResp?.response === 'string')  text = aiResp.response;
+  else if (typeof aiResp === 'string')            text = aiResp;
+  text = (text || '').trim();
+
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('curator returned no JSON');
+  const parsed = JSON.parse(match[0]);
+
+  const picks = (Array.isArray(parsed.picks) ? parsed.picks : [])
+    .map(p => ({
+      title:      String(p?.title || '').trim().slice(0, 120),
+      year:       Number.parseInt(p?.year, 10) || null,
+      ai_verdict: String(p?.ai_verdict || '').trim().replace(/[\n\r]+/g, ' ').slice(0, 160),
+      tags: Array.isArray(p?.tags)
+        ? p.tags.filter(t => typeof t === 'string')
+                .map(t => t.trim().replace(/[\n\r]+/g, ' ').slice(0, 26))
+                .filter(Boolean).slice(0, 3)
+        : [],
+    }))
+    .filter(p => p.title)
+    .slice(0, 7);
+
+  const seen = new Set();
+  const suggestedRefinements = [];
+  for (const raw of (Array.isArray(parsed.suggestedRefinements) ? parsed.suggestedRefinements : [])) {
+    if (typeof raw !== 'string') continue;
+    const clean = raw.trim().replace(/[\n\r]+/g, ' ').slice(0, 30);
+    const key = clean.toLowerCase();
+    if (!clean || seen.has(key)) continue;
+    seen.add(key);
+    suggestedRefinements.push(clean);
+    if (suggestedRefinements.length >= 4) break;
+  }
+
+  return {
+    picks,
+    suggestedRefinements,
+    message: typeof parsed.message === 'string' ? parsed.message : null,
+  };
+}
+
+/* Phase 2 — resolve one curated {title, year} to a real TMDB movie object.
+ * Prefers exact title + year matches with a poster; retries without the year
+ * filter if needed. Returns the TMDB raw object or null. */
+async function _tmdbFindMovie(title, year, env) {
+  const searchOnce = async (withYear) => {
+    const u = new URL('https://api.themoviedb.org/3/search/movie');
+    u.searchParams.set('api_key', env.TMDB_KEY);
+    u.searchParams.set('query', title);
+    u.searchParams.set('include_adult', 'false');
+    if (withYear && year) u.searchParams.set('primary_release_year', String(year));
+    try {
+      const r = await fetch(u.toString(), { headers: { 'User-Agent': 'FindFilm.ai/1.0' } });
+      const d = r.ok ? await r.json() : null;
+      return d?.results || [];
+    } catch { return []; }
+  };
+
+  let results = await searchOnce(true);
+  if (!results.length && year) results = await searchOnce(false); // widen if the year zeroed it out
+  if (!results.length) return null;
+
+  const want = title.toLowerCase();
+  const scored = results
+    .filter(m => m.poster_path)                 // skip poster-less entries → clean cards
+    .map(m => {
+      const t  = (m.title || m.original_title || '').toLowerCase();
+      const ry = parseInt((m.release_date || '').slice(0, 4)) || 0;
+      let s = 0;
+      if (t === want)                                    s += 4;
+      else if (t.startsWith(want) || want.startsWith(t)) s += 2;
+      if (year && ry === year)                           s += 3;
+      else if (year && Math.abs(ry - year) <= 1)         s += 1;
+      s += Math.min((m.vote_count || 0) / 5000, 1);      // gentle popularity tiebreak
+      return { m, s };
+    })
+    .sort((a, b) => b.s - a.s);
+
+  return scored.length ? scored[0].m : null;
+}
+
 /* ─── AI semantic search handler ───────────────────────────── */
 
 async function handleAISearch(request, env, cors, waitUntil) {
@@ -800,7 +949,7 @@ async function handleAISearch(request, env, cors, waitUntil) {
   // query + hard exclusions; 6-hour TTL keeps it fresh against the daily catalog.
   const _norm   = query.toLowerCase().replace(/\s+/g, ' ').trim();
   const _exKey  = exclude.length ? '|x:' + exclude.map(x => x.toLowerCase()).sort().join(',') : '';
-  const cacheKey = `ais:v1:${_norm}${_exKey}`.slice(0, 480);
+  const cacheKey = `ais:v2:${_norm}${_exKey}`.slice(0, 480);
   const cacheWrite = (payload) => {
     if (!env.MOVIES_CACHE) return;
     const w = env.MOVIES_CACHE.put(cacheKey, JSON.stringify(payload), { expirationTtl: 21600 }).catch(() => {});
@@ -917,6 +1066,50 @@ async function handleAISearch(request, env, cors, waitUntil) {
     } catch (e) {
       console.error('[ai-search:actor] intent parse failed:', e.message);
       // fall through to existing flow
+    }
+  }
+
+  // ── LLM-FIRST "By Plot" curation (open-world, agentic) ─────────────────
+  // Phase 1: the curator model names 5-7 real films from its own deep film
+  //   knowledge (open-world — not restricted to our KV catalog).
+  // Phase 2: hydrate each {title, year} against TMDB in parallel for posters,
+  //   genres and TMDB scores → real Movie-Card-shaped objects.
+  // Only returns when >=3 films hydrate cleanly; otherwise falls through to
+  // the closed-world KV catalog flow below so search never comes back empty.
+  if (env.AI && env.TMDB_KEY) {
+    try {
+      const { picks, suggestedRefinements, message } = await _llmFirstCuration(query, exclude, env);
+      if (picks.length) {
+        const hydrated = await Promise.all(picks.map(async p => {
+          const raw = await _tmdbFindMovie(p.title, p.year, env);
+          return raw ? { raw, pick: p } : null;
+        }));
+
+        const movies = [], reasons = {}, tags = {}, seenIds = new Set();
+        for (const h of hydrated) {
+          if (!h || seenIds.has(h.raw.id)) continue;
+          seenIds.add(h.raw.id);
+          movies.push(h.raw);
+          if (h.pick.ai_verdict)  reasons[h.raw.id] = h.pick.ai_verdict;
+          if (h.pick.tags.length) tags[h.raw.id]    = h.pick.tags;
+        }
+
+        if (movies.length >= 3) {
+          const payload = {
+            aiCurated: true,
+            movies,
+            reasons,
+            tags,
+            suggestedRefinements,
+            message: message || null,
+          };
+          cacheWrite(payload);
+          return json(payload);
+        }
+        console.log(`[ai-search:llm-first] only ${movies.length} films hydrated — falling back to KV catalog`);
+      }
+    } catch (e) {
+      console.error('[ai-search:llm-first] failed, falling back to KV:', e.message);
     }
   }
 
