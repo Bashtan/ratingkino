@@ -2,7 +2,19 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-22) — Deep Emotional "Vibe" Search
+## ⚡ Most Recent Session (2026-07-22) — Fix Mobile Search Bar (Squished Input)
+
+All commits on `main`, all live on https://findfilm.ai. Deployed `b1e7cf9d.ratingkino.pages.dev`.
+
+The humanized mode label ("Describe what you remember") made the search **mode trigger** eat most of the bar on phones, squishing the `#searchInput` so the typed query was invisible; the mode dropdown was also clipped by the sticky Movies/TV bar.
+
+| Commit | Feature |
+|--------|---------|
+| `(code)` | **Unsquish mobile search + fix dropdown clipping** (`index.html`). **(1) Collapse mode label ≤768px** — new `@media(max-width:768px)` rule `.sw-mode-label { display: none; }` (near the existing `.search-wrap--hero .sw-mode-trigger` mobile override ~L2747) so the trigger (`#swMode` → `.sw-mode-trigger`, label span `#smLabel`/`.sw-mode-label`) shows only the active **icon (★/🔍) + chevron**; trigger padding tightened to `0 8px 0 9px; gap:4px`. Result: trigger 46px, freeing the `.sw-input-zone` (`flex:1; min-width:0` — already correct, equiv. `flex-1 min-w-0`) to 206px on a 375px viewport. **(2) Fix dropdown z-index clipping** — root cause was `.search-wrap { position:relative; z-index:1 }` (L153) capping the `.sw-mode-menu` (internal `z-index:250`) stacking context **below** the sticky `.filters-bar` (`z-index:99`, Movies/TV) on mobile, where `#searchWrap` lives in the hero (desktop is fine — wrap sits in the header at z-index 100). Added `.search-wrap--hero:has(.sw-mode.open) { z-index: 130; }` (after `.search-wrap--hero:focus-within` ~L536) to lift the whole wrap above the filters bar **only while the menu is open**. **Verified (preview eval + screenshot, static preview, 375px mobile):** `#smLabel` `display:none`, trigger 46px, input zone 206px; opening `#swMode` → wrap `z-index:130`, `elementFromPoint` at menu center = `sw-mode-opt active` (dropdown on top, not clipped); screenshot shows icon-only trigger, full-width input ("Pure chaos & twists" visible), menu overlaying vibe chips + Movies/TV bar. **Tailwind deliverable** (docs-only): mode label span `class="hidden sm:inline"`; input `class="flex-1 min-w-0"`; open dropdown menu `class="absolute z-50 top-[calc(100%+9px)] left-0"` on a wrapper that becomes `class="relative z-[130]"` while open (e.g. via `has-[.open]:z-[130]`). |
+
+---
+
+## ⚡ Session (2026-07-22) — Deep Emotional "Vibe" Search
 
 All commits on `main`, all live on https://findfilm.ai. Deployed `ff4fc5ff.ratingkino.pages.dev`. Live API confirmed returning `vibeTags` (e.g. "Late night aesthetic" → Tokyo Nights / Neon Dreams / City Noir).
 
