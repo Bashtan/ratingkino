@@ -2,7 +2,19 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-22) — Mobile UI Declutter: Drop FAB, Disclaimer, H1 Brand
+## ⚡ Most Recent Session (2026-07-22) — Fix iOS Safe Area (Dynamic Island Overlap)
+
+All commits on `main`, all live on https://findfilm.ai. Deployed `d94cd8e1.ratingkino.pages.dev`.
+
+The sticky top bar rendered under the iPhone Dynamic Island / status bar (buttons unclickable) because it ignored the iOS safe area. Fixed by growing the header by the top inset and padding it.
+
+| Commit | Feature |
+|--------|---------|
+| `f29d7c8` | **iOS safe-area header fix** (`index.html`). Viewport `<meta>` already had `viewport-fit=cover` (required for `env()`) — no change. Base `header {}` rule (~L120): `height: 64px` → **`height: calc(64px + env(safe-area-inset-top))`** plus **`padding-top: env(safe-area-inset-top)`** and **`padding-left/right: env(safe-area-inset-left/right)`**. With global `box-sizing:border-box`, the grown height keeps the inner 64px content row intact while pushing it below the notch; horizontal insets protect landscape notches. Mobile `@media(max-width:768px) header{height:auto}` (~L2664) is unaffected — the base `padding-top` still applies and the header grows naturally. The existing **`syncFiltersTop()`** (~L11480; sets `.filters-bar.style.top` = header `getBoundingClientRect().height`, wired to a `ResizeObserver(header)` + `orientationchange`) auto-realigns the sticky `.filters-bar` to the taller header — zero JS changes needed. **Verified (preview eval):** desktop 1280 → header 64px, all safe-area paddings `0px` (Chrome insets=0), `.filters-bar` top syncs to 64px (`aligned:true`) — no regression; mobile 375 → header 52px auto, padding 0; **simulated 59px inset** (inline `paddingTop:59px` + `height:calc(64px+59px)` then `syncFiltersTop()`) → header 123px, inner content top-from-viewport = 59 (`contentClearsIsland:true`), inner row still 52px (not clipped), `.filters-bar` top synced to 123px; reverted cleanly to 52px. **Tailwind deliverable** (docs-only): meta `content="width=device-width, initial-scale=1.0, viewport-fit=cover"`; header `class="pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] h-[calc(64px+env(safe-area-inset-top))]"` (optional extra breathing room via `pt-[calc(env(safe-area-inset-top)+0.5rem)]` — NOT used here so desktop height stays exactly 64px). |
+
+---
+
+## ⚡ Session (2026-07-22) — Mobile UI Declutter: Drop FAB, Disclaimer, H1 Brand
 
 All commits on `main`, all live on https://findfilm.ai. Deployed `8901fc1b.ratingkino.pages.dev`.
 
