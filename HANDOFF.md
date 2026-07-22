@@ -2,7 +2,19 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-22) — Fix Mobile Search Bar (Squished Input)
+## ⚡ Most Recent Session (2026-07-22) — Vibe Chips: Localize + Single Compact Row
+
+All commits on `main`, all live on https://findfilm.ai. Deployed `c8a1bf80.ratingkino.pages.dev`.
+
+The 4 AI **Vibe Chips** under the hero search wrapped onto a 2nd line on desktop and were English-only. Now fully i18n'd across all 6 languages and forced onto one compact, subordinate single row.
+
+| Commit | Feature |
+|--------|---------|
+| `c79f588` | **Localize + compact vibe chips** (`index.html`). **i18n:** 4 new `TRANSLATIONS` keys **`vibe.brain` / `vibe.night` / `vibe.chaos` / `vibe.soul`** added to ALL 6 locales (en/es/fr/zh/ar/uk), each inserted right after that locale's `hero.eyebrow` (~L5044 en). EN = "Turn off my brain / Late night aesthetic / Pure chaos & twists / Good for the soul"; UK = "Вимкнути мозок / Нічна естетика / Суцільний хаос / Для душі"; plus es/fr/zh/ar (fr uses curly `’` in "Bon pour l’âme" to stay inside the single-quoted value). **Markup (`#vibeChips` ~L4374):** each `.vibe-chip` keeps its hardcoded emoji as a text node, and the inner `<span>` now carries `data-i18n="vibe.*"` (picked up by `applyTranslations()` L6600 on load + `switchLang()` L6692); `onclick` changed from a hardcoded English literal to **`vibeSearch(t('vibe.*'))`** so the search auto-fills with the active-locale string. **CSS (`.vibe-chips`/`.vibe-chip` ~L489):** `flex-wrap:wrap`→**`nowrap`**, `max-width:680px`→**`none`**, kept `justify-content:center` → chips stay on ONE centered row on desktop; compacted to `padding:5px 12px`, `font-size:13px`, `font-weight:500`, `gap:5px`; **subordinate styling** `color:#94a3b8` (slate-400) → `#fff` on hover, `bg rgba(255,255,255,.05)`, hover `bg .10` / `border .18`, **dropped the neon glow/translateY** (now `transition: background,border-color,color`). Mobile `@media(max-width:768px)` rail (`flex-nowrap; justify-content:flex-start; overflow-x:auto; .vibe-chip{flex:0 0 auto}` ~L2744) unchanged → horizontal scroll on phones. **Verified (preview eval + screenshot):** desktop 1280 → `flex-wrap:nowrap`, `justify:center`, 1 row, no body overflow (EN 633px / longest FR 737px both single-row, FR fits w/o page scroll); all 4 locales (fr/uk/ar/zh) render translated text on 1 row; `onclick` = `vibeSearch(t('vibe.brain'))`; `switchLang` round-trips back to EN correctly; mobile 402 → single scroll rail. **Tailwind deliverable** (docs-only): container `class="flex justify-center gap-2 md:flex-nowrap max-md:overflow-x-auto max-md:justify-start [scrollbar-width:none]"`; chip `class="inline-flex items-center gap-1.5 px-3 py-1 text-[13px] font-medium rounded-full whitespace-nowrap text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-colors"`; span `data-i18n="vibe.brain"`. |
+
+---
+
+## ⚡ Session (2026-07-22) — Fix Mobile Search Bar (Squished Input)
 
 All commits on `main`, all live on https://findfilm.ai. Deployed `b1e7cf9d.ratingkino.pages.dev`.
 
