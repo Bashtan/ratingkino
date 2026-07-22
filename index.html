@@ -533,6 +533,10 @@ header {
               0 0 40px rgba(99,102,241,0.28),
               0 0 80px rgba(6,182,212,0.12);
 }
+/* Lift the wrap's stacking context above the sticky .filters-bar (z-index:99)
+   while the mode dropdown is open, so the menu overlays the Movies/TV bar
+   cleanly instead of being clipped by it. */
+.search-wrap--hero:has(.sw-mode.open) { z-index: 130; }
 /* Input is transparent inside the bar (wrap paints the glass now) */
 .sw-input-zone { position: relative; flex: 1; display: flex; align-items: center; min-width: 0; }
 .search-wrap--hero .search-input {
@@ -2744,7 +2748,9 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   }
   .vibe-chip { flex: 0 0 auto; }
   .search-wrap--hero .search-input { height: 46px; font-size: 15px; }
-  .search-wrap--hero .sw-mode-trigger { height: 44px; font-size: 12px; padding: 0 9px 0 10px; }
+  .search-wrap--hero .sw-mode-trigger { height: 44px; font-size: 12px; padding: 0 8px 0 9px; gap: 4px; }
+  /* Mobile: collapse mode trigger to icon + chevron — frees width for the input */
+  .sw-mode-label { display: none; }
   .search-wrap--hero .search-icon { display: none; }  /* drop the decorative magnifier — save room */
   /* Discovery actions live in the header on mobile — hide the sub-nav links */
   .nav-feats { display: none; }
