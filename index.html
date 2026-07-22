@@ -1817,11 +1817,30 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 
 /* Modal body grid */
 .m-body {
-  display: grid; grid-template-columns: 1fr 300px; gap: 0;
+  display: block;
   border-top: 1px solid var(--border);
 }
-.m-left { padding: 24px 28px; border-right: 1px solid var(--border); min-width: 0; }
-.m-right { padding: 20px 22px; min-width: 0; }
+/* ── Editorial modal sections ──
+   Single vertical column; each section gets generous padding + a hairline
+   divider so the modal scans as distinct blocks (Overview · AI Insights ·
+   Where to Watch · Community · Keep Exploring) instead of one long stack. */
+.m-sec { padding: 26px 28px; min-width: 0; }
+.m-sec > :last-child { margin-bottom: 0; }
+.m-sec + .m-sec { border-top: 1px solid rgba(255,255,255,0.06); }
+/* AI Insights band — soft indigo tint marks it as the unique AI value prop. */
+.m-sec--ai { background: linear-gradient(180deg, rgba(99,102,241,0.06), rgba(99,102,241,0) 78%); }
+/* Community band — barely-there lift separates reviews from content above. */
+.m-sec--reviews { background: rgba(255,255,255,0.014); }
+.ai-sec-head { display: flex; align-items: center; gap: 8px; margin-bottom: 13px; }
+.ai-sec-spark { font-size: 15px; line-height: 1; }
+.ai-sec-title {
+  font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 15px;
+  letter-spacing: 0.2px; color: #c4b5fd;
+}
+/* Trust micro-copy under streaming/affiliate links. */
+.affiliate-note {
+  margin: 4px 0 0; font-size: 11px; line-height: 1.4; color: #64748b;
+}
 
 .section-lbl {
   font-size: 9.5px; letter-spacing: 3px; text-transform: uppercase;
@@ -2738,12 +2757,11 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .m-title     { font-size: 16px; line-height: 1.18; margin-bottom: 1px; }
   .m-close     { width: 44px; height: 44px; top: 10px; right: 10px; font-size: 16px; }
   .m-back      { width: 44px; height: 44px; top: 10px; left: 10px; }
-  .m-body      { grid-template-columns: 1fr; flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  /* min-width:0 overrides the CSS Grid default (min-width:auto), which otherwise lets
-     wide descendants (cast list, provider chips, VPN banner) force this column wider
-     than the viewport instead of wrapping — the root cause of mobile horizontal overflow. */
-  .m-left      { padding: 8px 14px 14px; border-right: none; border-bottom: 1px solid var(--border); min-width: 0; }
-  .m-right     { padding: 12px 14px; min-width: 0; }
+  /* Body is the flex-column scroll region between the pinned hero + sticky footer. */
+  .m-body      { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  /* min-width:0 lets wide descendants (cast list, provider chips, VPN banner) wrap
+     instead of forcing the column wider than the viewport (mobile overflow root cause). */
+  .m-sec       { padding: 14px; min-width: 0; }
   .meta-item span, .provider-chip span { overflow-wrap: break-word; word-break: break-word; }
   /* Trailer: modern aspect-ratio replaces the padding-bottom:56.25% hack — no wasted height */
   .trailer-wrap { padding-bottom: 0; height: auto; aspect-ratio: 16 / 9; margin-bottom: 10px; }
@@ -4615,7 +4633,7 @@ if ('serviceWorker' in navigator) {
       <div class="m-backdrop-grad"></div>
     </div>
 
-    <!-- Info strip -->
+    <!-- ═══════════ SECTION 1 · OVERVIEW (Hero) ═══════════ -->
     <div class="m-info-strip">
       <div class="m-poster" id="mPoster"></div>
       <div class="m-meta-col">
@@ -4641,9 +4659,11 @@ if ('serviceWorker' in navigator) {
       </div>
     </div>
 
-    <!-- Body (scrollable on mobile) -->
+    <!-- Sectioned, scrollable body (single editorial column) -->
     <div class="m-body">
-      <div class="m-left">
+
+      <!-- Section 1 continued · film detail (About / Details / Awards) -->
+      <section class="m-sec m-sec--overview">
         <div class="trailer-wrap" id="trailerWrap">
           <iframe id="trailerFrame" src="" allowfullscreen allow="autoplay"></iframe>
         </div>
@@ -4652,7 +4672,19 @@ if ('serviceWorker' in navigator) {
         <div class="m-desc" id="mDesc"></div>
         <button class="m-desc-toggle" id="mDescToggle" onclick="toggleSynopsis()" aria-expanded="false" style="display:none"></button>
 
-        <div class="section-lbl fit-lbl" id="mFitLbl" data-i18n="modal.fitSummary" style="display:none">Spoiler-Free Fit</div>
+        <div class="section-lbl" data-i18n="modal.details">Details</div>
+        <div class="meta-grid" id="mMeta"></div>
+
+        <div class="section-lbl" data-i18n="modal.awards">Awards &amp; Recognition</div>
+        <div class="awards" id="mAwards"></div>
+      </section>
+
+      <!-- ═══════════ SECTION 2 · AI INSIGHTS (Why it fits you) ═══════════ -->
+      <section class="m-sec m-sec--ai" style="display:none">
+        <div class="ai-sec-head" id="mFitLbl" style="display:none">
+          <span class="ai-sec-spark">✨</span>
+          <span class="ai-sec-title" data-i18n="modal.aiInsights">Why It Fits You</span>
+        </div>
         <div class="fit-summary" id="mFitSummary" style="display:none">
           <div class="fit-row fit-for">
             <span class="fit-ico">👍</span>
@@ -4676,22 +4708,18 @@ if ('serviceWorker' in navigator) {
             </div>
           </div>
         </div>
+      </section>
 
-        <div class="section-lbl" data-i18n="modal.details">Details</div>
-        <div class="meta-grid" id="mMeta"></div>
-
+      <!-- ═══════════ SECTION 3 · WHERE TO WATCH & ACTIONS ═══════════ -->
+      <section class="m-sec m-sec--watch">
         <div class="section-lbl" id="watchLbl" data-i18n="modal.whereToWatch" style="display:none">Where to Watch<span class="watch-lbl-region" id="watchRegionFlag"></span></div>
         <div id="watchProviders" style="margin-bottom:4px"></div>
-        <div id="vpnBanner" style="margin-bottom:18px"></div>
+        <div id="vpnBanner" style="margin-bottom:10px"></div>
+        <p class="affiliate-note" data-i18n="modal.affiliateNote">Affiliate links do not influence scores.</p>
+      </section>
 
-        <div class="section-lbl" data-i18n="modal.awards">Awards &amp; Recognition</div>
-        <div class="awards" id="mAwards"></div>
-
-        <div class="section-lbl m-similar-lbl" id="similarLbl" data-i18n="modal.similar" style="display:none">You Might Also Like</div>
-        <div class="feed-scroll m-similar-scroll" id="similarScroll" style="display:none"></div>
-      </div>
-
-      <div class="m-right">
+      <!-- ═══════════ SECTION 4 · COMMUNITY & REVIEWS ═══════════ -->
+      <section class="m-sec m-sec--reviews">
         <div class="section-lbl" data-i18n="modal.yourReview">Your Review</div>
         <div class="review-compose" id="reviewCompose">
           <input type="text" class="review-name" id="reviewName"
@@ -4710,7 +4738,13 @@ if ('serviceWorker' in navigator) {
 
         <div class="section-lbl" data-i18n="modal.reviews">Reviews</div>
         <div class="reviews-list" id="mReviews"></div>
-      </div>
+      </section>
+
+      <!-- ═══════════ SECTION 5 · KEEP EXPLORING (Related titles) ═══════════ -->
+      <section class="m-sec m-sec--related" style="display:none">
+        <div class="section-lbl m-similar-lbl" id="similarLbl" data-i18n="modal.similar" style="display:none">You Might Also Like</div>
+        <div class="feed-scroll m-similar-scroll" id="similarScroll" style="display:none"></div>
+      </section>
     </div>
 
     <!-- Mobile-only sticky NordVPN footer (flex column bottom item) -->
@@ -5074,6 +5108,8 @@ const TRANSLATIONS = {
     'onboard.cta':         'Let\'s go! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'Spoiler-Free Fit',
+    'modal.aiInsights':    'Why It Fits You',
+    'modal.affiliateNote': 'Affiliate links do not influence scores.',
     'modal.fitFor':        'For you if',
     'modal.fitSkip':       'Skip if',
     'modal.fitVibe':       'The experience',
@@ -5338,6 +5374,8 @@ const TRANSLATIONS = {
     'onboard.cta':         '¡Vamos! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'Sin spoilers',
+    'modal.aiInsights':    'Por qué te encaja',
+    'modal.affiliateNote': 'Los enlaces de afiliados no influyen en las puntuaciones.',
     'modal.fitFor':        'Para ti si',
     'modal.fitSkip':       'Sáltatela si',
     'modal.fitVibe':       'La experiencia',
@@ -5597,6 +5635,8 @@ const TRANSLATIONS = {
     'onboard.cta':         'C\'est parti ! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'Sans spoilers',
+    'modal.aiInsights':    'Pourquoi ça vous correspond',
+    'modal.affiliateNote': 'Les liens affiliés n\'influencent pas les notes.',
     'modal.fitFor':        'Pour vous si',
     'modal.fitSkip':       'À éviter si',
     'modal.fitVibe':       'L\'expérience',
@@ -5856,6 +5896,8 @@ const TRANSLATIONS = {
     'onboard.cta':         '开始探索！→',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    '无剧透匹配',
+    'modal.aiInsights':    '为什么适合你',
+    'modal.affiliateNote': '推广链接不影响评分。',
     'modal.fitFor':        '适合你，如果',
     'modal.fitSkip':       '跳过，如果',
     'modal.fitVibe':       '观影体验',
@@ -6115,6 +6157,8 @@ const TRANSLATIONS = {
     'onboard.cta':         'هيا بنا! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'بلا حرق للأحداث',
+    'modal.aiInsights':    'لماذا يناسبك',
+    'modal.affiliateNote': 'روابط الإحالة لا تؤثر على التقييمات.',
     'modal.fitFor':        'مناسب لك إذا',
     'modal.fitSkip':       'تجاوزه إذا',
     'modal.fitVibe':       'التجربة',
@@ -6383,6 +6427,8 @@ const TRANSLATIONS = {
     'onboard.cta':         'Поїхали! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'Без спойлерів',
+    'modal.aiInsights':    'Чому це вам підходить',
+    'modal.affiliateNote': 'Партнерські посилання не впливають на оцінки.',
     'modal.fitFor':        'Вам підійде, якщо',
     'modal.fitSkip':       'Пропустіть, якщо',
     'modal.fitVibe':       'Враження',
@@ -8984,6 +9030,15 @@ async function openMovie(tmdbId, listName = '') {
 /* ── Spoiler-Free Fit summary ── on-demand LLM block (KV-cached server-side,
    sessionStorage-cached client-side). Fills #fitFor/#fitSkip/#fitVibe or hides
    the whole block on error. Race-guarded against fast movie switches. ── */
+// Show/hide the editorial section (.m-sec wrapper) that contains a given child.
+// Used to collapse conditional sections (AI Insights, Keep Exploring) so they
+// never leave an empty tinted band + divider when there's no data to show.
+function _setSecVisible(childId, show) {
+  const el  = document.getElementById(childId);
+  const sec = el && el.closest('.m-sec');
+  if (sec) sec.style.display = show ? '' : 'none';
+}
+
 function _renderFitSummary(m, data) {
   if (!ACTIVE_MOVIE || ACTIVE_MOVIE.id !== m.id) return; // stale response
   const lbl  = document.getElementById('mFitLbl');
@@ -8992,7 +9047,7 @@ function _renderFitSummary(m, data) {
   const f = (data.forYou || '').trim();
   const s = (data.skipIf || '').trim();
   const v = (data.experience || '').trim();
-  if (!f && !s && !v) { lbl.style.display = 'none'; box.style.display = 'none'; return; }
+  if (!f && !s && !v) { lbl.style.display = 'none'; box.style.display = 'none'; _setSecVisible('mFitSummary', false); return; }
   box.classList.remove('fit-loading');
   document.getElementById('fitFor').textContent  = f;
   document.getElementById('fitSkip').textContent = s;
@@ -9003,6 +9058,7 @@ function _renderFitSummary(m, data) {
   box.querySelector('.fit-vibe').style.display = v ? '' : 'none';
   lbl.style.display = '';
   box.style.display = '';
+  _setSecVisible('mFitSummary', true);
 }
 
 async function refreshFitSummary(m) {
@@ -9013,6 +9069,7 @@ async function refreshFitSummary(m) {
   lbl.style.display = 'none';
   box.style.display = 'none';
   box.classList.remove('fit-loading');
+  _setSecVisible('mFitSummary', false);
 
   // Client session cache — instant on repeat opens within a session.
   try {
@@ -9026,6 +9083,7 @@ async function refreshFitSummary(m) {
   box.classList.add('fit-loading');
   lbl.style.display = '';
   box.style.display = '';
+  _setSecVisible('mFitSummary', true);
 
   try {
     const r = await fetch('/api/fit-summary', {
@@ -9049,6 +9107,7 @@ async function refreshFitSummary(m) {
       lbl.style.display = 'none';
       box.style.display = 'none';
       box.classList.remove('fit-loading');
+      _setSecVisible('mFitSummary', false);
     }
   }
 }
@@ -9371,6 +9430,7 @@ async function loadSimilarMovies(m) {
   if (lbl) lbl.style.display = '';
   scroll.innerHTML = _SIM_SKEL;
   scroll.style.display = '';
+  _setSecVisible('similarScroll', true);
 
   try {
     const type = m.isTV ? 'tv' : 'movie';
@@ -9380,6 +9440,7 @@ async function loadSimilarMovies(m) {
     if (!results.length) {
       scroll.style.display = 'none';
       if (lbl) lbl.style.display = 'none';
+      _setSecVisible('similarScroll', false);
       return;
     }
 
@@ -9409,6 +9470,7 @@ async function loadSimilarMovies(m) {
   } catch {
     scroll.style.display = 'none';
     if (lbl) lbl.style.display = 'none';
+    _setSecVisible('similarScroll', false);
   }
 }
 
