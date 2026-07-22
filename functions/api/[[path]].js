@@ -782,32 +782,36 @@ async function handleCache(key, env, cors) {
 ════════════════════════════════════════════════════════════════════ */
 
 const _CURATOR_SYSTEM_PROMPT =
-  'You are an elite film curator with encyclopaedic knowledge of world cinema — ' +
+  'You are a DEEP EMOTIONAL film curator with encyclopaedic knowledge of world cinema — ' +
   'arthouse, blockbusters, cult classics, festival winners and hidden gems across every era, ' +
-  'country and language. The user describes a vibe, plot, trope, mood, or a specific kind of scene. ' +
-  'Use your DEEP internal knowledge — subtext, emotional resonance, tone, cinematography, ' +
-  'character arcs, themes and memorable scenes — NOT just one-line plot summaries — ' +
-  'to name the films that fit the request most perfectly. ' +
-  'Recommend 5 to 7 real films, best match first. It is good to mix a well-known pick with a ' +
-  'deeper cut, but every film must genuinely fit and must actually exist. ' +
+  'country and language. The user tells you how they want to FEEL, or describes a vibe, mood, ' +
+  'plot, trope, or a specific kind of scene. Read the request for its EMOTIONAL intent, then ' +
+  'analyse each candidate film on four axes: (1) VIBE & emotional resonance — the feeling it ' +
+  'leaves you with; (2) PACING — slow-burn, meditative, breakneck, rollercoaster; ' +
+  '(3) COLOUR PALETTE & visual mood — neon, washed-out, warm, monochrome, saturated; ' +
+  '(4) TONE & subtext. Match on how the film FEELS, not merely what its plot is about. ' +
+  'Recommend 5 to 7 real films, best emotional match first. It is good to mix a well-known pick ' +
+  'with a deeper cut, but every film must genuinely deliver the requested feeling and must actually exist. ' +
   'Respond with STRICT JSON only — no markdown, no code fences, no prose outside the JSON. Schema:\n' +
   '{\n' +
   '  "picks": [\n' +
   '    { "title": "Exact English film title", "year": 1999, ' +
-  '"ai_verdict": "one punchy sentence on WHY this nails the user\'s exact request (tone/subtext/a specific scene — not a plot recap)", ' +
+  '"vibe_tag": "punchy 1-2 word mood label capturing the feeling (e.g. \\"Neon Noir\\", \\"Pure Chaos\\", \\"Slow-burn\\", \\"Cosy Warmth\\", \\"Gut-punch\\")", ' +
+  '"ai_verdict": "one punchy sentence on WHY this film delivers the exact feeling/vibe the user asked for — name the mood, pacing, palette or a specific scene, never a plot recap", ' +
   '"tags": ["1-3 word trait", "..."] }\n' +
   '  ],\n' +
   '  "suggestedRefinements": ["1-3 word next tweak", "...", "..."],\n' +
   '  "message": null\n' +
   '}\n' +
   'Rules: "year" is the 4-digit theatrical release year as an integer. ' +
-  'Each "ai_verdict" is at most 22 words and specific to THIS query. ' +
+  '"vibe_tag" is a punchy 1-2 word mood label in Title Case with no trailing punctuation. ' +
+  'Each "ai_verdict" is at most 22 words, centred on the FEELING/vibe match, and specific to THIS query. ' +
   'Each pick has 2 to 3 short "tags". ' +
   '"suggestedRefinements" is 3 to 4 short (1-3 word) follow-up tweaks. ' +
   'Never invent films. Never output anything except the JSON object.';
 
 /* Phase 1 — ask the curator model for real films matching the query.
- * Returns { picks:[{title,year,ai_verdict,tags}], suggestedRefinements, message }.
+ * Returns { picks:[{title,year,vibe_tag,ai_verdict,tags}], suggestedRefinements, message }.
  * Throws on hard failure so the caller can fall back to the KV catalog. */
 async function _llmFirstCuration(query, exclude, env) {
   const exclusionBlock = exclude.length
@@ -839,6 +843,7 @@ async function _llmFirstCuration(query, exclude, env) {
     .map(p => ({
       title:      String(p?.title || '').trim().slice(0, 120),
       year:       Number.parseInt(p?.year, 10) || null,
+      vibe_tag:   String(p?.vibe_tag || '').trim().replace(/[\n\r|]+/g, ' ').slice(0, 24),
       ai_verdict: String(p?.ai_verdict || '').trim().replace(/[\n\r]+/g, ' ').slice(0, 160),
       tags: Array.isArray(p?.tags)
         ? p.tags.filter(t => typeof t === 'string')
@@ -1085,13 +1090,14 @@ async function handleAISearch(request, env, cors, waitUntil) {
           return raw ? { raw, pick: p } : null;
         }));
 
-        const movies = [], reasons = {}, tags = {}, seenIds = new Set();
+        const movies = [], reasons = {}, tags = {}, vibeTags = {}, seenIds = new Set();
         for (const h of hydrated) {
           if (!h || seenIds.has(h.raw.id)) continue;
           seenIds.add(h.raw.id);
           movies.push(h.raw);
-          if (h.pick.ai_verdict)  reasons[h.raw.id] = h.pick.ai_verdict;
-          if (h.pick.tags.length) tags[h.raw.id]    = h.pick.tags;
+          if (h.pick.ai_verdict)  reasons[h.raw.id]  = h.pick.ai_verdict;
+          if (h.pick.tags.length) tags[h.raw.id]     = h.pick.tags;
+          if (h.pick.vibe_tag)    vibeTags[h.raw.id] = h.pick.vibe_tag;
         }
 
         if (movies.length >= 3) {
@@ -1100,6 +1106,7 @@ async function handleAISearch(request, env, cors, waitUntil) {
             movies,
             reasons,
             tags,
+            vibeTags,
             suggestedRefinements,
             message: message || null,
           };
@@ -1150,6 +1157,9 @@ async function handleAISearch(request, env, cors, waitUntil) {
     'For every result, ALSO provide "tags": an array of 2-3 very short labels (1-3 words each) ' +
     'capturing that movie\'s standout traits relevant to the query ' +
     '(e.g. "Slow-burn mystery", "Strong female lead", "Twist ending", "Feel-good"). ' +
+    'For every result, ALSO provide "vibe_tag": a punchy 1-2 word mood label (Title Case, no ' +
+    'trailing punctuation) capturing how the movie FEELS — its emotional vibe/pacing/palette ' +
+    '(e.g. "Neon Noir", "Pure Chaos", "Slow-burn", "Cosy Warmth", "Gut-punch"). ' +
     (exclude.length
       ? 'The user listed HARD EXCLUSIONS — themes, tones, or content they do NOT want. ' +
         'Never recommend a movie whose tone or content matches any hard exclusion; ' +
@@ -1177,12 +1187,13 @@ async function handleAISearch(request, env, cors, waitUntil) {
     `Return JSON:\n` +
     `{\n` +
     `  "results": [\n` +
-    `    { "id": integer, "reason": "short punchy match reason, max 10-15 words", "tags": ["1-3 word trait", "..."] },\n` +
+    `    { "id": integer, "vibe_tag": "1-2 word mood label", "reason": "short punchy match reason, max 10-15 words", "tags": ["1-3 word trait", "..."] },\n` +
     `    ...\n` +
     `  ],\n` +
     `  "suggestedRefinements": ["1-3 word refinement", "...", "...", "..."],\n` +
     `  "message": null\n` +
     `}\n` +
+    `Each result's "vibe_tag" MUST be a punchy 1-2 word mood label (e.g. "Neon Noir", "Pure Chaos", "Slow-burn").\n` +
     `Each result's "tags" MUST be 2-3 short labels (1-3 words each) describing that movie's standout traits.\n` +
     `results ordered best-match first, max 20 entries.\n` +
     `Example reason for query "crime movie like Zodiac but faster": ` +
@@ -1237,10 +1248,11 @@ async function handleAISearch(request, env, cors, waitUntil) {
       ? result.results
       : (result.ids || []).map(id => ({ id }));
 
-    const seen    = new Set();
-    const ids     = [];
-    const reasons = {};
-    const tags    = {};
+    const seen     = new Set();
+    const ids      = [];
+    const reasons  = {};
+    const tags     = {};
+    const vibeTags = {};
     for (const r of rawResults) {
       const id = Number(r?.id);
       if (!Number.isInteger(id) || !validIds.has(id) || seen.has(id)) continue;
@@ -1248,6 +1260,9 @@ async function handleAISearch(request, env, cors, waitUntil) {
       ids.push(id);
       if (typeof r.reason === 'string' && r.reason.trim()) {
         reasons[id] = r.reason.trim().replace(/[\n\r]+/g, ' ').slice(0, 140);
+      }
+      if (typeof r.vibe_tag === 'string' && r.vibe_tag.trim()) {
+        vibeTags[id] = r.vibe_tag.trim().replace(/[\n\r|]+/g, ' ').slice(0, 24);
       }
       if (Array.isArray(r.tags)) {
         const clean = r.tags
@@ -1274,7 +1289,7 @@ async function handleAISearch(request, env, cors, waitUntil) {
       if (suggestedRefinements.length >= 4) break;
     }
 
-    const payload = { ids, reasons, tags, suggestedRefinements, message: result.message || null };
+    const payload = { ids, reasons, tags, vibeTags, suggestedRefinements, message: result.message || null };
     cacheWrite(payload);
     return json(payload);
 

@@ -482,6 +482,34 @@ header {
   display: flex; flex-direction: column; align-items: center; gap: 10px;
   text-align: center;
 }
+
+/* ══ Vibe Chips — emotion-first quick prompts under the hero search ══
+   Educate users that they can search by how they want to FEEL. Each chip
+   auto-fills the search box + fires an AI search (see vibeSearch()). */
+.vibe-chips {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+  width: 100%; max-width: 680px; margin-top: 2px;
+}
+.vibe-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 999px;
+  font-family: inherit; font-size: 13px; font-weight: 600; line-height: 1.2;
+  white-space: nowrap; color: #e5e7ff; cursor: pointer;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  transition: background .18s, border-color .18s, transform .18s, box-shadow .18s;
+}
+.vibe-chip:hover {
+  background: rgba(255,255,255,0.20);
+  border-color: rgba(129,140,248,0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 0 18px rgba(99,102,241,0.22);
+}
+.vibe-chip:active { transform: translateY(0); }
+/* Reusable scrollbar-hiding utility (horizontal vibe rail on mobile) */
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
 /* ══ Unified "super search bar" (hero) ══════════════════════════════
    A single flex row: embedded mode selector · input · clear · AI-voice ·
    search. The wrap itself paints the glass + gradient ring; every control
@@ -1173,8 +1201,22 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   color: var(--text); margin-bottom: 3px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.movie-meta { font-size: 10px; color: var(--text-sub); display: flex; gap: 5px; }
+.movie-meta { font-size: 10px; color: var(--text-sub); display: flex; align-items: center; gap: 5px; }
 .mdot { color: var(--orange); }
+/* Emotional "vibe" badge on AI-curated cards — soft indigo pill next to the genre.
+   Rendered from the LLM's vibe_tag (e.g. "Neon Noir"). Auto-pushed to the row end. */
+.card-vibe-tag {
+  margin-left: auto; flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 8px; border-radius: 999px;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.2px; line-height: 1.4;
+  white-space: nowrap; max-width: 60%; overflow: hidden; text-overflow: ellipsis;
+  color: #c7d2fe;
+  background: rgba(99,102,241,0.20);
+  border: 1px solid rgba(129,140,248,0.32);
+  box-shadow: 0 0 12px rgba(99,102,241,0.14);
+  animation: aiWhyFadeIn 0.35s ease both;
+}
 
 /* ─── AI "why recommended" insight pill ─────────────────────────── */
 .ai-why-reason {
@@ -2694,6 +2736,13 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   /* Hero search: comfortable size on phones */
   .hero-search { padding: 12px 16px 20px; gap: 11px; }
   .search-wrap--hero { max-width: none; height: 54px; }
+  /* Vibe chips → single horizontally-scrollable rail (no wrap, edge-to-edge) */
+  .vibe-chips {
+    flex-wrap: nowrap; justify-content: flex-start;
+    max-width: none; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    padding: 2px 2px 3px; margin-left: -2px; margin-right: -2px;
+  }
+  .vibe-chip { flex: 0 0 auto; }
   .search-wrap--hero .search-input { height: 46px; font-size: 15px; }
   .search-wrap--hero .sw-mode-trigger { height: 44px; font-size: 12px; padding: 0 9px 0 10px; }
   .search-wrap--hero .search-icon { display: none; }  /* drop the decorative magnifier — save room */
@@ -4315,6 +4364,13 @@ if ('serviceWorker' in navigator) {
     </div>
   </div>
   </div><!-- /#heroSearchAnchor -->
+  <!-- ════ Vibe Chips — emotion-first quick prompts (auto-fill + AI search) ════ -->
+  <div class="vibe-chips hide-scrollbar" id="vibeChips" role="group" aria-label="Search by vibe">
+    <button class="vibe-chip" type="button" onclick="vibeSearch('Turn off my brain')">🛋️ <span>Turn off my brain</span></button>
+    <button class="vibe-chip" type="button" onclick="vibeSearch('Late night aesthetic')">🌃 <span>Late night aesthetic</span></button>
+    <button class="vibe-chip" type="button" onclick="vibeSearch('Pure chaos &amp; twists')">🎢 <span>Pure chaos &amp; twists</span></button>
+    <button class="vibe-chip" type="button" onclick="vibeSearch('Good for the soul')">❤️‍🩹 <span>Good for the soul</span></button>
+  </div>
 </section>
 
 <!-- ════════════ FIRST-VISIT ONBOARDING ════════════ -->
@@ -6899,6 +6955,7 @@ let _lastQuery        = '';        // last AI query for follow-up context
 let _aiMatchScores    = new Map(); // tmdbId → match % for current AI results
 let _aiMatchReasons   = new Map(); // tmdbId → "why recommended" AI explanation
 let _aiMatchTags      = new Map(); // tmdbId → ["Slow-burn mystery", ...] "why matches" chips
+let _aiVibeTags       = new Map(); // tmdbId → "Neon Noir" emotional vibe badge (LLM vibe_tag)
 let _thinkingTimer    = null;      // cycling thinking-text timer
 function getThinkingPhrases() {
   return [0,1,2,3].map(i => t(`ai.thinking.${i}`));
@@ -7715,6 +7772,10 @@ function renderCardHTML(m) {
   const whyTagsHTML = (matchTags && matchTags.length)
     ? `<div class="ai-why-tags">${matchTags.map(tg => `<span class="ai-why-tag">${esc(tg)}</span>`).join('')}</div>`
     : '';
+  const vibeTag = _aiVibeTags.get(m.id);
+  const vibeBadgeHTML = vibeTag
+    ? `<span class="card-vibe-tag">✦ ${esc(vibeTag)}</span>`
+    : '';
   return `<div class="movie-card" id="card-${m.id}" onclick="openMovie(${m.id})">
     <div class="movie-poster">
       ${poster}
@@ -7736,6 +7797,7 @@ function renderCardHTML(m) {
         <span>${m.year||''}</span>
         ${m.year ? '<span class="mdot">·</span>' : ''}
         <span>${esc(m.genre)}</span>
+        ${vibeBadgeHTML}
       </div>
       ${whyReasonHTML}
       ${whyTagsHTML}
@@ -8553,6 +8615,7 @@ function clearAISearch() {
   clearFollowUps();
   _aiMatchScores.clear();
   _aiMatchReasons.clear();
+  _aiVibeTags.clear();
   _lastQuery = '';
   document.getElementById('searchWrap').classList.remove('ai-active', 'typing');
   document.getElementById('searchInput').value = '';
@@ -8659,6 +8722,23 @@ function parseVibeQuery(query) {
   return { cleanQuery: cleanQuery || query, exclude: exclude.slice(0, 8) };
 }
 
+/* Vibe Chip click: auto-fill the search box with the emotion prompt, switch to
+   AI/"vibe" mode, and immediately fire the semantic search. */
+function vibeSearch(text) {
+  const q = (text || '').trim();
+  if (!q) return;
+  const inp  = document.getElementById('searchInput');
+  const wrap = document.getElementById('searchWrap');
+  if (inp) {
+    inp.value = q;
+    inp.dispatchEvent(new Event('input', { bubbles: true })); // sync .typing + clear button
+  }
+  if (wrap) wrap.classList.add('typing');
+  setSearchMode('ai');           // ensure semantic (plot/vibe) mode
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  aiSearch(q);
+}
+
 /* Main AI search function */
 async function aiSearch(query) {
   AI_SEARCH_ACTIVE = true;
@@ -8666,6 +8746,7 @@ async function aiSearch(query) {
   _aiMatchScores.clear();
   _aiMatchReasons.clear();
   _aiMatchTags.clear();
+  _aiVibeTags.clear();
   document.getElementById('searchWrap').classList.add('ai-active');
   document.getElementById('feedSections').style.display = 'none';
   applyBrowseCollapse(); // AI results always use the full grid
@@ -8707,8 +8788,10 @@ async function aiSearch(query) {
       _aiMatchScores.clear();
       _aiMatchReasons.clear();
       _aiMatchTags.clear();
+      _aiVibeTags.clear();
       Object.entries(data.reasons || {}).forEach(([id, reason]) => _aiMatchReasons.set(Number(id), reason));
       Object.entries(data.tags || {}).forEach(([id, arr]) => _aiMatchTags.set(Number(id), arr));
+      Object.entries(data.vibeTags || {}).forEach(([id, v]) => _aiVibeTags.set(Number(id), v));
 
       const banner = document.getElementById('aiBanner');
       banner.classList.remove('loading');
@@ -8757,6 +8840,10 @@ async function aiSearch(query) {
     _aiMatchTags.clear();
     if (tags) {
       Object.entries(tags).forEach(([id, arr]) => _aiMatchTags.set(Number(id), arr));
+    }
+    _aiVibeTags.clear();
+    if (data.vibeTags) {
+      Object.entries(data.vibeTags).forEach(([id, v]) => _aiVibeTags.set(Number(id), v));
     }
 
     // Switch banner from loading → result with typewriter
