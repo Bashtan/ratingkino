@@ -415,7 +415,7 @@ header {
 
 /* Mobile-only discovery icons in the header (shown ≤768px; hero keeps the
    full-text pills on desktop). Minimalist glass to match the bookmark icon. */
-.hdr-feats { display: none; align-items: center; gap: 6px; }
+.hdr-feats { display: flex; align-items: center; gap: 6px; }
 .hdr-feat {
   display: flex; align-items: center; justify-content: center;
   width: 32px; height: 32px; padding: 0; flex-shrink: 0;
@@ -681,53 +681,23 @@ header {
    stacked children (bar + pills). Keep them tight and grouped. Mobile
    (< 992px) keeps its own looser spacing + horizontal-scroll pill rail. */
 @media (min-width: 992px) {
-  /* Header now hosts the search bar → the standalone header search icon is redundant */
+  /* Mobile-only search overlay toggle stays hidden on desktop */
   .btn-search-toggle { display: none !important; }
-  /* Slot that receives the reparented #searchWrap; centers it, lets it grow on focus */
-  .header-search-slot {
-    flex: 1 1 auto; display: flex; justify-content: center;
-    min-width: 0; padding: 0 8px;
-  }
-  /* Header-integrated search: ultra-wide STATIC width — no expand-on-focus.
-     Width stays identical when idle, focused, or typing. On narrower desktops it
-     shrinks to fill the available slot via flex:1, so it never overflows the header. */
-  .search-wrap--hero.sw-in-header {
-    max-width: 800px; height: 44px; padding: 0 6px 0 4px;
-    border-radius: 12px;
-    transition: background 0.25s, box-shadow 0.25s;   /* width is static — no max-width transition */
-  }
-  /* Focus/typing/AI only change the glow, never the size */
-  .search-wrap--hero.sw-in-header:focus-within,
-  .search-wrap--hero.sw-in-header.typing,
-  .search-wrap--hero.sw-in-header.ai-active {
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08),
-                0 0 0 2px rgba(99,102,241,0.5),
-                0 0 15px rgba(99,102,241,0.35),
-                0 0 40px rgba(6,182,212,0.15);   /* AI glow */
-  }
-  .search-wrap--hero.sw-in-header .search-input { height: 38px; font-size: 14px; }
-  .search-wrap--hero.sw-in-header .sw-mode-trigger { height: 36px; font-size: 12px; padding: 0 9px 0 10px; }
-  .search-wrap--hero.sw-in-header .search-mic-btn { width: 40px; height: 40px; }
-  .search-wrap--hero.sw-in-header .search-icon { display: none; }  /* drop magnifier in the slim header bar */
-  /* Search lives in the header → the hero collapses to just the search hub
-     (the 3 AI actions now live in the sub-nav bar below). */
+  /* Search is centered in the hero on all viewports now — give the hero a
+     comfortable centered column (eyebrow value-prop + search + vibe chips). */
   .hero-search {
     max-width: 720px;
-    padding-top: 6px; padding-bottom: 20px;   /* breathing room above the sub-nav bar */
-    gap: 0;
+    padding-top: 18px; padding-bottom: 22px;
+    gap: 12px;
   }
-  /* Declutter the desktop hero — drop the eyebrow tagline and the rating-source
-     legend so focus lands purely on the search bar + sub-nav. (The catalog
-     freshness stamp still surfaces in the "How ratings work" modal.)
-     .hero-band scope raises specificity above the base .source-badges rule. */
-  .hero-eyebrow            { display: none; }
+  /* Keep the rating-source legend hidden on desktop (surfaces in the ratings modal). */
   .hero-band .source-badges { display: none; }
 }
 
 /* Filters launcher button in the (slim) filters bar */
 .btn-filters {
   display: inline-flex; align-items: center; gap: 7px;
-  height: 30px; padding: 0 15px; margin-left: auto;
+  height: 30px; padding: 0 15px;
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.12); border-radius: 20px;
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
@@ -844,12 +814,13 @@ header {
   border-bottom: 1px solid var(--border); /* bottom edge of the unified search+filter block */
 }
 
-/* Row 1: content type toggle + genre pills */
+/* Row 1: content-type toggle + Filters button — a single centered pair
+   (discovery actions moved to the top bar; drawer controls behind Filters). */
 .filter-row-1 {
-  display: flex; align-items: center;
+  display: flex; align-items: center; justify-content: center;
   padding: 5px 24px 0;
   max-width: 1200px; margin: 0 auto;
-  gap: 8px;
+  gap: 10px;
 }
 
 /* Content type toggle */
@@ -4251,9 +4222,6 @@ if ('serviceWorker' in navigator) {
       </div>
     </a>
 
-    <!-- Desktop search home: #searchWrap is reparented here at ≥992px (see syncSearchPlacement) -->
-    <div class="header-search-slot" id="headerSearchSlot"></div>
-
     <div class="header-btns">
       <!-- Mobile-only: the 3 discovery actions live here as dense icon buttons
            (≤768px). On desktop they live as text-link tabs in the sub-nav (.nav-feats). -->
@@ -4317,7 +4285,7 @@ if ('serviceWorker' in navigator) {
 <section class="hero-search" id="heroSearch">
   <!-- Eyebrow tagline — anchors the hero as an intentional "feature dashboard" -->
   <p class="hero-eyebrow" data-i18n="hero.eyebrow">240,000 films · 3 rating sources · 1 verdict</p>
-  <!-- Mobile home for #searchWrap. On desktop (≥992px) JS reparents it into #headerSearchSlot. -->
+  <!-- Home for #searchWrap on all viewports (search is centered in the hero). -->
   <div class="hero-search-anchor" id="heroSearchAnchor">
   <!-- Unified "super search bar": embedded mode selector · input · clear · AI voice · magnifier -->
   <div class="search-wrap search-wrap--hero" id="searchWrap">
@@ -4502,23 +4470,9 @@ if ('serviceWorker' in navigator) {
       <button class="ct-btn active" id="ctMovies" onclick="setContentType('movie')" data-i18n="nav.movies">Movies</button>
       <button class="ct-btn" id="ctTV" onclick="setContentType('tv')" data-i18n="nav.tvShows">TV Shows</button>
     </div>
-    <!-- AI discovery features integrated as text-link tabs (desktop/tablet; on
-         ≤768px these collapse into the header icon buttons .hdr-feats). Styled
-         to match the inactive Movies/TV tabs. -->
-    <div class="nav-feats" role="group" aria-label="AI discovery actions">
-      <button class="nav-feat" onclick="openWizard()" aria-label="Find something great for tonight" title="Find something great for tonight" data-i18n-aria="tonight.launch" data-i18n-title="tonight.launch">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 7.75a.75.75 0 0 1 1.142-.638l3.664 2.249a.75.75 0 0 1 0 1.278l-3.664 2.25a.75.75 0 0 1-1.142-.639z"/><path d="M12 17v4"/><path d="M8 21h8"/><rect x="2" y="3" width="20" height="14" rx="2"/></svg>
-        <span data-i18n="tonight.launch">Find something great for tonight</span>
-      </button>
-      <button class="nav-feat" onclick="openGroupPicker()" aria-label="Pick a movie together" title="Pick a movie together" data-i18n-aria="group.launch" data-i18n-title="group.launch">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <span data-i18n="group.launch">Pick a movie together</span>
-      </button>
-      <button class="nav-feat nav-feat--rnd" onclick="randomMovie()" aria-label="Surprise Me" title="Surprise Me" data-i18n-aria="btn.random" data-i18n-title="btn.random">
-        <svg class="rnd-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/></svg>
-        <span data-i18n="btn.random">Surprise Me</span>
-      </button>
-    </div>
+    <!-- Discovery actions (Tonight / Group / Surprise) now live as icon buttons
+         in the top bar (.hdr-feats) on all viewports, so the filters row stays a
+         clean, centered [Movies/TV · Filters] pair. -->
     <!-- All genre / country / rating / sort controls collapse into the slide-out drawer -->
     <button class="btn-filters" onclick="openFilters()" aria-label="Open filters">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
@@ -8381,22 +8335,16 @@ function clearSearchInput() {
    The single #searchWrap node is reparented between the sticky-header slot
    and its hero anchor so every ID/handler stays intact (no duplicate DOM).
    matchMedia fires only on the 992px crossing — no resize thrash. */
-const _searchDesktopMQ = window.matchMedia('(min-width: 992px)');
 function syncSearchPlacement() {
+  // Search bar is now centered in the hero on ALL viewports (the top bar stays
+  // minimal: logo + discovery icons + install + watchlist + language).
   const wrap   = document.getElementById('searchWrap');
-  const slot   = document.getElementById('headerSearchSlot');
   const anchor = document.getElementById('heroSearchAnchor');
-  if (!wrap || !slot || !anchor) return;
-  if (_searchDesktopMQ.matches) {           // desktop → live in the header
-    if (wrap.parentElement !== slot) slot.appendChild(wrap);
-    wrap.classList.add('sw-in-header');
-  } else {                                  // mobile → live in the hero
-    if (wrap.parentElement !== anchor) anchor.appendChild(wrap);
-    wrap.classList.remove('sw-in-header');
-  }
+  if (!wrap || !anchor) return;
+  if (wrap.parentElement !== anchor) anchor.appendChild(wrap);
+  wrap.classList.remove('sw-in-header');
 }
 syncSearchPlacement();
-_searchDesktopMQ.addEventListener('change', syncSearchPlacement);
 
 // Restore saved mode (defaults to Title) and paint the initial placeholder
 initDesktopPlaceholder();
