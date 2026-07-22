@@ -2,7 +2,19 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-22) — Hero Declutter: Pin Search, Header Icons, Centered Filters
+## ⚡ Most Recent Session (2026-07-22) — Mobile UI Declutter: Drop FAB, Disclaimer, H1 Brand
+
+All commits on `main`, all live on https://findfilm.ai. Deployed `8901fc1b.ratingkino.pages.dev`.
+
+Final mobile polish removing three clutter/redundancy items. The floating Random FAB was fully redundant with the header shuffle icon (`hdr-feat--rnd`, now visible on all viewports), so it was deleted outright rather than just hidden.
+
+| Commit | Feature |
+|--------|---------|
+| `e0686b1` | **Mobile UI declutter** (`index.html`). **(1) Removed floating Random FAB** — deleted the `.fab-random` `<button onclick="randomMovie()">` (was after the mobile search overlay) AND all its CSS: the base `.fab-random` block, `.fab-random::before`, `@keyframes fabAuraPulse`, `.fab-random:active`, the `@media(max-width:768px)` `.fab-random{display:flex}` override, and its entry in the mobile tap-highlight selector list. Random is still reachable via the header shuffle discovery icon (`.hdr-feat--rnd` → `randomMovie()`). **(2) Removed disclaimer** — deleted the `<p class="trust-note" data-i18n="trust.aggregated">Ratings are aggregated independently. Ads do not affect scores.</p>` element (sat between the "Best Available Now" feed and `#trustProof`), its orphaned `.trust-note` CSS, and the now-unused **`trust.aggregated`** key from ALL 6 locales (en/es/fr/zh/ar/uk). **(3) Stripped brand from H1** — `<h1 class="hero-h1" data-i18n="hero.h1">` and the English `'hero.h1'` TRANSLATIONS value changed from "FindFilm — AI Movie Assistant & Unified Ratings" → **"AI Movie Assistant & Unified Ratings"** (hero.h1 is only defined in the `en` dict; other locales fall back to it via `t()`). **Verified (preview eval + screenshot, 375px):** `.fab-random`/`​.trust-note` don't exist, "Ads do not affect" absent from `body.innerText`, `.hero-h1` == "AI Movie Assistant & Unified Ratings" (no "FindFilm"), `bodyHorizOverflow:false`; `switchLang('uk'/'fr'/'en')` round-trips with no errors and H1 stays brand-free; screenshot shows no bottom-right FAB. **Tailwind deliverable** (docs-only): to hide instead of delete, add `hidden md:flex` to the FAB button; H1 `class="text-center"` text now `AI Movie Assistant &amp; Unified Ratings`. |
+
+---
+
+## ⚡ Session (2026-07-22) — Hero Declutter: Pin Search, Header Icons, Centered Filters
 
 All commits on `main`, all live on https://findfilm.ai. Deployed `f30dc713.ratingkino.pages.dev`.
 
