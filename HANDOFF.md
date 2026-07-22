@@ -2,7 +2,19 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-22) — Movie Detail Modal: 5-Section Editorial Layout
+## ⚡ Most Recent Session (2026-07-22) — Humanize UX Microcopy
+
+All commits on `main`, all live on https://findfilm.ai. Deployed `a703adeb.ratingkino.pages.dev`.
+
+Shifted microcopy from system-centric labels to natural, outcome-based language (**English locale only** — es/fr/zh/ar/uk untouched). All keys in the flat `TRANSLATIONS.en` dict + their hardcoded HTML span fallbacks.
+
+| Commit | Feature |
+|--------|---------|
+| `df6337d` | **Humanized microcopy.** AI-discovery chips: `tonight.launch` "Movie for Tonight"→**"Find something great for tonight"**, `group.launch` "Watch with Friends"→**"Pick a movie together"** (both `data-i18n` spans in `.nav-feat` desktop chips L4450/4454 + i18n values L4981/5118; `.hdr-feat` icon buttons L4207/4210 aria/title fallbacks also updated — these collapse to icon-only ≤768px via `.hdr-feats`, so longer copy never crowds mobile). Search mode `search.modePlot` "By Plot"→**"Describe what you remember"** (`data-i18n` span L4285 + value L5086). Empty-state score fallbacks: `score.noData` "No ratings available"→**"Critic ratings haven't arrived yet"**, `score.tmdbOnly` "TMDB · no critic data yet"→**"TMDB · critic ratings haven't arrived yet"** (curly apostrophe ’, U+2019; reads as anticipated release not DB error; rendered in `.mr-hero-lbl` + srcLbl of the modal rating card, ~L9511/9520). **Verified (preview eval + screenshot, static preview, 1280 desktop + 375 mobile):** desktop `.nav-feats` = 855px, 3 chips (288/203/131px) no-wrap, `scrollWidth==clientWidth` (0 overflow); mobile `.nav-feats` `display:none` + `.hdr-feats` `display:flex` (icon collapse); plot chip "Describe what you remember" 196–242px no-wrap; no horizontal body overflow. **Tailwind deliverable** (docs-only): chip label spans are plain text — no class changes needed; the flex row `.nav-feats` ≈ `class="flex items-center gap-2 flex-wrap"` already absorbs the longer labels; mobile icon collapse ≈ `class="max-md:hidden"` on `.nav-feats` + `class="hidden max-md:flex"` on `.hdr-feats`. |
+
+---
+
+## ⚡ Session (2026-07-22) — Movie Detail Modal: 5-Section Editorial Layout
 
 All commits on `main`, all live on https://findfilm.ai. Deployed `742c89ee.ratingkino.pages.dev`.
 
