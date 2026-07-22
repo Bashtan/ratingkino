@@ -2,7 +2,19 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-22) — Humanize UX Microcopy
+## ⚡ Most Recent Session (2026-07-22) — Deep Emotional "Vibe" Search
+
+All commits on `main`, all live on https://findfilm.ai. Deployed `ff4fc5ff.ratingkino.pages.dev`. Live API confirmed returning `vibeTags` (e.g. "Late night aesthetic" → Tokyo Nights / Neon Dreams / City Noir).
+
+Full-stack "search by how you want to FEEL" upgrade. The LLM now curates on emotional resonance + labels each pick with a punchy mood tag, the homepage teaches this via **Vibe Chips**, and cards show the mood as a badge.
+
+| Commit | Feature |
+|--------|---------|
+| `caa3f88` | **Deep emotional vibe search (full-stack).** **Backend (`functions/api/[[path]].js`):** rewrote `_CURATOR_SYSTEM_PROMPT` (~L784) as a *deep emotional film curator* — analyses VIBE/emotional resonance, PACING, COLOUR PALETTE, TONE; `ai_verdict` now explains the FEELING match (not plot). New per-pick **`vibe_tag`** (punchy 1-2 word mood label, Title Case) added to the curator JSON schema + parsed in `_llmFirstCuration` (`vibe_tag` field, `.slice(0,24)`) → built into a **`vibeTags{id:tag}`** map in the curated payload (~L1090). Same `vibe_tag` added to the **KV-catalog fallback** path: systemPrompt instruction (~L1150), userPrompt `results[]` schema, parse loop (`vibeTags[id]`, ~L1245), and `payload = { ids, reasons, tags, vibeTags, ... }`. Both `/api/ai-search` shapes now carry `vibeTags`. **Frontend (`index.html`):** new global **`_aiVibeTags` Map** (tmdbId→mood, ~L6902); populated from `data.vibeTags` in EVERY `aiSearch` branch (curated + KV) + cleared at top / in `clearAISearch()`. `renderCardHTML` (~L7714) renders a **`.card-vibe-tag`** badge (`✦ {tag}`, soft indigo pill `rgba(99,102,241,.20)` / `#c7d2fe`, `margin-left:auto`, next to genre in `.movie-meta`). New hero **Vibe Chips** row `<div class="vibe-chips hide-scrollbar" id="vibeChips">` after `#heroSearchAnchor` — 4 emotion prompts (🛋️ Turn off my brain · 🌃 Late night aesthetic · 🎢 Pure chaos & twists · ❤️‍🩹 Good for the soul) as compact glassmorphic `.vibe-chip` pills. New **`vibeSearch(text)`** (before `aiSearch`) auto-fills `#searchInput`, dispatches `input`, calls `setSearchMode('ai')`, smooth-scrolls top, then `aiSearch(text)`. **CSS:** `.vibe-chips` (flex-wrap center, desktop) → mobile `@media(max-width:768px)` becomes `flex-nowrap; overflow-x:auto` horizontal rail; reusable **`.hide-scrollbar`** utility (`scrollbar-width:none` + `::-webkit-scrollbar{display:none}`); `.vibe-chip` glass pill + hover lift; `.card-vibe-tag`. **Verified:** `node --check` backend OK; live API returns 7 films + fitting vibeTags; preview eval — 4 chips render, `vibeSearch` fills input + mode→ai + fires search, card badge renders indigo pill "✦ Neon Noir", mobile chips scroll (686px in 343px, scrollbar hidden). **Tailwind deliverable** (docs-only): chip row `class="flex flex-wrap justify-center gap-2 max-md:flex-nowrap max-md:overflow-x-auto max-md:justify-start [scrollbar-width:none]"`, chip `class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-full bg-white/5 border border-white/10 hover:bg-white/20 transition-all cursor-pointer whitespace-nowrap"`; card badge `class="ml-auto shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30"`. |
+
+---
+
+## ⚡ Session (2026-07-22) — Humanize UX Microcopy
 
 All commits on `main`, all live on https://findfilm.ai. Deployed `a703adeb.ratingkino.pages.dev`.
 
