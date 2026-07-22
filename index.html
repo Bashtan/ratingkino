@@ -122,7 +122,12 @@ header {
   background: rgba(20,20,20,0.97);
   backdrop-filter: blur(20px);
   /* no border-bottom: merges visually with .filters-bar into one unified block */
-  height: 64px;
+  /* iOS safe area: grow the bar by the top inset so the 64px content row clears
+     the Dynamic Island / status bar; horizontal insets protect landscape notches. */
+  height: calc(64px + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 .header-inner {
   max-width: 1200px; margin: 0 auto;
