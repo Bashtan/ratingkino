@@ -2,7 +2,19 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-22) — Vibe Chips: Localize + Single Compact Row
+## ⚡ Most Recent Session (2026-07-22) — Hero Declutter: Pin Search, Header Icons, Centered Filters
+
+All commits on `main`, all live on https://findfilm.ai. Deployed `f30dc713.ratingkino.pages.dev`.
+
+Surgical above-the-fold declutter. The AI search bar now stays centered in the hero on **all** viewports (previously it reparented into the header on desktop), the 3 discovery icons live in the top bar everywhere, the redundant text tabs are gone, and the Movies/TV + Filters controls sit on one centered row. User-approved via AskUserQuestion: (1) center search in hero on all sizes, (2) logo left · Lang+Watchlist(+Install) right, (3) keep header discovery icons only. The SEO `<h1>` was intentionally left in `.hero-band`; the hero eyebrow value-prop was re-enabled on desktop instead.
+
+| Commit | Feature |
+|--------|---------|
+| `e67c0d1` | **Declutter hero** (`index.html`). **(1) Pin search to hero** — `syncSearchPlacement()` (~L8384) simplified to always keep `#searchWrap` inside `#heroSearchAnchor` and strip `.sw-in-header` (removed the `_searchDesktopMQ` ≥992px reparent-into-`#headerSearchSlot` branch + its `matchMedia change` listener); the now-unused empty `<div id="headerSearchSlot">` was deleted from `.header-inner`. **(2) Header discovery icons on all viewports** — `.hdr-feats` (L418) `display:none`→**`display:flex`** so the 3 discovery icons (screen/group/shuffle) show in the top bar at every width (was mobile-only). **(3) Drop text tabs** — removed the `.nav-feats` (Tonight/Group/Surprise) text-tab block from `.filter-row-1` markup. **(4) Center filters row** — `.filter-row-1` (~L848) gained `justify-content:center` (gap `8px`→`10px`); `.btn-filters` (~L728) lost `margin-left:auto` so Movies/TV toggle + Filters button center together. **(5) Desktop eyebrow** — in the ≥992px block (L683+) replaced the dead `.header-search-slot`/`.sw-in-header` rules with `.btn-search-toggle{display:none!important}` + `.hero-search{max-width:720px;padding:18px 0 22px;gap:12px}` + `.hero-band .source-badges{display:none}`, and **removed** the old `.hero-eyebrow{display:none}` so the "240,000 films · 3 rating sources · 1 verdict" value-prop shows on desktop. **Verified (preview eval + screenshots):** desktop 1280 / tablet 768 / mobile 375 & 640 all `bodyHorizOverflow:false`, `header-inner` scrollW==clientW (no overflow), `filter-row-1` justify `center`, `#searchWrap` parent == `#heroSearchAnchor`, `.hdr-feats` `display:flex` w/ 3 icons, eyebrow `display:block`; mobile dropdown still lifts wrap to `z-index:130` and hit-tests to `sw-mode-opt active` (Task-C fix intact). Mobile touch targets remain 34–36px (below 44px ideal but no h-scroll — the hard constraint won). **Tailwind deliverable** (docs-only): top bar `header class="w-full px-4 py-3 flex items-center gap-3"` → logo, then `<div class="ml-auto flex items-center gap-2">` for hdr-feats/install/watchlist/lang; hero `section class="mx-auto max-w-3xl flex flex-col items-center gap-3 pt-[18px] pb-[22px] text-center"`; filters row `div class="flex justify-center items-center gap-2.5"`. |
+
+---
+
+## ⚡ Session (2026-07-22) — Vibe Chips: Localize + Single Compact Row
 
 All commits on `main`, all live on https://findfilm.ai. Deployed `c8a1bf80.ratingkino.pages.dev`.
 
