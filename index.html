@@ -487,26 +487,25 @@ header {
    Educate users that they can search by how they want to FEEL. Each chip
    auto-fills the search box + fires an AI search (see vibeSearch()). */
 .vibe-chips {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
-  width: 100%; max-width: 680px; margin-top: 2px;
+  display: flex; flex-wrap: nowrap; justify-content: center; gap: 8px;
+  width: 100%; max-width: none; margin-top: 2px;
 }
 .vibe-chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 14px; border-radius: 999px;
-  font-family: inherit; font-size: 13px; font-weight: 600; line-height: 1.2;
-  white-space: nowrap; color: #e5e7ff; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 999px;
+  font-family: inherit; font-size: 13px; font-weight: 500; line-height: 1.2;
+  white-space: nowrap; color: #94a3b8; cursor: pointer;
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.10);
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  transition: background .18s, border-color .18s, transform .18s, box-shadow .18s;
+  transition: background .18s, border-color .18s, color .18s;
 }
 .vibe-chip:hover {
-  background: rgba(255,255,255,0.20);
-  border-color: rgba(129,140,248,0.5);
-  transform: translateY(-1px);
-  box-shadow: 0 0 18px rgba(99,102,241,0.22);
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.18);
+  color: #fff;
 }
-.vibe-chip:active { transform: translateY(0); }
+.vibe-chip:active { color: #e2e8f0; }
 /* Reusable scrollbar-hiding utility (horizontal vibe rail on mobile) */
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
@@ -4372,10 +4371,10 @@ if ('serviceWorker' in navigator) {
   </div><!-- /#heroSearchAnchor -->
   <!-- ════ Vibe Chips — emotion-first quick prompts (auto-fill + AI search) ════ -->
   <div class="vibe-chips hide-scrollbar" id="vibeChips" role="group" aria-label="Search by vibe">
-    <button class="vibe-chip" type="button" onclick="vibeSearch('Turn off my brain')">🛋️ <span>Turn off my brain</span></button>
-    <button class="vibe-chip" type="button" onclick="vibeSearch('Late night aesthetic')">🌃 <span>Late night aesthetic</span></button>
-    <button class="vibe-chip" type="button" onclick="vibeSearch('Pure chaos &amp; twists')">🎢 <span>Pure chaos &amp; twists</span></button>
-    <button class="vibe-chip" type="button" onclick="vibeSearch('Good for the soul')">❤️‍🩹 <span>Good for the soul</span></button>
+    <button class="vibe-chip" type="button" onclick="vibeSearch(t('vibe.brain'))">🛋️ <span data-i18n="vibe.brain">Turn off my brain</span></button>
+    <button class="vibe-chip" type="button" onclick="vibeSearch(t('vibe.night'))">🌃 <span data-i18n="vibe.night">Late night aesthetic</span></button>
+    <button class="vibe-chip" type="button" onclick="vibeSearch(t('vibe.chaos'))">🎢 <span data-i18n="vibe.chaos">Pure chaos &amp; twists</span></button>
+    <button class="vibe-chip" type="button" onclick="vibeSearch(t('vibe.soul'))">❤️‍🩹 <span data-i18n="vibe.soul">Good for the soul</span></button>
   </div>
 </section>
 
@@ -5042,6 +5041,10 @@ const TRANSLATIONS = {
     'btn.random':           'Surprise Me',
     'tonight.launch':       'Find something great for tonight',
     'hero.eyebrow':         '240,000 films · 3 rating sources · 1 verdict',
+    'vibe.brain':           'Turn off my brain',
+    'vibe.night':           'Late night aesthetic',
+    'vibe.chaos':           'Pure chaos & twists',
+    'vibe.soul':            'Good for the soul',
     'util.voice':           'Voice',
     'util.watchlist':       'Watchlist',
     'filter.filters':       'Filters',
@@ -5347,6 +5350,10 @@ const TRANSLATIONS = {
     'btn.random':           'RandomAI',
     'tonight.launch':       '¿Esta noche?',
     'hero.eyebrow':         '240.000 películas · 3 fuentes de puntuación · 1 veredicto',
+    'vibe.brain':           'Desconectar la mente',
+    'vibe.night':           'Estética nocturna',
+    'vibe.chaos':           'Puro caos y giros',
+    'vibe.soul':            'Bueno para el alma',
     'wiz.qMood':            '¿Qué te apetece?',
     'wiz.qTime':            '¿Cuánto tiempo tienes?',
     'wiz.qCompany':         '¿Con quién vas a ver?',
@@ -5608,6 +5615,10 @@ const TRANSLATIONS = {
     'btn.random':           'RandomAI',
     'tonight.launch':       'Ce soir ?',
     'hero.eyebrow':         '240 000 films · 3 sources de notes · 1 verdict',
+    'vibe.brain':           'Débrancher son cerveau',
+    'vibe.night':           'Esthétique nocturne',
+    'vibe.chaos':           'Chaos et rebondissements',
+    'vibe.soul':            'Bon pour l’âme',
     'wiz.qMood':            'De quelle humeur êtes-vous ?',
     'wiz.qTime':            'Combien de temps avez-vous ?',
     'wiz.qCompany':         'Avec qui regardez-vous ?',
@@ -5869,6 +5880,10 @@ const TRANSLATIONS = {
     'btn.random':           'RandomAI',
     'tonight.launch':       '今晚看？',
     'hero.eyebrow':         '240,000 部电影 · 3 个评分来源 · 1 个结论',
+    'vibe.brain':           '放空大脑',
+    'vibe.night':           '深夜美学',
+    'vibe.chaos':           '纯粹混乱与反转',
+    'vibe.soul':            '治愈心灵',
     'wiz.qMood':            '你想看什么类型？',
     'wiz.qTime':            '你有多少时间？',
     'wiz.qCompany':         '和谁一起看？',
@@ -6130,6 +6145,10 @@ const TRANSLATIONS = {
     'btn.random':           'RandomAI',
     'tonight.launch':       'الليلة؟',
     'hero.eyebrow':         '240,000 فيلم · 3 مصادر تقييم · حكم واحد',
+    'vibe.brain':           'أطفئ عقلك',
+    'vibe.night':           'أجواء ليلية',
+    'vibe.chaos':           'فوضى ومفاجآت',
+    'vibe.soul':            'غذاء للروح',
     'wiz.qMood':            'ما الذي ترغب في مشاهدته؟',
     'wiz.qTime':            'كم من الوقت لديك؟',
     'wiz.qCompany':         'مع من تشاهد؟',
@@ -6391,6 +6410,10 @@ const TRANSLATIONS = {
     'btn.random':           'Здивуй мене',
     'tonight.launch':       'Фільм на вечір',
     'hero.eyebrow':         '240 000 фільмів · 3 джерела оцінок · 1 вердикт',
+    'vibe.brain':           'Вимкнути мозок',
+    'vibe.night':           'Нічна естетика',
+    'vibe.chaos':           'Суцільний хаос',
+    'vibe.soul':            'Для душі',
     'hero.unified':         'Єдиний рейтинг з IMDb, Rotten Tomatoes та Metacritic.',
     'feed.seeMore':         'Усі',
     'feed.seeMoreAria':     'Показати всі фільми цієї добірки',
