@@ -4204,10 +4204,10 @@ if ('serviceWorker' in navigator) {
       <!-- Mobile-only: the 3 discovery actions live here as dense icon buttons
            (≤768px). On desktop they live as text-link tabs in the sub-nav (.nav-feats). -->
       <div class="hdr-feats" role="group" aria-label="Quick discovery actions">
-        <button class="hdr-feat" onclick="openWizard()" aria-label="Movie for Tonight" title="Movie for Tonight" data-i18n-aria="tonight.launch" data-i18n-title="tonight.launch">
+        <button class="hdr-feat" onclick="openWizard()" aria-label="Find something great for tonight" title="Find something great for tonight" data-i18n-aria="tonight.launch" data-i18n-title="tonight.launch">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 7.75a.75.75 0 0 1 1.142-.638l3.664 2.249a.75.75 0 0 1 0 1.278l-3.664 2.25a.75.75 0 0 1-1.142-.639z"/><path d="M12 17v4"/><path d="M8 21h8"/><rect x="2" y="3" width="20" height="14" rx="2"/></svg>
         </button>
-        <button class="hdr-feat" onclick="openGroupPicker()" aria-label="Watch with Friends" title="Watch with Friends" data-i18n-aria="group.launch" data-i18n-title="group.launch">
+        <button class="hdr-feat" onclick="openGroupPicker()" aria-label="Pick a movie together" title="Pick a movie together" data-i18n-aria="group.launch" data-i18n-title="group.launch">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </button>
         <button class="hdr-feat hdr-feat--rnd" onclick="randomMovie()" aria-label="Surprise Me" title="Surprise Me" data-i18n-aria="btn.random" data-i18n-title="btn.random">
@@ -4282,7 +4282,7 @@ if ('serviceWorker' in navigator) {
         </button>
         <button class="sw-mode-opt" id="smPlot" type="button" role="option" aria-selected="false" onclick="setSearchMode('ai')">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
-          <span data-i18n="search.modePlot">By Plot</span>
+          <span data-i18n="search.modePlot">Describe what you remember</span>
         </button>
       </div>
     </div>
@@ -4445,13 +4445,13 @@ if ('serviceWorker' in navigator) {
          ≤768px these collapse into the header icon buttons .hdr-feats). Styled
          to match the inactive Movies/TV tabs. -->
     <div class="nav-feats" role="group" aria-label="AI discovery actions">
-      <button class="nav-feat" onclick="openWizard()" aria-label="Movie for Tonight" title="Movie for Tonight" data-i18n-aria="tonight.launch" data-i18n-title="tonight.launch">
+      <button class="nav-feat" onclick="openWizard()" aria-label="Find something great for tonight" title="Find something great for tonight" data-i18n-aria="tonight.launch" data-i18n-title="tonight.launch">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 7.75a.75.75 0 0 1 1.142-.638l3.664 2.249a.75.75 0 0 1 0 1.278l-3.664 2.25a.75.75 0 0 1-1.142-.639z"/><path d="M12 17v4"/><path d="M8 21h8"/><rect x="2" y="3" width="20" height="14" rx="2"/></svg>
-        <span data-i18n="tonight.launch">Movie for Tonight</span>
+        <span data-i18n="tonight.launch">Find something great for tonight</span>
       </button>
-      <button class="nav-feat" onclick="openGroupPicker()" aria-label="Watch with Friends" title="Watch with Friends" data-i18n-aria="group.launch" data-i18n-title="group.launch">
+      <button class="nav-feat" onclick="openGroupPicker()" aria-label="Pick a movie together" title="Pick a movie together" data-i18n-aria="group.launch" data-i18n-title="group.launch">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <span data-i18n="group.launch">Watch with Friends</span>
+        <span data-i18n="group.launch">Pick a movie together</span>
       </button>
       <button class="nav-feat nav-feat--rnd" onclick="randomMovie()" aria-label="Surprise Me" title="Surprise Me" data-i18n-aria="btn.random" data-i18n-title="btn.random">
         <svg class="rnd-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/></svg>
@@ -4978,7 +4978,7 @@ const TRANSLATIONS = {
     'cast.qrSub':            'Open the browser on your Smart TV and scan this code to watch.',
     'cast.qrCopy':           'Copy TV link',
     'btn.random':           'Surprise Me',
-    'tonight.launch':       'Movie for Tonight',
+    'tonight.launch':       'Find something great for tonight',
     'hero.eyebrow':         '240,000 films · 3 rating sources · 1 verdict',
     'util.voice':           'Voice',
     'util.watchlist':       'Watchlist',
@@ -5083,7 +5083,7 @@ const TRANSLATIONS = {
     'search.nlpHint':      "✨ Can't remember the title? Just describe the plot!",
     // Search-mode toggle (Title vs Plot/AI)
     'search.modeTitle':    'By Title',
-    'search.modePlot':     'By Plot',
+    'search.modePlot':     'Describe what you remember',
     'search.modeTitlePh':  'Search movies by title...',
     'search.modePlotPh':   'e.g., DiCaprio on a sinking ship...',
     // Search suggestion pills
@@ -5115,7 +5115,7 @@ const TRANSLATIONS = {
     'modal.fitVibe':       'The experience',
     'modal.fitLoading':    'Reading the vibe…',
     // Group Picker
-    'group.launch':        'Watch with Friends',
+    'group.launch':        'Pick a movie together',
     'group.title':         'Group Movie Night',
     'group.sub':           'Add what each person loves — we\'ll find the perfect overlap.',
     'group.personPh':      'e.g. loves heist thrillers & witty dialogue',
@@ -5193,8 +5193,8 @@ const TRANSLATIONS = {
     'stream.region':       'Streaming in {country}',
     'stream.streamOn':     'Stream on:',
     // Score labels
-    'score.noData':        'No ratings available',
-    'score.tmdbOnly':      'TMDB · no critic data yet',
+    'score.noData':        'Critic ratings haven’t arrived yet',
+    'score.tmdbOnly':      'TMDB · critic ratings haven’t arrived yet',
     'score.weighted':      'Weighted avg · {n} source',
     'score.weightedPlural':'Weighted avg · {n} sources',
     // VPN banner
