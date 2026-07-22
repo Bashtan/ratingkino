@@ -2,7 +2,19 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-21) — Mobile Responsiveness Audit & Polish
+## ⚡ Most Recent Session (2026-07-22) — Movie Detail Modal: 5-Section Editorial Layout
+
+All commits on `main`, all live on https://findfilm.ai. Deployed `742c89ee.ratingkino.pages.dev`.
+
+Restructured the movie detail modal (`#overlay`/`#modal`, `index.html` ~L4606) from one long stack into **5 scannable editorial sections** (vertical single column), each a `.m-sec` wrapper with generous padding + a hairline divider (`.m-sec + .m-sec { border-top }`). **All wired IDs preserved** — zero changes to `populateModal`/`refreshModalRatings`/`refreshModalDetails`/`_refreshStreamingCtAs`/`refreshWatchProviders`/`renderReviews`/`submitReview`.
+
+| Commit | Feature |
+|--------|---------|
+| _(code)_ | **5-section editorial modal.** `.m-body` changed from 2-col grid (`1fr 300px`, old `.m-left`/`.m-right` **removed**) to `display:block` single column holding five `<section class="m-sec m-sec--…">`. **§1 Overview** `.m-sec--overview` — pinned hero `.m-info-strip` (poster/title/`#mOrig`/`#aiMatchPill`/`#mStarring`/`#mRatings` + quick actions Share/`#btnWatchlist`; `#btnTrailer`+`#streamingCtAs` stay here) then `#trailerWrap` + About(`#mDesc`/`#mDescToggle`) + Details(`#mMeta`) + Awards(`#mAwards`). **§2 AI Insights** `.m-sec--ai` — soft indigo tint band; header repurposed: `#mFitLbl` is now `.ai-sec-head` (`✨ .ai-sec-spark` + `.ai-sec-title` `data-i18n="modal.aiInsights"` = "Why It Fits You") + existing `#mFitSummary` glass card (`#fitFor`/`#fitSkip`/`#fitVibe`). **§3 Where to Watch** `.m-sec--watch` — `#watchLbl`/`#watchProviders`/`#vpnBanner` + **new trust micro-copy** `<p class="affiliate-note" data-i18n="modal.affiliateNote">Affiliate links do not influence scores.</p>` (slate-500 `#64748b`, 11px). **§4 Community & Reviews** `.m-sec--reviews` — barely-there lift `rgba(255,255,255,.014)`; `#reviewCompose`+`#mReviews` now full-width (was 300px sidebar). **§5 Keep Exploring** `.m-sec--related` — `#similarLbl`/`#similarScroll`. **New helper `_setSecVisible(childId, show)`** (before `_renderFitSummary`): toggles the `.closest('.m-sec')` wrapper so conditional sections (AI Insights, Related) never leave an empty tinted band + divider. Wired into `_renderFitSummary`/`refreshFitSummary` (reset/skeleton/success/no-data/catch → toggle `'mFitSummary'`) and `loadSimilarMovies` (start/no-results/catch → toggle `'similarScroll'`); `.m-sec--ai` + `.m-sec--related` start `style="display:none"`. **New CSS** `.m-sec`/`.m-sec--ai`/`.m-sec--reviews`/`.ai-sec-head`/`.ai-sec-spark`/`.ai-sec-title`/`.affiliate-note` (~L1819); mobile `@media(max-width:768px)` `.m-body`(flex scroll region, no grid)/`.m-sec{padding:14px}` replace old `.m-left`/`.m-right` rules (~L2741). **New i18n keys** `modal.aiInsights` + `modal.affiliateNote` across all 6 langs (en/es/fr/zh/ar/uk). **Verified (preview eval + screenshot, static preview):** 5 `.m-sec` in order (overview·ai·watch·reviews·related); all 24 tracked IDs present, no dupes; affiliate note text + `rgb(100,116,139)`; AI header "✨ Why It Fits You"; `_setSecVisible` toggles wrappers; mobile pinned-hero + `.m-body` scroll + sticky NordVPN footer preserved; desktop full-width column (modal 1020px, overlay scrolls). **Tailwind deliverable** (docs-only — live site is vanilla CSS): section wrapper `class="px-7 py-6 [&+&]:border-t [&+&]:border-white/[0.06]"`; AI band `class="bg-gradient-to-b from-indigo-500/[0.06] to-transparent"` with header `class="flex items-center gap-2 mb-3"`→`<span>✨</span><span class="font-extrabold text-[15px] text-violet-300">Why It Fits You</span>`; affiliate note `class="mt-1 text-[11px] leading-snug text-slate-500">Affiliate links do not influence scores.`; reviews band `class="bg-white/[0.014]"`. |
+
+---
+
+## ⚡ Session (2026-07-21) — Mobile Responsiveness Audit & Polish
 
 All commits on `main`, all live on https://findfilm.ai.
 
