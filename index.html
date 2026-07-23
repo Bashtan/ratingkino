@@ -606,6 +606,9 @@ header {
   width: 26px; height: 26px; padding: 0;
   background: rgba(255,255,255,0.07); border: none; border-radius: 50%;
   color: #9aa4b2; cursor: pointer;
+  /* Lift above .search-wrap::before (the z-index:0 gradient ring) so clicks
+     land on the button instead of the ring — otherwise the X does nothing. */
+  position: relative; z-index: 2; pointer-events: auto;
   transition: background 0.18s, color 0.18s;
 }
 .search-clear-btn svg { width: 11px; height: 11px; }
@@ -2734,7 +2737,13 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .filter-row-1 { padding: 8px 14px; gap: 8px; }
 
   /* Hero band is hidden by default (base rule); mobile keeps it hidden. */
-  .hero-title  { font-size: 12px; line-height: 1.35; }
+  /* Compact mobile value-prop — shrink type + tighten gaps so the block fits
+     in 2–3 sleek lines and the search bar rides higher. (Uses .hero-vp scope
+     to beat the base .hero-vp .hero-title specificity.) */
+  .hero-vp { gap: 2px; }
+  .hero-vp .hero-h1 { font-size: 17px; line-height: 1.18; }
+  .hero-vp .hero-title { font-size: 11px; line-height: 1.3; letter-spacing: 0; }
+  .hero-vp .how-ratings-link { margin-top: 1px; font-size: 11px; }
 
   /* 2-column movie grid */
   main { padding: 0 12px 90px; }
