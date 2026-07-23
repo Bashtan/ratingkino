@@ -2,7 +2,19 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-23) — Desktop Hero: Value-Prop Block, Widened Search, Icon-Only Mode
+## ⚡ Most Recent Session (2026-07-23) — Mobile Hero Type Compaction + Search Clear-Button Fix
+
+All commits on `main`, all live on https://findfilm.ai. Deployed `18160251.ratingkino.pages.dev`.
+
+Two mobile fixes: the hero value-prop was wrapping to 4–5 lines and pushing the search bar down, and the in-bar "X" (clear) button did nothing when tapped.
+
+| Commit | Feature |
+|--------|---------|
+| `b1562b1` | **Mobile hero type + clear-button fix** (`index.html`). **(1) Compact mobile typography** — in the `@media (max-width:768px)` block, replaced the low-specificity `.hero-title{font-size:12px}` (which lost to the base `.hero-vp .hero-title`) with `.hero-vp`-scoped rules: `.hero-vp{gap:2px}`, `.hero-vp .hero-h1{font-size:17px;line-height:1.18}` (2 lines), `.hero-vp .hero-title{font-size:11px;line-height:1.3;letter-spacing:0}` (2 lines), `.hero-vp .how-ratings-link{margin-top:1px;font-size:11px}`. Value-prop block shrank from ~4–5 lines to an 89px, 2+2-line block; desktop (`≥992`) unchanged at 26px/15px. **(2) Fixed the clear (X) button** — `#searchClearBtn`.`search-clear-btn` was `position:static; z-index:auto`, so it painted BELOW `.search-wrap::before` (the `position:absolute; inset:-2px; z-index:0` animated gradient ring); `document.elementFromPoint()` over the button returned `#searchWrap` (the ring), so taps never reached the button and `clearSearchInput()` never ran. Fix: added **`position:relative; z-index:2; pointer-events:auto`** to `.search-clear-btn` so it sits above the ring. (Handler/markup were already correct: `onclick="clearSearchInput()"` at L8285 → clears `#searchInput`, dispatches `input` to drop `.typing` + re-run `applyFilters`, refocuses; visibility via `.search-wrap--hero.typing .search-clear-btn{display:inline-flex}`.) **Verified (preview eval, 375 + 1280):** clear button `elementFromPoint` now hits the button/SVG (`hitTestPassesToBtn:true`), click empties `#searchInput` and removes `.typing` on both widths; mobile h1 17px/2-line, sub 11px/2-line, `bodyHorizOverflow:false`; desktop still 26px/15px. **Tailwind deliverable** (docs-only): headline `class="text-lg md:text-2xl font-bold leading-tight"`, subtitle `class="text-[11px] md:text-sm leading-tight"`, link `class="text-[11px] mt-px"`; clear button `class="relative z-[2] pointer-events-auto cursor-pointer"` with `onclick="document.getElementById('searchInput').value='';document.getElementById('searchInput').focus()"` (live site uses the richer `clearSearchInput()`). |
+
+---
+
+## ⚡ Session (2026-07-23) — Desktop Hero: Value-Prop Block, Widened Search, Icon-Only Mode
 
 All commits on `main`, all live on https://findfilm.ai. Deployed `9adb80e0.ratingkino.pages.dev`.
 
