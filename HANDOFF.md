@@ -2,7 +2,19 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-23) — Mobile Hero Type Compaction + Search Clear-Button Fix
+## ⚡ Most Recent Session (2026-07-23) — Localization Expansion (no/de/sv) + IP Auto-Language
+
+All commits on `main`, all live on https://findfilm.ai. Deployed `70d8920b.ratingkino.pages.dev`.
+
+Added three new UI languages (Norwegian, German, Swedish) at full key-parity, backfilled recently-added hero/vibe keys across every existing language, and made first-visit language auto-detection resilient with a client-side IP fallback layered on top of the existing Cloudflare geo path.
+
+| Commit | Feature |
+|--------|---------|
+| `69c4d06` | **Localization expansion + IP auto-language** (`index.html` + `functions/api/[[path]].js`). **(1) 3 new languages** — added `de` (Deutsch), `sv` (Svenska), `no` (Norsk) to the `.lang-option` dropdown (L~4269) and to all support maps: `TMDB_LANG` (`de-DE`/`sv-SE`/`nb-NO`), `LANG_NATIVE`, `_i18nLocale` (`de`/`sv`/`nb` for `Intl.DisplayNames`). Added **three full `TRANSLATIONS` dictionaries** (`de`/`sv`/`no`), each **291 keys = exact parity with `en`** (verified `missingVsEn:0`), all `{placeholder}`/`<strong>`/`<span>` tokens preserved. **(2) Audit backfill** — the recently-added hero/vibe keys were missing in older dicts; added `hero.h1`, `hero.unified`, `ratings.howLink`, `search.modePlot` to `es`/`fr`/`zh`/`ar`/`uk` where absent (uk already had unified+modePlot). Verified **zero `englishSame`** (no untranslated English fallbacks) across the audited keys in every language. **(3) Server geo map** — `functions/api/[[path]].js` `/api/geo-lang` (L64): added `DE_COUNTRIES=['DE','AT','CH','LI']→de`, `NO_COUNTRIES=['NO']→no`, `SV_COUNTRIES=['SE']→sv`; **moved `CH` out of `FR_COUNTRIES`** into DE; new branches ordered before FR/ES. **(4) Client IP fallback** — new module-scope `COUNTRY_LANG` map + rewritten `detectLang()` (L~7550): tries `/api/geo-lang` (Cloudflare `request.cf.country`, primary) → **`https://ipapi.co/json/`** (HTTPS, no-key, reads `country_code`, adblock-safe via try/catch) → `navigator.language`; on success **persists to `localStorage.rk_lang`** so auto-detect runs only on the first visit; explicit `switchLang()` choice still always wins. **Verified (preview eval):** all 9 langs load with no JS parse error; `de`/`sv`/`no` render native hero (`h1`, `#heroTitle` unified line, `.how-ratings-link`) + native `#langBtn` label on live switch; only expected TMDb-404 static noise. **Deliverables (docs):** lang-selector `<button class="lang-option" data-lang="de" onclick="switchLang('de')">Deutsch</button>` (+sv/no); IP-detection JS = the layered `detectLang()` above; `TRANSLATIONS` gains full `de`/`sv`/`no` objects + the 4 backfilled keys in `es`/`fr`/`zh`/`ar`/`uk`. |
+
+---
+
+## ⚡ Session (2026-07-23) — Mobile Hero Type Compaction + Search Clear-Button Fix
 
 All commits on `main`, all live on https://findfilm.ai. Deployed `18160251.ratingkino.pages.dev`.
 
