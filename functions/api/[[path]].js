@@ -65,11 +65,17 @@ export async function onRequest({ request, env, params, waitUntil }) {
   if (path === '/geo-lang') {
     const country = request.cf?.country || '';
     const ES_COUNTRIES = ['ES','MX','AR','CO','CL','PE','VE','EC','BO','PY','UY','CR','PA','DO','HN','SV','GT','NI','CU','PR'];
-    const FR_COUNTRIES = ['FR','BE','CH','LU','MC','SN','CI','ML','BF','NE','TD','CM','MG','RW','BJ','TG','GA','CD','CG','CF','GN','MR','DJ','KM','VU','SC','MU','HT','GF','GP','MQ','NC','PF','RE'];
+    const FR_COUNTRIES = ['FR','BE','LU','MC','SN','CI','ML','BF','NE','TD','CM','MG','RW','BJ','TG','GA','CD','CG','CF','GN','MR','DJ','KM','VU','SC','MU','HT','GF','GP','MQ','NC','PF','RE'];
     const ZH_COUNTRIES = ['CN','TW','HK','MO','SG'];
     const AR_COUNTRIES = ['SA','AE','EG','IQ','SY','JO','LB','KW','QA','BH','OM','YE','LY','TN','DZ','MA','SD','SO','PS','MR','DJ','KM'];
+    const DE_COUNTRIES = ['DE','AT','CH','LI'];
+    const NO_COUNTRIES = ['NO'];
+    const SV_COUNTRIES = ['SE'];
     let lang = 'en';
     if (country === 'UA')                      lang = 'uk';
+    else if (DE_COUNTRIES.includes(country))   lang = 'de';
+    else if (NO_COUNTRIES.includes(country))   lang = 'no';
+    else if (SV_COUNTRIES.includes(country))   lang = 'sv';
     else if (ZH_COUNTRIES.includes(country))   lang = 'zh';
     else if (AR_COUNTRIES.includes(country))   lang = 'ar';
     else if (FR_COUNTRIES.includes(country))   lang = 'fr';
