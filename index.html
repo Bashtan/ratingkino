@@ -1573,13 +1573,16 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   background: linear-gradient(to bottom, rgba(26,26,26,0.05) 0%, rgba(26,26,26,0.92) 100%);
 }
 .m-close {
-  position: absolute; top: 12px; right: 12px; z-index: 10;
-  width: 36px; height: 36px;
-  background: rgba(0,0,0,0.55); backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.12);
+  position: absolute; top: 14px; right: 14px; z-index: 12;
+  width: 40px; height: 40px;
+  background: rgba(20,20,28,0.5);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.18);
   border-radius: 50%;
-  color: #fff; font-size: 15px; cursor: pointer;
+  color: #fff; font-size: 16px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   transition: background 0.18s, border-color 0.18s, transform 0.18s;
 }
 .m-close:hover {
@@ -1653,13 +1656,14 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 /* ── Score transparency: hero avg + source breakdown ──────── */
 .mr-score-card {
   display: flex; flex-direction: column; gap: 5px;
-  padding: 11px 16px 12px; border-radius: 12px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.09);
+  padding: 13px 20px 14px; border-radius: 16px;
+  background: linear-gradient(150deg, rgba(255,138,0,0.14), rgba(255,255,255,0.04) 62%);
+  border: 1px solid rgba(255,138,0,0.28);
+  box-shadow: 0 0 0 1px rgba(255,138,0,0.06), 0 6px 22px -12px rgba(255,138,0,0.5);
 }
 .mr-hero-avg { display: flex; align-items: baseline; gap: 3px; line-height: 1; }
-.mr-star { font-size: 17px; font-weight: 900; color: var(--accent); font-family: 'Montserrat', sans-serif; }
-.mr-avg-num { font-size: 36px; font-weight: 900; font-family: 'Montserrat', sans-serif; color: #fff; letter-spacing: -1.5px; line-height: 1; }
+.mr-star { font-size: 20px; font-weight: 900; color: var(--accent); font-family: 'Montserrat', sans-serif; }
+.mr-avg-num { font-size: 46px; font-weight: 900; font-family: 'Montserrat', sans-serif; color: #fff; letter-spacing: -2px; line-height: 1; text-shadow: 0 2px 18px rgba(255,138,0,0.35); }
 .mr-hero-lbl { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; }
 .mr-breakdown { display: flex; align-items: center; gap: 6px; margin-top: 3px; flex-wrap: wrap; }
 .mrb-src { display: flex; align-items: center; gap: 4px; }
@@ -1706,7 +1710,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   font-size: 11px; font-weight: 600; color: #67e8f9; opacity: 0.9;
   font-family: 'Montserrat', sans-serif; line-height: 1;
 }
-.m-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.m-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.07); }
 .btn-trailer {
   display: flex; align-items: center; gap: 6px;
   height: 38px; padding: 0 16px;
@@ -1881,6 +1885,56 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .m-sec--ai { background: linear-gradient(180deg, rgba(99,102,241,0.06), rgba(99,102,241,0) 78%); }
 /* Community band — barely-there lift separates reviews from content above. */
 .m-sec--reviews { background: rgba(255,255,255,0.014); }
+
+/* ── Bento grid — decision-engine card layout inside the scroll body ──
+   Each .m-sec becomes a rounded translucent card. JS still targets IDs and
+   hides sections via .closest('.m-sec'); cards ARE the .m-sec nodes so all
+   show/hide logic is untouched. 1 col → 2 col → 3 col responsive rhythm. */
+.bento-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  padding: 16px;
+}
+.bento-card {
+  padding: 18px 20px;
+  border-radius: 20px;
+  background: rgba(30,32,40,0.5);
+  border: 1px solid rgba(255,255,255,0.06);
+  grid-column: 1 / -1;            /* full width by default */
+}
+/* Cards carry their own border → drop the inherited hairline divider. */
+.bento-card + .bento-card { border-top: none; }
+/* AI Insights card keeps its indigo accent layered over the card surface. */
+.m-sec--ai.bento-card { background: linear-gradient(180deg, rgba(99,102,241,0.12), rgba(30,32,40,0.5) 70%); border-color: rgba(129,140,248,0.22); }
+@media (min-width: 700px) {
+  .bento-grid { grid-template-columns: repeat(2,1fr); gap: 16px; }
+  /* Details + Awards pair up side-by-side once there's room. */
+  .bento-card.bento-2, .bento-card.bento-1 { grid-column: auto; }
+}
+@media (min-width: 980px) {
+  .bento-grid { grid-template-columns: repeat(3,1fr); }
+  .bento-card.bento-2 { grid-column: span 2; }
+  .bento-card.bento-1 { grid-column: span 1; }
+}
+
+/* ── AI TL;DR — glassmorphism synopsis panel ── */
+.ai-tldr-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 14px;
+  letter-spacing: 0.4px; color: #e9d5ff; text-transform: uppercase;
+}
+.ai-tldr-spark { font-size: 15px; line-height: 1; filter: drop-shadow(0 0 6px rgba(196,181,253,0.6)); }
+.ai-tldr-panel {
+  background: rgba(255,255,255,0.045);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 16px 18px;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.ai-tldr-panel .m-desc:last-child, .ai-tldr-panel > :last-child { margin-bottom: 0; }
+
 .ai-sec-head { display: flex; align-items: center; gap: 8px; margin-bottom: 13px; }
 .ai-sec-spark { font-size: 15px; line-height: 1; }
 .ai-sec-title {
@@ -4660,28 +4714,28 @@ if ('serviceWorker' in navigator) {
       </div>
     </div>
 
-    <!-- Sectioned, scrollable body (single editorial column) -->
+    <!-- Sectioned, scrollable body — Bento grid of decision cards -->
     <div class="m-body">
+     <div class="bento-grid">
 
-      <!-- Section 1 continued · film detail (About / Details / Awards) -->
-      <section class="m-sec m-sec--overview">
+      <!-- ═══════════ CARD · AI TL;DR (synopsis + trailer) ═══════════ -->
+      <section class="m-sec m-sec--overview bento-card">
         <div class="trailer-wrap" id="trailerWrap">
           <iframe id="trailerFrame" src="" allowfullscreen allow="autoplay"></iframe>
         </div>
 
-        <div class="section-lbl" data-i18n="modal.about">About</div>
-        <div class="m-desc" id="mDesc"></div>
-        <button class="m-desc-toggle" id="mDescToggle" onclick="toggleSynopsis()" aria-expanded="false" style="display:none"></button>
-
-        <div class="section-lbl" data-i18n="modal.details">Details</div>
-        <div class="meta-grid" id="mMeta"></div>
-
-        <div class="section-lbl" data-i18n="modal.awards">Awards &amp; Recognition</div>
-        <div class="awards" id="mAwards"></div>
+        <div class="ai-tldr-head">
+          <span class="ai-tldr-spark" aria-hidden="true">✨</span>
+          <span data-i18n="modal.aiTldr">AI TL;DR</span>
+        </div>
+        <div class="ai-tldr-panel">
+          <div class="m-desc" id="mDesc"></div>
+          <button class="m-desc-toggle" id="mDescToggle" onclick="toggleSynopsis()" aria-expanded="false" style="display:none"></button>
+        </div>
       </section>
 
-      <!-- ═══════════ SECTION 2 · AI INSIGHTS (Why it fits you) ═══════════ -->
-      <section class="m-sec m-sec--ai" style="display:none">
+      <!-- ═══════════ CARD · AI INSIGHTS (Why it fits you) ═══════════ -->
+      <section class="m-sec m-sec--ai bento-card" style="display:none">
         <div class="ai-sec-head" id="mFitLbl" style="display:none">
           <span class="ai-sec-spark">✨</span>
           <span class="ai-sec-title" data-i18n="modal.aiInsights">Why It Fits You</span>
@@ -4711,16 +4765,28 @@ if ('serviceWorker' in navigator) {
         </div>
       </section>
 
-      <!-- ═══════════ SECTION 3 · WHERE TO WATCH & ACTIONS ═══════════ -->
-      <section class="m-sec m-sec--watch">
+      <!-- ═══════════ CARD · WHERE TO WATCH & ACTIONS ═══════════ -->
+      <section class="m-sec m-sec--watch bento-card">
         <div class="section-lbl" id="watchLbl" data-i18n="modal.whereToWatch" style="display:none">Where to Watch<span class="watch-lbl-region" id="watchRegionFlag"></span></div>
         <div id="watchProviders" style="margin-bottom:4px"></div>
         <div id="vpnBanner" style="margin-bottom:10px"></div>
         <p class="affiliate-note" data-i18n="modal.affiliateNote">Affiliate links do not influence scores.</p>
       </section>
 
-      <!-- ═══════════ SECTION 4 · COMMUNITY & REVIEWS ═══════════ -->
-      <section class="m-sec m-sec--reviews">
+      <!-- ═══════════ CARD · DETAILS (Block D · Geek Info) ═══════════ -->
+      <section class="m-sec m-sec--details bento-card bento-2">
+        <div class="section-lbl" data-i18n="modal.details">Details</div>
+        <div class="meta-grid" id="mMeta"></div>
+      </section>
+
+      <!-- ═══════════ CARD · AWARDS (Block C) ═══════════ -->
+      <section class="m-sec m-sec--awards bento-card bento-1">
+        <div class="section-lbl" data-i18n="modal.awards">Awards &amp; Recognition</div>
+        <div class="awards" id="mAwards"></div>
+      </section>
+
+      <!-- ═══════════ CARD · COMMUNITY & REVIEWS ═══════════ -->
+      <section class="m-sec m-sec--reviews bento-card">
         <div class="section-lbl" data-i18n="modal.yourReview">Your Review</div>
         <div class="review-compose" id="reviewCompose">
           <input type="text" class="review-name" id="reviewName"
@@ -4741,11 +4807,13 @@ if ('serviceWorker' in navigator) {
         <div class="reviews-list" id="mReviews"></div>
       </section>
 
-      <!-- ═══════════ SECTION 5 · KEEP EXPLORING (Related titles) ═══════════ -->
-      <section class="m-sec m-sec--related" style="display:none">
+      <!-- ═══════════ CARD · KEEP EXPLORING (Related titles) ═══════════ -->
+      <section class="m-sec m-sec--related bento-card" style="display:none">
         <div class="section-lbl m-similar-lbl" id="similarLbl" data-i18n="modal.similar" style="display:none">You Might Also Like</div>
         <div class="feed-scroll m-similar-scroll" id="similarScroll" style="display:none"></div>
       </section>
+
+     </div><!-- /.bento-grid -->
     </div>
 
     <!-- Mobile-only sticky NordVPN footer (flex column bottom item) -->
@@ -4928,6 +4996,7 @@ const TRANSLATIONS = {
     'grid.noMatches':       'No matches for this AI search',
     'card.viewDetails':     'View Details',
     'modal.about':          'About',
+    'modal.aiTldr':         'AI TL;DR',
     'modal.readMore':       'Read more',
     'modal.showLess':       'Show less',
     'modal.details':        'Details',
@@ -5242,6 +5311,7 @@ const TRANSLATIONS = {
     'grid.noMatches':       'Sin coincidencias para esta búsqueda IA',
     'card.viewDetails':     'Ver detalles',
     'modal.about':          'Sobre la película',
+    'modal.aiTldr':         'Resumen IA',
     'modal.readMore':       'Leer más',
     'modal.showLess':       'Mostrar menos',
     'modal.details':        'Detalles',
@@ -5514,6 +5584,7 @@ const TRANSLATIONS = {
     'grid.noMatches':       'Aucune correspondance pour cette recherche IA',
     'card.viewDetails':     'Voir les détails',
     'modal.about':          'À propos',
+    'modal.aiTldr':         'Résumé IA',
     'modal.readMore':       'Lire plus',
     'modal.showLess':       'Afficher moins',
     'modal.details':        'Détails',
@@ -5786,6 +5857,7 @@ const TRANSLATIONS = {
     'grid.noMatches':       '此 AI 搜索无匹配结果',
     'card.viewDetails':     '查看详情',
     'modal.about':          '关于',
+    'modal.aiTldr':         'AI 摘要',
     'modal.readMore':       '展开',
     'modal.showLess':       '收起',
     'modal.details':        '详情',
@@ -6058,6 +6130,7 @@ const TRANSLATIONS = {
     'grid.noMatches':       'لا تطابقات لبحث الذكاء الاصطناعي هذا',
     'card.viewDetails':     'عرض التفاصيل',
     'modal.about':          'حول الفيلم',
+    'modal.aiTldr':         'ملخص الذكاء الاصطناعي',
     'modal.readMore':       'اقرأ المزيد',
     'modal.showLess':       'عرض أقل',
     'modal.details':        'تفاصيل',
@@ -6328,6 +6401,7 @@ const TRANSLATIONS = {
     'grid.noMatches':       'Немає збігів для цього ШІ-пошуку',
     'card.viewDetails':     'Детальніше',
     'modal.about':          'Про фільм',
+    'modal.aiTldr':         'Стисло від ШІ',
     'modal.readMore':       'Читати більше',
     'modal.showLess':       'Згорнути',
     'modal.details':        'Деталі',
@@ -6615,6 +6689,7 @@ const TRANSLATIONS = {
     'grid.noMatches':       'Keine Treffer für diese KI-Suche',
     'card.viewDetails':     'Details ansehen',
     'modal.about':          'Über',
+    'modal.aiTldr':         'KI-Kurzfassung',
     'modal.readMore':       'Mehr lesen',
     'modal.showLess':       'Weniger anzeigen',
     'modal.details':        'Details',
@@ -6911,6 +6986,7 @@ const TRANSLATIONS = {
     'grid.noMatches':       'Inga träffar för denna AI-sökning',
     'card.viewDetails':     'Visa detaljer',
     'modal.about':          'Om',
+    'modal.aiTldr':         'AI-sammanfattning',
     'modal.readMore':       'Läs mer',
     'modal.showLess':       'Visa mindre',
     'modal.details':        'Detaljer',
@@ -7207,6 +7283,7 @@ const TRANSLATIONS = {
     'grid.noMatches':       'Ingen treff for dette AI-søket',
     'card.viewDetails':     'Se detaljer',
     'modal.about':          'Om',
+    'modal.aiTldr':         'AI-sammendrag',
     'modal.readMore':       'Les mer',
     'modal.showLess':       'Vis mindre',
     'modal.details':        'Detaljer',
