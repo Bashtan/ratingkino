@@ -4546,16 +4546,10 @@ if ('serviceWorker' in navigator) {
     <div class="feed-scroll" id="scrollBest"></div>
   </div>
 
-  <!-- "Why trust FindFilm?" proof row — value-prop pillars between two feeds -->
-  <div class="ai-status" id="trustProof" role="status" aria-live="off">
-    <span class="ai-status-dot" aria-hidden="true"></span>
-    <span class="ai-status-text" data-i18n="ai.status">✨ AI Engine Active: 3 Sources Merged • Unbiased Data • 100% Ad-Free</span>
-  </div>
-
-  <!-- Hidden Gems — under-the-radar high-quality picks (daily theme shown as a badge) -->
+  <!-- All-Time Classics — audience-favorite high-quality picks (daily theme shown as a badge) -->
   <div class="feed-row" id="rowPopular">
     <div class="feed-row-header">
-      <h2 class="feed-row-title" data-i18n="feed.hiddenGems">💎 Hidden Gems</h2>
+      <h2 class="feed-row-title" data-i18n="feed.hiddenGems">⭐ All-Time Classics</h2>
       <span class="feed-row-badge" id="rowPopularTheme"></span>
     </div>
     <div class="feed-scroll" id="scrollPopular"></div>
@@ -4899,6 +4893,10 @@ const TRANSLATIONS = {
     'filter.minRating':     'Min Rating',
     'filter.any':           'Any',
     'filter.sort':          'Sort',
+    'sort.imdb':            'Audience favorite',
+    'sort.rt':              'Critics love it',
+    'sort.mc':              "Critics' choice",
+    'sort.avg':             'Best overall',
     'hero.h1':              'AI Movie Assistant & Unified Ratings',
     'hero.subtitle':        'Describe any mood, plot, or vibe and our AI finds your next watch — with IMDb, Rotten Tomatoes & Metacritic blended into one trustworthy score.',
     'ratings.howLink':      'How ratings work',
@@ -5049,7 +5047,7 @@ const TRANSLATIONS = {
     'feed.forYouBadge':    'Based on your taste',
     'feed.best':           '🏅 Best Available Now',
     'feed.bestBadge':      'Certified by ratings & votes',
-    'feed.hiddenGems':     '💎 Hidden Gems',
+    'feed.hiddenGems':     '⭐ All-Time Classics',
     // "Explore Top Rated" filler CTA (Best Available Now row)
     'best.exploreTitle':   'Explore Top Rated',
     'best.exploreSub':     'Discover 50+ more highly-rated films, ranked by IMDb, RT & Metacritic.',
@@ -5058,7 +5056,6 @@ const TRANSLATIONS = {
     'feed.seeMore':        'See all',
     'feed.seeMoreAria':    'See all titles in this collection',
     // "Why trust FindFilm?" proof row
-    'ai.status':           '✨ AI Engine Active: 3 Sources Merged • Unbiased Data • 100% Ad-Free',
     // Rating transparency (trust pill)
     'rating.unified':      'Unified',
     'rating.tmdb':         'TMDB',
@@ -5217,6 +5214,10 @@ const TRANSLATIONS = {
     'filter.minRating':     'Nota mínima',
     'filter.any':           'Cualquiera',
     'filter.sort':          'Ordenar',
+    'sort.imdb':            'Favorito del público',
+    'sort.rt':              'Aclamada por la crítica',
+    'sort.mc':              'Elección de la crítica',
+    'sort.avg':             'Mejor en conjunto',
     'hero.subtitle':        'Agregamos puntuaciones de IMDb, Rotten Tomatoes y Metacritic en una calificación ponderada.',
     'hero.h1':              'Asistente de cine con IA y valoraciones unificadas',
     'hero.unified':         'Una sola nota de IMDb, Rotten Tomatoes y Metacritic.',
@@ -5350,6 +5351,7 @@ const TRANSLATIONS = {
     'time.yearsAgo':       'hace {n}año',
     'fv.skip':             'Toca para continuar',
     'feed.forYou':         '✨ Para Ti',
+    'feed.hiddenGems':     '⭐ Clásicos de todos los tiempos',
     'feed.forYouBadge':    'Basado en tu gusto',
     'grid.explore':        '🍿 Explorar Colección',
     'browse.more':         'Explorar colección completa',
@@ -5484,6 +5486,10 @@ const TRANSLATIONS = {
     'filter.minRating':     'Note min.',
     'filter.any':           'Peu importe',
     'filter.sort':          'Trier',
+    'sort.imdb':            'Coup de cœur du public',
+    'sort.rt':              'Adorée par la critique',
+    'sort.mc':              'Choix de la critique',
+    'sort.avg':             'Meilleure note globale',
     'hero.subtitle':        'Nous agrégeons les scores IMDb, Rotten Tomatoes et Metacritic en une note pondérée unique.',
     'hero.h1':              'Assistant cinéma IA et notes unifiées',
     'hero.unified':         'Une seule note d’IMDb, Rotten Tomatoes et Metacritic.',
@@ -5617,6 +5623,7 @@ const TRANSLATIONS = {
     'time.yearsAgo':       'il y a {n}ans',
     'fv.skip':             'Appuyez pour continuer',
     'feed.forYou':         '✨ Pour Vous',
+    'feed.hiddenGems':     '⭐ Classiques intemporels',
     'feed.forYouBadge':    'Selon vos goûts',
     'grid.explore':        '🍿 Explorer la Collection',
     'browse.more':         'Parcourir toute la collection',
@@ -5751,6 +5758,10 @@ const TRANSLATIONS = {
     'filter.minRating':     '最低评分',
     'filter.any':           '不限',
     'filter.sort':          '排序',
+    'sort.imdb':            '观众最爱',
+    'sort.rt':              '影评人力荐',
+    'sort.mc':              '影评人之选',
+    'sort.avg':             '综合最佳',
     'hero.subtitle':        '我们将 IMDb、烂番茄和 Metacritic 的评分汇总为一个综合加权评分。',
     'hero.h1':              'AI 电影助手与统一评分',
     'hero.unified':         '融合 IMDb、烂番茄和 Metacritic 的统一评分。',
@@ -5884,6 +5895,7 @@ const TRANSLATIONS = {
     'time.yearsAgo':       '{n}年前',
     'fv.skip':             '点击继续',
     'feed.forYou':         '✨ 为你推荐',
+    'feed.hiddenGems':     '⭐ 永恒经典',
     'feed.forYouBadge':    '根据你的品味',
     'grid.explore':        '🍿 探索合集',
     'browse.more':         '浏览完整合集',
@@ -6018,6 +6030,10 @@ const TRANSLATIONS = {
     'filter.minRating':     'أدنى تقييم',
     'filter.any':           'أي تقييم',
     'filter.sort':          'ترتيب',
+    'sort.imdb':            'المفضّل لدى الجمهور',
+    'sort.rt':              'يعشقه النقاد',
+    'sort.mc':              'اختيار النقاد',
+    'sort.avg':             'الأفضل إجمالاً',
     'hero.subtitle':        'نجمع تقييمات IMDb وRotten Tomatoes وMetacritic في تقييم واحد موزون.',
     'hero.h1':              'مساعد الأفلام بالذكاء الاصطناعي وتقييمات موحّدة',
     'hero.unified':         'تقييم واحد من IMDb وRotten Tomatoes وMetacritic.',
@@ -6151,6 +6167,7 @@ const TRANSLATIONS = {
     'time.yearsAgo':       'منذ {n}سنة',
     'fv.skip':             'انقر للمتابعة',
     'feed.forYou':         '✨ لك',
+    'feed.hiddenGems':     '⭐ كلاسيكيات كل العصور',
     'feed.forYouBadge':    'بناءً على ذوقك',
     'grid.explore':        '🍿 استكشاف المجموعة',
     'browse.more':         'تصفّح المجموعة كاملة',
@@ -6285,6 +6302,10 @@ const TRANSLATIONS = {
     'filter.minRating':     'Мін. рейтинг',
     'filter.any':           'Будь-який',
     'filter.sort':          'Сортування',
+    'sort.imdb':            'Улюбленець глядачів',
+    'sort.rt':              'Обожнюють критики',
+    'sort.mc':              'Вибір критиків',
+    'sort.avg':             'Найкраще загалом',
     'hero.subtitle':        'Ми агрегуємо оцінки IMDb, Rotten Tomatoes та Metacritic в єдиний зважений рейтинг.',
     'hero.h1':              'AI-помічник із фільмів та єдиний рейтинг',
     'ratings.howLink':      'Як працюють оцінки',
@@ -6364,7 +6385,6 @@ const TRANSLATIONS = {
     'hero.unified':         'Єдиний рейтинг з IMDb, Rotten Tomatoes та Metacritic.',
     'feed.seeMore':         'Усі',
     'feed.seeMoreAria':     'Показати всі фільми цієї добірки',
-    'ai.status':            '✨ ШІ Активний: 3 Джерела Зведені • Неупереджені Дані • Без Реклами',
     'wiz.qMood':            'Що вам до настрою?',
     'wiz.qTime':            'Скільки у вас часу?',
     'wiz.qCompany':         'З ким дивитесь?',
@@ -6420,6 +6440,7 @@ const TRANSLATIONS = {
     'time.yearsAgo':       '{n}р тому',
     'fv.skip':             'Натисніть будь-де',
     'feed.forYou':         '✨ Для Тебе',
+    'feed.hiddenGems':     '⭐ Класика на всі часи',
     'feed.forYouBadge':    'На основі вашого смаку',
     'grid.explore':        '🍿 Дослідити Колекцію',
     'browse.more':         'Переглянути всю колекцію',
@@ -6559,6 +6580,10 @@ const TRANSLATIONS = {
     'filter.minRating':     'Mindestbewertung',
     'filter.any':           'Beliebig',
     'filter.sort':          'Sortieren',
+    'sort.imdb':            'Publikumsliebling',
+    'sort.rt':              'Von Kritikern geliebt',
+    'sort.mc':              'Wahl der Kritiker',
+    'sort.avg':             'Insgesamt am besten',
     'hero.h1':              'KI-Filmassistent & vereinte Bewertungen',
     'hero.subtitle':        'Beschreibe eine Stimmung, Handlung oder Atmosphäre – unsere KI findet deinen nächsten Film, mit IMDb, Rotten Tomatoes & Metacritic zu einer verlässlichen Wertung vereint.',
     'ratings.howLink':      'So funktionieren die Bewertungen',
@@ -6708,13 +6733,12 @@ const TRANSLATIONS = {
     'feed.forYouBadge':    'Basierend auf deinem Geschmack',
     'feed.best':           '🏅 Jetzt am besten verfügbar',
     'feed.bestBadge':      'Bestätigt durch Bewertungen & Stimmen',
-    'feed.hiddenGems':     '💎 Geheimtipps',
+    'feed.hiddenGems':     '⭐ Zeitlose Klassiker',
     'best.exploreTitle':   'Topbewertete entdecken',
     'best.exploreSub':     'Entdecke 50+ weitere top­bewertete Filme, gereiht nach IMDb, RT & Metacritic.',
     'best.exploreCta':     'Topbewertete durchstöbern',
     'feed.seeMore':        'Alle ansehen',
     'feed.seeMoreAria':    'Alle Titel dieser Sammlung ansehen',
-    'ai.status':           '✨ KI-Engine aktiv: 3 Quellen vereint • Unvoreingenommene Daten • 100 % werbefrei',
     'rating.unified':      'Vereint',
     'rating.tmdb':         'TMDB',
     'rating.unifiedTip':   'Kombinierte Kritikerwertung (IMDb, RT, Metacritic)',
@@ -6852,6 +6876,10 @@ const TRANSLATIONS = {
     'filter.minRating':     'Lägsta betyg',
     'filter.any':           'Valfritt',
     'filter.sort':          'Sortera',
+    'sort.imdb':            'Publikens favorit',
+    'sort.rt':              'Älskad av kritiker',
+    'sort.mc':              'Kritikernas val',
+    'sort.avg':             'Bäst totalt',
     'hero.h1':              'AI-filmassistent & samlat betyg',
     'hero.subtitle':        'Beskriv en känsla, handling eller stämning så hittar vår AI din nästa film – med IMDb, Rotten Tomatoes & Metacritic sammanvägda till ett pålitligt betyg.',
     'ratings.howLink':      'Så fungerar betygen',
@@ -7001,13 +7029,12 @@ const TRANSLATIONS = {
     'feed.forYouBadge':    'Baserat på din smak',
     'feed.best':           '🏅 Bäst tillgängligt nu',
     'feed.bestBadge':      'Bekräftat av betyg & röster',
-    'feed.hiddenGems':     '💎 Dolda pärlor',
+    'feed.hiddenGems':     '⭐ Tidlösa klassiker',
     'best.exploreTitle':   'Utforska högst betygsatta',
     'best.exploreSub':     'Upptäck 50+ fler högt betygsatta filmer, rankade av IMDb, RT & Metacritic.',
     'best.exploreCta':     'Bläddra bland högst betygsatta',
     'feed.seeMore':        'Visa alla',
     'feed.seeMoreAria':    'Visa alla titlar i samlingen',
-    'ai.status':           '✨ AI-motor aktiv: 3 källor sammanvägda • Opartisk data • 100 % reklamfritt',
     'rating.unified':      'Samlat',
     'rating.tmdb':         'TMDB',
     'rating.unifiedTip':   'Kombinerat kritikerbetyg (IMDb, RT, Metacritic)',
@@ -7145,6 +7172,10 @@ const TRANSLATIONS = {
     'filter.minRating':     'Minste vurdering',
     'filter.any':           'Alle',
     'filter.sort':          'Sorter',
+    'sort.imdb':            'Publikumsfavoritt',
+    'sort.rt':              'Elsket av kritikere',
+    'sort.mc':              'Kritikernes valg',
+    'sort.avg':             'Best totalt',
     'hero.h1':              'AI-filmassistent & samlet vurdering',
     'hero.subtitle':        'Beskriv en stemning, et plott eller en vibb, så finner vår AI din neste film – med IMDb, Rotten Tomatoes & Metacritic samlet til én pålitelig vurdering.',
     'ratings.howLink':      'Slik fungerer vurderingene',
@@ -7294,13 +7325,12 @@ const TRANSLATIONS = {
     'feed.forYouBadge':    'Basert på din smak',
     'feed.best':           '🏅 Best tilgjengelig nå',
     'feed.bestBadge':      'Bekreftet av vurderinger & stemmer',
-    'feed.hiddenGems':     '💎 Skjulte perler',
+    'feed.hiddenGems':     '⭐ Tidløse klassikere',
     'best.exploreTitle':   'Utforsk topprangerte',
     'best.exploreSub':     'Oppdag 50+ flere høyt vurderte filmer, rangert av IMDb, RT & Metacritic.',
     'best.exploreCta':     'Bla gjennom topprangerte',
     'feed.seeMore':        'Se alle',
     'feed.seeMoreAria':    'Se alle titler i denne samlingen',
-    'ai.status':           '✨ AI-motor aktiv: 3 kilder samlet • Upartiske data • 100 % reklamefritt',
     'rating.unified':      'Samlet',
     'rating.tmdb':         'TMDB',
     'rating.unifiedTip':   'Kombinert kritikervurdering (IMDb, RT, Metacritic)',
@@ -7922,15 +7952,15 @@ window._FEED_POOL = [];
 
 function miniRatingPill(m) {
   if (m.avg == null || m.avg === '') return '';
+  // Decluttered: one dynamic-colored score badge (green = unified critic score,
+  // grey = provisional TMDB). Source tag / "i" icon / explanatory tooltip removed
+  // to cut per-card visual noise; the color state alone signals data confidence.
   const hasCritic = (parseFloat(m.imdb) > 0) || (parseInt(m.rt) > 0) || (parseInt(m.mc) > 0);
   const s = hasCritic
-    ? { cls: 'mc-rating--unified', tag: t('rating.unified'), tip: t('rating.unifiedTip') }
-    : { cls: 'mc-rating--tmdb',    tag: t('rating.tmdb'),    tip: t('rating.tmdbTip') };
-  return `<div class="mc-rating ${s.cls}" tabindex="0" role="img" aria-label="${esc(s.tag)} score ${m.avg}. ${esc(s.tip)}">`
+    ? { cls: 'mc-rating--unified', tag: t('rating.unified') }
+    : { cls: 'mc-rating--tmdb',    tag: t('rating.tmdb') };
+  return `<div class="mc-rating ${s.cls}" role="img" aria-label="${esc(s.tag)} score ${m.avg}">`
     + `<span class="mc-rating-star">★</span><span class="mc-rating-score">${m.avg}</span>`
-    + `<span class="mc-rating-tag">${esc(s.tag)}</span>`
-    + `<span class="mc-rating-info" aria-hidden="true">i</span>`
-    + `<span class="mc-rating-tip" role="tooltip">${esc(s.tip)}</span>`
     + `</div>`;
 }
 function renderMiniCard(m, opts = {}) {
@@ -12582,10 +12612,10 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
     <div class="fd-group">
       <span class="fd-label" data-i18n="filter.sort">Sort</span>
       <div class="sort-wrap fd-sort">
-        <button class="src-btn imd" id="btnIMD" onclick="toggleSrc('imd')">IMDb</button>
-        <button class="src-btn rt"  id="btnRT"  onclick="toggleSrc('rt')">RT</button>
-        <button class="src-btn mc"  id="btnMC"  onclick="toggleSrc('mc')">Metacritic</button>
-        <button class="src-btn avg" id="btnAVG" onclick="toggleSrc('avg')">Avg ★</button>
+        <button class="src-btn imd" id="btnIMD" onclick="toggleSrc('imd')" data-i18n="sort.imdb">Audience favorite</button>
+        <button class="src-btn rt"  id="btnRT"  onclick="toggleSrc('rt')" data-i18n="sort.rt">Critics love it</button>
+        <button class="src-btn mc"  id="btnMC"  onclick="toggleSrc('mc')" data-i18n="sort.mc">Critics' choice</button>
+        <button class="src-btn avg" id="btnAVG" onclick="toggleSrc('avg')" data-i18n="sort.avg">Best overall</button>
       </div>
     </div>
   </div>
