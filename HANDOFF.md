@@ -2,7 +2,21 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-23) — UX Declutter: Card Badge, Trust Text, Copy Humanization
+## ⚡ Most Recent Session (2026-07-23) — Bento-Style Movie Modal (Decision-Engine Grid)
+
+All commits on `main`, all live on https://findfilm.ai. Deployed `37e826a4.ratingkino.pages.dev`.
+
+Redesigned the movie-detail modal (`#overlay > #modal`) from a linear editorial scroll into a modern **Bento Box / Smart Grid "Decision Engine"** layout — dominant verdict header, prominent action bar, and a responsive grid of rounded translucent cards. **Pure DOM-reorg + CSS**; no data-fetching, affiliate, QR, or review logic touched. All element IDs, the `.m-body` scroll region, `.m-sec` nesting (needed by `_setSecVisible`'s `.closest('.m-sec')`), and `#mDesc` in-flow layout (synopsis `scrollHeight` clamp) preserved → every ID-based handler works unchanged.
+
+| Commit | Feature |
+|--------|---------|
+| `a31a390` | **Bento-style movie modal** (`index.html`). **(1) Bento grid** — the modal `.m-body` (L~4664) now wraps its 5 sections in `<div class="bento-grid">`; each `<section class="m-sec …">` gains a **`.bento-card`** modifier (rounded `border-radius:20px`, `rgba(30,32,40,.5)` bg, hairline border). Grid is **1 col → 2 col (≥700px) → 3 col (≥980px)**; full-width cards use `grid-column:1/-1` (default). **Details** card (`.m-sec--details`, holds `#mMeta`) = `.bento-2`, **Awards** card (`.m-sec--awards`, holds `#mAwards`) = `.bento-1`: they're full-width on mobile, **pair side-by-side** at ≥700px (`grid-column:auto`) and at ≥980px span 2/1 of the 3-col row. `.m-sec--overview/--ai/--watch/--reviews/--related` stay full-width. Cards ARE the `.m-sec` nodes (not wrappers) so `_setSecVisible('mFitSummary'/'similarScroll', …)` section-hide is untouched. **(2) AI TL;DR** — the old "About" `.section-lbl` + `#mDesc` were reframed: new **`.ai-tldr-head`** (✨ `.ai-tldr-spark` + `data-i18n="modal.aiTldr"`) over a **`.ai-tldr-panel`** glassmorphism box (`backdrop-filter:blur(8px)`, translucent) wrapping `#mDesc` + `#mDescToggle` (IDs + in-flow layout kept for the clamp read). **(3) Big Badge** — enlarged the unified score in `#mRatings`: `.mr-score-card` gains an orange neon gradient/glow, `.mr-avg-num` 36px→**46px** (text-shadow), `.mr-star` 17px→20px (mobile keeps its compact 17px row override at L~2875). **(4) Action bar** — `.m-actions` (holds `#btnTrailer`, `#streamingCtAs`, Share, `#btnWatchlist`) gets a dedicated-bar look: `margin-top:14px; padding-top:14px; border-top` separator. **(5) Frosted close** — `.m-close` 36→40px, `blur(14px) saturate(160%)`, lighter translucent glass, `z-index:12`, shadow. (True viewport-sticky not possible: `.modal` has `transform`+`overflow:hidden` which contains/clips `position:fixed` descendants — button stays `absolute` at modal top-right, already frosted.) **(6) i18n** — added **`modal.aiTldr`** to all 9 dicts (en "AI TL;DR", es "Resumen IA", fr "Résumé IA", zh "AI 摘要", ar "ملخص الذكاء الاصطناعي", uk "Стисло від ШІ", de "KI-Kurzfassung", sv "AI-sammanfattning", no "AI-sammendrag"). **Verified (preview eval + screenshots @375/768/desktop):** all 41 modal IDs resolve once, no dupes; 7 `.bento-card`s all still `.m-sec`; grid 336px(1col)/354×2(2col)/318×3(3col) with **no horizontal overflow**; Details+Awards side-by-side at ≥700; `_setSecVisible` shows/hides `.m-sec--ai`/`.m-sec--related` correctly; `toggleSynopsis()`, `openShare()` (`#sharePanel` sibling opens), `toggleWatchlistModal()` all fire without error; only expected TMDb-404 static noise. **Deliverables (Tailwind docs, live site stays vanilla CSS):** grid `class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"`; card `class="bg-gray-800/50 rounded-2xl p-4 border border-white/5"` (Details `lg:col-span-2`, Awards `lg:col-span-1`); AI TL;DR panel `class="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-4"`; close `class="w-10 h-10 rounded-full backdrop-blur bg-black/40 border border-white/20"`. |
+
+**New selectors/keys this session:** `.bento-grid`, `.bento-card`, `.bento-1`, `.bento-2`, `.ai-tldr-head`, `.ai-tldr-spark`, `.ai-tldr-panel`; new `.m-sec--details` / `.m-sec--awards` section classes (split out of `.m-sec--overview`); i18n key `modal.aiTldr` ×9.
+
+---
+
+## ⚡ Session (2026-07-23) — UX Declutter: Card Badge, Trust Text, Copy Humanization
 
 All commits on `main`, all live on https://findfilm.ai. Deployed `ee3def5c.ratingkino.pages.dev`.
 
