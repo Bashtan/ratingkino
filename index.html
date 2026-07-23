@@ -519,7 +519,7 @@ header {
    search. The wrap itself paints the glass + gradient ring; every control
    is a normal-flow flex child (no fragile absolute positioning). */
 .search-wrap--hero {
-  width: 100%; max-width: 680px; flex: none;
+  width: 100%; max-width: 820px; flex: none;
   display: flex; align-items: center; gap: 4px;
   height: 52px; padding: 0 8px 0 5px;
   border-radius: 15px;
@@ -565,6 +565,9 @@ header {
   transition: background 0.2s, color 0.2s;
 }
 .sw-mode-trigger:hover { background: rgba(255,255,255,0.1); color: #e9d5ff; }
+/* Icon-only mode trigger on ALL breakpoints — shows just the active icon + chevron,
+   handing the reclaimed width back to the input. The label stays in the DOM for a11y. */
+.sw-mode-label { display: none; }
 .sw-mode-ic { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.9; }
 .sw-mode .ic-plot { display: none; }
 .sw-mode.is-ai .ic-title { display: none; }
@@ -638,11 +641,24 @@ header {
 }
 
 /* ── Hero eyebrow: muted neon tagline above the feature dashboard ── */
-.hero-eyebrow {
-  margin: 0 0 2px; padding: 0;
-  font-family: 'DM Mono', monospace; font-size: 11px;
-  letter-spacing: 1.6px; text-transform: uppercase;
-  color: rgba(167,139,250,0.55); white-space: nowrap;
+/* Hero value proposition — centered headline · subtext · subtle ratings-info link */
+.hero-vp {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  text-align: center; width: 100%;
+}
+.hero-vp .hero-h1 {
+  font-size: 22px; font-weight: 800; line-height: 1.15;
+  color: #ece8ff; letter-spacing: 0.2px; margin: 0;
+}
+.hero-vp .hero-title {
+  justify-content: center; font-size: 14px; color: var(--muted);
+}
+.hero-vp .how-ratings-link {
+  margin-top: 2px; padding: 0; background: none; border: none; border-radius: 0;
+  color: #818cf8; font-size: 12px; font-weight: 600;
+}
+.hero-vp .how-ratings-link:hover {
+  background: none; border: none; transform: none; text-decoration: underline;
 }
 /* Anchor that holds #searchWrap on mobile (emptied when reparented into the header) */
 .hero-search-anchor { width: 100%; display: flex; justify-content: center; }
@@ -689,14 +705,18 @@ header {
   /* Mobile-only search overlay toggle stays hidden on desktop */
   .btn-search-toggle { display: none !important; }
   /* Search is centered in the hero on all viewports now — give the hero a
-     comfortable centered column (eyebrow value-prop + search + vibe chips). */
+     wide centered column (value-prop + search + vibe chips) so long queries
+     have plenty of horizontal room. */
   .hero-search {
-    max-width: 720px;
-    padding-top: 18px; padding-bottom: 22px;
-    gap: 12px;
+    max-width: 880px;
+    padding-top: 10px; padding-bottom: 22px;
+    gap: 10px;
   }
-  /* Keep the rating-source legend hidden on desktop (surfaces in the ratings modal). */
-  .hero-band .source-badges { display: none; }
+  /* Larger, bolder headline on desktop (text-2xl-ish). */
+  .hero-vp .hero-h1 { font-size: 26px; }
+  .hero-vp .hero-title { font-size: 15px; }
+  /* .hero-band is hidden by default (see base rule) — only the 769–991px
+     tablet range opts back in, so nothing to hide here on desktop. */
 }
 
 /* Filters launcher button in the (slim) filters bar */
@@ -921,13 +941,19 @@ header {
 .src-btn.mc.on  { background: var(--mc); color: #1a1a1a; border-color: var(--mc); box-shadow: 0 2px 12px rgba(255,204,52,0.35); }
 .src-btn.avg.on { background: #6366f1; color: #fff; border-color: #6366f1; box-shadow: 0 2px 12px rgba(99,102,241,0.45); }
 
-/* ─── HERO BAND ───────────────────────────────── */
+/* ─── HERO BAND (legend + freshness stamp) ─────────────────────────────
+   Value-prop now lives in the hero (.hero-vp), so the band is only surfaced
+   in the tablet range (769–991px). Hidden by default; shown via the tablet
+   media query below. (Base-rule source order beats the ≥992 hide, so we hide
+   at the base and opt-in for tablet instead.) */
 .hero-band {
   padding: 6px 24px 8px;
   max-width: 1200px; margin: 0 auto;
-  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+  display: none; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
 }
-.hero-band-copy { max-width: 720px; }
+@media (min-width: 769px) and (max-width: 991px) {
+  .hero-band { display: flex; }
+}
 .hero-h1 {
   font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 15px; line-height: 1.15;
   margin: 0 0 2px; letter-spacing: 0.2px;
@@ -2694,12 +2720,9 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .vibe-chip { flex: 0 0 auto; }
   .search-wrap--hero .search-input { height: 46px; font-size: 15px; }
   .search-wrap--hero .sw-mode-trigger { height: 44px; font-size: 12px; padding: 0 8px 0 9px; gap: 4px; }
-  /* Mobile: collapse mode trigger to icon + chevron — frees width for the input */
-  .sw-mode-label { display: none; }
   .search-wrap--hero .search-icon { display: none; }  /* drop the decorative magnifier — save room */
   /* Discovery actions live in the header on mobile — hide the sub-nav links */
   .nav-feats { display: none; }
-  .hero-eyebrow { font-size: 10px; letter-spacing: 1.2px; white-space: normal; }
 
   /* Larger touch targets for the drawer controls */
   .gpill      { height: 38px; padding: 0 14px; font-size: 13px; }
@@ -2710,10 +2733,8 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   /* Slim filter bar (single row: content toggle + Filters button) */
   .filter-row-1 { padding: 8px 14px; gap: 8px; }
 
-  /* Compact hero band — get cards above the fold */
-  .hero-band   { padding: 10px 14px 8px; flex-direction: column; gap: 4px; align-items: flex-start; }
+  /* Hero band is hidden by default (base rule); mobile keeps it hidden. */
   .hero-title  { font-size: 12px; line-height: 1.35; }
-  .source-badges { display: none; }
 
   /* 2-column movie grid */
   main { padding: 0 12px 90px; }
@@ -4245,8 +4266,18 @@ if ('serviceWorker' in navigator) {
 
 <!-- ════════════ HERO SEARCH (dominant primary CTA) ════════════ -->
 <section class="hero-search" id="heroSearch">
-  <!-- Eyebrow tagline — anchors the hero as an intentional "feature dashboard" -->
-  <p class="hero-eyebrow" data-i18n="hero.eyebrow">240,000 films · 3 rating sources · 1 verdict</p>
+  <!-- Value proposition — headline · unified-ratings subtext · ratings-info link (centered).
+       The single SEO <h1> + dynamic #heroTitle live here now (relocated from .hero-band). -->
+  <div class="hero-vp">
+    <h1 class="hero-h1" data-i18n="hero.h1">AI Movie Assistant &amp; Unified Ratings</h1>
+    <div class="hero-title" id="heroTitle">
+      <span class="c-p">240K+</span> films <span class="ht-dot">•</span> <span class="c-o">One score from IMDb, Rotten Tomatoes, and Metacritic.</span>
+    </div>
+    <button class="how-ratings-link" onclick="openRatingsInfo()" aria-label="How ratings work">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <span data-i18n="ratings.howLink">How ratings work</span>
+    </button>
+  </div>
   <!-- Home for #searchWrap on all viewports (search is centered in the hero). -->
   <div class="hero-search-anchor" id="heroSearchAnchor">
   <!-- Unified "super search bar": embedded mode selector · input · clear · AI voice · magnifier -->
@@ -4444,18 +4475,8 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
-<!-- ════════════ HERO BAND (SEO content zone) ════════════ -->
+<!-- ════════════ HERO BAND — rating-source legend + freshness stamp (tablet only) ════════════ -->
 <div class="hero-band">
-  <div class="hero-band-copy">
-    <h1 class="hero-h1" data-i18n="hero.h1">AI Movie Assistant &amp; Unified Ratings</h1>
-    <div class="hero-title" id="heroTitle">
-      <span class="c-p">240K+</span> films <span class="ht-dot">•</span> <span class="c-o">One score from IMDb, Rotten Tomatoes, and Metacritic.</span>
-    </div>
-    <button class="how-ratings-link" onclick="openRatingsInfo()" aria-label="How ratings work">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-      <span data-i18n="ratings.howLink">How ratings work</span>
-    </button>
-  </div>
   <div class="source-badges">
     <div class="sbadge imd">⭐ IMDb</div>
     <div class="sbadge rt">🍅 Rotten Tomatoes</div>
@@ -4947,7 +4968,6 @@ const TRANSLATIONS = {
     'cast.qrCopy':           'Copy TV link',
     'btn.random':           'Surprise Me',
     'tonight.launch':       'Find something great for tonight',
-    'hero.eyebrow':         '240,000 films · 3 rating sources · 1 verdict',
     'vibe.brain':           'Turn off my brain',
     'vibe.night':           'Late night aesthetic',
     'vibe.chaos':           'Pure chaos & twists',
@@ -5255,7 +5275,6 @@ const TRANSLATIONS = {
     'cast.qrCopy':           'Copiar enlace del TV',
     'btn.random':           'RandomAI',
     'tonight.launch':       '¿Esta noche?',
-    'hero.eyebrow':         '240.000 películas · 3 fuentes de puntuación · 1 veredicto',
     'vibe.brain':           'Desconectar la mente',
     'vibe.night':           'Estética nocturna',
     'vibe.chaos':           'Puro caos y giros',
@@ -5519,7 +5538,6 @@ const TRANSLATIONS = {
     'cast.qrCopy':           'Copier le lien TV',
     'btn.random':           'RandomAI',
     'tonight.launch':       'Ce soir ?',
-    'hero.eyebrow':         '240 000 films · 3 sources de notes · 1 verdict',
     'vibe.brain':           'Débrancher son cerveau',
     'vibe.night':           'Esthétique nocturne',
     'vibe.chaos':           'Chaos et rebondissements',
@@ -5783,7 +5801,6 @@ const TRANSLATIONS = {
     'cast.qrCopy':           '复制电视链接',
     'btn.random':           'RandomAI',
     'tonight.launch':       '今晚看？',
-    'hero.eyebrow':         '240,000 部电影 · 3 个评分来源 · 1 个结论',
     'vibe.brain':           '放空大脑',
     'vibe.night':           '深夜美学',
     'vibe.chaos':           '纯粹混乱与反转',
@@ -6047,7 +6064,6 @@ const TRANSLATIONS = {
     'cast.qrCopy':           'نسخ رابط التلفاز',
     'btn.random':           'RandomAI',
     'tonight.launch':       'الليلة؟',
-    'hero.eyebrow':         '240,000 فيلم · 3 مصادر تقييم · حكم واحد',
     'vibe.brain':           'أطفئ عقلك',
     'vibe.night':           'أجواء ليلية',
     'vibe.chaos':           'فوضى ومفاجآت',
@@ -6311,7 +6327,6 @@ const TRANSLATIONS = {
     'cast.qrCopy':           'Копіювати посилання TV',
     'btn.random':           'Здивуй мене',
     'tonight.launch':       'Фільм на вечір',
-    'hero.eyebrow':         '240 000 фільмів · 3 джерела оцінок · 1 вердикт',
     'vibe.brain':           'Вимкнути мозок',
     'vibe.night':           'Нічна естетика',
     'vibe.chaos':           'Суцільний хаос',
