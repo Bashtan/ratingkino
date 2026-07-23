@@ -2,7 +2,19 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-23) — Localization Expansion (no/de/sv) + IP Auto-Language
+## ⚡ Most Recent Session (2026-07-23) — UX Declutter: Card Badge, Trust Text, Copy Humanization
+
+All commits on `main`, all live on https://findfilm.ai. Deployed `ee3def5c.ratingkino.pages.dev`.
+
+Presentation-only pass to shift from a "database" feel to a "curator" feel: stripped per-card rating clutter, removed a promotional trust banner, and rewrote catalog/sort copy to be outcome-based. No API params, `toggleSrc` bindings, button IDs, `<option value>`s, or JS state logic changed.
+
+| Commit | Feature |
+|--------|---------|
+| `ed53638` | **UX declutter + copy humanization** (`index.html`). **(1) Feed-card badge declutter** — `miniRatingPill()` (L~7923) reduced to a single dynamic-colored score badge: removed the `.mc-rating-tag` (UNIFIED/TMDB label), `.mc-rating-info` ("i" icon), and the `.mc-rating-tip` tooltip carrying `rating.tmdbTip` ("Temporary TMDB score until critic reviews arrive"). Kept star+score and the confidence **color state** (`.mc-rating--unified` green / `.mc-rating--tmdb` grey) + `aria-label`; parent `.mini-card` `onclick="openMovie()"` untouched. (Now-unused `.mc-rating-tag/-info/-tip` CSS + `rating.tmdbTip`/`rating.unifiedTip` keys left in place, harmless.) **(2) Removed promo trust banner** — deleted the entire `#trustProof` `<div class="ai-status">` node (was "✨ AI Engine Active: 3 Sources Merged • Unbiased Data • 100% Ad-Free", `data-i18n="ai.status"`) that sat between `#scrollBest` and `#rowPopular`; removed the whole node (no empty wrapper/gap) and deleted the orphan `'ai.status'` key from en/uk/de/sv/no dicts (the loader keeps `ai.status.scan/analyze/verdict/posters`). **(3) "Hidden Gems" → "All-Time Classics"** — kept the JS/i18n key **`feed.hiddenGems`** (row `#rowPopular`/`#scrollPopular` data logic unchanged); updated HTML default (L~4555) + values in all 9 langs (en "⭐ All-Time Classics", es "Clásicos de todos los tiempos", fr "Classiques intemporels", zh "永恒经典", ar "كلاسيكيات كل العصور", uk "Класика на всі часи", de "Zeitlose Klassiker", sv "Tidlösa klassiker", no "Tidløse klassikere"); added the key to es/fr/zh/ar/uk which previously fell back to EN. **(4) Humanized SORT labels** — the 4 `.src-btn` in the Filters drawer (`.fd-sort`, L~12585) kept `id="btnIMD/RT/MC/AVG"`, `onclick="toggleSrc('imd'/'rt'/'mc'/'avg')"`, and `.imd/.rt/.mc/.avg` color classes; only visible text changed via new `data-i18n="sort.imdb/rt/mc/avg"` keys added to **all 9 langs** — EN: IMDb→"Audience favorite", RT→"Critics love it", MC→"Critics' choice" (distinct from RT to avoid duplicate labels), Avg★→"Best overall". `.fd-sort` `flex-wrap:wrap` (L810) lets the longer labels reflow. **Verified (preview eval + screenshot):** `#trustProof` gone, no "AI Engine Active"/"Ad-Free" text anywhere; `miniRatingPill` output has no tag/info/tip in both critic & TMDB states; `⭐ All-Time Classics` + localized sort labels render for en/de/fr/ar/no; clicking "Critics love it" still fires `toggleSrc('rt')` → adds `.on`; `Best overall` shows default-active indigo. **Deliverables (docs):** card = `<div class="mc-rating {unified|tmdb}" role="img" aria-label="…"><span class="mc-rating-star">★</span><span class="mc-rating-score">{avg}</span></div>` (Tailwind: `class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9.5px] font-bold {emerald-400 bg-emerald-500/15 | slate-400 bg-slate-900/85}"`); sort `<button>`s unchanged except inner text + `data-i18n`; `TRANSLATIONS` gains `sort.imdb/rt/mc/avg` ×9 and updated `feed.hiddenGems` ×9, loses `ai.status` ×5. |
+
+---
+
+## ⚡ Session (2026-07-23) — Localization Expansion (no/de/sv) + IP Auto-Language
 
 All commits on `main`, all live on https://findfilm.ai. Deployed `70d8920b.ratingkino.pages.dev`.
 
