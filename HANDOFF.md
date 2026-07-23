@@ -2,7 +2,19 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-22) — Fix iOS Safe Area (Dynamic Island Overlap)
+## ⚡ Most Recent Session (2026-07-23) — Desktop Hero: Value-Prop Block, Widened Search, Icon-Only Mode
+
+All commits on `main`, all live on https://findfilm.ai. Deployed `9adb80e0.ratingkino.pages.dev`.
+
+Structural desktop-hero optimization: promoted the value proposition to a centered 3-line block directly above the search, widened + tightened the search bar, and stripped the mode-selector down to an icon so the input reclaims the space. Also fixed a stacking/source-order bug that was leaking the legend band onto desktop.
+
+| Commit | Feature |
+|--------|---------|
+| `bd54518` | **Desktop hero optimization** (`index.html`). **(1) Value-prop block** — replaced the `.hero-eyebrow` `<p>` ("240,000 films · 3 rating sources · 1 verdict", plus its 6 `hero.eyebrow` locale keys) with a centered **`.hero-vp`** block at the top of `#heroSearch`, holding the single SEO **`<h1 class="hero-h1">`**, the dynamic **`#heroTitle`** subtext ("240K+ films • One score from IMDb, Rotten Tomatoes, and Metacritic."), and the **`.how-ratings-link`** (→`openRatingsInfo()`). These were **relocated** out of `.hero-band` (not duplicated) to keep exactly one H1 and preserve the JS-bound `#heroTitle`/`#heroUpdated` IDs. New CSS: `.hero-vp{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}`; `.hero-vp .hero-h1{font-size:22px;font-weight:800;color:#ece8ff}` (26px desktop); `.hero-vp .hero-title{justify-content:center;font-size:14px}` (15px desktop); `.hero-vp .how-ratings-link` restyled to a borderless indigo (`#818cf8`) text link (hover:underline). **(2) Widen + raise search** — `.search-wrap--hero` `max-width:680px`→**`820px`**; desktop (`@media min-width:992px`) `.hero-search` `max-width:720px`→**`880px`**, `padding-top:18px`→**`10px`**, `gap:12px`→`10px`. **(3) Icon-only mode selector** — added base **`.sw-mode-label{display:none}`** (was mobile-only) so the "Describe what you remember" label is hidden on ALL breakpoints, leaving icon + chevron; `.sw-input-zone` stays `flex:1` and fills the reclaimed width. **(4) Hero-band source-order fix** — the `≥992` `.hero-band{display:none}` rule sat BEFORE the base `.hero-band{display:flex}` (~L946), so equal specificity + later source order made the band render on desktop (would have leaked the source-badges). Fixed by flipping the **base rule to `display:none`** and opting back in only via **`@media (min-width:769px) and (max-width:991px){.hero-band{display:flex}}`** (tablet-only legend/freshness band); removed the now-redundant desktop + mobile `.hero-band{display:none}` overrides. **Verified (preview eval + screenshots):** desktop 1280 → `.hero-band` `display:none`, `h1Count:1`, h1 26px centered, `.hero-search` max 880px, search wrap 820px, `.sw-mode-label` `display:none`, input-zone `flex-grow:1`, link `rgb(129,140,248)` transparent bg, no h-overflow; tablet 900 → band `flex` w/ badges `flex`; mobile 375 → band `none`, label `none`, scrollW==375 (no h-scroll), h1 22px, sub 14px, mode dropdown still lifts wrap to `z-index:130` & hit-tests to `sw-mode-opt active` (not clipped). **Tailwind deliverable** (docs-only): value-prop `div class="flex flex-col items-center gap-1 text-center"` → `h1 class="text-xl md:text-2xl font-extrabold text-[#ece8ff]"`, `p class="text-sm md:text-base text-gray-400"`, `button class="text-xs text-indigo-400 hover:underline cursor-pointer mt-0.5 bg-transparent border-0"`; search container `class="w-full max-w-[820px] md:max-w-[880px] mx-auto"`; mode selector label `class="hidden"` + input `class="flex-1 w-full"`. |
+
+---
+
+## ⚡ Session (2026-07-22) — Fix iOS Safe Area (Dynamic Island Overlap)
 
 All commits on `main`, all live on https://findfilm.ai. Deployed `d94cd8e1.ratingkino.pages.dev`.
 
