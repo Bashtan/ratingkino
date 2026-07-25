@@ -2,7 +2,19 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-25) — Vibe Check Backend Wiring (Real Photo/Music → Movies)
+## ⚡ Most Recent Session (2026-07-25) — Mobile Vertical-Space Tightening
+
+All commits on `main`, live on https://findfilm.ai. Deployed `d3e21080.ratingkino.pages.dev`. Verified via preview eval at 375/402px (mobile) + 1280px (desktop unaffected).
+
+Tightened the mobile homepage so the **Movies/TV Shows/Filters toggle sits closer to the vibe chips** and hid a redundant badge on phones. **CSS-only, mobile-scoped** — desktop layout byte-for-byte unchanged (badge stays `flex`, base paddings intact at 1280px).
+
+| Commit | Feature |
+|--------|---------|
+| `baad910` | **Mobile spacing + badge hide** (`index.html`, CSS-only). **(1) Gap below vibe chips** — trimmed `.hero-search` bottom padding in the `@media (max-width:768px)` block (`12px 16px 20px` → `12px 16px 6px`) and `.filter-row-1` top/vertical padding in **both** the 768px block (`8px 14px` → `2px 14px 8px`) **and** the `@media (max-width:430px)` block (`7px 12px 0` → `2px 12px 0` — this ≤430px rule is the *effective* one on phones, overriding 768px by source order), pulling the toggle up (gap 13px → 8px at 375px). **(2) Hide taste badge** — added `#rowForYou .feed-row-badge { display:none; }` inside the 768px block so the "★ Based on your taste" pill disappears on phones while remaining `flex` on desktop (i18n JS at ~L7899 only sets its textContent, never display — CSS hide is safe). **Verified:** preview eval @375/402px → `badgeDisplay:"none"`, `heroPad:"12px 16px 6px"`, `row1Pad:"2px … 0"`, gap 8px; @1280px → `badgeDisplay:"flex"`, `heroPad:"10px 24px 22px"`, `row1Pad:"5px 24px 0"` (desktop untouched). **Deliverables (Tailwind equivalents, live stays vanilla CSS):** hero wrapper `max-md:pb-1.5`; toggle row `max-md:pt-0.5`; badge `hidden md:inline-flex`. |
+
+---
+
+## ⚡ Session (2026-07-25) — Vibe Check Backend Wiring (Real Photo/Music → Movies)
 
 All commits on `main`, live on https://findfilm.ai. Deployed `ada60c67.ratingkino.pages.dev`. Verified live end-to-end (music + photo).
 
