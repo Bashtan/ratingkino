@@ -626,6 +626,18 @@ header {
   color: #a5b4fc; background: rgba(99,102,241,0.16);
   box-shadow: 0 0 14px rgba(99,102,241,0.35);
 }
+/* Vibe Check entry icons (camera + music note) — sit beside the mic, share its
+   round hit-area. z-index:2 lifts them above .search-wrap::before gradient ring. */
+.search-vibe-btn {
+  position: relative; z-index: 2; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; padding: 0;
+  background: transparent; border: none; border-radius: 50%;
+  color: #9aa4b2; cursor: pointer;
+  transition: color 0.18s, background 0.18s;
+}
+.search-vibe-btn svg { width: 20px; height: 20px; }
+.search-vibe-btn:hover { color: #fff; background: rgba(99,102,241,0.16); }
 .search-wrap--hero .search-icon {
   position: static; transform: none; flex: none;
   width: 18px; height: 18px; margin-right: 4px;
@@ -1392,6 +1404,85 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .wiz-restart:hover { background: rgba(124,58,237,0.24); }
 .wiz-loading { text-align: center; padding: 40px 0; color: var(--text-sub); font-size: 14px; }
+
+/* ─── VIBE CHECK modal (photo / music search — frontend scaffold) ─────
+   Mirrors .wiz-overlay stacking/dismiss; two modes toggled by a class on
+   .vibe-modal (.vibe-mode-photo / .vibe-mode-music). ─── */
+.vibe-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.82);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  z-index: 250; overflow-y: auto;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.22s ease;
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px 16px;
+}
+.vibe-overlay.open { opacity: 1; pointer-events: all; }
+.vibe-modal {
+  width: 100%; max-width: 460px;
+  background: var(--modal-bg, #14161c); border-radius: 22px;
+  padding: 26px 26px 28px; position: relative;
+  border: 1px solid rgba(129,140,248,0.24);
+  box-shadow: 0 32px 80px rgba(0,0,0,0.8);
+}
+.vibe-head {
+  display: flex; align-items: center; gap: 9px;
+  margin: 2px 34px 18px 2px;
+  font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 17px;
+  letter-spacing: 0.2px; color: #eef2f7;
+}
+.vibe-spark { font-size: 16px; line-height: 1; filter: drop-shadow(0 0 6px rgba(196,181,253,0.6)); }
+/* Only the active mode's title shows */
+.vibe-title { display: none; }
+.vibe-mode-photo .vibe-title--photo { display: inline; }
+.vibe-mode-music .vibe-title--music { display: inline; }
+/* Panels: only the active mode's panel shows */
+.vibe-panel { display: none; }
+.vibe-mode-photo #vibePhotoPanel { display: block; }
+.vibe-mode-music #vibeMusicPanel { display: block; }
+/* Photo dropzone */
+.vibe-drop {
+  border: 2px dashed rgba(148,163,184,0.5); border-radius: 16px;
+  background: rgba(17,19,26,0.6); padding: 30px 22px; text-align: center;
+  cursor: pointer; transition: border-color 0.18s, background 0.18s;
+}
+.vibe-drop:hover, .vibe-drop.dragover {
+  border-color: #818cf8; background: rgba(99,102,241,0.12);
+}
+.vibe-drop-ic { width: 40px; height: 40px; color: #a5b4fc; margin-bottom: 12px; }
+.vibe-drop-txt { font-size: 13.5px; color: var(--text-sub, #9aa4b2); line-height: 1.5; }
+.vibe-preview {
+  margin-top: 14px; display: flex; align-items: center; gap: 10px;
+  font-size: 12.5px; color: #c4b5fd;
+}
+.vibe-preview img { width: 46px; height: 46px; border-radius: 10px; object-fit: cover; }
+/* Music link input */
+.vibe-link {
+  width: 100%; box-sizing: border-box;
+  background: rgba(17,19,26,0.7); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 13px; padding: 14px 16px; color: var(--text, #eef2f7);
+  font-size: 14px; outline: none; transition: border-color 0.18s;
+}
+.vibe-link:focus { border-color: #818cf8; }
+.vibe-link::placeholder { color: #6b7280; }
+.vibe-hint { margin-top: 10px; font-size: 12.5px; color: var(--text-sub, #9aa4b2); line-height: 1.5; }
+/* Analyze button — prominent gradient CTA */
+.vibe-analyze-btn {
+  display: block; width: 100%; margin-top: 20px;
+  background: linear-gradient(90deg, #7c3aed, #6366f1);
+  border: none; border-radius: 13px; padding: 14px;
+  color: #fff; font-family: 'Montserrat', sans-serif; font-weight: 800;
+  font-size: 14px; letter-spacing: 0.3px; cursor: pointer;
+  transition: filter 0.18s, transform 0.12s;
+  box-shadow: 0 10px 26px rgba(99,102,241,0.4);
+}
+.vibe-analyze-btn:hover { filter: brightness(1.08); }
+.vibe-analyze-btn:active { transform: translateY(1px); }
+/* Loader region */
+.vibe-loader { padding: 6px 0 4px; }
+.vibe-loader .cine-loader { padding: 26px 0 6px; }
+.vibe-status { text-align: center; margin-top: 4px; }
 
 /* ─── Cinematic loader: glowing film reel + flickering "projector" caption.
       Reused by the Tonight wizard + Group Picker while the LLM responds. ─── */
@@ -4385,6 +4476,21 @@ if ('serviceWorker' in navigator) {
         <path d="M18.5 2.2l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7z" fill="currentColor" stroke="none"/>
       </svg>
     </button>
+    <!-- Vibe Check: photo (camera) — opens the Photo Vibe modal -->
+    <button class="search-vibe-btn" id="searchPhotoBtn" type="button" onclick="openVibeCheck('photo')" aria-label="Photo vibe search" data-i18n-title="vibe.photoTip" data-i18n-aria="vibe.photoTip">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 8a2 2 0 0 1 2-2h1.2l1-1.6a1.5 1.5 0 0 1 1.3-.7h3a1.5 1.5 0 0 1 1.3.7l1 1.6H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/>
+        <circle cx="12" cy="12.5" r="3.2"/>
+      </svg>
+    </button>
+    <!-- Vibe Check: music (note) — opens the Audio Vibe modal -->
+    <button class="search-vibe-btn" id="searchMusicBtn" type="button" onclick="openVibeCheck('music')" aria-label="Music vibe search" data-i18n-title="vibe.musicTip" data-i18n-aria="vibe.musicTip">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M9 18V5l10-2v13"/>
+        <circle cx="6" cy="18" r="3"/>
+        <circle cx="16" cy="16" r="3"/>
+      </svg>
+    </button>
     <!-- Decorative magnifier (hidden on mobile) -->
     <svg class="search-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -4892,6 +4998,42 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
+<!-- ════════════ VIBE CHECK (photo / music search — frontend scaffold) ════════════ -->
+<div class="vibe-overlay" id="vibeOverlay" onclick="vibeOverlayClick(event)">
+  <div class="vibe-modal vibe-mode-photo" id="vibeModal">
+    <button class="m-close" onclick="closeVibeCheck()" aria-label="Close">✕</button>
+    <!-- Header (mode-dependent title/subtitle toggled by CSS) -->
+    <div class="vibe-head">
+      <span class="vibe-spark" aria-hidden="true">✨</span>
+      <span class="vibe-title vibe-title--photo" id="vibeTitlePhoto" data-i18n="vibe.titlePhoto">Photo Vibe Check</span>
+      <span class="vibe-title vibe-title--music" id="vibeTitleMusic" data-i18n="vibe.titleMusic">Audio Vibe Check</span>
+    </div>
+    <!-- Input region (hidden while analyzing) -->
+    <div class="vibe-input" id="vibeInput">
+      <!-- Photo mode: drag & drop zone -->
+      <div class="vibe-panel" id="vibePhotoPanel">
+        <div class="vibe-drop" id="vibeDrop" role="button" tabindex="0" onclick="document.getElementById('vibeFile').click()">
+          <input type="file" id="vibeFile" accept="image/*" hidden>
+          <svg class="vibe-drop-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 8a2 2 0 0 1 2-2h1.2l1-1.6a1.5 1.5 0 0 1 1.3-.7h3a1.5 1.5 0 0 1 1.3.7l1 1.6H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/>
+            <circle cx="12" cy="12.5" r="3.2"/>
+          </svg>
+          <div class="vibe-drop-txt" data-i18n="vibe.photoPrompt">Show us your mood. Drop a photo or click to upload.</div>
+        </div>
+        <div class="vibe-preview" id="vibePreview" hidden></div>
+      </div>
+      <!-- Music mode: link input -->
+      <div class="vibe-panel" id="vibeMusicPanel">
+        <input type="text" class="vibe-link" id="vibeLink" autocomplete="off" spellcheck="false" data-i18n-placeholder="vibe.linkPlaceholder" placeholder="Paste a Spotify or YouTube link…">
+        <div class="vibe-hint" data-i18n="vibe.musicPrompt">Paste a Spotify or YouTube link to set the tone.</div>
+      </div>
+      <button class="vibe-analyze-btn" id="vibeAnalyzeBtn" type="button" onclick="simulateVibeAnalysis(document.getElementById('vibeModal').classList.contains('vibe-mode-music') ? 'music' : 'photo')" data-i18n="vibe.analyze">Analyze Vibe</button>
+    </div>
+    <!-- Loader region (populated by simulateVibeAnalysis; shown while analyzing) -->
+    <div class="vibe-loader" id="vibeLoader" hidden></div>
+  </div>
+</div>
+
 <!-- ════════════ GROUP PICKER ════════════ -->
 <div class="wiz-overlay group-overlay" id="groupOverlay" onclick="groupOverlayClick(event)">
   <div class="wiz-modal group-modal" id="groupModal">
@@ -5069,6 +5211,18 @@ const TRANSLATIONS = {
     'ai.status.analyze':    'Analyzing semantic matches…',
     'ai.status.verdict':    'Writing AI verdicts…',
     'ai.status.posters':    'Fetching high-res posters…',
+    'vibe.photoTip':        'Search by photo',
+    'vibe.musicTip':        'Search by music',
+    'vibe.titlePhoto':      'Photo Vibe Check',
+    'vibe.titleMusic':      'Audio Vibe Check',
+    'vibe.photoPrompt':     'Show us your mood. Drop a photo or click to upload.',
+    'vibe.musicPrompt':     'Paste a Spotify or YouTube link to set the tone.',
+    'vibe.linkPlaceholder': 'Paste a Spotify or YouTube link…',
+    'vibe.analyze':         'Analyze Vibe',
+    'vibe.ph.scan':         'Scanning colors and mood…',
+    'vibe.mu.scan':         'Extracting audio signature…',
+    'vibe.ph.translate':    'Translating vibe into cinematic elements…',
+    'vibe.ph.match':        'Finding the perfect match…',
     'wiz.empty':            'Couldn’t find a match — try different answers.',
     'wiz.mood.cozy':        'Cozy & warm',
     'wiz.mood.thrill':      'Thrilling',
@@ -5378,6 +5532,18 @@ const TRANSLATIONS = {
     'ai.status.analyze':    'Analizando coincidencias semánticas…',
     'ai.status.verdict':    'Redactando veredictos de IA…',
     'ai.status.posters':    'Obteniendo pósters en alta resolución…',
+    'vibe.photoTip':        'Buscar por foto',
+    'vibe.musicTip':        'Buscar por música',
+    'vibe.titlePhoto':      'Vibe Check por foto',
+    'vibe.titleMusic':      'Vibe Check por audio',
+    'vibe.photoPrompt':     'Muéstranos tu mood. Suelta una foto o haz clic para subirla.',
+    'vibe.musicPrompt':     'Pega un enlace de Spotify o YouTube para marcar el tono.',
+    'vibe.linkPlaceholder': 'Pega un enlace de Spotify o YouTube…',
+    'vibe.analyze':         'Analizar vibe',
+    'vibe.ph.scan':         'Analizando colores y ambiente…',
+    'vibe.mu.scan':         'Extrayendo la firma de audio…',
+    'vibe.ph.translate':    'Traduciendo el vibe en elementos cinematográficos…',
+    'vibe.ph.match':        'Buscando la coincidencia perfecta…',
     'wiz.empty':            'No se encontró coincidencia — prueba otras respuestas.',
     'wiz.mood.cozy':        'Acogedor',
     'wiz.mood.thrill':      'Emocionante',
@@ -5651,6 +5817,18 @@ const TRANSLATIONS = {
     'ai.status.analyze':    'Recherche de correspondances sémantiques…',
     'ai.status.verdict':    'Rédaction des verdicts IA…',
     'ai.status.posters':    'Récupération des affiches HD…',
+    'vibe.photoTip':        'Rechercher par photo',
+    'vibe.musicTip':        'Rechercher par musique',
+    'vibe.titlePhoto':      'Vibe Check photo',
+    'vibe.titleMusic':      'Vibe Check audio',
+    'vibe.photoPrompt':     'Montrez-nous votre humeur. Déposez une photo ou cliquez pour l’importer.',
+    'vibe.musicPrompt':     'Collez un lien Spotify ou YouTube pour donner le ton.',
+    'vibe.linkPlaceholder': 'Collez un lien Spotify ou YouTube…',
+    'vibe.analyze':         'Analyser le vibe',
+    'vibe.ph.scan':         'Analyse des couleurs et de l’ambiance…',
+    'vibe.mu.scan':         'Extraction de la signature audio…',
+    'vibe.ph.translate':    'Traduction du vibe en éléments cinématographiques…',
+    'vibe.ph.match':        'Recherche de la correspondance parfaite…',
     'wiz.empty':            'Aucune correspondance — essayez d’autres réponses.',
     'wiz.mood.cozy':        'Cocooning',
     'wiz.mood.thrill':      'Palpitant',
@@ -5924,6 +6102,18 @@ const TRANSLATIONS = {
     'ai.status.analyze':    '正在分析语义匹配…',
     'ai.status.verdict':    '正在撰写 AI 评定…',
     'ai.status.posters':    '正在获取高清海报…',
+    'vibe.photoTip':        '按照片搜索',
+    'vibe.musicTip':        '按音乐搜索',
+    'vibe.titlePhoto':      '照片氛围检测',
+    'vibe.titleMusic':      '音频氛围检测',
+    'vibe.photoPrompt':     '展示你的心情。拖入一张照片或点击上传。',
+    'vibe.musicPrompt':     '粘贴 Spotify 或 YouTube 链接来定下基调。',
+    'vibe.linkPlaceholder': '粘贴 Spotify 或 YouTube 链接…',
+    'vibe.analyze':         '分析氛围',
+    'vibe.ph.scan':         '正在扫描色彩与情绪…',
+    'vibe.mu.scan':         '正在提取音频特征…',
+    'vibe.ph.translate':    '正在将氛围转化为电影元素…',
+    'vibe.ph.match':        '正在寻找完美匹配…',
     'wiz.empty':            '未找到匹配 — 换个答案试试。',
     'wiz.mood.cozy':        '温馨治愈',
     'wiz.mood.thrill':      '惊险刺激',
@@ -6197,6 +6387,18 @@ const TRANSLATIONS = {
     'ai.status.analyze':    'تحليل التطابقات الدلالية…',
     'ai.status.verdict':    'كتابة أحكام الذكاء الاصطناعي…',
     'ai.status.posters':    'جلب الملصقات عالية الدقة…',
+    'vibe.photoTip':        'البحث بالصورة',
+    'vibe.musicTip':        'البحث بالموسيقى',
+    'vibe.titlePhoto':      'فحص الأجواء بالصورة',
+    'vibe.titleMusic':      'فحص الأجواء بالصوت',
+    'vibe.photoPrompt':     'أرِنا مزاجك. أفلِت صورة أو انقر للرفع.',
+    'vibe.musicPrompt':     'الصق رابط Spotify أو YouTube لتحديد الأجواء.',
+    'vibe.linkPlaceholder': 'الصق رابط Spotify أو YouTube…',
+    'vibe.analyze':         'تحليل الأجواء',
+    'vibe.ph.scan':         'جارٍ فحص الألوان والمزاج…',
+    'vibe.mu.scan':         'جارٍ استخراج البصمة الصوتية…',
+    'vibe.ph.translate':    'جارٍ ترجمة الأجواء إلى عناصر سينمائية…',
+    'vibe.ph.match':        'جارٍ إيجاد التطابق المثالي…',
     'wiz.empty':            'لم يتم العثور على تطابق — جرّب إجابات أخرى.',
     'wiz.mood.cozy':        'دافئ ومريح',
     'wiz.mood.thrill':      'مثير',
@@ -6471,6 +6673,18 @@ const TRANSLATIONS = {
     'ai.status.analyze':    'Аналіз семантичних збігів…',
     'ai.status.verdict':    'Пишемо вердикти ШІ…',
     'ai.status.posters':    'Отримання постерів у високій якості…',
+    'vibe.photoTip':        'Пошук за фото',
+    'vibe.musicTip':        'Пошук за музикою',
+    'vibe.titlePhoto':      'Vibe Check за фото',
+    'vibe.titleMusic':      'Vibe Check за аудіо',
+    'vibe.photoPrompt':     'Покажіть свій настрій. Перетягніть фото або натисніть, щоб завантажити.',
+    'vibe.musicPrompt':     'Вставте посилання Spotify або YouTube, щоб задати настрій.',
+    'vibe.linkPlaceholder': 'Вставте посилання Spotify або YouTube…',
+    'vibe.analyze':         'Аналізувати вайб',
+    'vibe.ph.scan':         'Сканування кольорів і настрою…',
+    'vibe.mu.scan':         'Витягуємо аудіопідпис…',
+    'vibe.ph.translate':    'Перетворюємо вайб на кінематографічні елементи…',
+    'vibe.ph.match':        'Шукаємо ідеальний збіг…',
     'wiz.empty':            'Збігів не знайдено — спробуйте інші відповіді.',
     'wiz.mood.cozy':        'Затишне',
     'wiz.mood.thrill':      'Напружене',
@@ -6762,6 +6976,18 @@ const TRANSLATIONS = {
     'ai.status.analyze':    'Analysiere semantische Treffer …',
     'ai.status.verdict':    'Schreibe KI-Urteile …',
     'ai.status.posters':    'Lade hochauflösende Poster …',
+    'vibe.photoTip':        'Nach Foto suchen',
+    'vibe.musicTip':        'Nach Musik suchen',
+    'vibe.titlePhoto':      'Foto-Vibe-Check',
+    'vibe.titleMusic':      'Audio-Vibe-Check',
+    'vibe.photoPrompt':     'Zeig uns deine Stimmung. Foto ablegen oder zum Hochladen klicken.',
+    'vibe.musicPrompt':     'Füge einen Spotify- oder YouTube-Link ein, um den Ton anzugeben.',
+    'vibe.linkPlaceholder': 'Spotify- oder YouTube-Link einfügen …',
+    'vibe.analyze':         'Vibe analysieren',
+    'vibe.ph.scan':         'Farben und Stimmung werden gescannt …',
+    'vibe.mu.scan':         'Audiosignatur wird extrahiert …',
+    'vibe.ph.translate':    'Vibe wird in filmische Elemente übersetzt …',
+    'vibe.ph.match':        'Perfekte Übereinstimmung wird gesucht …',
     'wiz.empty':            'Kein Treffer gefunden – probier andere Antworten.',
     'wiz.mood.cozy':        'Gemütlich & warm',
     'wiz.mood.thrill':      'Spannend',
@@ -7059,6 +7285,18 @@ const TRANSLATIONS = {
     'ai.status.analyze':    'Analyserar semantiska träffar …',
     'ai.status.verdict':    'Skriver AI-utlåtanden …',
     'ai.status.posters':    'Hämtar högupplösta affischer …',
+    'vibe.photoTip':        'Sök med foto',
+    'vibe.musicTip':        'Sök med musik',
+    'vibe.titlePhoto':      'Foto-Vibe-Check',
+    'vibe.titleMusic':      'Ljud-Vibe-Check',
+    'vibe.photoPrompt':     'Visa oss ditt humör. Släpp ett foto eller klicka för att ladda upp.',
+    'vibe.musicPrompt':     'Klistra in en Spotify- eller YouTube-länk för att sätta tonen.',
+    'vibe.linkPlaceholder': 'Klistra in en Spotify- eller YouTube-länk …',
+    'vibe.analyze':         'Analysera vibe',
+    'vibe.ph.scan':         'Skannar färger och stämning …',
+    'vibe.mu.scan':         'Extraherar ljudsignatur …',
+    'vibe.ph.translate':    'Översätter vibe till filmiska element …',
+    'vibe.ph.match':        'Hittar den perfekta matchningen …',
     'wiz.empty':            'Hittade ingen träff – prova andra svar.',
     'wiz.mood.cozy':        'Mysigt & varmt',
     'wiz.mood.thrill':      'Spännande',
@@ -7356,6 +7594,18 @@ const TRANSLATIONS = {
     'ai.status.analyze':    'Analyserer semantiske treff …',
     'ai.status.verdict':    'Skriver AI-dommer …',
     'ai.status.posters':    'Henter høyoppløselige plakater …',
+    'vibe.photoTip':        'Søk med foto',
+    'vibe.musicTip':        'Søk med musikk',
+    'vibe.titlePhoto':      'Foto-Vibe-Check',
+    'vibe.titleMusic':      'Lyd-Vibe-Check',
+    'vibe.photoPrompt':     'Vis oss stemningen din. Slipp et foto eller klikk for å laste opp.',
+    'vibe.musicPrompt':     'Lim inn en Spotify- eller YouTube-lenke for å sette tonen.',
+    'vibe.linkPlaceholder': 'Lim inn en Spotify- eller YouTube-lenke …',
+    'vibe.analyze':         'Analyser vibe',
+    'vibe.ph.scan':         'Skanner farger og stemning …',
+    'vibe.mu.scan':         'Trekker ut lydsignatur …',
+    'vibe.ph.translate':    'Oversetter vibe til filmatiske elementer …',
+    'vibe.ph.match':        'Finner den perfekte matchen …',
     'wiz.empty':            'Fant ingen treff – prøv andre svar.',
     'wiz.mood.cozy':        'Koselig & varmt',
     'wiz.mood.thrill':      'Spennende',
@@ -11019,6 +11269,125 @@ function closeWizard() {
 
 function wizardOverlayClick(e) {
   if (e.target === document.getElementById('wizardOverlay')) closeWizard();
+}
+
+/* ════════════ VIBE CHECK (photo / music search — frontend scaffold) ════════════
+   Purely additive UI: opens a modal, mocks a cinematic "analysis", then closes.
+   Does NOT touch existing text/voice search or any API. Real routing is future. */
+let _vibeTimer = null;
+let _vibePreviewUrl = null;
+
+function openVibeCheck(mode) {
+  const overlay = document.getElementById('vibeOverlay');
+  const modal   = document.getElementById('vibeModal');
+  if (!overlay || !modal) return;
+  // Set active mode (photo | music)
+  modal.classList.remove('vibe-mode-photo', 'vibe-mode-music');
+  modal.classList.add(mode === 'music' ? 'vibe-mode-music' : 'vibe-mode-photo');
+  // Reset input/loader state
+  _vibeReset();
+  document.getElementById('vibeInput').hidden  = false;
+  document.getElementById('vibeLoader').hidden = true;
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  applyTranslations();
+}
+
+function closeVibeCheck() {
+  const overlay = document.getElementById('vibeOverlay');
+  if (overlay) overlay.classList.remove('open');
+  if (_vibeTimer) { clearInterval(_vibeTimer); _vibeTimer = null; }
+  // Only release the scroll lock if no other overlay is open beneath.
+  if (!document.getElementById('overlay').classList.contains('open')) {
+    document.body.style.overflow = '';
+  }
+}
+
+function vibeOverlayClick(e) {
+  if (e.target === document.getElementById('vibeOverlay')) closeVibeCheck();
+}
+
+/* Clear any chosen file / link + revoke the last object URL. */
+function _vibeReset() {
+  const link = document.getElementById('vibeLink');
+  if (link) link.value = '';
+  const fileInput = document.getElementById('vibeFile');
+  if (fileInput) fileInput.value = '';
+  const prev = document.getElementById('vibePreview');
+  if (prev) { prev.hidden = true; prev.innerHTML = ''; }
+  if (_vibePreviewUrl) { URL.revokeObjectURL(_vibePreviewUrl); _vibePreviewUrl = null; }
+}
+
+/* Show a small thumbnail + filename for a chosen image (no upload/network). */
+function _vibeShowFile(file) {
+  if (!file || !file.type || file.type.indexOf('image/') !== 0) return;
+  const prev = document.getElementById('vibePreview');
+  if (!prev) return;
+  if (_vibePreviewUrl) URL.revokeObjectURL(_vibePreviewUrl);
+  _vibePreviewUrl = URL.createObjectURL(file);
+  prev.innerHTML = `<img src="${_vibePreviewUrl}" alt=""><span>${esc(file.name)}</span>`;
+  prev.hidden = false;
+}
+
+/* Drag & drop wiring (fresh — no prior DnD code in the app). */
+function _initVibeDropzone() {
+  const drop = document.getElementById('vibeDrop');
+  const fileInput = document.getElementById('vibeFile');
+  if (!drop || !fileInput) return;
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files && fileInput.files[0]) _vibeShowFile(fileInput.files[0]);
+  });
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); drop.classList.add('dragover');
+  }));
+  ['dragleave', 'dragend'].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); drop.classList.remove('dragover');
+  }));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); e.stopPropagation(); drop.classList.remove('dragover');
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+      _vibeShowFile(e.dataTransfer.files[0]);
+    }
+  });
+  drop.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+  });
+}
+document.addEventListener('DOMContentLoaded', _initVibeDropzone);
+
+/* Cinematic mock analysis: cycles 3 phase captions (~1.5s each), then closes.
+   Reuses the .ai-status-out fade pattern from startAiStatus, but on a dedicated
+   timer so it never collides with the AI-search / wizard status driver. */
+function simulateVibeAnalysis(mode) {
+  const loader = document.getElementById('vibeLoader');
+  const input  = document.getElementById('vibeInput');
+  if (!loader || !input) return;
+  const phrases = (mode === 'music')
+    ? [t('vibe.mu.scan'), t('vibe.ph.translate'), t('vibe.ph.match')]
+    : [t('vibe.ph.scan'), t('vibe.ph.translate'), t('vibe.ph.match')];
+  // Swap input → loader
+  input.hidden = true;
+  loader.hidden = false;
+  loader.innerHTML = `<div class="cine-loader">${cineReelSVG()}` +
+    `<div class="vibe-status ai-status-text" id="vibeStatus" role="status" aria-live="polite">${esc(phrases[0])}</div></div>`;
+  let i = 0;
+  if (_vibeTimer) clearInterval(_vibeTimer);
+  _vibeTimer = setInterval(() => {
+    const node = document.getElementById('vibeStatus');
+    if (!node) { clearInterval(_vibeTimer); _vibeTimer = null; return; }
+    i++;
+    if (i >= phrases.length) {
+      // Finished all phases — close after the last one has been shown ~1.5s.
+      clearInterval(_vibeTimer); _vibeTimer = null;
+      setTimeout(closeVibeCheck, 100);
+      return;
+    }
+    node.classList.add('ai-status-out');
+    setTimeout(() => {
+      const n = document.getElementById('vibeStatus');
+      if (n) { n.textContent = phrases[i]; n.classList.remove('ai-status-out'); }
+    }, 260);
+  }, 1500);
 }
 
 function wizardSelect(key, value) {
