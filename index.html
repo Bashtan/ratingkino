@@ -1483,6 +1483,14 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .vibe-loader { padding: 6px 0 4px; }
 .vibe-loader .cine-loader { padding: 26px 0 6px; }
 .vibe-status { text-align: center; margin-top: 4px; }
+.vibe-status.vibe-error { color: #fca5a5; font-weight: 700; padding: 22px 6px 6px; }
+/* Inline validation hint (missing photo/link) */
+.vibe-msg {
+  margin-top: 10px; text-align: center; font-size: 13px; font-weight: 600;
+  color: #fca5a5; opacity: 0; max-height: 0; overflow: hidden;
+  transition: opacity 0.2s, max-height 0.2s;
+}
+.vibe-msg.show { opacity: 1; max-height: 40px; }
 
 /* ─── Cinematic loader: glowing film reel + flickering "projector" caption.
       Reused by the Tonight wizard + Group Picker while the LLM responds. ─── */
@@ -5223,6 +5231,13 @@ const TRANSLATIONS = {
     'vibe.mu.scan':         'Extracting audio signature…',
     'vibe.ph.translate':    'Translating vibe into cinematic elements…',
     'vibe.ph.match':        'Finding the perfect match…',
+    'vibe.srcPhoto':        'your photo',
+    'vibe.srcMusic':        'your track',
+    'vibe.resultsBanner':   'Matched {n} films to {src} ✨',
+    'vibe.errNoPhoto':      'Drop or choose a photo first.',
+    'vibe.errNoLink':       'Paste a Spotify or YouTube link first.',
+    'vibe.errFail':         'Couldn’t read that vibe — try another one.',
+    'vibe.retry':           'Try again',
     'wiz.empty':            'Couldn’t find a match — try different answers.',
     'wiz.mood.cozy':        'Cozy & warm',
     'wiz.mood.thrill':      'Thrilling',
@@ -5544,6 +5559,13 @@ const TRANSLATIONS = {
     'vibe.mu.scan':         'Extrayendo la firma de audio…',
     'vibe.ph.translate':    'Traduciendo el vibe en elementos cinematográficos…',
     'vibe.ph.match':        'Buscando la coincidencia perfecta…',
+    'vibe.srcPhoto':        'tu foto',
+    'vibe.srcMusic':        'tu canción',
+    'vibe.resultsBanner':   '{n} películas para {src} ✨',
+    'vibe.errNoPhoto':      'Suelta o elige una foto primero.',
+    'vibe.errNoLink':       'Pega un enlace de Spotify o YouTube primero.',
+    'vibe.errFail':         'No pudimos leer esa vibra — prueba con otra.',
+    'vibe.retry':           'Reintentar',
     'wiz.empty':            'No se encontró coincidencia — prueba otras respuestas.',
     'wiz.mood.cozy':        'Acogedor',
     'wiz.mood.thrill':      'Emocionante',
@@ -5829,6 +5851,13 @@ const TRANSLATIONS = {
     'vibe.mu.scan':         'Extraction de la signature audio…',
     'vibe.ph.translate':    'Traduction du vibe en éléments cinématographiques…',
     'vibe.ph.match':        'Recherche de la correspondance parfaite…',
+    'vibe.srcPhoto':        'votre photo',
+    'vibe.srcMusic':        'votre morceau',
+    'vibe.resultsBanner':   '{n} films associés à {src} ✨',
+    'vibe.errNoPhoto':      'Déposez ou choisissez une photo d’abord.',
+    'vibe.errNoLink':       'Collez d’abord un lien Spotify ou YouTube.',
+    'vibe.errFail':         'Impossible de lire cette ambiance — essayez-en une autre.',
+    'vibe.retry':           'Réessayer',
     'wiz.empty':            'Aucune correspondance — essayez d’autres réponses.',
     'wiz.mood.cozy':        'Cocooning',
     'wiz.mood.thrill':      'Palpitant',
@@ -6114,6 +6143,13 @@ const TRANSLATIONS = {
     'vibe.mu.scan':         '正在提取音频特征…',
     'vibe.ph.translate':    '正在将氛围转化为电影元素…',
     'vibe.ph.match':        '正在寻找完美匹配…',
+    'vibe.srcPhoto':        '你的照片',
+    'vibe.srcMusic':        '你的音乐',
+    'vibe.resultsBanner':   '为{src}匹配到 {n} 部电影 ✨',
+    'vibe.errNoPhoto':      '请先拖入或选择一张照片。',
+    'vibe.errNoLink':       '请先粘贴 Spotify 或 YouTube 链接。',
+    'vibe.errFail':         '无法解析这种氛围——换一个试试。',
+    'vibe.retry':           '重试',
     'wiz.empty':            '未找到匹配 — 换个答案试试。',
     'wiz.mood.cozy':        '温馨治愈',
     'wiz.mood.thrill':      '惊险刺激',
@@ -6399,6 +6435,13 @@ const TRANSLATIONS = {
     'vibe.mu.scan':         'جارٍ استخراج البصمة الصوتية…',
     'vibe.ph.translate':    'جارٍ ترجمة الأجواء إلى عناصر سينمائية…',
     'vibe.ph.match':        'جارٍ إيجاد التطابق المثالي…',
+    'vibe.srcPhoto':        'صورتك',
+    'vibe.srcMusic':        'مقطعك الموسيقي',
+    'vibe.resultsBanner':   'تم مطابقة {n} فيلمًا مع {src} ✨',
+    'vibe.errNoPhoto':      'أفلت صورة أو اخترها أولًا.',
+    'vibe.errNoLink':       'الصق رابط Spotify أو YouTube أولًا.',
+    'vibe.errFail':         'تعذّرت قراءة هذا الانطباع — جرّب غيره.',
+    'vibe.retry':           'حاول مجددًا',
     'wiz.empty':            'لم يتم العثور على تطابق — جرّب إجابات أخرى.',
     'wiz.mood.cozy':        'دافئ ومريح',
     'wiz.mood.thrill':      'مثير',
@@ -6685,6 +6728,13 @@ const TRANSLATIONS = {
     'vibe.mu.scan':         'Витягуємо аудіопідпис…',
     'vibe.ph.translate':    'Перетворюємо вайб на кінематографічні елементи…',
     'vibe.ph.match':        'Шукаємо ідеальний збіг…',
+    'vibe.srcPhoto':        'вашого фото',
+    'vibe.srcMusic':        'вашого треку',
+    'vibe.resultsBanner':   'Підібрано {n} фільмів до {src} ✨',
+    'vibe.errNoPhoto':      'Спершу перетягніть або оберіть фото.',
+    'vibe.errNoLink':       'Спершу вставте посилання Spotify або YouTube.',
+    'vibe.errFail':         'Не вдалося зчитати цей настрій — спробуйте інший.',
+    'vibe.retry':           'Спробувати ще',
     'wiz.empty':            'Збігів не знайдено — спробуйте інші відповіді.',
     'wiz.mood.cozy':        'Затишне',
     'wiz.mood.thrill':      'Напружене',
@@ -6988,6 +7038,13 @@ const TRANSLATIONS = {
     'vibe.mu.scan':         'Audiosignatur wird extrahiert …',
     'vibe.ph.translate':    'Vibe wird in filmische Elemente übersetzt …',
     'vibe.ph.match':        'Perfekte Übereinstimmung wird gesucht …',
+    'vibe.srcPhoto':        'dein Foto',
+    'vibe.srcMusic':        'deinen Track',
+    'vibe.resultsBanner':   '{n} Filme zu {src} gefunden ✨',
+    'vibe.errNoPhoto':      'Zieh oder wähle zuerst ein Foto.',
+    'vibe.errNoLink':       'Füge zuerst einen Spotify- oder YouTube-Link ein.',
+    'vibe.errFail':         'Diese Stimmung ließ sich nicht lesen — versuch eine andere.',
+    'vibe.retry':           'Erneut versuchen',
     'wiz.empty':            'Kein Treffer gefunden – probier andere Antworten.',
     'wiz.mood.cozy':        'Gemütlich & warm',
     'wiz.mood.thrill':      'Spannend',
@@ -7297,6 +7354,13 @@ const TRANSLATIONS = {
     'vibe.mu.scan':         'Extraherar ljudsignatur …',
     'vibe.ph.translate':    'Översätter vibe till filmiska element …',
     'vibe.ph.match':        'Hittar den perfekta matchningen …',
+    'vibe.srcPhoto':        'ditt foto',
+    'vibe.srcMusic':        'din låt',
+    'vibe.resultsBanner':   'Matchade {n} filmer till {src} ✨',
+    'vibe.errNoPhoto':      'Släpp eller välj ett foto först.',
+    'vibe.errNoLink':       'Klistra in en Spotify- eller YouTube-länk först.',
+    'vibe.errFail':         'Kunde inte läsa den känslan — testa en annan.',
+    'vibe.retry':           'Försök igen',
     'wiz.empty':            'Hittade ingen träff – prova andra svar.',
     'wiz.mood.cozy':        'Mysigt & varmt',
     'wiz.mood.thrill':      'Spännande',
@@ -7606,6 +7670,13 @@ const TRANSLATIONS = {
     'vibe.mu.scan':         'Trekker ut lydsignatur …',
     'vibe.ph.translate':    'Oversetter vibe til filmatiske elementer …',
     'vibe.ph.match':        'Finner den perfekte matchen …',
+    'vibe.srcPhoto':        'bildet ditt',
+    'vibe.srcMusic':        'sporet ditt',
+    'vibe.resultsBanner':   'Matchet {n} filmer til {src} ✨',
+    'vibe.errNoPhoto':      'Slipp eller velg et bilde først.',
+    'vibe.errNoLink':       'Lim inn en Spotify- eller YouTube-lenke først.',
+    'vibe.errFail':         'Klarte ikke å lese den stemningen — prøv en annen.',
+    'vibe.retry':           'Prøv igjen',
     'wiz.empty':            'Fant ingen treff – prøv andre svar.',
     'wiz.mood.cozy':        'Koselig & varmt',
     'wiz.mood.thrill':      'Spennende',
@@ -11276,6 +11347,7 @@ function wizardOverlayClick(e) {
    Does NOT touch existing text/voice search or any API. Real routing is future. */
 let _vibeTimer = null;
 let _vibePreviewUrl = null;
+let _vibeHintTimer = null;
 
 function openVibeCheck(mode) {
   const overlay = document.getElementById('vibeOverlay');
@@ -11355,18 +11427,41 @@ function _initVibeDropzone() {
 }
 document.addEventListener('DOMContentLoaded', _initVibeDropzone);
 
-/* Cinematic mock analysis: cycles 3 phase captions (~1.5s each), then closes.
-   Reuses the .ai-status-out fade pattern from startAiStatus, but on a dedicated
-   timer so it never collides with the AI-search / wizard status driver. */
-function simulateVibeAnalysis(mode) {
+/* Real vibe analysis: packages the chosen photo (FormData) or music link (JSON),
+   POSTs it to /api/vibe-check, plays the cinematic loader during the round-trip,
+   then renders the returned movie grid via the existing open-world path.
+   Does NOT touch the text/voice search flow — it only reuses shared renderers. */
+async function simulateVibeAnalysis(mode) {
   const loader = document.getElementById('vibeLoader');
   const input  = document.getElementById('vibeInput');
   if (!loader || !input) return;
+
+  // ── Gather + validate the payload for the active mode ──
+  let request, label;
+  if (mode === 'music') {
+    const link = (document.getElementById('vibeLink')?.value || '').trim();
+    if (!/^https?:\/\//i.test(link)) { _vibeHint(t('vibe.errNoLink')); return; }
+    label   = t('vibe.srcMusic');
+    request = fetch('/api/vibe-check', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ type: 'music', url: link }),
+    });
+  } else {
+    const file = document.getElementById('vibeFile')?.files?.[0];
+    if (!file) { _vibeHint(t('vibe.errNoPhoto')); return; }
+    label = t('vibe.srcPhoto');
+    const fd = new FormData();
+    fd.append('type', 'image');
+    fd.append('image', file, file.name || 'vibe.jpg');
+    request = fetch('/api/vibe-check', { method: 'POST', body: fd });
+  }
+
+  // ── Cinematic loader — cycle phase captions while the request is in flight ──
   const phrases = (mode === 'music')
     ? [t('vibe.mu.scan'), t('vibe.ph.translate'), t('vibe.ph.match')]
     : [t('vibe.ph.scan'), t('vibe.ph.translate'), t('vibe.ph.match')];
-  // Swap input → loader
-  input.hidden = true;
+  input.hidden  = true;
   loader.hidden = false;
   loader.innerHTML = `<div class="cine-loader">${cineReelSVG()}` +
     `<div class="vibe-status ai-status-text" id="vibeStatus" role="status" aria-live="polite">${esc(phrases[0])}</div></div>`;
@@ -11374,20 +11469,102 @@ function simulateVibeAnalysis(mode) {
   if (_vibeTimer) clearInterval(_vibeTimer);
   _vibeTimer = setInterval(() => {
     const node = document.getElementById('vibeStatus');
-    if (!node) { clearInterval(_vibeTimer); _vibeTimer = null; return; }
-    i++;
-    if (i >= phrases.length) {
-      // Finished all phases — close after the last one has been shown ~1.5s.
-      clearInterval(_vibeTimer); _vibeTimer = null;
-      setTimeout(closeVibeCheck, 100);
-      return;
-    }
+    if (!node) return;
+    i = Math.min(i + 1, phrases.length - 1);   // advance, then hold on the final phrase
     node.classList.add('ai-status-out');
     setTimeout(() => {
       const n = document.getElementById('vibeStatus');
       if (n) { n.textContent = phrases[i]; n.classList.remove('ai-status-out'); }
     }, 260);
   }, 1500);
+
+  // ── Await the backend → render results or surface an error ──
+  try {
+    const r = await request;
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    if (!(data.aiCurated && Array.isArray(data.movies) && data.movies.length)) throw new Error('empty');
+    if (_vibeTimer) { clearInterval(_vibeTimer); _vibeTimer = null; }
+    closeVibeCheck();
+    _renderVibeResults(data, label);
+  } catch (e) {
+    if (_vibeTimer) { clearInterval(_vibeTimer); _vibeTimer = null; }
+    _vibeError(t('vibe.errFail'), mode);
+  }
+}
+
+/* Render vibe-check movies through the SAME open-world path as aiSearch(). */
+function _renderVibeResults(data, label) {
+  AI_SEARCH_ACTIVE = true;
+  clearFollowUps();
+  _aiMatchScores.clear(); _aiMatchReasons.clear(); _aiMatchTags.clear(); _aiVibeTags.clear();
+
+  setSearchMode('ai');
+  document.getElementById('searchWrap').classList.add('ai-active');
+  document.getElementById('feedSections').style.display = 'none';
+  applyBrowseCollapse();
+
+  data.movies.forEach(raw => { if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromTMDb(raw)); });
+  const results = data.movies.map(raw => MOVIES.find(x => x.id === raw.id)).filter(Boolean);
+
+  MOVIES      = results;
+  TOTAL_COUNT = results.length;
+  _lastQuery  = label;
+
+  Object.entries(data.reasons  || {}).forEach(([id, r]) => _aiMatchReasons.set(Number(id), r));
+  Object.entries(data.tags     || {}).forEach(([id, a]) => _aiMatchTags.set(Number(id), a));
+  Object.entries(data.vibeTags || {}).forEach(([id, v]) => _aiVibeTags.set(Number(id), v));
+
+  showAIBanner('', false);
+  const banner = document.getElementById('aiBanner');
+  if (banner) {
+    banner.classList.remove('loading');
+    typewriterBanner(data.message ? '✦ ' + data.message : t('vibe.resultsBanner', { n: results.length, src: label }));
+  }
+
+  renderGrid(results, false);
+  const ct = document.getElementById('countTotal'); if (ct) ct.textContent = results.length.toLocaleString();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => renderFollowUps(label, data.suggestedRefinements), 600);
+}
+
+/* Inline validation hint (missing photo/link) — keeps the input visible. */
+function _vibeHint(msg) {
+  const btn = document.getElementById('vibeAnalyzeBtn');
+  if (!btn) return;
+  let hint = document.getElementById('vibeMsg');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.id = 'vibeMsg';
+    hint.className = 'vibe-msg';
+    hint.setAttribute('role', 'alert');
+    btn.parentNode.insertBefore(hint, btn.nextSibling);
+  }
+  hint.textContent = msg;
+  hint.classList.add('show');
+  clearTimeout(_vibeHintTimer);
+  _vibeHintTimer = setTimeout(() => hint.classList.remove('show'), 2600);
+}
+
+/* Fetch/curation failure — show an error in the loader region with a retry. */
+function _vibeError(msg, mode) {
+  const loader = document.getElementById('vibeLoader');
+  const input  = document.getElementById('vibeInput');
+  if (input)  input.hidden  = true;
+  if (loader) {
+    loader.hidden = false;
+    loader.innerHTML =
+      `<div class="vibe-status vibe-error" role="alert">${esc(msg)}</div>` +
+      `<button type="button" class="vibe-analyze-btn" onclick="_vibeRetry()">${esc(t('vibe.retry'))}</button>`;
+  }
+}
+
+/* Return from the error state to the input region (file/link are preserved). */
+function _vibeRetry() {
+  const loader = document.getElementById('vibeLoader');
+  const input  = document.getElementById('vibeInput');
+  if (loader) { loader.hidden = true; loader.innerHTML = ''; }
+  if (input)  input.hidden = false;
 }
 
 function wizardSelect(key, value) {

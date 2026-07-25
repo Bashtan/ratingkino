@@ -43,6 +43,11 @@ export async function onRequest({ request, env, params, waitUntil }) {
     return handleAISearch(request, env, cors, waitUntil);
   }
 
+  /* ── /api/vibe-check ── photo/music → vibe translation → movie curation ── */
+  if (path === '/vibe-check') {
+    return handleVibeCheck(request, env, cors, waitUntil);
+  }
+
   /* ── /api/group-picker ── taste-overlap picks for a group via Cloudflare AI ── */
   if (path === '/group-picker') {
     return handleGroupPicker(request, env, cors, waitUntil);
@@ -917,6 +922,141 @@ async function _tmdbFindMovie(title, year, env) {
     .sort((a, b) => b.s - a.s);
 
   return scored.length ? scored[0].m : null;
+}
+
+/* ─── Vibe Check handler ─────────────────────────────────────
+ * Two entry points, one destination:
+ *   • Photo  (multipart/form-data, field "image") → Cloudflare LLaVA vision
+ *     model reads the mood/colour/setting → a natural-language "vibe" string.
+ *   • Music  (JSON {url}) → fetch the link's OpenGraph title/description
+ *     (Spotify/YouTube expose the track/video name there) → a "vibe" string.
+ * The vibe string is then handed to the SAME open-world curation path used by
+ * /api/ai-search (_llmFirstCuration → _tmdbFindMovie), so the response shape is
+ * identical to the aiCurated branch and the frontend renders it with the
+ * existing grid logic. */
+async function handleVibeCheck(request, env, cors, waitUntil) {
+  const json = (body, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+
+  if (request.method !== 'POST')        return json({ error: 'Method not allowed' }, 405);
+  if (!env.AI || !env.TMDB_KEY)         return json({ error: 'Vibe engine not configured' }, 503);
+
+  const ctype = request.headers.get('Content-Type') || '';
+  let mode = 'photo';
+  let vibeQuery = '';
+  let vibeSource = '';
+
+  try {
+    if (ctype.includes('multipart/form-data')) {
+      /* ── Photo vibe: vision model reads the image ── */
+      mode = 'photo';
+      const form = await request.formData();
+      const file = form.get('image');
+      if (!file || typeof file.arrayBuffer !== 'function') return json({ error: 'No image provided' }, 400);
+
+      const buf = await file.arrayBuffer();
+      if (buf.byteLength > 6 * 1024 * 1024) return json({ error: 'Image too large (max 6MB)' }, 413);
+
+      let description = '';
+      try {
+        const vResp = await env.AI.run('@cf/llava-hf/llava-1.5-7b-hf', {
+          image:  [...new Uint8Array(buf)],
+          prompt: 'Analyze the mood, colors, and setting of this image. Suggest 3 movie genres or specific cinematic themes that perfectly match this vibe. Be concise.',
+          max_tokens: 384,
+        });
+        description = (vResp?.description || vResp?.response || '').toString().trim();
+      } catch (e) {
+        console.error('[vibe-check:vision] failed:', e.message);
+        return json({ error: 'Vision analysis failed' }, 502);
+      }
+      if (!description) return json({ error: 'Could not read the image vibe' }, 502);
+
+      vibeSource = description.replace(/\s+/g, ' ').slice(0, 140);
+      vibeQuery  = `A film matching this mood, colour palette and atmosphere: ${description}`;
+    } else {
+      /* ── Music vibe: read the link's OpenGraph metadata ── */
+      mode = 'music';
+      const body = await request.json();
+      const link = (body.url || '').toString().trim().slice(0, 500);
+      if (!link || !/^https?:\/\//i.test(link)) return json({ error: 'No valid link provided' }, 400);
+
+      const meta = await _musicMeta(link);
+      vibeSource = meta || link;
+      vibeQuery  = `A film that matches the mood, energy and emotional tone of this music: "${meta || link}"`;
+    }
+  } catch (e) {
+    console.error('[vibe-check] bad request:', e.message);
+    return json({ error: 'Invalid request body' }, 400);
+  }
+
+  /* ── Hand off the vibe string to the existing curator → TMDB path ── */
+  try {
+    const { picks, suggestedRefinements, message } = await _llmFirstCuration(vibeQuery, [], env);
+    if (picks.length) {
+      const hydrated = await Promise.all(picks.map(async p => {
+        const raw = await _tmdbFindMovie(p.title, p.year, env);
+        return raw ? { raw, pick: p } : null;
+      }));
+
+      const movies = [], reasons = {}, tags = {}, vibeTags = {}, seenIds = new Set();
+      for (const h of hydrated) {
+        if (!h || seenIds.has(h.raw.id)) continue;
+        seenIds.add(h.raw.id);
+        movies.push(h.raw);
+        if (h.pick.ai_verdict)  reasons[h.raw.id]  = h.pick.ai_verdict;
+        if (h.pick.tags.length) tags[h.raw.id]     = h.pick.tags;
+        if (h.pick.vibe_tag)    vibeTags[h.raw.id] = h.pick.vibe_tag;
+      }
+
+      if (movies.length >= 3) {
+        return json({
+          aiCurated: true,
+          vibeCheck: true,
+          vibeMode:  mode,
+          vibeSource,
+          movies,
+          reasons,
+          tags,
+          vibeTags,
+          suggestedRefinements,
+          message: message || null,
+        });
+      }
+    }
+    return json({ error: 'No vibe matches found', hint: 'try another photo or track' }, 404);
+  } catch (e) {
+    console.error('[vibe-check] curation failed:', e.message);
+    return json({ error: 'Vibe curation failed' }, 502);
+  }
+}
+
+/* Fetch a music link's OpenGraph title/description (Spotify & YouTube expose the
+ * track/video name there) → a compact "Artist — Song" label. Best-effort: any
+ * failure returns '' so the caller falls back to the raw URL. */
+async function _musicMeta(url) {
+  try {
+    const r = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FindFilm.ai/1.0; +https://findfilm.ai)' },
+      redirect: 'follow',
+    });
+    if (!r.ok) return '';
+    const html = (await r.text()).slice(0, 200000);
+    const pick = (prop) => {
+      const m = html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${prop}["'][^>]+content=["']([^"']+)["']`, 'i'))
+             || html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${prop}["']`, 'i'));
+      return m ? m[1].trim() : '';
+    };
+    const title = pick('og:title');
+    const desc  = pick('og:description');
+    let out = title;
+    if (desc && desc.length <= 120) out = title ? `${title} — ${desc}` : desc;
+    return (out || '').replace(/\s+/g, ' ').replace(/&amp;/g, '&').slice(0, 200);
+  } catch {
+    return '';
+  }
 }
 
 /* ─── AI semantic search handler ───────────────────────────── */
