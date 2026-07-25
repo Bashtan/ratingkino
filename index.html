@@ -2864,8 +2864,9 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 
   .mob-search-overlay { display: none; }
 
-  /* Hero search: comfortable size on phones */
-  .hero-search { padding: 12px 16px 20px; gap: 11px; }
+  /* Hero search: comfortable size on phones (trim bottom pad so the
+     content-type toggle rides up close to the vibe chips) */
+  .hero-search { padding: 12px 16px 6px; gap: 11px; }
   .search-wrap--hero { max-width: none; height: 54px; }
   /* Vibe chips → single horizontally-scrollable rail (no wrap, edge-to-edge) */
   .vibe-chips {
@@ -2886,8 +2887,13 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .src-btn    { height: 36px; padding: 0 12px; min-width: 44px; }
   .filter-sel { height: 40px; }
 
-  /* Slim filter bar (single row: content toggle + Filters button) */
-  .filter-row-1 { padding: 8px 14px; gap: 8px; }
+  /* Slim filter bar (single row: content toggle + Filters button).
+     Tight top pad pulls the Movies/TV/Filters row up under the vibe chips. */
+  .filter-row-1 { padding: 2px 14px 8px; gap: 8px; }
+
+  /* "★ Based on your taste" pill is desktop-only — hide on phones to save
+     vertical space in the "Start here tonight" row. */
+  #rowForYou .feed-row-badge { display: none; }
 
   /* Hero band is hidden by default (base rule); mobile keeps it hidden. */
   /* Compact mobile value-prop — shrink type + tighten gaps so the block fits
@@ -3040,7 +3046,8 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .lang-btn-name { display: none; }
   .hero-title   { font-size: 11.5px; }
   .movie-grid   { gap: 8px; }
-  .filter-row-1 { padding: 7px 12px 0; }
+  /* Pull the content-type toggle up tight under the vibe chips (trim top pad) */
+  .filter-row-1 { padding: 2px 12px 0; }
   .filter-row-2 { padding: 5px 12px 7px; }
   .ct-toggle    { flex-shrink: 0; }
 }
