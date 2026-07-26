@@ -48,6 +48,11 @@ export async function onRequest({ request, env, params, waitUntil }) {
     return handleVibeCheck(request, env, cors, waitUntil);
   }
 
+  /* ── /api/taste-dna ── aggregated ratings → cinematic personality JSON ── */
+  if (path === '/taste-dna') {
+    return handleTasteDna(request, env, cors);
+  }
+
   /* ── /api/group-picker ── taste-overlap picks for a group via Cloudflare AI ── */
   if (path === '/group-picker') {
     return handleGroupPicker(request, env, cors, waitUntil);
@@ -1057,6 +1062,113 @@ async function _musicMeta(url) {
   } catch {
     return '';
   }
+}
+
+/* ─── Taste DNA ─────────────────────────────────────────────
+ * Takes the films a user rated highly (title/year/rating/genres/director,
+ * derived on the frontend from rk_taste_v1 + rk_rated_films) and asks the
+ * curator model for a shareable "cinematic personality": an archetype, three
+ * aesthetic vibe tags, a second-person summary, a 3-colour palette and a
+ * spirit film. Reuses env.AI (llama-3.3-70b) and the same strict-JSON parse
+ * pattern as _llmFirstCuration, so no new binding or model is introduced. */
+const _TASTE_DNA_PROMPT =
+  'You are a cinematic personality analyst. You receive a list of films a user ' +
+  'rated highly, with genres, directors and years. Infer the through-line in their ' +
+  'taste across four axes: (1) AESTHETICS — visual palette, lighting, era; ' +
+  '(2) PACING — slow-burn, meditative, breakneck; (3) THEMES & TROPES — the recurring ' +
+  'emotional/narrative obsessions; (4) TONE. Do not just list genres back; name the ' +
+  'FEELING that connects their picks. Write for a premium, shareable profile card.\n' +
+  'Respond with STRICT JSON only — no markdown, no code fences, no prose outside the JSON. Schema:\n' +
+  '{\n' +
+  '  "archetype": "2-4 word evocative title in Title Case (e.g. \\"Neon Melancholic\\", \\"Chaos Romantic\\")",\n' +
+  '  "vibeTags": ["exactly 3 punchy 1-3 word aesthetic tags"],\n' +
+  '  "summary": "2-3 sentence second-person summary of their taste — specific, flattering, quotable",\n' +
+  '  "palette": ["3 hex colours that visually represent this taste, e.g. \\"#6C1FE0\\""],\n' +
+  '  "spiritFilm": "one real film that most epitomises their taste"\n' +
+  '}\n' +
+  'Rules: exactly 3 vibeTags. summary is at most 45 words, second person ("You gravitate toward…"). ' +
+  'palette is 3 valid 6-digit hex strings. Never invent films for spiritFilm. Output only the JSON object.';
+
+async function handleTasteDna(request, env, cors) {
+  const json = (body, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json', ...cors },
+    });
+
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+  if (!env.AI)                    return json({ error: 'Taste engine not configured' }, 503);
+
+  let films;
+  try {
+    const body = await request.json();
+    films = Array.isArray(body.films) ? body.films.slice(0, 40) : [];
+  } catch {
+    return json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  if (films.length < 10) return json({ error: 'need_more', min: 10, have: films.length }, 422);
+
+  /* Compact each film to one signal-dense line so the model sees taste, not noise. */
+  const filmLines = films.map(f => {
+    const title  = String(f?.title || '').replace(/[\n\r]+/g, ' ').slice(0, 80);
+    const year   = Number.parseInt(f?.year, 10) || '?';
+    const rating = Number.parseFloat(f?.rating);
+    const dir    = String(f?.director || '').replace(/[\n\r]+/g, ' ').slice(0, 40);
+    const genres = Array.isArray(f?.genres)
+      ? f.genres.filter(g => typeof g === 'string').slice(0, 3).join(', ')
+      : '';
+    return `- ${title} (${year})` +
+           (rating ? ` ★${rating}` : '') +
+           (dir    ? ` · dir ${dir}` : '') +
+           (genres ? ` · ${genres}` : '');
+  }).filter(Boolean).join('\n');
+
+  let aiResp;
+  try {
+    aiResp = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
+      messages: [
+        { role: 'system', content: _TASTE_DNA_PROMPT },
+        { role: 'user',   content: `The user's top-rated films:\n${filmLines}\n\nReturn the JSON now.` },
+      ],
+      max_tokens:  500,
+      temperature: 0.6,   // a little warmth for a distinctive, human read
+      stream:      false,
+    });
+  } catch (e) {
+    console.error('[taste-dna] ai failed:', e.message);
+    return json({ error: 'ai_failed' }, 502);
+  }
+
+  let text = '';
+  if (aiResp?.choices?.[0]?.message?.content) text = aiResp.choices[0].message.content;
+  else if (typeof aiResp?.response === 'string') text = aiResp.response;
+  else if (typeof aiResp === 'string')           text = aiResp;
+
+  const match = String(text || '').match(/\{[\s\S]*\}/);
+  if (!match) return json({ error: 'parse_failed' }, 502);
+
+  let parsed;
+  try { parsed = JSON.parse(match[0]); } catch { return json({ error: 'parse_failed' }, 502); }
+
+  const dna = {
+    archetype: String(parsed?.archetype || 'Cinephile').replace(/[\n\r]+/g, ' ').trim().slice(0, 40),
+    vibeTags: (Array.isArray(parsed?.vibeTags) ? parsed.vibeTags : [])
+                .filter(s => typeof s === 'string')
+                .map(s => s.replace(/[\n\r|]+/g, ' ').trim().slice(0, 24))
+                .filter(Boolean).slice(0, 3),
+    summary: String(parsed?.summary || '').replace(/[\n\r]+/g, ' ').trim().slice(0, 320),
+    palette: (Array.isArray(parsed?.palette) ? parsed.palette : [])
+                .filter(h => typeof h === 'string' && /^#[0-9a-fA-F]{6}$/.test(h.trim()))
+                .map(h => h.trim().toUpperCase()).slice(0, 3),
+    spiritFilm: String(parsed?.spiritFilm || '').replace(/[\n\r]+/g, ' ').trim().slice(0, 80),
+  };
+
+  /* Defensive fallbacks so the card always renders cleanly. */
+  if (dna.palette.length < 3) dna.palette = ['#6C1FE0', '#0EA5E9', '#F59E0B'];
+  while (dna.vibeTags.length < 3) dna.vibeTags.push('Cinephile');
+
+  return json({ ok: true, dna });
 }
 
 /* ─── AI semantic search handler ───────────────────────────── */

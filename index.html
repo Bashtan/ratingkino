@@ -1492,6 +1492,98 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .vibe-msg.show { opacity: 1; max-height: 40px; }
 
+/* ═══════════ TASTE DNA ═══════════
+   Shareable "cinematic personality" card. Reuses .vibe-overlay (backdrop +
+   centering) and .vibe-analyze-btn (share CTA). The card itself is the
+   screenshot-ready artifact; aura colours are driven by the AI palette via
+   the --dna-c1/--dna-c2 custom properties set in renderTasteDna(). */
+.dna-modal {
+  width: 100%; max-width: 400px; position: relative;
+  background: transparent; padding: 0;
+}
+.dna-modal .m-close {
+  position: absolute; top: -6px; right: -4px; z-index: 4;
+  color: #cbd5e1; background: rgba(0,0,0,0.4); border-radius: 50%;
+}
+/* Teaser (not enough films yet) */
+.dna-teaser {
+  background: var(--modal-bg, #14161c); border: 1px solid rgba(129,140,248,0.24);
+  border-radius: 22px; padding: 34px 26px 30px; text-align: center;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.8);
+}
+.dna-teaser-ic { font-size: 34px; line-height: 1; filter: drop-shadow(0 0 10px rgba(129,140,248,0.6)); }
+.dna-teaser-title {
+  margin: 14px 0 8px; font-family: 'Montserrat', sans-serif; font-weight: 800;
+  font-size: 18px; color: #eef2f7;
+}
+.dna-teaser-sub { margin: 0; font-size: 13.5px; color: var(--text-sub, #9aa4b2); line-height: 1.55; }
+/* Loader */
+.dna-loader {
+  background: var(--modal-bg, #14161c); border: 1px solid rgba(129,140,248,0.24);
+  border-radius: 22px; padding: 46px 26px; text-align: center;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.8);
+}
+.dna-spinner {
+  width: 46px; height: 46px; margin: 0 auto 18px; border-radius: 50%;
+  border: 3px solid rgba(129,140,248,0.2); border-top-color: #a5b4fc;
+  animation: cineSpin 0.9s linear infinite;
+}
+.dna-loader-txt {
+  font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.3px;
+  background: linear-gradient(90deg,#a5b4fc,#22d3ee); -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: #a5b4fc;
+}
+/* The shareable card */
+.dna-card {
+  position: relative; overflow: hidden; border-radius: 26px;
+  aspect-ratio: 4 / 5; padding: 26px 24px; display: flex; flex-direction: column;
+  background: linear-gradient(155deg, #0b0710 0%, #140a24 55%, #04060f 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 34px 80px rgba(76,29,149,0.4), 0 0 0 1px rgba(129,140,248,0.08) inset;
+}
+.dna-aura { position: absolute; width: 260px; height: 260px; border-radius: 50%; filter: blur(60px); pointer-events: none; }
+.dna-aura-1 { top: -96px; right: -64px; background: var(--dna-c1, #6C1FE0); opacity: 0.42; }
+.dna-aura-2 { bottom: -96px; left: -64px; background: var(--dna-c2, #0EA5E9); opacity: 0.32; }
+.dna-card-head { position: relative; display: flex; align-items: center; justify-content: space-between; }
+.dna-kicker { font-size: 10.5px; font-weight: 700; letter-spacing: 2.4px; text-transform: uppercase; color: rgba(255,255,255,0.5); }
+.dna-brand { font-size: 11.5px; font-weight: 800; color: rgba(255,255,255,0.72); }
+.dna-archetype {
+  position: relative; margin: 22px 0 0; font-family: 'Montserrat', sans-serif;
+  font-weight: 900; font-size: 33px; line-height: 1.08; letter-spacing: -0.5px;
+  background: linear-gradient(92deg, #ffffff, #ddd6fe 55%, #bae6fd);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.dna-tags { position: relative; margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+.dna-tag {
+  padding: 6px 13px; border-radius: 999px; font-size: 13px; font-weight: 700;
+  color: rgba(255,255,255,0.92); background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.16); backdrop-filter: blur(6px);
+}
+.dna-summary { position: relative; margin: 18px 0 0; flex: 1; font-size: 14.5px; line-height: 1.62; color: rgba(255,255,255,0.82); }
+.dna-card-foot { position: relative; display: flex; align-items: flex-end; justify-content: space-between; margin-top: 16px; }
+.dna-spirit { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.dna-spirit-label { font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase; color: rgba(255,255,255,0.4); }
+.dna-spirit-name { font-size: 13.5px; font-weight: 700; color: rgba(255,255,255,0.92); }
+.dna-palette { display: flex; gap: 6px; flex: none; }
+.dna-swatch { width: 24px; height: 24px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(255,255,255,0.2) inset; }
+/* Share action + error */
+.dna-actions { margin-top: 16px; }
+.dna-share-btn { margin-top: 0; }
+.dna-error {
+  background: var(--modal-bg, #14161c); border: 1px solid rgba(248,113,113,0.3);
+  border-radius: 22px; padding: 30px 26px; text-align: center;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.8);
+}
+.dna-error-txt { margin: 0 0 16px; font-size: 14px; font-weight: 600; color: #fca5a5; }
+/* Entry-point chip in the For-You header — inherits .foryou-refine, adds an accent */
+.foryou-refine.dna-trigger { border-color: rgba(129,140,248,0.4); color: #c7d2fe; }
+.foryou-refine.dna-trigger:hover { border-color: rgba(129,140,248,0.7); color: #e0e7ff; }
+@media (max-width: 480px) {
+  .dna-modal { max-width: 340px; }
+  .dna-archetype { font-size: 29px; }
+}
+@media (prefers-reduced-motion: reduce) { .dna-spinner { animation-duration: 2.4s; } }
+
 /* ─── Cinematic loader: glowing film reel + flickering "projector" caption.
       Reused by the Tonight wizard + Group Picker while the LLM responds. ─── */
 .cine-loader { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 40px 0; }
@@ -4704,6 +4796,10 @@ if ('serviceWorker' in navigator) {
         <svg class="foryou-refine-spark" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/><path d="M18.5 3.5l.7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7z"/></svg>
         <span data-i18n="onboard.refine">Personalize Your Picks</span>
       </button>
+      <button class="foryou-refine dna-trigger" onclick="openTasteDna()" data-i18n-title="dna.entryHint" title="See the AI read of your cinematic taste — shareable.">
+        <svg class="foryou-refine-spark" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 3c0 4 8 6 8 10s-8 4-8 8"/><path d="M16 3c0 4-8 6-8 10s8 4 8 8"/><path d="M8.5 7h7M8.5 17h7M7 12h10"/></svg>
+        <span data-i18n="dna.entry">Your Taste DNA</span>
+      </button>
     </div>
     <p class="foryou-hint" id="forYouHint">
       <svg class="foryou-hint-spark" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg>
@@ -5049,6 +5145,57 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
+<!-- ════════════ TASTE DNA ════════════ -->
+<div class="vibe-overlay dna-overlay" id="dnaOverlay" onclick="dnaOverlayClick(event)">
+  <div class="dna-modal" id="dnaModal">
+    <button class="m-close" onclick="closeTasteDna()" aria-label="Close">✕</button>
+
+    <!-- Teaser: not enough rated films yet -->
+    <div class="dna-teaser" id="dnaTeaser" hidden>
+      <span class="dna-teaser-ic" aria-hidden="true">🧬</span>
+      <h3 class="dna-teaser-title" data-i18n="dna.teaserTitle">Your Taste DNA is forming</h3>
+      <p class="dna-teaser-sub" id="dnaTeaserSub" data-i18n="dna.teaserSub">Rate a few more films and we'll decode your cinematic personality.</p>
+    </div>
+
+    <!-- Loader while the model reads the taste log -->
+    <div class="dna-loader" id="dnaLoader" hidden>
+      <div class="dna-spinner" aria-hidden="true"></div>
+      <div class="dna-loader-txt" data-i18n="dna.analyzing">Decoding your cinematic DNA…</div>
+    </div>
+
+    <!-- Result: the shareable card -->
+    <div class="dna-card" id="dnaCard" hidden>
+      <span class="dna-aura dna-aura-1" aria-hidden="true"></span>
+      <span class="dna-aura dna-aura-2" aria-hidden="true"></span>
+      <div class="dna-card-head">
+        <span class="dna-kicker" data-i18n="dna.kicker">Your Taste DNA</span>
+        <span class="dna-brand">FindFilm.ai</span>
+      </div>
+      <h2 class="dna-archetype" id="dnaArchetype"></h2>
+      <div class="dna-tags" id="dnaTags"></div>
+      <p class="dna-summary" id="dnaSummary"></p>
+      <div class="dna-card-foot">
+        <div class="dna-spirit">
+          <span class="dna-spirit-label" data-i18n="dna.spirit">Spirit film</span>
+          <span class="dna-spirit-name" id="dnaSpirit"></span>
+        </div>
+        <div class="dna-palette" id="dnaPalette"></div>
+      </div>
+    </div>
+
+    <!-- Share action (outside the card art) -->
+    <div class="dna-actions" id="dnaActions" hidden>
+      <button class="vibe-analyze-btn dna-share-btn" type="button" onclick="shareTasteDna()" data-i18n="dna.share">Share my Taste DNA</button>
+    </div>
+
+    <!-- Error -->
+    <div class="dna-error" id="dnaError" hidden>
+      <p class="dna-error-txt" data-i18n="dna.error">We couldn't read your Taste DNA right now.</p>
+      <button class="vibe-analyze-btn" type="button" onclick="generateTasteDna()" data-i18n="dna.retry">Try again</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════════════ GROUP PICKER ════════════ -->
 <div class="wiz-overlay group-overlay" id="groupOverlay" onclick="groupOverlayClick(event)">
   <div class="wiz-modal group-modal" id="groupModal">
@@ -5245,6 +5392,18 @@ const TRANSLATIONS = {
     'vibe.errNoLink':       'Paste a Spotify or YouTube link first.',
     'vibe.errFail':         'Couldn’t read that vibe — try another one.',
     'vibe.retry':           'Try again',
+    'dna.entry':            'Your Taste DNA',
+    'dna.entryHint':        'See the AI read of your cinematic taste — shareable.',
+    'dna.teaserTitle':      'Your Taste DNA is forming',
+    'dna.teaserSub':        'Rate {n} more films and we’ll decode your cinematic personality.',
+    'dna.analyzing':        'Decoding your cinematic DNA…',
+    'dna.kicker':           'Your Taste DNA',
+    'dna.spirit':           'Spirit film',
+    'dna.share':            'Share my Taste DNA',
+    'dna.shareText':        'My cinematic taste is “{archetype}” — {tags}. Find yours on FindFilm.ai',
+    'dna.copied':           'Copied!',
+    'dna.error':            'We couldn’t read your Taste DNA right now.',
+    'dna.retry':            'Try again',
     'wiz.empty':            'Couldn’t find a match — try different answers.',
     'wiz.mood.cozy':        'Cozy & warm',
     'wiz.mood.thrill':      'Thrilling',
@@ -5573,6 +5732,18 @@ const TRANSLATIONS = {
     'vibe.errNoLink':       'Pega un enlace de Spotify o YouTube primero.',
     'vibe.errFail':         'No pudimos leer esa vibra — prueba con otra.',
     'vibe.retry':           'Reintentar',
+    'dna.entry':            'Tu ADN de Cine',
+    'dna.entryHint':        'Descubre cómo la IA lee tu gusto cinematográfico — para compartir.',
+    'dna.teaserTitle':      'Tu ADN de Cine se está formando',
+    'dna.teaserSub':        'Valora {n} películas más y descifraremos tu personalidad cinematográfica.',
+    'dna.analyzing':        'Descifrando tu ADN cinematográfico…',
+    'dna.kicker':           'Tu ADN de Cine',
+    'dna.spirit':           'Película afín',
+    'dna.share':            'Compartir mi ADN de Cine',
+    'dna.shareText':        'Mi gusto cinematográfico es «{archetype}» — {tags}. Descubre el tuyo en FindFilm.ai',
+    'dna.copied':           '¡Copiado!',
+    'dna.error':            'No pudimos leer tu ADN de Cine ahora mismo.',
+    'dna.retry':            'Reintentar',
     'wiz.empty':            'No se encontró coincidencia — prueba otras respuestas.',
     'wiz.mood.cozy':        'Acogedor',
     'wiz.mood.thrill':      'Emocionante',
@@ -5865,6 +6036,18 @@ const TRANSLATIONS = {
     'vibe.errNoLink':       'Collez d’abord un lien Spotify ou YouTube.',
     'vibe.errFail':         'Impossible de lire cette ambiance — essayez-en une autre.',
     'vibe.retry':           'Réessayer',
+    'dna.entry':            'Votre ADN Ciné',
+    'dna.entryHint':        'Découvrez la lecture IA de vos goûts cinéma — à partager.',
+    'dna.teaserTitle':      'Votre ADN Ciné se dessine',
+    'dna.teaserSub':        'Notez {n} films de plus et nous décoderons votre personnalité cinématographique.',
+    'dna.analyzing':        'Décodage de votre ADN cinématographique…',
+    'dna.kicker':           'Votre ADN Ciné',
+    'dna.spirit':           'Film totem',
+    'dna.share':            'Partager mon ADN Ciné',
+    'dna.shareText':        'Mon goût cinéma, c’est « {archetype} » — {tags}. Trouvez le vôtre sur FindFilm.ai',
+    'dna.copied':           'Copié !',
+    'dna.error':            'Impossible de lire votre ADN Ciné pour le moment.',
+    'dna.retry':            'Réessayer',
     'wiz.empty':            'Aucune correspondance — essayez d’autres réponses.',
     'wiz.mood.cozy':        'Cocooning',
     'wiz.mood.thrill':      'Palpitant',
@@ -6157,6 +6340,18 @@ const TRANSLATIONS = {
     'vibe.errNoLink':       '请先粘贴 Spotify 或 YouTube 链接。',
     'vibe.errFail':         '无法解析这种氛围——换一个试试。',
     'vibe.retry':           '重试',
+    'dna.entry':            '你的观影基因',
+    'dna.entryHint':        '看看 AI 如何解读你的观影品味 — 可分享。',
+    'dna.teaserTitle':      '你的观影基因正在形成',
+    'dna.teaserSub':        '再评价 {n} 部影片，我们就能解码你的电影人格。',
+    'dna.analyzing':        '正在解码你的观影基因…',
+    'dna.kicker':           '你的观影基因',
+    'dna.spirit':           '灵魂影片',
+    'dna.share':            '分享我的观影基因',
+    'dna.shareText':        '我的观影品味是「{archetype}」— {tags}。到 FindFilm.ai 发现你的吧',
+    'dna.copied':           '已复制！',
+    'dna.error':            '暂时无法读取你的观影基因。',
+    'dna.retry':            '重试',
     'wiz.empty':            '未找到匹配 — 换个答案试试。',
     'wiz.mood.cozy':        '温馨治愈',
     'wiz.mood.thrill':      '惊险刺激',
@@ -6449,6 +6644,18 @@ const TRANSLATIONS = {
     'vibe.errNoLink':       'الصق رابط Spotify أو YouTube أولًا.',
     'vibe.errFail':         'تعذّرت قراءة هذا الانطباع — جرّب غيره.',
     'vibe.retry':           'حاول مجددًا',
+    'dna.entry':            'حمضك السينمائي',
+    'dna.entryHint':        'شاهد قراءة الذكاء الاصطناعي لذوقك السينمائي — قابلة للمشاركة.',
+    'dna.teaserTitle':      'حمضك السينمائي قيد التكوين',
+    'dna.teaserSub':        'قيّم {n} أفلام إضافية وسنحلّل شخصيتك السينمائية.',
+    'dna.analyzing':        'جارٍ فكّ شفرة حمضك السينمائي…',
+    'dna.kicker':           'حمضك السينمائي',
+    'dna.spirit':           'الفيلم القرين',
+    'dna.share':            'شارك حمضي السينمائي',
+    'dna.shareText':        'ذوقي السينمائي هو «{archetype}» — {tags}. اكتشف ذوقك على FindFilm.ai',
+    'dna.copied':           'تم النسخ!',
+    'dna.error':            'تعذّرت قراءة حمضك السينمائي الآن.',
+    'dna.retry':            'حاول مجددًا',
     'wiz.empty':            'لم يتم العثور على تطابق — جرّب إجابات أخرى.',
     'wiz.mood.cozy':        'دافئ ومريح',
     'wiz.mood.thrill':      'مثير',
@@ -6742,6 +6949,18 @@ const TRANSLATIONS = {
     'vibe.errNoLink':       'Спершу вставте посилання Spotify або YouTube.',
     'vibe.errFail':         'Не вдалося зчитати цей настрій — спробуйте інший.',
     'vibe.retry':           'Спробувати ще',
+    'dna.entry':            'Ваша кіно-ДНК',
+    'dna.entryHint':        'Подивіться, як ШІ читає ваш кіносмак — можна поділитися.',
+    'dna.teaserTitle':      'Ваша кіно-ДНК формується',
+    'dna.teaserSub':        'Оцініть ще {n} фільмів, і ми розшифруємо вашу кінематографічну особистість.',
+    'dna.analyzing':        'Розшифровуємо вашу кіно-ДНК…',
+    'dna.kicker':           'Ваша кіно-ДНК',
+    'dna.spirit':           'Фільм-двійник',
+    'dna.share':            'Поділитися моєю кіно-ДНК',
+    'dna.shareText':        'Мій кіносмак — «{archetype}» — {tags}. Знайдіть свій на FindFilm.ai',
+    'dna.copied':           'Скопійовано!',
+    'dna.error':            'Наразі не вдалося прочитати вашу кіно-ДНК.',
+    'dna.retry':            'Спробувати ще',
     'wiz.empty':            'Збігів не знайдено — спробуйте інші відповіді.',
     'wiz.mood.cozy':        'Затишне',
     'wiz.mood.thrill':      'Напружене',
@@ -7052,6 +7271,18 @@ const TRANSLATIONS = {
     'vibe.errNoLink':       'Füge zuerst einen Spotify- oder YouTube-Link ein.',
     'vibe.errFail':         'Diese Stimmung ließ sich nicht lesen — versuch eine andere.',
     'vibe.retry':           'Erneut versuchen',
+    'dna.entry':            'Deine Film-DNA',
+    'dna.entryHint':        'Sieh, wie die KI deinen Filmgeschmack liest — teilbar.',
+    'dna.teaserTitle':      'Deine Film-DNA entsteht',
+    'dna.teaserSub':        'Bewerte {n} weitere Filme und wir entschlüsseln deine cineastische Persönlichkeit.',
+    'dna.analyzing':        'Deine Film-DNA wird entschlüsselt…',
+    'dna.kicker':           'Deine Film-DNA',
+    'dna.spirit':           'Seelenfilm',
+    'dna.share':            'Meine Film-DNA teilen',
+    'dna.shareText':        'Mein Filmgeschmack ist „{archetype}“ — {tags}. Finde deinen auf FindFilm.ai',
+    'dna.copied':           'Kopiert!',
+    'dna.error':            'Deine Film-DNA konnte gerade nicht gelesen werden.',
+    'dna.retry':            'Erneut versuchen',
     'wiz.empty':            'Kein Treffer gefunden – probier andere Antworten.',
     'wiz.mood.cozy':        'Gemütlich & warm',
     'wiz.mood.thrill':      'Spannend',
@@ -7368,6 +7599,18 @@ const TRANSLATIONS = {
     'vibe.errNoLink':       'Klistra in en Spotify- eller YouTube-länk först.',
     'vibe.errFail':         'Kunde inte läsa den känslan — testa en annan.',
     'vibe.retry':           'Försök igen',
+    'dna.entry':            'Ditt Film-DNA',
+    'dna.entryHint':        'Se AI:ns läsning av din filmsmak — delbar.',
+    'dna.teaserTitle':      'Ditt Film-DNA tar form',
+    'dna.teaserSub':        'Betygsätt {n} filmer till så avkodar vi din filmiska personlighet.',
+    'dna.analyzing':        'Avkodar ditt film-DNA…',
+    'dna.kicker':           'Ditt Film-DNA',
+    'dna.spirit':           'Själsfilm',
+    'dna.share':            'Dela mitt Film-DNA',
+    'dna.shareText':        'Min filmsmak är ”{archetype}” — {tags}. Hitta din på FindFilm.ai',
+    'dna.copied':           'Kopierat!',
+    'dna.error':            'Vi kunde inte läsa ditt Film-DNA just nu.',
+    'dna.retry':            'Försök igen',
     'wiz.empty':            'Hittade ingen träff – prova andra svar.',
     'wiz.mood.cozy':        'Mysigt & varmt',
     'wiz.mood.thrill':      'Spännande',
@@ -7684,6 +7927,18 @@ const TRANSLATIONS = {
     'vibe.errNoLink':       'Lim inn en Spotify- eller YouTube-lenke først.',
     'vibe.errFail':         'Klarte ikke å lese den stemningen — prøv en annen.',
     'vibe.retry':           'Prøv igjen',
+    'dna.entry':            'Ditt Film-DNA',
+    'dna.entryHint':        'Se AI-ens lesning av filmsmaken din — delbar.',
+    'dna.teaserTitle':      'Ditt Film-DNA tar form',
+    'dna.teaserSub':        'Vurder {n} filmer til, så dekoder vi den filmatiske personligheten din.',
+    'dna.analyzing':        'Dekoder ditt film-DNA…',
+    'dna.kicker':           'Ditt Film-DNA',
+    'dna.spirit':           'Sjelsfilm',
+    'dna.share':            'Del mitt Film-DNA',
+    'dna.shareText':        'Filmsmaken min er «{archetype}» — {tags}. Finn din på FindFilm.ai',
+    'dna.copied':           'Kopiert!',
+    'dna.error':            'Vi klarte ikke å lese ditt Film-DNA akkurat nå.',
+    'dna.retry':            'Prøv igjen',
     'wiz.empty':            'Fant ingen treff – prøv andre svar.',
     'wiz.mood.cozy':        'Koselig & varmt',
     'wiz.mood.thrill':      'Spennende',
@@ -8197,10 +8452,35 @@ function recordInteraction(m) {
   }
   p.total = (p.total || 0) + 1;
   saveTasteProfile(p);
+  // Parallel log of the actual films engaged with — powers Taste DNA (most-recent 40,
+  // de-duped by title+year). Kept separate from the weighted rk_taste_v1 aggregate.
+  logRatedFilm(m);
   // Refresh "For You" row if we just crossed the threshold
   if (p.total >= TASTE_THRESHOLD && window._FEED_POOL?.length) {
     renderForYouRow();
   }
+}
+
+const RATED_FILMS_KEY = 'rk_rated_films';
+const RATED_FILMS_MAX = 40;
+
+// Append a compact film row (title/year/genres/director) to the Taste DNA log.
+// De-dupes on title+year and keeps the 40 most-recent, newest first.
+function logRatedFilm(m) {
+  if (!m || !m.title) return;
+  let log;
+  try { log = JSON.parse(localStorage.getItem(RATED_FILMS_KEY) || '[]'); } catch { log = []; }
+  if (!Array.isArray(log)) log = [];
+  const key = `${m.title}|${m.year || ''}`.toLowerCase();
+  log = log.filter(f => `${f.title}|${f.year || ''}`.toLowerCase() !== key);
+  log.unshift({
+    title:    m.title,
+    year:     m.year || null,
+    rating:   m.myRating || null,
+    genres:   Array.isArray(m.genres) ? m.genres.slice(0, 3) : [],
+    director: m.director || null,
+  });
+  try { localStorage.setItem(RATED_FILMS_KEY, JSON.stringify(log.slice(0, RATED_FILMS_MAX))); } catch {}
 }
 
 function scoredForProfile(movies) {
@@ -11572,6 +11852,151 @@ function _vibeRetry() {
   const input  = document.getElementById('vibeInput');
   if (loader) { loader.hidden = true; loader.innerHTML = ''; }
   if (input)  input.hidden = false;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TASTE DNA — reads the local rk_rated_films log, asks the curator model for a
+   shareable "cinematic personality" card (/api/taste-dna), renders it, and lets
+   the user share it. Purely additive: does NOT touch search/voice/taste logic.
+   Card states are mutually-exclusive regions inside #dnaModal:
+     #dnaTeaser (too few films) · #dnaLoader · #dnaCard (+#dnaActions) · #dnaError
+   ═══════════════════════════════════════════════════════════════════════════ */
+const DNA_MIN_FILMS = 10;
+let _dnaLoading = false;
+
+function openTasteDna() {
+  const overlay = document.getElementById('dnaOverlay');
+  if (!overlay) return;
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  applyTranslations();
+  generateTasteDna();
+}
+
+function closeTasteDna() {
+  const overlay = document.getElementById('dnaOverlay');
+  if (overlay) overlay.classList.remove('open');
+  // Only release the scroll lock if no other overlay is open beneath.
+  if (!document.getElementById('overlay').classList.contains('open')) {
+    document.body.style.overflow = '';
+  }
+}
+
+function dnaOverlayClick(e) {
+  if (e.target === document.getElementById('dnaOverlay')) closeTasteDna();
+}
+
+/* Show exactly one state region; hide the rest. */
+function _dnaShow(state) {
+  const map = {
+    teaser: 'dnaTeaser', loader: 'dnaLoader',
+    card:   'dnaCard',   error:  'dnaError',
+  };
+  Object.values(map).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.hidden = true;
+  });
+  const actions = document.getElementById('dnaActions');
+  if (actions) actions.hidden = (state !== 'card');
+  const target = document.getElementById(map[state]);
+  if (target) target.hidden = false;
+}
+
+/* Read the compact rated-films log written by logRatedFilm(). */
+function _dnaReadFilms() {
+  let log;
+  try { log = JSON.parse(localStorage.getItem(RATED_FILMS_KEY) || '[]'); } catch { log = []; }
+  return Array.isArray(log) ? log : [];
+}
+
+async function generateTasteDna() {
+  if (_dnaLoading) return;
+  const films = _dnaReadFilms();
+
+  // Not enough signal yet → teaser with a live remaining-count.
+  if (films.length < DNA_MIN_FILMS) {
+    const sub = document.getElementById('dnaTeaserSub');
+    if (sub) sub.textContent = t('dna.teaserSub', { n: DNA_MIN_FILMS - films.length });
+    _dnaShow('teaser');
+    return;
+  }
+
+  _dnaLoading = true;
+  _dnaShow('loader');
+  try {
+    const r = await fetch('/api/taste-dna', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ films }),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    if (!(data && data.ok && data.dna)) throw new Error('empty');
+    renderTasteDna(data.dna);
+  } catch (e) {
+    _dnaShow('error');
+  } finally {
+    _dnaLoading = false;
+  }
+}
+
+/* Paint the returned DNA object into the shareable card. */
+function renderTasteDna(dna) {
+  const pal = Array.isArray(dna.palette) && dna.palette.length >= 2
+    ? dna.palette : ['#6C1FE0', '#0EA5E9', '#F59E0B'];
+  const modal = document.getElementById('dnaModal');
+  if (modal) {
+    modal.style.setProperty('--dna-c1', pal[0]);
+    modal.style.setProperty('--dna-c2', pal[1] || pal[0]);
+    modal.style.setProperty('--dna-c3', pal[2] || pal[1] || pal[0]);
+  }
+  const arch = document.getElementById('dnaArchetype');
+  if (arch) arch.textContent = dna.archetype || 'Cinephile';
+  const summ = document.getElementById('dnaSummary');
+  if (summ) summ.textContent = dna.summary || '';
+  const spirit = document.getElementById('dnaSpirit');
+  if (spirit) spirit.textContent = dna.spiritFilm || '—';
+
+  const tags = document.getElementById('dnaTags');
+  if (tags) {
+    tags.innerHTML = (Array.isArray(dna.vibeTags) ? dna.vibeTags : [])
+      .slice(0, 3)
+      .map(tag => `<span class="dna-tag">${esc(tag)}</span>`)
+      .join('');
+  }
+  const palEl = document.getElementById('dnaPalette');
+  if (palEl) {
+    palEl.innerHTML = pal.slice(0, 3)
+      .map(hex => `<span class="dna-swatch" style="background:${esc(hex)}"></span>`)
+      .join('');
+  }
+
+  // Stash for the share text.
+  _lastDna = dna;
+  _dnaShow('card');
+}
+let _lastDna = null;
+
+/* Native share (falls back to clipboard) of the archetype + a couple tags. */
+async function shareTasteDna() {
+  const dna = _lastDna;
+  if (!dna) return;
+  const tags = (Array.isArray(dna.vibeTags) ? dna.vibeTags : []).slice(0, 2).join(' · ');
+  const text = t('dna.shareText', { archetype: dna.archetype || 'Cinephile', tags });
+  const url  = 'https://findfilm.ai';
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: t('dna.kicker'), text, url });
+      return;
+    }
+    await navigator.clipboard.writeText(`${text} ${url}`);
+    const btn = document.getElementById('dnaActions')?.querySelector('.dna-share-btn');
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = t('dna.copied');
+      setTimeout(() => { btn.textContent = orig; }, 1800);
+    }
+  } catch (e) { /* user dismissed share sheet — no-op */ }
 }
 
 function wizardSelect(key, value) {
