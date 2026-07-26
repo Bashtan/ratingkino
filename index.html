@@ -3235,6 +3235,8 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   font-family: 'Montserrat', sans-serif; transition: background 0.18s, border-color 0.18s;
 }
 .foryou-refine-spark { flex-shrink: 0; color: #a78bfa; }
+/* Desktop shows the full label; the compact label is mobile-only (swapped ≤768px). */
+.foryou-refine .refine-short { display: none; }
 .foryou-refine:hover { background: rgba(124,58,237,0.14); border-color: rgba(124,58,237,0.65); }
 .foryou-refine:hover .foryou-refine-spark { color: #c4b5fd; }
 /* Explanatory micro-copy under the personalized row — how to activate AI personalization. */
@@ -3462,9 +3464,18 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .feed-row--primary { margin-left: 8px; margin-right: 8px; }
   .feed-row--primary .feed-row-title { font-size: 15px; }
   .feed-row--primary .mini-card { flex-basis: 140px; }
-  /* Let the header wrap so the "Personalize Your Picks" chip drops to its own line
-     instead of cramming/overflowing on narrow screens. */
-  .feed-row--primary .feed-row-header { flex-wrap: wrap; row-gap: 6px; }
+  /* Keep the header on ONE line — the two action chips never stack vertically.
+     The title flexes and truncates if needed; chips stay side-by-side on the
+     right with shortened labels ("Picks" / "DNA"). */
+  .feed-row--primary .feed-row-header { flex-wrap: nowrap; gap: 6px; }
+  .feed-row--primary .feed-row-title {
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .feed-row--primary .foryou-refine { flex: none; padding: 4px 8px; gap: 4px; }
+  /* Only the first chip carries the auto-margin gutter — the pair stays grouped. */
+  .feed-row--primary .foryou-refine.dna-trigger { margin-left: 0; }
+  .foryou-refine .refine-full  { display: none; }
+  .foryou-refine .refine-short { display: inline; }
 }
 /* Rating transparency note — subdued, centered line under "Best Available Now" */
 /* Curated-homepage "Browse full collection" CTA — glassmorphism ghost button */
@@ -4794,11 +4805,13 @@ if ('serviceWorker' in navigator) {
       </span>
       <button class="foryou-refine" onclick="openOnboardQuiz()" data-i18n-title="onboard.refineHint" title="Answer a few quick questions so our AI learns your taste.">
         <svg class="foryou-refine-spark" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/><path d="M18.5 3.5l.7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7z"/></svg>
-        <span data-i18n="onboard.refine">Personalize Your Picks</span>
+        <span class="refine-full" data-i18n="onboard.refine">Personalize Your Picks</span>
+        <span class="refine-short" data-i18n="onboard.refineShort">Picks</span>
       </button>
       <button class="foryou-refine dna-trigger" onclick="openTasteDna()" data-i18n-title="dna.entryHint" title="See the AI read of your cinematic taste — shareable.">
         <svg class="foryou-refine-spark" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 3c0 4 8 6 8 10s-8 4-8 8"/><path d="M16 3c0 4-8 6-8 10s8 4 8 8"/><path d="M8.5 7h7M8.5 17h7M7 12h10"/></svg>
-        <span data-i18n="dna.entry">Your Taste DNA</span>
+        <span class="refine-full" data-i18n="dna.entry">Your Taste DNA</span>
+        <span class="refine-short" data-i18n="dna.entryShort">DNA</span>
       </button>
     </div>
     <p class="foryou-hint" id="forYouHint">
@@ -5393,6 +5406,7 @@ const TRANSLATIONS = {
     'vibe.errFail':         'Couldn’t read that vibe — try another one.',
     'vibe.retry':           'Try again',
     'dna.entry':            'Your Taste DNA',
+    'dna.entryShort':       'DNA',
     'dna.entryHint':        'See the AI read of your cinematic taste — shareable.',
     'dna.teaserTitle':      'Your Taste DNA is forming',
     'dna.teaserSub':        'Rate {n} more films and we’ll decode your cinematic personality.',
@@ -5535,6 +5549,7 @@ const TRANSLATIONS = {
     'onboard.personalize': 'Personalize in 30s →',
     'onboard.browseNow':   'Skip — just browse',
     'onboard.refine':      'Personalize Your Picks',
+    'onboard.refineShort': 'Picks',
     'onboard.refineHint':  'Answer a few quick questions so our AI learns your taste.',
     'onboard.refineSub':   'Rate at least 3 movies to let our AI learn your taste.',
     'onboard.step':        'Step {n} of {total}',
@@ -5733,6 +5748,7 @@ const TRANSLATIONS = {
     'vibe.errFail':         'No pudimos leer esa vibra — prueba con otra.',
     'vibe.retry':           'Reintentar',
     'dna.entry':            'Tu ADN de Cine',
+    'dna.entryShort':       'ADN',
     'dna.entryHint':        'Descubre cómo la IA lee tu gusto cinematográfico — para compartir.',
     'dna.teaserTitle':      'Tu ADN de Cine se está formando',
     'dna.teaserSub':        'Valora {n} películas más y descifraremos tu personalidad cinematográfica.',
@@ -5844,6 +5860,7 @@ const TRANSLATIONS = {
     'onboard.personalize': 'Personalizar en 30s →',
     'onboard.browseNow':   'Omitir — solo explorar',
     'onboard.refine':      'Personaliza tus elecciones',
+    'onboard.refineShort': 'Elige',
     'onboard.refineHint':  'Responde unas preguntas rápidas para que la IA aprenda tus gustos.',
     'onboard.refineSub':   'Valora al menos 3 películas para que nuestra IA aprenda tus gustos.',
     'onboard.step':        'Paso {n} de {total}',
@@ -6037,6 +6054,7 @@ const TRANSLATIONS = {
     'vibe.errFail':         'Impossible de lire cette ambiance — essayez-en une autre.',
     'vibe.retry':           'Réessayer',
     'dna.entry':            'Votre ADN Ciné',
+    'dna.entryShort':       'ADN',
     'dna.entryHint':        'Découvrez la lecture IA de vos goûts cinéma — à partager.',
     'dna.teaserTitle':      'Votre ADN Ciné se dessine',
     'dna.teaserSub':        'Notez {n} films de plus et nous décoderons votre personnalité cinématographique.',
@@ -6148,6 +6166,7 @@ const TRANSLATIONS = {
     'onboard.personalize': 'Personnaliser en 30s →',
     'onboard.browseNow':   'Ignorer — juste explorer',
     'onboard.refine':      'Personnaliser vos choix',
+    'onboard.refineShort': 'Choix',
     'onboard.refineHint':  'Répondez à quelques questions pour que l\'IA apprenne vos goûts.',
     'onboard.refineSub':   'Notez au moins 3 films pour que notre IA apprenne vos goûts.',
     'onboard.step':        'Étape {n} sur {total}',
@@ -6341,6 +6360,7 @@ const TRANSLATIONS = {
     'vibe.errFail':         '无法解析这种氛围——换一个试试。',
     'vibe.retry':           '重试',
     'dna.entry':            '你的观影基因',
+    'dna.entryShort':       '基因',
     'dna.entryHint':        '看看 AI 如何解读你的观影品味 — 可分享。',
     'dna.teaserTitle':      '你的观影基因正在形成',
     'dna.teaserSub':        '再评价 {n} 部影片，我们就能解码你的电影人格。',
@@ -6452,6 +6472,7 @@ const TRANSLATIONS = {
     'onboard.personalize': '30秒个性化 →',
     'onboard.browseNow':   '跳过——直接浏览',
     'onboard.refine':      '个性化你的推荐',
+    'onboard.refineShort': '精选',
     'onboard.refineHint':  '回答几个小问题，让 AI 了解你的口味。',
     'onboard.refineSub':   '至少评分 3 部电影，让我们的 AI 了解你的口味。',
     'onboard.step':        '第 {n} 步，共 {total} 步',
@@ -6645,6 +6666,7 @@ const TRANSLATIONS = {
     'vibe.errFail':         'تعذّرت قراءة هذا الانطباع — جرّب غيره.',
     'vibe.retry':           'حاول مجددًا',
     'dna.entry':            'حمضك السينمائي',
+    'dna.entryShort':       'حمضك',
     'dna.entryHint':        'شاهد قراءة الذكاء الاصطناعي لذوقك السينمائي — قابلة للمشاركة.',
     'dna.teaserTitle':      'حمضك السينمائي قيد التكوين',
     'dna.teaserSub':        'قيّم {n} أفلام إضافية وسنحلّل شخصيتك السينمائية.',
@@ -6756,6 +6778,7 @@ const TRANSLATIONS = {
     'onboard.personalize': 'التخصيص في 30 ثانية →',
     'onboard.browseNow':   'تخطَّ — تصفّح فقط',
     'onboard.refine':      'خصّص اختياراتك',
+    'onboard.refineShort': 'اختياراتك',
     'onboard.refineHint':  'أجب عن بضعة أسئلة سريعة ليتعرّف الذكاء الاصطناعي على ذوقك.',
     'onboard.refineSub':   'قيّم 3 أفلام على الأقل ليتعرّف الذكاء الاصطناعي على ذوقك.',
     'onboard.step':        'الخطوة {n} من {total}',
@@ -6950,6 +6973,7 @@ const TRANSLATIONS = {
     'vibe.errFail':         'Не вдалося зчитати цей настрій — спробуйте інший.',
     'vibe.retry':           'Спробувати ще',
     'dna.entry':            'Ваша кіно-ДНК',
+    'dna.entryShort':       'ДНК',
     'dna.entryHint':        'Подивіться, як ШІ читає ваш кіносмак — можна поділитися.',
     'dna.teaserTitle':      'Ваша кіно-ДНК формується',
     'dna.teaserSub':        'Оцініть ще {n} фільмів, і ми розшифруємо вашу кінематографічну особистість.',
@@ -7066,6 +7090,7 @@ const TRANSLATIONS = {
     'onboard.personalize': 'Персоналізувати за 30с →',
     'onboard.browseNow':   'Пропустити — просто огляд',
     'onboard.refine':      'Персоналізувати добірку',
+    'onboard.refineShort': 'Добірка',
     'onboard.refineHint':  'Дайте відповідь на кілька запитань, щоб ШІ вивчив ваш смак.',
     'onboard.refineSub':   'Оцініть щонайменше 3 фільми, щоб ШІ вивчив ваш смак.',
     'onboard.step':        'Крок {n} з {total}',
@@ -7272,6 +7297,7 @@ const TRANSLATIONS = {
     'vibe.errFail':         'Diese Stimmung ließ sich nicht lesen — versuch eine andere.',
     'vibe.retry':           'Erneut versuchen',
     'dna.entry':            'Deine Film-DNA',
+    'dna.entryShort':       'DNA',
     'dna.entryHint':        'Sieh, wie die KI deinen Filmgeschmack liest — teilbar.',
     'dna.teaserTitle':      'Deine Film-DNA entsteht',
     'dna.teaserSub':        'Bewerte {n} weitere Filme und wir entschlüsseln deine cineastische Persönlichkeit.',
@@ -7395,6 +7421,7 @@ const TRANSLATIONS = {
     'onboard.personalize': 'In 30 Sek. personalisieren →',
     'onboard.browseNow':   'Überspringen – nur stöbern',
     'onboard.refine':      'Personalisiere deine Tipps',
+    'onboard.refineShort': 'Tipps',
     'onboard.refineHint':  'Beantworte ein paar kurze Fragen, damit unsere KI deinen Geschmack lernt.',
     'onboard.refineSub':   'Bewerte mindestens 3 Filme, damit unsere KI deinen Geschmack lernt.',
     'onboard.step':        'Schritt {n} von {total}',
@@ -7600,6 +7627,7 @@ const TRANSLATIONS = {
     'vibe.errFail':         'Kunde inte läsa den känslan — testa en annan.',
     'vibe.retry':           'Försök igen',
     'dna.entry':            'Ditt Film-DNA',
+    'dna.entryShort':       'DNA',
     'dna.entryHint':        'Se AI:ns läsning av din filmsmak — delbar.',
     'dna.teaserTitle':      'Ditt Film-DNA tar form',
     'dna.teaserSub':        'Betygsätt {n} filmer till så avkodar vi din filmiska personlighet.',
@@ -7723,6 +7751,7 @@ const TRANSLATIONS = {
     'onboard.personalize': 'Anpassa på 30 sek →',
     'onboard.browseNow':   'Hoppa över – bara bläddra',
     'onboard.refine':      'Anpassa dina tips',
+    'onboard.refineShort': 'Tips',
     'onboard.refineHint':  'Svara på några snabba frågor så lär sig vår AI din smak.',
     'onboard.refineSub':   'Betygsätt minst 3 filmer så lär sig vår AI din smak.',
     'onboard.step':        'Steg {n} av {total}',
@@ -7928,6 +7957,7 @@ const TRANSLATIONS = {
     'vibe.errFail':         'Klarte ikke å lese den stemningen — prøv en annen.',
     'vibe.retry':           'Prøv igjen',
     'dna.entry':            'Ditt Film-DNA',
+    'dna.entryShort':       'DNA',
     'dna.entryHint':        'Se AI-ens lesning av filmsmaken din — delbar.',
     'dna.teaserTitle':      'Ditt Film-DNA tar form',
     'dna.teaserSub':        'Vurder {n} filmer til, så dekoder vi den filmatiske personligheten din.',
@@ -8051,6 +8081,7 @@ const TRANSLATIONS = {
     'onboard.personalize': 'Tilpass på 30 sek →',
     'onboard.browseNow':   'Hopp over – bare bla',
     'onboard.refine':      'Tilpass tipsene dine',
+    'onboard.refineShort': 'Tips',
     'onboard.refineHint':  'Svar på noen raske spørsmål så lærer AI-en vår smaken din.',
     'onboard.refineSub':   'Vurder minst 3 filmer så lærer AI-en vår smaken din.',
     'onboard.step':        'Steg {n} av {total}',
