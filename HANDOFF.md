@@ -2,7 +2,21 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-26) — Taste DNA (AI Cinematic-Personality Card)
+## ⚡ Most Recent Session (2026-07-26) — For You Header: One-Row Mobile Fix
+
+All commits on `main`, live on https://findfilm.ai. Verified via preview eval @375px (nowrap, same-row, no overflow) + @1280px (full labels preserved) + screenshot.
+
+The two action chips in the "Start here tonight" header (**Personalize Your Picks** + **Your Taste DNA**) were wrapping and stacking vertically at ~375px. Now they stay on a **single horizontal line** next to the title with shortened mobile labels.
+
+| Commit | Feature |
+|--------|---------|
+| `8d6a157` | **For You header one-row mobile fix** (`index.html`, HTML+CSS+i18n). **(1) Paired labels** — each `.foryou-refine` chip now holds two spans: `.refine-full` (`data-i18n="onboard.refine"`/`"dna.entry"`) + `.refine-short` (`data-i18n="onboard.refineShort"`/`"dna.entryShort"`). Default CSS hides `.refine-short`. **(2) Mobile rule** — the `@media (max-width:768px)` `.feed-row--primary .feed-row-header` changed from **`flex-wrap:wrap; row-gap:6px`** → **`flex-wrap:nowrap; gap:6px`**; title gets `min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap` (flexes/truncates); chips get `flex:none; padding:4px 8px; gap:4px`; `.dna-trigger` gets `margin-left:0` so only the first chip keeps the `margin-left:auto` gutter (pair stays grouped right); `.refine-full` hidden + `.refine-short` shown. **(3) i18n** — new `onboard.refineShort` (Picks/Elige/Choix/精选/اختياراتك/Добірка/Tipps/Tips/Tips) + `dna.entryShort` (DNA/ADN/ADN/基因/حمضك/ДНК/DNA/DNA/DNA) across all 9 dicts. **Verified:** @375px header `flex-wrap:nowrap`, both chips same top (328), labels "Picks"/"DNA", no overflow (right 346<375); @1280px full labels shown, short hidden. **Deliverable (Tailwind equiv):** header `flex flex-nowrap items-center gap-1.5`; title `min-w-0 truncate`; chips `shrink-0`; labels `<span class="hidden md:inline">Personalize Your Picks</span><span class="md:hidden">Picks</span>`. |
+
+**New selectors/keys this session:** CSS `.foryou-refine .refine-full`/`.refine-short`; i18n `onboard.refineShort` + `dna.entryShort` ×9.
+
+---
+
+## ⚡ Session (2026-07-26) — Taste DNA (AI Cinematic-Personality Card)
 
 All commits on `main`, live on https://findfilm.ai. First retention feature of a planned pair (Streaming Radar is PR #2 — deferred). Verified via preview eval (13/13 DNA IDs, 7/7 fns, i18n interpolation, teaser gate, card render, state machine, error path) + screenshot; backend `node --check` clean.
 
