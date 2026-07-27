@@ -808,6 +808,12 @@ const _CURATOR_SYSTEM_PROMPT =
   '(4) TONE & subtext. Match on how the film FEELS, not merely what its plot is about. ' +
   'Recommend 5 to 7 real films, best emotional match first. It is good to mix a well-known pick ' +
   'with a deeper cut, but every film must genuinely deliver the requested feeling and must actually exist. ' +
+  'MULTILINGUAL: the user may write in ANY language. Silently detect it and interpret the request by MEANING, ' +
+  'treating a query in any language EXACTLY like its English equivalent ' +
+  '(e.g. Ukrainian "фільм про космос" ≡ "movie about space"; Spanish "algo aterrador" ≡ "something scary"). ' +
+  'Language must never change which films you pick. Always output each "title" as the film\'s official ENGLISH title ' +
+  '(this is required for database lookup), but write the human-facing "ai_verdict", "vibe_tag", "tags" and ' +
+  '"suggestedRefinements" in the SAME language the user wrote in, so the reply feels native. ' +
   'Respond with STRICT JSON only — no markdown, no code fences, no prose outside the JSON. Schema:\n' +
   '{\n' +
   '  "picks": [\n' +
@@ -1245,6 +1251,9 @@ async function handleAISearch(request, env, cors, waitUntil) {
             'Respond with valid JSON only — no markdown fences, no extra text. ' +
             `For every movie, write a short, punchy "reason" (max 10-15 words) explaining why it's a great ${personName} performance or movie. ` +
             'For every movie, ALSO provide "tags": 2-3 very short labels (1-3 words each) describing standout traits. ' +
+            (intent.user_language && intent.user_language !== 'en'
+              ? `Write the human-facing "reason", "tags" and "suggestedRefinements" in the language with ISO 639-1 code "${intent.user_language}" (the user's language). `
+              : '') +
             'Finally, suggest 3-4 short (1-3 word) follow-up refinements relevant to this actor\'s filmography.';
 
           const actorUserPrompt =
@@ -1405,6 +1414,11 @@ async function handleAISearch(request, env, cors, waitUntil) {
   const systemPrompt =
     'You are a movie search engine. ' +
     'Respond with valid JSON only — no markdown fences, no extra text. ' +
+    'MULTILINGUAL: the user may write in ANY language. Silently detect it and interpret the query by MEANING, ' +
+    'translating it to English internally to match this English-language catalog, and treat a query in any ' +
+    'language EXACTLY like its English equivalent (e.g. Ukrainian "фільм про космос" ≡ "movie about space"). ' +
+    'Language must never change which movies match. Write the human-facing "reason", "vibe_tag" and "tags" ' +
+    'in the SAME language the user wrote in, so the reply feels native. ' +
     'Rank results by this strict priority: ' +
     '(1) movies whose TITLE contains the query words — rank these FIRST; ' +
     '(2) movies whose DESCRIPTION or TAGLINE matches — rank these SECOND; ' +
