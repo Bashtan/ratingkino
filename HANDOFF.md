@@ -2,7 +2,21 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-26) — For You Header: One-Row Mobile Fix
+## ⚡ Most Recent Session (2026-07-27) — Multilingual AI Search Input (English-Only Output)
+
+All commits on `main`, live on https://findfilm.ai (deployed `d6e1df71.ratingkino.pages.dev`). Verified live: Ukrainian queries return the **same films** as their English equivalents, with **all output text in English**.
+
+Made the AI search **language-agnostic on input only**. A user typing `фільм про космос` (Ukrainian) now gets the same results as `movie about space`, and `щось моторошне про привидів у старому будинку` correctly returns *The Others*. **Per the final requirement, output is NOT localized** — titles, reasons/verdicts, vibe tags and refinements stay in **English** (the app UI is English). Prompt-only change; the curator model (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`) is already multilingual, so **zero extra latency/API calls** and **no vector embeddings** (search is pure LLM ranking).
+
+| Commit | Feature |
+|--------|---------|
+| `4476573` + follow-up | **Multilingual AI search (input understanding, English output)** (`functions/api/[[path]].js`, prompt-only). **Three system prompts** each got a MULTILINGUAL directive: *silently detect the query's language and interpret it by MEANING, treating any language exactly like its English equivalent — language must never change which films match.* **(1) `_CURATOR_SYSTEM_PROMPT`** (open-world `_llmFirstCuration`, primary path): understands any language, but **"Always write ALL output — every `title`, `ai_verdict`, `vibe_tag`, `tags` and `suggestedRefinements` — in ENGLISH, regardless of the query's language. Do NOT translate output back into the user's language."** **(2) KV catalog `systemPrompt`** (closed-world fallback): translates the query to English internally to match the English catalog, output `reason`/`vibe_tag`/`tags` **in English only**. **(3) actor path `actorSystemPrompt`**: `reason`/`tags`/`suggestedRefinements` **in English only** (removed the earlier `intent.user_language` conditional-localization block). The actor bypass already translated params to English via **`_parseIntent`** (`clean_title_guess`→English, `english_keywords`→English, `user_language` ISO code) — unchanged. **Verified live:** UK `фільм про космос` → 2001/Gravity/Solaris/Interstellar/Sunshine (≡ EN `movie about space`); UK `щось моторошне про привидів` → The Others + English `reasons` ("Delivers eerie ghostly presence") + English `vibeTags` ("Ghostly Terror") + English `suggestedRefinements`. `node --check` clean. **Note:** the initial `4476573` commit localized output to the user's language; this session **reversed that** to English-only per the refined "No Output Translation" requirement (follow-up code commit). |
+
+**Changed this session:** 3 backend system prompts in `functions/api/[[path]].js` — `_CURATOR_SYSTEM_PROMPT` (~L800), KV `systemPrompt` (~L1414), `actorSystemPrompt` (~L1249). No new IDs/classes/keys; input translation leans on existing `_parseIntent`. **Method:** requirement #1 (prompt-based query understanding) ✅; requirement #2 (vector/multilingual embeddings) N/A — no embeddings in the stack.
+
+---
+
+## ⚡ Session (2026-07-26) — For You Header: One-Row Mobile Fix
 
 All commits on `main`, live on https://findfilm.ai. Verified via preview eval @375px (nowrap, same-row, no overflow) + @1280px (full labels preserved) + screenshot.
 
