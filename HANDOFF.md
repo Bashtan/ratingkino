@@ -2,7 +2,21 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-27) — Multilingual AI Search Input (English-Only Output)
+## ⚡ Most Recent Session (2026-07-29) — Explicit Input Translation Step (Non-English Search Fix)
+
+All commits on `main`, live on https://findfilm.ai (deployed `bc5ea1ad.ratingkino.pages.dev`). Verified live: UK & ES time-loop queries now return the correct English films.
+
+**Problem:** Non-English queries still failed for non-trivial requests (e.g. UK `фільм де люди застрягли у часовій петлі` = "movie where people are stuck in a time loop"). **Root cause:** the primary `_llmFirstCuration` and KV fallback passed the **raw** non-English string to the 70B model, relying on it to translate *internally* — inconsistent, so non-English queries often hydrated <3 films and fell through to the tiny `new-releases` KV catalog → poor/empty results. **Fix:** an **explicit translation step** now runs BEFORE any curation/ranking/TMDB lookup: `_parseIntent` is parsed once, and when `user_language !== 'en'` the query is replaced with its English translation (`searchQuery`), which is fed to every search path. Output stays strictly English (from the 2026-07-27 session).
+
+| Commit | Feature |
+|--------|---------|
+| `afd2040` | **Explicit multilingual input-translation step** (`functions/api/[[path]].js`, backend-only). **(1) `_parseIntent`** (L293, the 1B `@cf/meta/llama-3.2-1b-instruct` parser) gains a new **`english_query`** field — *the FULL search request faithfully translated into natural English, preserving complete intent (plot/mood/constraints), not just keywords; verbatim if already English* — returned (capped 300 chars) alongside the existing `clean_title_guess`/`english_keywords`/`user_language`. **(2) `handleAISearch`** (after the KV response-cache check, ~L1236): new **EXPLICIT INPUT TRANSLATION** block hoists `let intent = await _parseIntent(query, env)` to run **once** and builds **`let searchQuery`** = `intent.english_query || clean_title_guess || english_keywords` when `intent.user_language !== 'en'`, else the raw `query`. Adds the debug log **`console.log('[ai-search] Raw query:', …, '-> Translated query:', …, '(lang: …)')`**. **(3) Actor block** (~L1264) refactored from `if (env.AI && env.TMDB_KEY){ const intent = await _parseIntent(...) …}` → **`if (env.AI && env.TMDB_KEY && intent)`** reusing the hoisted `intent` (removes a redundant 1B call). **(4) `_llmFirstCuration(searchQuery, exclude, env)`** and the **KV `userPrompt`** (`User query: "${searchQuery}"`) now receive the **English** query. Cache key still keyed on the **raw** `query` (`ais:v2:` `_norm`) so caching is per-input. The belt-and-suspenders "MULTILINGUAL: understand any language" directives in `_CURATOR_SYSTEM_PROMPT`/KV `systemPrompt` stay as a fallback. **Verified live (`node --check` clean, deployed):** EN `movie where people are stuck in a time loop` → Groundhog Day/Edge of Tomorrow/Palm Springs/Happy Death Day; UK `фільм де люди застрягли у часовій петлі` → Edge of Tomorrow/Groundhog Day/Happy Death Day/Palm Springs/Looper/12:01 PM; ES `una película sobre un bucle temporal` → Edge of Tomorrow/Groundhog Day/Looper/Predestination — all with English reasons/tags/refinements. |
+
+**Changed this session:** `functions/api/[[path]].js` only — `_parseIntent` (`+english_query`), `handleAISearch` (hoisted `intent` + new `searchQuery` translation block + `[ai-search]` debug log; actor block reuses `intent`; `_llmFirstCuration` + KV `userPrompt` fed `searchQuery`). No frontend/i18n/DOM changes. **Method:** requirement #1 (explicit LLM query→English translation before search) ✅; #2 (strict English output) ✅ (kept from prior session); #3 (debug logging) ✅. Vector/embedding step N/A — search is pure LLM ranking, no embeddings.
+
+---
+
+## ⚡ Session (2026-07-27) — Multilingual AI Search Input (English-Only Output)
 
 All commits on `main`, live on https://findfilm.ai (deployed `d6e1df71.ratingkino.pages.dev`). Verified live: Ukrainian queries return the **same films** as their English equivalents, with **all output text in English**.
 
