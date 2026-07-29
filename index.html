@@ -761,6 +761,22 @@ header {
 }
 .filters-count.on { display: inline-flex; }
 
+/* AI Magic launcher — mobile-only gradient button beside Filters (opens #aiHubSheet).
+   Default hidden; the mobile media query flips it to inline-flex so desktop never shows it. */
+.btn-ai-magic {
+  display: none; align-items: center; gap: 7px;
+  height: 30px; padding: 0 15px; border-radius: 20px;
+  border: 1px solid rgba(129,140,248,0.55);
+  background: linear-gradient(135deg, #6366f1 0%, #7c3aed 55%, #22d3ee 140%);
+  color: #fff; font-family: 'Montserrat', sans-serif;
+  font-weight: 700; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;
+  cursor: pointer; flex-shrink: 0;
+  box-shadow: 0 4px 18px rgba(124,58,237,0.45);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-ai-magic:hover { transform: translateY(-1px); box-shadow: 0 6px 26px rgba(124,58,237,0.6); }
+.btn-ai-magic svg { flex-shrink: 0; }
+
 /* Filters drawer — mirrors the watchlist drawer pattern */
 .filters-backdrop {
   position: fixed; inset: 0; z-index: 9700;
@@ -845,6 +861,76 @@ header {
   box-shadow: 0 6px 20px rgba(99,102,241,0.32);
 }
 .fd-apply:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99,102,241,0.5); }
+
+/* ─── AI Magic Hub — mobile bottom sheet (mirrors filters-drawer mechanics) ─── */
+.aihub-backdrop {
+  position: fixed; inset: 0; z-index: 9700;
+  background: rgba(3,2,10,0.7);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.aihub-backdrop.open { opacity: 1; pointer-events: auto; }
+.aihub-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 9800;
+  max-height: 86vh; display: flex; flex-direction: column;
+  background: linear-gradient(180deg, rgba(20,18,38,0.94) 0%, rgba(11,10,24,0.97) 100%);
+  backdrop-filter: blur(26px) saturate(1.4);
+  -webkit-backdrop-filter: blur(26px) saturate(1.4);
+  border-top: 1px solid rgba(255,255,255,0.1);
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -18px 70px rgba(0,0,0,0.65);
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.22,1,0.36,1);
+}
+.aihub-sheet.open { transform: translateY(0); }
+.aihub-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;
+}
+.aihub-title {
+  flex: 1; font-family: 'Montserrat', sans-serif; font-weight: 800;
+  font-size: 16px; color: #fff; letter-spacing: -0.3px;
+}
+.aihub-close {
+  width: 28px; height: 28px; flex-shrink: 0;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 50%;
+  cursor: pointer; color: rgba(255,255,255,0.5);
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.aihub-close:hover { background: rgba(99,102,241,0.18); border-color: rgba(99,102,241,0.5); color: #fff; }
+.aihub-body {
+  flex: 1; overflow-y: auto; padding: 16px 18px 24px;
+  display: flex; flex-direction: column; gap: 22px;
+  scrollbar-width: thin; scrollbar-color: rgba(99,102,241,0.3) transparent;
+}
+.aihub-body::-webkit-scrollbar { width: 4px; }
+.aihub-body::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 2px; }
+.aihub-group { display: flex; flex-direction: column; gap: 10px; }
+.aihub-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 1.6px;
+  text-transform: uppercase; color: #94a3b8;
+  font-family: 'Montserrat', sans-serif;
+}
+.aihub-item {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 14px 16px; border-radius: 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #e5e7eb; font-family: 'Montserrat', sans-serif;
+  font-weight: 600; font-size: 14px; text-align: left; cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
+}
+.aihub-item:hover { background: rgba(99,102,241,0.14); border-color: rgba(99,102,241,0.5); }
+.aihub-moods { display: flex; flex-wrap: wrap; gap: 8px; }
+.aihub-moods .mob-mood-chip { flex: 0 0 auto; }
+/* Desktop guard — the hub is a phone-only surface */
+@media (min-width: 769px) {
+  .aihub-backdrop, .aihub-sheet { display: none !important; }
+}
 
 /* ─── FILTER BAR (Netflix-style) ─────────────── */
 .filters-bar {
@@ -2954,6 +3040,21 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .header-btns .btn-watchlist { width: 34px; height: 34px; border-radius: 9px; }
   .hdr-feat    { width: 34px; height: 34px; }
 
+  /* ── AI Magic Hub: declutter mobile home (tools consolidated into #aiHubSheet) ── */
+  .header-btns .hdr-feats { display: none; }                  /* discovery icons → Hub */
+  .hero-vp .hero-h1,
+  .hero-vp .hero-title { display: none; }                     /* hide headline + subtitle */
+  /* !important beats the JS-set inline display:flex on the mic in AI mode */
+  .search-wrap--hero #searchMicBtn,
+  .search-wrap--hero #searchPhotoBtn,
+  .search-wrap--hero #searchMusicBtn { display: none !important; }  /* strip search-bar AI icons */
+  #rowForYou .foryou-refine { display: none; }                /* Personalize + DNA → Hub */
+  .btn-ai-magic { display: inline-flex; }                     /* reveal the Hub launcher */
+  /* Tighten the sub-nav row so [Movies/TV] + [Filters] + [AI Magic] fit ≤375px */
+  .filter-row-1 { gap: 6px; }
+  .filter-row-1 .ct-btn { padding: 0 10px; }
+  .btn-filters, .btn-ai-magic { padding: 0 11px; }
+
   .mob-search-overlay { display: none; }
 
   /* Hero search: comfortable size on phones (trim bottom pad so the
@@ -4762,6 +4863,14 @@ if ('serviceWorker' in navigator) {
       <span data-i18n="filter.filters">Filters</span>
       <span class="filters-count" id="filtersCount"></span>
     </button>
+    <!-- AI Magic launcher (mobile-only) — opens the consolidated AI Hub bottom sheet -->
+    <button class="btn-ai-magic" onclick="openAiHub()" aria-label="Open AI Magic hub" data-i18n-aria="hub.btn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/>
+        <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>
+      </svg>
+      <span data-i18n="hub.btn">AI Magic</span>
+    </button>
   </div>
 </div>
 
@@ -5446,6 +5555,19 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Search',
     'search.mood':          'Mood',
     'search.tryAsking':     'Try asking:',
+    'hub.btn':              'AI Magic',
+    'hub.title':            'AI Magic Hub',
+    'hub.searchModes':      'AI Search Modes',
+    'hub.voice':            'Voice Search',
+    'hub.photo':            'Photo Vibe Check',
+    'hub.music':            'Music Vibe Check',
+    'hub.moodTitle':        'What are you in the mood for?',
+    'hub.personal':         'Personalization & Social',
+    'hub.tonight':          'Find Something for Tonight',
+    'hub.group':            'Group Movie Night',
+    'hub.surprise':         'Surprise Me',
+    'hub.personalize':      'Personalize Your Picks',
+    'hub.dna':              'Your Taste DNA',
     'search.chips.darkThriller': 'Dark thriller',
     'search.chips.romCom':       'Rom-com',
     'search.chips.scifi':        'Epic sci-fi',
@@ -5788,6 +5910,19 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Buscar',
     'search.mood':          'Estado de ánimo',
     'search.tryAsking':     'Prueba preguntar:',
+    'hub.btn':              'Magia IA',
+    'hub.title':            'Centro de Magia IA',
+    'hub.searchModes':      'Modos de búsqueda IA',
+    'hub.voice':            'Búsqueda por voz',
+    'hub.photo':            'Vibe por foto',
+    'hub.music':            'Vibe por música',
+    'hub.moodTitle':        '¿Qué te apetece ver?',
+    'hub.personal':         'Personalización y social',
+    'hub.tonight':          'Algo para esta noche',
+    'hub.group':            'Noche de cine en grupo',
+    'hub.surprise':         'Sorpréndeme',
+    'hub.personalize':      'Personaliza tus recomendaciones',
+    'hub.dna':              'Tu ADN de cine',
     'search.chips.darkThriller': 'Thriller oscuro',
     'search.chips.romCom':       'Comedia romántica',
     'search.chips.scifi':        'Ciencia ficción',
@@ -6094,6 +6229,19 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Rechercher',
     'search.mood':          'Ambiance',
     'search.tryAsking':     'Essayez de demander :',
+    'hub.btn':              'Magie IA',
+    'hub.title':            'Hub Magie IA',
+    'hub.searchModes':      'Modes de recherche IA',
+    'hub.voice':            'Recherche vocale',
+    'hub.photo':            'Vibe par photo',
+    'hub.music':            'Vibe par musique',
+    'hub.moodTitle':        'Vous avez envie de quoi ?',
+    'hub.personal':         'Personnalisation et social',
+    'hub.tonight':          'Une idée pour ce soir',
+    'hub.group':            'Soirée ciné en groupe',
+    'hub.surprise':         'Surprenez-moi',
+    'hub.personalize':      'Personnalisez vos choix',
+    'hub.dna':              'Votre ADN cinéma',
     'search.chips.darkThriller': 'Thriller sombre',
     'search.chips.romCom':       'Comédie romantique',
     'search.chips.scifi':        'Sci-fi épique',
@@ -6400,6 +6548,19 @@ const TRANSLATIONS = {
     'search.sendBtn':       '搜索',
     'search.mood':          '心情',
     'search.tryAsking':     '试着问一问：',
+    'hub.btn':              'AI 魔法',
+    'hub.title':            'AI 魔法中心',
+    'hub.searchModes':      'AI 搜索模式',
+    'hub.voice':            '语音搜索',
+    'hub.photo':            '照片氛围检测',
+    'hub.music':            '音乐氛围检测',
+    'hub.moodTitle':        '你今天想看什么？',
+    'hub.personal':         '个性化与社交',
+    'hub.tonight':          '今晚看点什么',
+    'hub.group':            '多人观影之夜',
+    'hub.surprise':         '给我惊喜',
+    'hub.personalize':      '定制你的推荐',
+    'hub.dna':              '你的观影基因',
     'search.chips.darkThriller': '黑暗惊悚',
     'search.chips.romCom':       '浪漫喜剧',
     'search.chips.scifi':        '科幻史诗',
@@ -6706,6 +6867,19 @@ const TRANSLATIONS = {
     'search.sendBtn':       'بحث',
     'search.mood':          'المزاج',
     'search.tryAsking':     'جرب السؤال عن:',
+    'hub.btn':              'سحر الذكاء الاصطناعي',
+    'hub.title':            'مركز سحر الذكاء الاصطناعي',
+    'hub.searchModes':      'أوضاع البحث الذكي',
+    'hub.voice':            'البحث الصوتي',
+    'hub.photo':            'أجواء عبر الصورة',
+    'hub.music':            'أجواء عبر الموسيقى',
+    'hub.moodTitle':        'ما الذي تريد مشاهدته؟',
+    'hub.personal':         'التخصيص والمشاركة',
+    'hub.tonight':          'اقتراح لهذه الليلة',
+    'hub.group':            'ليلة أفلام جماعية',
+    'hub.surprise':         'فاجئني',
+    'hub.personalize':      'خصّص اختياراتك',
+    'hub.dna':              'بصمة ذوقك السينمائي',
     'search.chips.darkThriller': 'إثارة مظلمة',
     'search.chips.romCom':       'كوميديا رومانسية',
     'search.chips.scifi':        'خيال علمي ملحمي',
@@ -7013,6 +7187,19 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Пошук',
     'search.mood':          'Настрій',
     'search.tryAsking':     'Спробуй запитати:',
+    'hub.btn':              'AI-магія',
+    'hub.title':            'Центр AI-магії',
+    'hub.searchModes':      'Режими AI-пошуку',
+    'hub.voice':            'Голосовий пошук',
+    'hub.photo':            'Вайб за фото',
+    'hub.music':            'Вайб за музикою',
+    'hub.moodTitle':        'Що хочеш подивитися?',
+    'hub.personal':         'Персоналізація та спільне',
+    'hub.tonight':          'Щось на сьогодні',
+    'hub.group':            'Кіновечір з друзями',
+    'hub.surprise':         'Здивуй мене',
+    'hub.personalize':      'Персоналізуй добірку',
+    'hub.dna':              'Твоя ДНК смаку',
     'search.chips.darkThriller': 'Темний трилер',
     'search.chips.romCom':       'Ромком',
     'search.chips.scifi':        'Фантастика',
@@ -7337,6 +7524,19 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Suchen',
     'search.mood':          'Stimmung',
     'search.tryAsking':     'Frag doch mal:',
+    'hub.btn':              'KI-Magie',
+    'hub.title':            'KI-Magie-Hub',
+    'hub.searchModes':      'KI-Suchmodi',
+    'hub.voice':            'Sprachsuche',
+    'hub.photo':            'Vibe per Foto',
+    'hub.music':            'Vibe per Musik',
+    'hub.moodTitle':        'Worauf hast du Lust?',
+    'hub.personal':         'Personalisierung & Social',
+    'hub.tonight':          'Etwas für heute Abend',
+    'hub.group':            'Filmabend in der Gruppe',
+    'hub.surprise':         'Überrasch mich',
+    'hub.personalize':      'Empfehlungen anpassen',
+    'hub.dna':              'Deine Geschmacks-DNA',
     'search.chips.darkThriller': 'Düsterer Thriller',
     'search.chips.romCom':       'Romantische Komödie',
     'search.chips.scifi':        'Epische Sci-Fi',
@@ -7667,6 +7867,19 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Sök',
     'search.mood':          'Känsla',
     'search.tryAsking':     'Prova att fråga:',
+    'hub.btn':              'AI-magi',
+    'hub.title':            'AI-magi-hubb',
+    'hub.searchModes':      'AI-söklägen',
+    'hub.voice':            'Röstsökning',
+    'hub.photo':            'Vibe via foto',
+    'hub.music':            'Vibe via musik',
+    'hub.moodTitle':        'Vad är du sugen på?',
+    'hub.personal':         'Personligt & socialt',
+    'hub.tonight':          'Något för ikväll',
+    'hub.group':            'Filmkväll i grupp',
+    'hub.surprise':         'Överraska mig',
+    'hub.personalize':      'Anpassa dina tips',
+    'hub.dna':              'Ditt smak-DNA',
     'search.chips.darkThriller': 'Mörk thriller',
     'search.chips.romCom':       'Romantisk komedi',
     'search.chips.scifi':        'Episk sci-fi',
@@ -7997,6 +8210,19 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Søk',
     'search.mood':          'Stemning',
     'search.tryAsking':     'Prøv å spørre:',
+    'hub.btn':              'AI-magi',
+    'hub.title':            'AI-magi-hub',
+    'hub.searchModes':      'AI-søkemoduser',
+    'hub.voice':            'Stemmesøk',
+    'hub.photo':            'Vibe via foto',
+    'hub.music':            'Vibe via musikk',
+    'hub.moodTitle':        'Hva er du i humør til?',
+    'hub.personal':         'Personlig og sosialt',
+    'hub.tonight':          'Noe for i kveld',
+    'hub.group':            'Filmkveld i gruppe',
+    'hub.surprise':         'Overrask meg',
+    'hub.personalize':      'Tilpass anbefalingene',
+    'hub.dna':              'Ditt smaks-DNA',
     'search.chips.darkThriller': 'Mørk thriller',
     'search.chips.romCom':       'Romantisk komedie',
     'search.chips.scifi':        'Episk sci-fi',
@@ -11019,6 +11245,21 @@ function closeFilters() {
   }
 }
 
+/* ─── AI Magic Hub (mobile) — mirrors the filters-drawer open/close mechanics ─── */
+function openAiHub() {
+  document.getElementById('aiHubSheet')?.classList.add('open');
+  document.getElementById('aiHubBackdrop')?.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeAiHub() {
+  document.getElementById('aiHubSheet')?.classList.remove('open');
+  document.getElementById('aiHubBackdrop')?.classList.remove('open');
+  if (!document.getElementById('overlay')?.classList.contains('open')) {
+    document.body.style.overflow = '';
+  }
+}
+function aiHubBackdropClick(e) { if (e.target === e.currentTarget) closeAiHub(); }
+
 // Live badge on the "Filters" button — counts genre / country / rating / sort deviations from default.
 function updateFilterCount() {
   let n = 0;
@@ -13710,6 +13951,49 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
     <button class="fd-apply" onclick="closeFilters()" data-i18n="filter.showResults">Show results</button>
   </div>
 </aside>
+
+<!-- ════════════ AI MAGIC HUB (mobile-only bottom sheet) ════════════
+     Consolidates every AI tool behind one launcher. Items call the same global
+     handlers used elsewhere (openVibeCheck / openWizard / setMood / …). -->
+<div class="aihub-backdrop" id="aiHubBackdrop" onclick="aiHubBackdropClick(event)"></div>
+<div class="aihub-sheet" id="aiHubSheet" role="dialog" aria-modal="true" aria-labelledby="aiHubTitle">
+  <div class="aihub-head">
+    <span class="aihub-title" id="aiHubTitle" data-i18n="hub.title">AI Magic Hub</span>
+    <button class="aihub-close" onclick="closeAiHub()" aria-label="Close">✕</button>
+  </div>
+  <div class="aihub-body">
+    <!-- Section 1: AI Search Modes -->
+    <div class="aihub-group">
+      <div class="aihub-label" data-i18n="hub.searchModes">AI Search Modes</div>
+      <button class="aihub-item" onclick="closeAiHub(); toggleDesktopVoice()">🎙️ <span data-i18n="hub.voice">Voice Search</span></button>
+      <button class="aihub-item" onclick="closeAiHub(); openVibeCheck('photo')">📸 <span data-i18n="hub.photo">Photo Vibe Check</span></button>
+      <button class="aihub-item" onclick="closeAiHub(); openVibeCheck('music')">🎵 <span data-i18n="hub.music">Music Vibe Check</span></button>
+    </div>
+    <!-- Section 2: Mood Selector (fresh copies; setMood is global-safe via _activeMoodEl) -->
+    <div class="aihub-group">
+      <div class="aihub-label" data-i18n="hub.moodTitle">What are you in the mood for?</div>
+      <div class="aihub-moods">
+        <button class="mob-mood-chip" data-modifier="mind-bending with an unexpected plot twist" onclick="setMood(this)">🤯 Mind-bending</button>
+        <button class="mob-mood-chip" data-modifier="emotionally powerful and moving, makes you cry" onclick="setMood(this)">😢 Need to cry</button>
+        <button class="mob-mood-chip" data-modifier="fun and easy to watch, crowd-pleasing entertainment" onclick="setMood(this)">🍿 Brain-off fun</button>
+        <button class="mob-mood-chip" data-modifier="tense and suspenseful, keeps you on the edge of your seat" onclick="setMood(this)">😱 Keep me awake</button>
+        <button class="mob-mood-chip" data-modifier="uplifting and feel-good, leaves you smiling" onclick="setMood(this)">❤️ Feel good</button>
+        <button class="mob-mood-chip" data-modifier="thought-provoking and philosophical, makes you reflect" onclick="setMood(this)">🧠 Deep thought</button>
+        <button class="mob-mood-chip" data-modifier="hilarious, non-stop laughs, pure comedy" onclick="setMood(this)">😂 Just laugh</button>
+        <button class="mob-mood-chip" data-modifier="world cinema or foreign language gem, international" onclick="setMood(this)">🌍 World cinema</button>
+      </div>
+    </div>
+    <!-- Section 3: Personalization & Social (all 3 header icons moved here + Personalize + DNA) -->
+    <div class="aihub-group">
+      <div class="aihub-label" data-i18n="hub.personal">Personalization &amp; Social</div>
+      <button class="aihub-item" onclick="closeAiHub(); openWizard()">🌙 <span data-i18n="hub.tonight">Find Something for Tonight</span></button>
+      <button class="aihub-item" onclick="closeAiHub(); openGroupPicker()">🍿 <span data-i18n="hub.group">Group Movie Night</span></button>
+      <button class="aihub-item" onclick="closeAiHub(); randomMovie()">🎲 <span data-i18n="hub.surprise">Surprise Me</span></button>
+      <button class="aihub-item" onclick="closeAiHub(); openOnboardQuiz()">✨ <span data-i18n="hub.personalize">Personalize Your Picks</span></button>
+      <button class="aihub-item" onclick="closeAiHub(); openTasteDna()">🧬 <span data-i18n="hub.dna">Your Taste DNA</span></button>
+    </div>
+  </div>
+</div>
 
 <!-- AI Watchlist Drawer -->
 <div class="wl-backdrop" id="wlBackdrop" onclick="closeWatchlist()"></div>
