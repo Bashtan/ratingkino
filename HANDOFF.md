@@ -2,7 +2,31 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-29) — Explicit Input Translation Step (Non-English Search Fix)
+## ⚡ Most Recent Session (2026-07-29) — Mobile "AI Magic" Hub (PREVIEW branch, NOT on main)
+
+⚠️ **This work is on branch `feat/mobile-ai-hub` only — NOT merged to `main`, NOT on production `findfilm.ai`.** Deployed to a **Cloudflare Pages preview** for review. Do not merge/production-deploy until the user approves.
+
+Restructured the **mobile (≤768px) home** to declutter it and consolidate every AI-driven tool behind a single **`[🔮 AI Magic]`** launcher (sits next to `[≡ Filters]`). Tapping it opens a **bottom-sheet hub** (`#aiHubSheet`) with 3 sections: **AI Search Modes** (Voice/Photo/Music), **Mood selector** (8 chips), **Personalization & Social** (Tonight/Group/Surprise/Personalize/DNA — all 3 former header discovery icons moved in). **Desktop is 100% untouched** — every change is gated behind `@media (max-width:768px)` and the hub is force-hidden ≥769px.
+
+| Commit | Feature |
+|--------|---------|
+| `a1e2a1d` | **Mobile AI Magic hub** (`index.html`, additive UI). **(1) Mobile-hide block** (inside `@media max-width:768px`, ~L2952): hides `.header-btns .hdr-feats`, `.hero-vp .hero-h1`+`.hero-title`, the in-search `#searchMicBtn`/`#searchPhotoBtn`/`#searchMusicBtn` (**`display:none !important`** to beat the JS-set inline `display:flex` on the mic in AI mode), and `#rowForYou .foryou-refine`; reveals `.btn-ai-magic`; tightens `.filter-row-1` (`gap:6px`, `.ct-btn`/`.btn-filters`/`.btn-ai-magic` padding) so `[Movies/TV]+[Filters]+[AI Magic]` fit 375px (no page horiz-overflow). **(2) `.btn-ai-magic`** launcher — mobile-only gradient pill (indigo→violet→cyan + violet glow), `onclick="openAiHub()"`, inserted after `.btn-filters` in `.filter-row-1`; CSS near `.btn-filters` (~L762, default `display:none`). **(3) `#aiHubBackdrop`+`#aiHubSheet`** bottom sheet (placed after the filters-drawer `</aside>`) — mirrors the filters-drawer mechanics but **slides up** (`transform:translateY(100%)→0`), z 9700/9800, `.aihub-head/.aihub-title/.aihub-close/.aihub-body/.aihub-group/.aihub-label/.aihub-item/.aihub-moods`; **desktop guard** `@media(min-width:769px){.aihub-backdrop,.aihub-sheet{display:none!important}}`. Items call existing globals (`toggleDesktopVoice`, `openVibeCheck('photo'/'music')`, `openWizard`, `openGroupPicker`, `randomMovie`, `openOnboardQuiz`, `openTasteDna`), each prefixed with `closeAiHub()`. Mood chips are **fresh copies** of the 8 `.mob-mood-chip` (data-modifier + `setMood(this)`) — safe because `setMood` keys off the global `_activeMoodEl` (no `querySelectorAll`). **(4) JS** `openAiHub`/`closeAiHub`/`aiHubBackdropClick` added beside `openFilters`/`closeFilters` (~L11124) — identical `.open` toggle + `body.overflow` lock + close-guard. **(5) i18n** `hub.*` (13 keys: `hub.btn/title/searchModes/voice/photo/music/moodTitle/personal/tonight/group/surprise/personalize/dna`) added after each dict's `'search.tryAsking'` across **all 9 languages** (en/es/fr/zh/ar/uk/de/sv/no). **Verified on preview server @375px:** hero text + search icons + header icons hidden, gradient AI Magic button shown, no page horiz-scroll; hub opens/closes via button, X, and backdrop (body.overflow restored); 3 sections + 8 items + 8 mood chips render; mood single-active toggle works; all handlers resolve; i18n renders all 9 langs incl. ar RTL; **@1280px desktop identical to before** (hdr-feats/hero/mic/photo/music visible, AI Magic + hub hidden). Console clean apart from expected static-host TMDb 404s. |
+
+**Changed this session:** `index.html` only (branch `feat/mobile-ai-hub`). New selectors: `.btn-ai-magic`, `.aihub-backdrop`/`.aihub-sheet`/`.aihub-head`/`.aihub-title`/`.aihub-close`/`.aihub-body`/`.aihub-group`/`.aihub-label`/`.aihub-item`/`.aihub-moods`. New IDs: `#aiHubSheet`/`#aiHubBackdrop`/`#aiHubTitle`. New fns: `openAiHub`/`closeAiHub`/`aiHubBackdropClick`. New i18n namespace: `hub.*` (×9 langs). No existing function/DOM logic altered — pure additive + mobile-scoped CSS.
+
+**Tailwind-equivalent docs deliverable** (for reference — the live site is vanilla CSS, no build step; these are the requested `md:` mappings):
+- **Mobile-hide originals:** add `md:flex hidden`? No — inverse: originals are `flex md:flex` by default and hidden on mobile → `max-md:hidden` (e.g. hero text/header icons/search icons/foryou buttons: `class="… max-md:hidden"`).
+- **AI Magic launcher (mobile-only):** `inline-flex md:hidden items-center gap-2 h-[30px] px-4 rounded-full text-white text-[11px] font-bold uppercase tracking-wide bg-gradient-to-r from-indigo-500 via-violet-600 to-cyan-400 border border-violet-400/55 shadow-lg shadow-violet-500/45 hover:-translate-y-px hover:shadow-violet-500/60 transition`
+- **Hub backdrop:** `fixed inset-0 z-[9700] bg-[#03020a]/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity data-[open]:opacity-100 data-[open]:pointer-events-auto md:hidden`
+- **Hub sheet:** `fixed inset-x-0 bottom-0 z-[9800] max-h-[86vh] flex flex-col bg-gray-900/95 backdrop-blur-2xl border-t border-white/10 rounded-t-3xl shadow-[0_-18px_70px_rgba(0,0,0,0.65)] translate-y-full data-[open]:translate-y-0 transition-transform duration-400 ease-out md:hidden`
+- **Hub item:** `flex items-center gap-3 w-full p-3.5 rounded-2xl bg-white/5 border border-white/10 text-gray-200 font-semibold text-sm text-left hover:bg-indigo-500/15 hover:border-indigo-500/50 transition`
+- **Mood chips wrap:** `flex flex-wrap gap-2`
+
+**Next step (pending user approval):** review the preview URL; if approved, merge `feat/mobile-ai-hub` → `main` and run the production deploy (`npx wrangler pages deploy . --project-name=ratingkino`).
+
+---
+
+## ⚡ Session (2026-07-29) — Explicit Input Translation Step (Non-English Search Fix)
 
 All commits on `main`, live on https://findfilm.ai (deployed `bc5ea1ad.ratingkino.pages.dev`). Verified live: UK & ES time-loop queries now return the correct English films.
 
