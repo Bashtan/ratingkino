@@ -297,6 +297,7 @@ async function _parseIntent(query, env) {
       'Fields: ' +
       '"clean_title_guess": if the user is searching for a specific movie title (with possible typos or in another language), normalise it to English; otherwise empty string. ' +
       '"english_keywords": core plot or vibe elements translated to English, 3-5 words max. ' +
+      '"english_query": the FULL search request faithfully translated into natural English, preserving the COMPLETE intent (plot, mood, constraints), not just keywords. If the input is already English, repeat it verbatim. ' +
       '"intent": "title_search" if they want a specific movie, "vibe_search" if describing a theme or mood, "actor_search" if the query is specifically about movies featuring a particular real actor/actress. ' +
       '"actor_name": the actor/actress\'s name in English if intent is actor_search; otherwise empty string. ' +
       '"user_language": ISO 639-1 code of the input language.';
@@ -325,6 +326,7 @@ async function _parseIntent(query, env) {
     return {
       clean_title_guess: String(parsed.clean_title_guess || '').trim(),
       english_keywords:  String(parsed.english_keywords  || '').trim(),
+      english_query:     String(parsed.english_query     || '').trim().slice(0, 300),
       intent,
       actor_name:        String(parsed.actor_name || '').trim(),
       user_language:     String(parsed.user_language     || 'en').trim().slice(0, 10),
@@ -1231,14 +1233,37 @@ async function handleAISearch(request, env, cors, waitUntil) {
     } catch {}
   }
 
+  // ── EXPLICIT INPUT TRANSLATION (multilingual → English) ────────────────
+  // Root fix for non-English search: instead of relying on the downstream
+  // curator/ranker to translate internally (inconsistent — non-English queries
+  // often fell through to the tiny KV catalog and returned poor results), we
+  // translate the query to English HERE, once, BEFORE any curation, ranking, or
+  // TMDB lookup runs. `_parseIntent` is parsed a single time and reused by the
+  // actor + LLM-first + KV paths. When the input is not English, `searchQuery`
+  // becomes the English translation; results/output stay strictly English.
+  let intent = null;
+  let searchQuery = query;                      // English query fed to EVERY search path
+  if (env.AI) {
+    intent = await _parseIntent(query, env);
+    if (intent && intent.user_language && intent.user_language !== 'en') {
+      const englishQuery =
+        (intent.english_query || intent.clean_title_guess || intent.english_keywords || '').trim();
+      if (englishQuery) searchQuery = englishQuery;
+    }
+    console.log(
+      '[ai-search] Raw query:', JSON.stringify(query),
+      '-> Translated query:', JSON.stringify(searchQuery),
+      `(lang: ${intent?.user_language || '?'})`
+    );
+  }
+
   // Actor-focused queries ("Best movies with Leonardo DiCaprio") bypass the
   // closed-world KV catalog entirely — they return real TMDB filmography data.
-  // Any failure here (intent parse, actor not found, TMDB error) falls through
-  // unchanged to the existing catalog-embedding flow below.
-  if (env.AI && env.TMDB_KEY) {
+  // Any failure here (actor not found, TMDB error) falls through unchanged to
+  // the existing catalog-embedding flow below. Reuses the intent parsed above.
+  if (env.AI && env.TMDB_KEY && intent) {
     try {
-      const intent = await _parseIntent(query, env);
-      if (intent?.intent === 'actor_search' && intent.actor_name) {
+      if (intent.intent === 'actor_search' && intent.actor_name) {
         const actorResult = await _actorMovies(intent.actor_name, env);
         if (actorResult && actorResult.movies.length) {
           const { personName, movies: actorMovies } = actorResult;
@@ -1348,7 +1373,7 @@ async function handleAISearch(request, env, cors, waitUntil) {
   // the closed-world KV catalog flow below so search never comes back empty.
   if (env.AI && env.TMDB_KEY) {
     try {
-      const { picks, suggestedRefinements, message } = await _llmFirstCuration(query, exclude, env);
+      const { picks, suggestedRefinements, message } = await _llmFirstCuration(searchQuery, exclude, env);
       if (picks.length) {
         const hydrated = await Promise.all(picks.map(async p => {
           const raw = await _tmdbFindMovie(p.title, p.year, env);
@@ -1446,7 +1471,7 @@ async function handleAISearch(request, env, cors, waitUntil) {
     : '';
 
   const userPrompt =
-    `User query: "${query}"\n\n` +
+    `User query: "${searchQuery}"\n\n` +
     exclusionBlock +
     `MANDATORY ranking order:\n` +
     `  Tier 1 — title match: if any movie title contains the query words, it MUST appear before all others.\n` +
