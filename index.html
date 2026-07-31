@@ -4236,10 +4236,22 @@ main.browse-collapsed > .load-wrap { display: none !important; }
   transition: color 0.2s, background 0.2s;
 }
 .search-mic-btn:hover { color: #a78bfa; background: rgba(124,58,237,0.12); }
-.search-mic-btn.listening { color: #ef4444; animation: micPulse 1.1s ease-in-out infinite; }
+/* Recording state must ALWAYS read red — beat the hero/hover mic-color rules
+   (.search-wrap--hero .search-mic-btn:hover is specificity 0,3,0) even mid-hover. */
+.search-mic-btn.listening,
+.search-wrap--hero .search-mic-btn.listening,
+.search-wrap--hero .search-mic-btn.listening:hover {
+  color: #ef4444; animation: micPulse 1.1s ease-in-out infinite;
+}
 @keyframes micPulse {
   0%, 100% { opacity: 1;    transform: translateY(-50%) scale(1); }
   50%      { opacity: 0.5;  transform: translateY(-50%) scale(1.22); }
+}
+/* Hero placement overrides transform (position:static) — pulse without translateY. */
+.search-wrap--hero .search-mic-btn.listening { animation: micPulseHero 1.1s ease-in-out infinite; }
+@keyframes micPulseHero {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(1.18); }
 }
 
 /* ─── First-visit onboarding overlay ──────────────────── */
