@@ -638,6 +638,64 @@ header {
 }
 .search-vibe-btn svg { width: 20px; height: 20px; }
 .search-vibe-btn:hover { color: #fff; background: rgba(99,102,241,0.16); }
+
+/* ── Voice-language selector (desktop): compact badge trigger + popover ── */
+.voice-lang-wrap { position: relative; z-index: 3; flex: none; display: none; align-items: center; }
+.search-wrap.has-mic .voice-lang-wrap { display: inline-flex; }   /* only when speech is supported */
+.voice-lang-trigger {
+  display: inline-flex; align-items: center; gap: 3px;
+  height: 26px; padding: 0 7px 0 8px;
+  background: rgba(148,163,184,0.10); border: 1px solid rgba(148,163,184,0.22);
+  border-radius: 13px; color: #cbd5e1; cursor: pointer;
+  font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: .3px;
+  transition: background .18s, border-color .18s, color .18s;
+}
+.voice-lang-trigger:hover { background: rgba(99,102,241,0.18); border-color: rgba(129,140,248,0.55); color: #fff; }
+.vl-badge-trigger { line-height: 1; }
+.vl-caret { opacity: .7; transition: transform .2s; }
+.voice-lang-wrap.open .vl-caret { transform: rotate(180deg); }
+.voice-lang-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 60;
+  width: 220px; max-height: 320px; overflow-y: auto;
+  background: linear-gradient(180deg, rgba(24,22,44,.98) 0%, rgba(14,13,28,.99) 100%);
+  border: 1px solid rgba(255,255,255,.1); border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  padding: 8px; opacity: 0; transform: translateY(-6px) scale(.98);
+  pointer-events: none; transition: opacity .18s, transform .18s;
+}
+.voice-lang-wrap.open .voice-lang-menu { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.vl-menu-title {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: #94a3b8; padding: 4px 8px 8px; font-family: 'Montserrat', sans-serif;
+}
+.vl-menu-list { display: flex; flex-direction: column; gap: 2px; }
+.vl-opt {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 10px; border-radius: 9px; border: 1px solid transparent;
+  background: transparent; color: #e5e7eb; cursor: pointer; text-align: left;
+  font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 500;
+  transition: background .14s, border-color .14s;
+}
+.vl-opt:hover { background: rgba(99,102,241,0.14); }
+.vl-opt.active { background: rgba(99,102,241,0.20); border-color: rgba(129,140,248,0.55); }
+.vl-badge {
+  flex: none; min-width: 30px; text-align: center;
+  font-size: 10px; font-weight: 800; letter-spacing: .5px; color: #a5b4fc;
+  background: rgba(99,102,241,0.16); border-radius: 6px; padding: 3px 4px;
+}
+.vl-native { flex: 1; }
+/* Lift the whole search bar above the sticky filters-bar (z:99) while the popover is
+   open, so the menu isn't clipped behind it. Scoped to the open state only. */
+#searchWrap:has(.voice-lang-wrap.open) { z-index: 250; }
+/* Mobile: the hero search bar is shared, so the selector lives here too — just made
+   ultra-compact (badge only, no caret) and the icon row is tightened a touch so the
+   crowded row still fits down to ~360px phones. */
+@media (max-width: 768px) {
+  .search-wrap--hero { gap: 3px; }
+  .voice-lang-trigger { height: 28px; padding: 0 5px; gap: 0; font-size: 10.5px; }
+  .voice-lang-trigger .vl-caret { display: none; }
+  .voice-lang-menu { width: 200px; }
+}
 .search-wrap--hero .search-icon {
   position: static; transform: none; flex: none;
   width: 18px; height: 18px; margin-right: 4px;
@@ -4694,6 +4752,17 @@ if ('serviceWorker' in navigator) {
         <path d="M18.5 2.2l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7z" fill="currentColor" stroke="none"/>
       </svg>
     </button>
+    <!-- Spoken-language selector: pick which language you'll SPEAK; sets recognition.lang -->
+    <div class="voice-lang-wrap" id="voiceLangWrap">
+      <button class="voice-lang-trigger" type="button" onclick="toggleVoiceLangMenu(event)" aria-label="Choose voice language" data-i18n-aria="voicelang.title" title="Voice language">
+        <span class="vl-badge-trigger" id="voiceLangBadge">🌐</span>
+        <svg class="vl-caret" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="voice-lang-menu" id="voiceLangMenuBox" role="listbox" aria-label="Voice language">
+        <div class="vl-menu-title" data-i18n="voicelang.title">Language you'll speak</div>
+        <div class="vl-menu-list" id="voiceLangMenu"></div>
+      </div>
+    </div>
     <!-- Vibe Check: photo (camera) — opens the Photo Vibe modal -->
     <button class="search-vibe-btn" id="searchPhotoBtn" type="button" onclick="openVibeCheck('photo')" aria-label="Photo vibe search" data-i18n-title="vibe.photoTip" data-i18n-aria="vibe.photoTip">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -5600,6 +5669,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   'No exact match found for',
     'search.noMatchHint':  'Check out these titles instead.',
     'search.listening':    'Listening…',
+    'voicelang.title':     'Language you\'ll speak',
     'search.micDenied':    'Mic permission denied — type your search',
     // Animated placeholder cycling strings
     'search.ph0':          'Describe a movie in your own words…',
@@ -5930,6 +6000,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   'No se encontró coincidencia exacta para',
     'search.noMatchHint':  'Mira estos títulos en su lugar.',
     'search.listening':    'Escuchando…',
+    'voicelang.title':     'Idioma que hablarás',
     'search.micDenied':    'Micrófono denegado — escribe tu búsqueda',
     'search.ph0':          'Busca por título, género o año…',
     'search.ph1':          "Prueba: 'Una película en el espacio con Matthew McConaughey'",
@@ -6244,6 +6315,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   'Aucune correspondance exacte pour',
     'search.noMatchHint':  'Découvrez ces titres à la place.',
     'search.listening':    'Écoute…',
+    'voicelang.title':     'Langue que vous parlerez',
     'search.micDenied':    'Microphone refusé — tapez votre recherche',
     'search.ph0':          'Cherchez par titre, genre ou année…',
     'search.ph1':          "Essayez : 'Un film sur l'espace avec Matthew McConaughey'",
@@ -6558,6 +6630,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   '未找到精确匹配：',
     'search.noMatchHint':  '看看这些推荐标题。',
     'search.listening':    '正在聆听…',
+    'voicelang.title':     '你说的语言',
     'search.micDenied':    '麦克风权限被拒绝 — 请键入搜索内容',
     'search.ph0':          '按标题、类型或年份搜索…',
     'search.ph1':          "试试：'一部关于太空的电影，主演马修·麦康纳'",
@@ -6872,6 +6945,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   'لم يتم العثور على تطابق دقيق لـ',
     'search.noMatchHint':  'اطّلع على هذه العناوين بدلاً من ذلك.',
     'search.listening':    'جارٍ الاستماع…',
+    'voicelang.title':     'اللغة التي ستتحدث بها',
     'search.micDenied':    'تم رفض إذن الميكروفون — اكتب بحثك',
     'search.ph0':          'ابحث بالعنوان أو النوع أو السنة…',
     'search.ph1':          "جرّب: 'فيلم عن الفضاء مع ماثيو ماكونهي'",
@@ -7187,6 +7261,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   'Точних збігів не знайдено для',
     'search.noMatchHint':  'Перегляньте ці назви натомість.',
     'search.listening':    'Слухаю…',
+    'voicelang.title':     'Мова, якою ви говоритимете',
     'search.micDenied':    'Мікрофон заблоковано — введіть пошук вручну',
     'search.ph0':          'Опишіть фільм своїми словами…',
     'search.ph1':          "Спробуй: 'Фільм про космос з Меттью МакКонахі'",
@@ -7530,6 +7605,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   'Kein exakter Treffer für',
     'search.noMatchHint':  'Schau dir stattdessen diese Titel an.',
     'search.listening':    'Höre zu …',
+    'voicelang.title':     'Sprache, die du sprichst',
     'search.micDenied':    'Mikrofonzugriff verweigert – tippe deine Suche',
     'search.ph0':          'Beschreibe einen Film mit eigenen Worten …',
     'search.ph1':          'Versuch: „Ein Film über das Weltall mit Matthew McConaughey“',
@@ -7868,6 +7944,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   'Ingen exakt träff för',
     'search.noMatchHint':  'Kolla in de här titlarna istället.',
     'search.listening':    'Lyssnar …',
+    'voicelang.title':     'Språk du talar',
     'search.micDenied':    'Mikrofon nekades – skriv din sökning',
     'search.ph0':          'Beskriv en film med egna ord …',
     'search.ph1':          'Prova: ”En film om rymden med Matthew McConaughey”',
@@ -8206,6 +8283,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   'Ingen eksakt treff for',
     'search.noMatchHint':  'Sjekk ut disse titlene i stedet.',
     'search.listening':    'Lytter …',
+    'voicelang.title':     'Språket du snakker',
     'search.micDenied':    'Mikrofontilgang avslått – skriv søket ditt',
     'search.ph0':          'Beskriv en film med egne ord …',
     'search.ph1':          'Prøv: «En film om verdensrommet med Matthew McConaughey»',
@@ -13307,17 +13385,111 @@ function stopMobPlaceholder() {
 // ─── VOICE SEARCH ──────────────────────────────────
 let _recognition = null, _isListening = false, _finalTranscript = '';
 
-// Voice recognition locale is DECOUPLED from the site's UI language. We use the
-// user's real browser/system locale (navigator.language) so someone can speak
-// Ukrainian, Spanish, etc. even when the interface is set to English. The backend
-// intent step translates ANY spoken language to English, so recognition only has
-// to transcribe the user's actual spoken tongue accurately — the UI locale is
-// irrelevant to what they say out loud.
-function _voiceLang() {
+// Voice recognition locale is DECOUPLED from the site's UI language. The user picks
+// the language they'll SPEAK in via a dedicated selector (default = their real
+// browser/system locale) so someone can speak Ukrainian, Spanish, Chinese, etc. even
+// when the interface is set to English. The backend intent step translates ANY spoken
+// language to English, so recognition only has to transcribe the user's actual spoken
+// tongue accurately — the UI locale is irrelevant to what they say out loud.
+//
+// Each entry: code (persisted key), short badge, BCP-47 tag for SpeechRecognition.lang,
+// and the native language name shown in the menu. 'auto' = follow navigator.language.
+const VOICE_LANGS = [
+  { code: 'auto', badge: 'AUTO', bcp: '',      native: 'Browser Default' },
+  { code: 'en',   badge: 'EN',   bcp: 'en-US', native: 'English' },
+  { code: 'es',   badge: 'ES',   bcp: 'es-ES', native: 'Español' },
+  { code: 'uk',   badge: 'UK',   bcp: 'uk-UA', native: 'Українська' },
+  { code: 'zh',   badge: 'ZH',   bcp: 'zh-CN', native: '中文' },
+  { code: 'de',   badge: 'DE',   bcp: 'de-DE', native: 'Deutsch' },
+  { code: 'fr',   badge: 'FR',   bcp: 'fr-FR', native: 'Français' },
+  { code: 'hi',   badge: 'HI',   bcp: 'hi-IN', native: 'हिन्दी' },
+  { code: 'ar',   badge: 'AR',   bcp: 'ar-SA', native: 'العربية' },
+  { code: 'ja',   badge: 'JA',   bcp: 'ja-JP', native: '日本語' },
+  { code: 'ko',   badge: 'KO',   bcp: 'ko-KR', native: '한국어' },
+  { code: 'pt',   badge: 'PT',   bcp: 'pt-BR', native: 'Português' },
+  { code: 'ru',   badge: 'RU',   bcp: 'ru-RU', native: 'Русский' },
+  { code: 'it',   badge: 'IT',   bcp: 'it-IT', native: 'Italiano' }
+];
+
+// Last spoken-language choice persists across sessions.
+let _voiceLangPref = (function() {
+  try { return localStorage.getItem('ff_voice_lang') || 'auto'; }
+  catch(e) { return 'auto'; }
+})();
+
+function _browserVoiceLang() {
   return navigator.language
       || (navigator.languages && navigator.languages[0])
       || 'en-US';
 }
+
+// Resolve the BCP-47 tag to hand SpeechRecognition, honouring the user's pick.
+function _voiceLang() {
+  if (_voiceLangPref && _voiceLangPref !== 'auto') {
+    const hit = VOICE_LANGS.find(l => l.code === _voiceLangPref);
+    if (hit && hit.bcp) return hit.bcp;
+  }
+  return _browserVoiceLang();
+}
+
+// User selected a spoken language from a selector. Persist it, refresh both selectors,
+// and — if we're mid-listening — restart recognition so the new locale takes effect.
+function setVoiceLang(code) {
+  _voiceLangPref = code || 'auto';
+  try { localStorage.setItem('ff_voice_lang', _voiceLangPref); } catch(e) {}
+  _syncVoiceLangUI();
+  closeVoiceLangMenu();
+  if (_isListening && _recognition) {
+    // Bounce recognition; the shared onend fires but we swallow the auto-submit
+    // because there's no transcript yet, then reopen with the new .lang.
+    const wasDesktop = _recognition._ffDesktop;
+    _recognition._ffSwitch = true;
+    try { _recognition.stop(); } catch(e) {}
+    setTimeout(() => { wasDesktop ? toggleDesktopVoice() : toggleVoiceSearch(); }, 150);
+  }
+}
+
+// Human label for the current pick (badge for pills, native for menu rows).
+function _voiceLangEntry() {
+  return VOICE_LANGS.find(l => l.code === _voiceLangPref) || VOICE_LANGS[0];
+}
+
+// Build the selector's option list once, then reflect the active choice.
+function _renderVoiceLangOptions() {
+  const menu = document.getElementById('voiceLangMenu');
+  if (menu) {
+    menu.innerHTML = VOICE_LANGS.map(l =>
+      `<button type="button" class="vl-opt" data-vl="${l.code}" onclick="setVoiceLang('${l.code}')">`
+      + `<span class="vl-badge">${l.badge}</span><span class="vl-native">${l.native}</span></button>`
+    ).join('');
+  }
+  _syncVoiceLangUI();
+}
+
+function _syncVoiceLangUI() {
+  const entry = _voiceLangEntry();
+  // Trigger badge (globe for Browser Default, 2-letter code otherwise)
+  const trig = document.getElementById('voiceLangBadge');
+  if (trig) trig.textContent = entry.code === 'auto' ? '🌐' : entry.badge;
+  // Active state on the open menu's rows
+  document.querySelectorAll('.vl-opt').forEach(b =>
+    b.classList.toggle('active', b.dataset.vl === _voiceLangPref));
+}
+
+function toggleVoiceLangMenu(e) {
+  if (e) e.stopPropagation();
+  const m = document.getElementById('voiceLangWrap');
+  if (m) m.classList.toggle('open');
+}
+function closeVoiceLangMenu() {
+  const m = document.getElementById('voiceLangWrap');
+  if (m) m.classList.remove('open');
+}
+// Close the desktop popover on any outside click.
+document.addEventListener('click', e => {
+  const w = document.getElementById('voiceLangWrap');
+  if (w && w.classList.contains('open') && !w.contains(e.target)) closeVoiceLangMenu();
+});
 
 // Detect speech support once; show mic buttons only if supported
 (function detectSpeech() {
@@ -13327,6 +13499,7 @@ function _voiceLang() {
     if (sw) sw.classList.add('has-mic');
     const dm = document.getElementById('searchMicBtn');
     if (dm) dm.style.display = 'flex';
+    _renderVoiceLangOptions();   // build both spoken-language selectors + reflect saved pick
   }
 })();
 
@@ -13342,7 +13515,8 @@ function toggleVoiceSearch() {
   if (!SR) return;
 
   _recognition = new SR();
-  _recognition.lang = _voiceLang();       // user's system locale, NOT the site UI language
+  _recognition._ffDesktop = false;
+  _recognition.lang = _voiceLang();       // user's PICKED spoken language (or browser default)
   _recognition.interimResults = true;     // live-update the field as the user speaks
   _recognition.maxAlternatives = 1;
   _recognition.continuous = false;        // single utterance → crisp final capture
@@ -13369,6 +13543,8 @@ function toggleVoiceSearch() {
     document.getElementById('mobAiInputWrap').classList.toggle('has-value', !!display);
   };
   _recognition.onend = () => {
+    // Language switch mid-listen: swallow this end; setVoiceLang reopens with new .lang.
+    if (_recognition && _recognition._ffSwitch) { _stopListening(); return; }
     _stopListening();
     const inp = document.getElementById('mobSearchInput');
     const spoken = (_finalTranscript || inp.value).trim();
@@ -13404,7 +13580,8 @@ function toggleDesktopVoice() {
   if (!SR) return;
 
   _recognition = new SR();
-  _recognition.lang = _voiceLang();       // user's system locale, NOT the site UI language
+  _recognition._ffDesktop = true;
+  _recognition.lang = _voiceLang();       // user's PICKED spoken language (or browser default)
   _recognition.interimResults = true;     // live-update the field as the user speaks
   _recognition.maxAlternatives = 1;
   _recognition.continuous = false;        // single utterance → crisp final capture
@@ -13433,6 +13610,8 @@ function toggleDesktopVoice() {
     }
   };
   _recognition.onend = () => {
+    // Language switch mid-listen: swallow this end; setVoiceLang reopens with new .lang.
+    if (_recognition && _recognition._ffSwitch) { _isListening = false; if (micBtn) micBtn.classList.remove('listening'); return; }
     _isListening = false;
     if (micBtn) micBtn.classList.remove('listening');
     const spoken = (_finalTranscript || (inp ? inp.value : '')).trim();
