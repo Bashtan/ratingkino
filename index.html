@@ -846,6 +846,91 @@ header {
 }
 .fd-apply:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99,102,241,0.5); }
 
+/* ═══════════ AI RESULTS MODAL ═══════════ */
+/* Dedicated overlay for semantic search results. Desktop: centred card over a
+   dimmed/blurred feed. Mobile: bottom sheet. z-index 150 keeps it below the movie
+   detail modal (#overlay @200) so a result card opens details on top of it. */
+.airx-backdrop {
+  position: fixed; inset: 0; z-index: 150;
+  background: rgba(4,2,14,0.72);
+  backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px);
+  opacity: 0; pointer-events: none; transition: opacity .3s ease;
+}
+.airx-backdrop.open { opacity: 1; pointer-events: auto; }
+.airx-modal {
+  position: fixed; z-index: 151;
+  top: 50%; left: 50%; transform: translate(-50%, -48%) scale(.97);
+  width: min(1120px, 94vw); max-height: 88vh;
+  display: flex; flex-direction: column;
+  background: linear-gradient(180deg, rgba(22,18,44,0.97) 0%, rgba(12,9,26,0.98) 100%);
+  backdrop-filter: blur(26px) saturate(1.4); -webkit-backdrop-filter: blur(26px) saturate(1.4);
+  border: 1px solid rgba(129,140,248,0.28);
+  border-radius: 24px;
+  box-shadow: 0 40px 120px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04) inset;
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s ease, transform .35s cubic-bezier(.22,1,.36,1);
+}
+.airx-modal.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+.airx-head {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 22px 26px 10px;
+}
+.airx-head-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.airx-eyebrow {
+  font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700;
+  letter-spacing: 1.4px; text-transform: uppercase;
+  color: #a5b4fc;
+}
+.airx-title {
+  font-family: 'Montserrat', sans-serif; font-size: 21px; font-weight: 800;
+  color: #fff; line-height: 1.25;
+  overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.airx-close {
+  flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.6); font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .18s, color .18s, transform .18s;
+}
+.airx-close:hover { background: rgba(239,68,68,0.2); color: #fff; transform: rotate(90deg); }
+.airx-summary {
+  padding: 0 26px 6px; min-height: 20px;
+  font-family: 'Inter', sans-serif; font-size: 13.5px; color: #c7d2fe; font-weight: 500;
+}
+.airx-body { overflow-y: auto; padding: 14px 26px 22px; flex: 1; }
+.airx-grid { min-height: 200px; }
+.airx-empty { display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 48px 20px; text-align: center; }
+.airx-empty.show { display: flex; }
+.airx-empty-icon { font-size: 40px; }
+.airx-empty-title { font-family: 'Montserrat', sans-serif; font-size: 17px; font-weight: 700; color: #fff; }
+.airx-empty-sub { font-size: 13px; color: #9ca3af; max-width: 340px; }
+.airx-followups { padding: 0 26px; }
+.airx-followups:empty { display: none; }
+.airx-followups .ai-sug-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase;
+  color: #94a3b8; font-family: 'Montserrat', sans-serif; margin-bottom: 8px;
+}
+.airx-foot-space { height: 14px; }
+body.airx-open { overflow: hidden; }
+@media (max-width: 768px) {
+  .airx-modal {
+    top: auto; bottom: 0; left: 0;
+    transform: translateY(100%); width: 100%; max-height: 90vh;
+    border-radius: 22px 22px 0 0;
+    border: none; border-top: 1px solid rgba(129,140,248,0.28);
+  }
+  .airx-modal.open { transform: translateY(0); }
+  .airx-head { padding: 18px 18px 8px; }
+  .airx-title { font-size: 18px; }
+  .airx-summary { padding: 0 18px 4px; }
+  .airx-body { padding: 12px 16px 20px; }
+  .airx-followups { padding: 0 18px; }
+  .airx-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+}
+
 /* ─── FILTER BAR (Netflix-style) ─────────────── */
 .filters-bar {
   position: sticky; top: 64px; z-index: 99;
@@ -5446,6 +5531,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Search',
     'search.mood':          'Mood',
     'search.tryAsking':     'Try asking:',
+    'results.eyebrow':      '✦ AI Results for',
+    'results.close':        'Close',
+    'results.thinking':     'Finding your films…',
+    'results.refine':       'Refine your search',
+    'results.closest':      'Here are the closest matches we could find.',
+    'results.errorTitle':   'Something went sideways',
+    'results.errorSub':     "We couldn't reach the AI just now. Give it another try.",
+    'results.retry':        'Try Again',
     'search.chips.darkThriller': 'Dark thriller',
     'search.chips.romCom':       'Rom-com',
     'search.chips.scifi':        'Epic sci-fi',
@@ -5788,6 +5881,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Buscar',
     'search.mood':          'Estado de ánimo',
     'search.tryAsking':     'Prueba preguntar:',
+    'results.eyebrow':      '✦ Resultados IA para',
+    'results.close':        'Cerrar',
+    'results.thinking':     'Buscando tus películas…',
+    'results.refine':       'Afina tu búsqueda',
+    'results.closest':      'Estas son las coincidencias más cercanas que encontramos.',
+    'results.errorTitle':   'Algo salió mal',
+    'results.errorSub':     'No pudimos contactar con la IA. Inténtalo de nuevo.',
+    'results.retry':        'Reintentar',
     'search.chips.darkThriller': 'Thriller oscuro',
     'search.chips.romCom':       'Comedia romántica',
     'search.chips.scifi':        'Ciencia ficción',
@@ -6094,6 +6195,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Rechercher',
     'search.mood':          'Ambiance',
     'search.tryAsking':     'Essayez de demander :',
+    'results.eyebrow':      '✦ Résultats IA pour',
+    'results.close':        'Fermer',
+    'results.thinking':     'Recherche de vos films…',
+    'results.refine':       'Affinez votre recherche',
+    'results.closest':      'Voici les correspondances les plus proches trouvées.',
+    'results.errorTitle':   'Un souci est survenu',
+    'results.errorSub':     "Impossible de joindre l'IA pour l'instant. Réessayez.",
+    'results.retry':        'Réessayer',
     'search.chips.darkThriller': 'Thriller sombre',
     'search.chips.romCom':       'Comédie romantique',
     'search.chips.scifi':        'Sci-fi épique',
@@ -6400,6 +6509,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       '搜索',
     'search.mood':          '心情',
     'search.tryAsking':     '试着问一问：',
+    'results.eyebrow':      '✦ AI 结果：',
+    'results.close':        '关闭',
+    'results.thinking':     '正在为你寻找影片…',
+    'results.refine':       '优化你的搜索',
+    'results.closest':      '这些是我们能找到的最接近的结果。',
+    'results.errorTitle':   '出了点问题',
+    'results.errorSub':     '暂时无法连接 AI，请再试一次。',
+    'results.retry':        '再试一次',
     'search.chips.darkThriller': '黑暗惊悚',
     'search.chips.romCom':       '浪漫喜剧',
     'search.chips.scifi':        '科幻史诗',
@@ -6706,6 +6823,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       'بحث',
     'search.mood':          'المزاج',
     'search.tryAsking':     'جرب السؤال عن:',
+    'results.eyebrow':      '✦ نتائج الذكاء الاصطناعي لـ',
+    'results.close':        'إغلاق',
+    'results.thinking':     'نبحث عن أفلامك…',
+    'results.refine':       'حسّن بحثك',
+    'results.closest':      'إليك أقرب النتائج التي وجدناها.',
+    'results.errorTitle':   'حدث خطأ ما',
+    'results.errorSub':     'تعذّر الوصول إلى الذكاء الاصطناعي الآن. حاول مرة أخرى.',
+    'results.retry':        'حاول مجددًا',
     'search.chips.darkThriller': 'إثارة مظلمة',
     'search.chips.romCom':       'كوميديا رومانسية',
     'search.chips.scifi':        'خيال علمي ملحمي',
@@ -7013,6 +7138,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Пошук',
     'search.mood':          'Настрій',
     'search.tryAsking':     'Спробуй запитати:',
+    'results.eyebrow':      '✦ Результати ШІ для',
+    'results.close':        'Закрити',
+    'results.thinking':     'Шукаємо твої фільми…',
+    'results.refine':       'Уточни свій пошук',
+    'results.closest':      'Ось найближчі збіги, які ми знайшли.',
+    'results.errorTitle':   'Щось пішло не так',
+    'results.errorSub':     'Не вдалося зʼєднатися з ШІ. Спробуй ще раз.',
+    'results.retry':        'Спробувати ще раз',
     'search.chips.darkThriller': 'Темний трилер',
     'search.chips.romCom':       'Ромком',
     'search.chips.scifi':        'Фантастика',
@@ -7337,6 +7470,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Suchen',
     'search.mood':          'Stimmung',
     'search.tryAsking':     'Frag doch mal:',
+    'results.eyebrow':      '✦ KI-Ergebnisse für',
+    'results.close':        'Schließen',
+    'results.thinking':     'Wir suchen deine Filme…',
+    'results.refine':       'Verfeinere deine Suche',
+    'results.closest':      'Hier sind die nächstgelegenen Treffer, die wir gefunden haben.',
+    'results.errorTitle':   'Da ist etwas schiefgelaufen',
+    'results.errorSub':     'Die KI ist gerade nicht erreichbar. Versuch es noch mal.',
+    'results.retry':        'Erneut versuchen',
     'search.chips.darkThriller': 'Düsterer Thriller',
     'search.chips.romCom':       'Romantische Komödie',
     'search.chips.scifi':        'Epische Sci-Fi',
@@ -7667,6 +7808,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Sök',
     'search.mood':          'Känsla',
     'search.tryAsking':     'Prova att fråga:',
+    'results.eyebrow':      '✦ AI-resultat för',
+    'results.close':        'Stäng',
+    'results.thinking':     'Letar efter dina filmer…',
+    'results.refine':       'Förfina din sökning',
+    'results.closest':      'Här är de närmaste träffarna vi kunde hitta.',
+    'results.errorTitle':   'Något gick snett',
+    'results.errorSub':     'Vi kunde inte nå AI:n just nu. Försök igen.',
+    'results.retry':        'Försök igen',
     'search.chips.darkThriller': 'Mörk thriller',
     'search.chips.romCom':       'Romantisk komedi',
     'search.chips.scifi':        'Episk sci-fi',
@@ -7997,6 +8146,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Søk',
     'search.mood':          'Stemning',
     'search.tryAsking':     'Prøv å spørre:',
+    'results.eyebrow':      '✦ AI-resultater for',
+    'results.close':        'Lukk',
+    'results.thinking':     'Finner filmene dine…',
+    'results.refine':       'Forfin søket ditt',
+    'results.closest':      'Her er de nærmeste treffene vi fant.',
+    'results.errorTitle':   'Noe gikk galt',
+    'results.errorSub':     'Vi fikk ikke kontakt med AI-en nå. Prøv igjen.',
+    'results.retry':        'Prøv igjen',
     'search.chips.darkThriller': 'Mørk thriller',
     'search.chips.romCom':       'Romantisk komedie',
     'search.chips.scifi':        'Episk sci-fi',
@@ -10375,25 +10532,114 @@ function vibeSearch(text) {
   aiSearch(q);
 }
 
-/* Main AI search function */
-async function aiSearch(query) {
-  AI_SEARCH_ACTIVE = true;
-  clearFollowUps();
+/* ═══════════════════════════════════
+   AI RESULTS MODAL — dedicated overlay
+   Renders semantic-search results in a centred card (desktop) / bottom sheet
+   (mobile) that floats ABOVE the feed. The feed is never replaced or hidden,
+   so closing the modal returns the user exactly where they were.
+═══════════════════════════════════ */
+function openAiResults(query) {
+  const titleEl = document.getElementById('aiResultsTitle');
+  if (titleEl) titleEl.textContent = query || '';
+  document.getElementById('aiResultsSummary').textContent = t('results.thinking');
+  document.getElementById('aiResultsFollowups').innerHTML = '';
+  document.getElementById('aiResultsEmpty').classList.remove('show');
+  document.getElementById('aiResultsGrid').innerHTML =
+    Array(8).fill(null).map(skeletonCard).join('');
+  document.getElementById('aiResultsBackdrop').classList.add('open');
+  document.getElementById('aiResultsModal').classList.add('open');
+  document.body.classList.add('airx-open');
+  const body = document.getElementById('aiResultsBody');
+  if (body) body.scrollTop = 0;
+}
+
+function closeAiResults() {
+  document.getElementById('aiResultsModal').classList.remove('open');
+  document.getElementById('aiResultsBackdrop').classList.remove('open');
+  document.body.classList.remove('airx-open');
+  // Only fully release the scroll lock if the detail modal isn't stacked on top.
+  if (!document.getElementById('overlay')?.classList.contains('open')) {
+    document.body.style.overflow = '';
+  }
   _aiMatchScores.clear();
   _aiMatchReasons.clear();
   _aiMatchTags.clear();
   _aiVibeTags.clear();
-  document.getElementById('searchWrap').classList.add('ai-active');
-  document.getElementById('feedSections').style.display = 'none';
-  applyBrowseCollapse(); // AI results always use the full grid
-  showSkeletons(12);
-  showAIBanner('', true); // triggers startThinkingText()
+}
+
+function aiResultsBackdropClick(e) {
+  if (e.target === e.currentTarget) closeAiResults();
+}
+
+function renderAiResults(results) {
+  const grid  = document.getElementById('aiResultsGrid');
+  const empty = document.getElementById('aiResultsEmpty');
+  empty.classList.remove('show');
+  if (!results.length) { grid.innerHTML = ''; showAiResultsError(); return; }
+  grid.innerHTML = results.map(renderCardHTML).join('');
+}
+
+function renderAiFollowUps(query, dynamicChips) {
+  const el = document.getElementById('aiResultsFollowups');
+  if (!el) return;
+  const chips = (Array.isArray(dynamicChips) && dynamicChips.length)
+    ? dynamicChips.slice(0, 4)
+    : _followUpPool(query).slice(0, 4);
+  if (!chips.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="ai-sug-label">${esc(t('results.refine'))}</div>
+    <div class="ai-sug-chips">${chips.map((c, i) =>
+      `<button class="ai-sug-chip" style="animation-delay:${i*65}ms"
+         onclick="applyFollowUp(this.dataset.q)" data-q="${esc(c)}">↺ ${esc(c)}</button>`
+    ).join('')}</div><div class="airx-foot-space"></div>`;
+}
+
+function showAiResultsError() {
+  document.getElementById('aiResultsGrid').innerHTML = '';
+  document.getElementById('aiResultsSummary').textContent = '';
+  document.getElementById('aiResultsEmpty').classList.add('show');
+  const retry = document.getElementById('aiResultsRetry');
+  if (retry) retry.onclick = () =>
+    aiSearch(_lastQuery || (document.getElementById('searchInput')?.value || '').trim());
+}
+
+/* Pure keyword ranker (no side effects) — client-side safety net that fills the
+   modal from the local cache when /api/ai-search is unreachable. */
+function _keywordResultsForModal(query) {
+  const q     = (query || '').toLowerCase().trim();
+  const words = q.split(/\s+/).filter(Boolean);
+  if (!words.length || !CACHE_MOVIES.length) return [];
+  const score = m => {
+    const ts = _titleMatchScore(m, q, words);
+    if (ts > 0) return 500 + ts * 10;
+    const desc = (m.desc || '').toLowerCase();
+    if (words.every(w => desc.includes(w))) return 300;
+    if (words.some(w  => desc.includes(w))) return 200;
+    const hay = ((m.genres || []).join(' ') + ' ' + (m.director || '') + ' ' +
+                 (m.actors || []).join(' ')).toLowerCase();
+    if (words.some(w => hay.includes(w))) return 100;
+    return 0;
+  };
+  return CACHE_MOVIES.map(m => ({ m, s: score(m) }))
+    .filter(x => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 18).map(x => x.m);
+}
+
+/* Main AI search — routes every query through the backend's English intent
+   translation + never-empty guarantee, then renders into the AI Results modal. */
+async function aiSearch(query) {
+  query = (query || '').trim();
+  if (!query) return;
+  _lastQuery = query;
+  _aiMatchScores.clear();
+  _aiMatchReasons.clear();
+  _aiMatchTags.clear();
+  _aiVibeTags.clear();
+  openAiResults(query);
 
   const { cleanQuery, exclude } = parseVibeQuery(query);
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 12000);
 
     const r = await fetch('/api/ai-search', {
       method:  'POST',
@@ -10406,106 +10652,72 @@ async function aiSearch(query) {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
 
-    // Open-world results return real TMDB movie objects directly — bypasses the
-    // closed-world CACHE_MOVIES filtering below entirely. Two flavours:
-    //   • actorQuery — an actor's filmography ("movies with DiCaprio").
-    //   • aiCurated  — LLM-First "By Plot" curation: the model names real films
-    //     from its own deep knowledge, hydrated via TMDB (open-world vibe search).
+    // Header shows the ENGLISH translated intent the backend actually searched on.
+    const headerQuery = data.translatedQuery || query;
+    const titleEl = document.getElementById('aiResultsTitle');
+    if (titleEl) titleEl.textContent = headerQuery;
+
+    // ── Open-world path: actor filmography or LLM-curated real films ──
     if ((data.actorQuery || data.aiCurated) && data.movies?.length) {
       data.movies.forEach(raw => {
         if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromTMDb(raw));
       });
       const results = data.movies.map(raw => MOVIES.find(x => x.id === raw.id)).filter(Boolean);
 
-      MOVIES      = results;
-      TOTAL_COUNT = results.length;
-      _lastQuery  = query;
-
-      _aiMatchScores.clear();
-      _aiMatchReasons.clear();
-      _aiMatchTags.clear();
-      _aiVibeTags.clear();
-      Object.entries(data.reasons || {}).forEach(([id, reason]) => _aiMatchReasons.set(Number(id), reason));
-      Object.entries(data.tags || {}).forEach(([id, arr]) => _aiMatchTags.set(Number(id), arr));
+      Object.entries(data.reasons  || {}).forEach(([id, v]) => _aiMatchReasons.set(Number(id), v));
+      Object.entries(data.tags     || {}).forEach(([id, v]) => _aiMatchTags.set(Number(id), v));
       Object.entries(data.vibeTags || {}).forEach(([id, v]) => _aiVibeTags.set(Number(id), v));
 
-      const banner = document.getElementById('aiBanner');
-      banner.classList.remove('loading');
-      if (data.actorQuery) {
-        typewriterBanner(t('ai.foundForActor', { name: data.personName }));
-      } else {
-        const n = results.length;
-        typewriterBanner(
-          data.message
-            ? '✦ ' + data.message
-            : (n === 1 ? t('ai.found', { n, q: query }) : t('ai.foundPlural', { n, q: query }))
-        );
-      }
-
-      renderGrid(results, false);
-      document.getElementById('countTotal').textContent = results.length.toLocaleString();
-
-      setTimeout(() => renderFollowUps(query, data.suggestedRefinements), 600);
+      renderAiResults(results);
+      const n = results.length;
+      const summary = data.actorQuery
+        ? t('ai.foundForActor', { name: data.personName })
+        : (data.message || (n === 1 ? t('ai.found', { n, q: headerQuery })
+                                    : t('ai.foundPlural', { n, q: headerQuery })));
+      document.getElementById('aiResultsSummary').textContent = '✦ ' + summary;
+      renderAiFollowUps(query, data.suggestedRefinements);
       return;
     }
 
+    // ── Closed-world path: KV catalog reorder ──
     const { ids, reasons, tags, suggestedRefinements, message } = data;
-
     if (!ids || !ids.length) throw new Error('Empty AI response');
 
-    // Reorder CACHE_MOVIES to match AI ranking
     const idOrder = new Map(ids.map((id, i) => [id, i]));
     const aiRanked = CACHE_MOVIES
       .filter(m => idOrder.has(m.id))
       .sort((a, b) => idOrder.get(a.id) - idOrder.get(b.id));
-
-    // Client-side title boost: guarantee title matches surface above desc/theme matches.
-    // Stable sort — within each tier, LLM order is preserved.
     const results = titleBoostResults(aiRanked, query);
 
-    MOVIES      = results;
-    TOTAL_COUNT = CACHE_MOVIES.length;
-    _lastQuery  = query;
+    // Union into MOVIES (no clobber) so result cards resolve via openMovie().
+    results.forEach(m => { if (!MOVIES.find(x => x.id === m.id)) MOVIES.push(m); });
 
-    // Build per-card match scores + "why recommended" reasons before rendering
     buildMatchScores(results);
-    _aiMatchReasons.clear();
-    if (reasons) {
-      Object.entries(reasons).forEach(([id, reason]) => _aiMatchReasons.set(Number(id), reason));
-    }
-    _aiMatchTags.clear();
-    if (tags) {
-      Object.entries(tags).forEach(([id, arr]) => _aiMatchTags.set(Number(id), arr));
-    }
-    _aiVibeTags.clear();
-    if (data.vibeTags) {
-      Object.entries(data.vibeTags).forEach(([id, v]) => _aiVibeTags.set(Number(id), v));
-    }
+    if (reasons)       Object.entries(reasons).forEach(([id, v]) => _aiMatchReasons.set(Number(id), v));
+    if (tags)          Object.entries(tags).forEach(([id, v]) => _aiMatchTags.set(Number(id), v));
+    if (data.vibeTags) Object.entries(data.vibeTags).forEach(([id, v]) => _aiVibeTags.set(Number(id), v));
 
-    // Switch banner from loading → result with typewriter
-    const banner = document.getElementById('aiBanner');
-    banner.classList.remove('loading');
+    renderAiResults(results);
     const n = results.length;
-    const reasonText = message
-      ? message
-      : (n === 1 ? t('ai.found', { n, q: query }) : t('ai.foundPlural', { n, q: query }));
-    typewriterBanner(`✦ ${reasonText}`);
-
-    renderGrid(results, false);
-    document.getElementById('countTotal').textContent = CACHE_MOVIES.length.toLocaleString();
-
-    // Show follow-up chips after a short delay (AI-generated when available)
-    setTimeout(() => renderFollowUps(query, suggestedRefinements), 600);
+    const summary = message || (n === 1 ? t('ai.found', { n, q: headerQuery })
+                                        : t('ai.foundPlural', { n, q: headerQuery }));
+    document.getElementById('aiResultsSummary').textContent = '✦ ' + summary;
+    renderAiFollowUps(query, suggestedRefinements);
 
   } catch (e) {
-    // Fallback: client-side keyword filter
-    console.warn('[AI search] falling back to keyword:', e.message);
-    AI_SEARCH_ACTIVE = false;
-    _aiMatchScores.clear();
-    _aiMatchTags.clear();
-    hideAIBanner();
-    document.getElementById('searchWrap').classList.remove('ai-active');
-    keywordFilterCache(query);
+    // Backend guarantees ≥4 films, so this only fires on network/timeout. Fill the
+    // modal from the local cache when possible; otherwise show a retry state.
+    console.warn('[AI search] failed:', e.message);
+    const fallback = _keywordResultsForModal(query);
+    if (fallback.length) {
+      fallback.forEach(m => { if (!MOVIES.find(x => x.id === m.id)) MOVIES.push(m); });
+      buildMatchScores(fallback);
+      renderAiResults(fallback);
+      document.getElementById('aiResultsSummary').textContent = '✦ ' + t('results.closest');
+      renderAiFollowUps(query, null);
+    } else {
+      showAiResultsError();
+    }
   }
 }
 
@@ -12957,6 +13169,9 @@ async function pitchToFriends() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closeSearch(); closeMobSearch();
+    // AI Results modal closes first (unless the detail modal is stacked on top of it)
+    if (document.getElementById('aiResultsModal')?.classList.contains('open')
+        && !document.getElementById('overlay')?.classList.contains('open')) closeAiResults();
     if (document.getElementById('filtersDrawer')?.classList.contains('open')) closeFilters();
     if (document.getElementById('ratingsInfoModal')?.classList.contains('open')) closeRatingsInfo();
     if (document.getElementById('iosPwaSim')?.classList.contains('visible')) closeIosSim();
@@ -13005,7 +13220,15 @@ function submitMobSearch() {
   const finalQ = rawQ && mood ? `${rawQ} — ${mood}` : rawQ || mood || '';
   document.getElementById('searchInput').value = finalQ;
   closeMobSearch();
-  if (finalQ) applyFilters();
+  if (!finalQ) return;
+  // Route mobile search (voice, Enter, or mood chip) through the semantic AI path so
+  // every query passes the backend English intent-translation step and opens the
+  // AI Results bottom sheet. TV falls back to the classic title search.
+  if (CONTENT_TYPE === 'movie') {
+    aiSearch(finalQ);
+  } else {
+    applyFilters();
+  }
 }
 
 function clearMobSearch() {
@@ -13167,7 +13390,15 @@ function toggleDesktopVoice() {
   _recognition.onend = () => {
     _isListening = false;
     if (micBtn) micBtn.classList.remove('listening');
-    if (inp && !inp.value.trim()) {
+    const spoken = inp ? inp.value.trim() : '';
+    // Auto-run semantic AI search on the spoken query — routes ANY spoken language
+    // through the backend's English intent-translation step and opens the results modal.
+    if (spoken && CONTENT_TYPE === 'movie') {
+      clearTimeout(filterTimer);
+      clearTimeout(AI_SEARCH_TIMER);
+      setSearchMode('ai');
+      aiSearch(spoken);
+    } else if (inp && !spoken) {
       inp.placeholder = t('search.placeholder');
     }
   };
@@ -13647,6 +13878,32 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
     <!-- animated tap indicator -->
     <div class="sim-tap"></div>
   </div>
+</div>
+
+<!-- ════════════ AI RESULTS MODAL — dedicated overlay for semantic search ════════════ -->
+<!-- Desktop: centred card over dimmed/blurred feed. Mobile: bottom sheet. z-index 150
+     (below the movie detail modal @200 so tapping a result opens details on top and
+     closing returns exactly here). Feed is NEVER replaced — it stays intact behind. -->
+<div class="airx-backdrop" id="aiResultsBackdrop" onclick="aiResultsBackdropClick(event)"></div>
+<div class="airx-modal" id="aiResultsModal" role="dialog" aria-modal="true" aria-labelledby="aiResultsTitle">
+  <div class="airx-head">
+    <div class="airx-head-main">
+      <span class="airx-eyebrow" id="aiResultsEyebrow" data-i18n="results.eyebrow">✦ AI Results for</span>
+      <span class="airx-title" id="aiResultsTitle"></span>
+    </div>
+    <button class="airx-close" onclick="closeAiResults()" aria-label="Close" data-i18n-aria="results.close">✕</button>
+  </div>
+  <div class="airx-summary" id="aiResultsSummary"></div>
+  <div class="airx-body" id="aiResultsBody">
+    <div class="movie-grid airx-grid" id="aiResultsGrid"></div>
+    <div class="airx-empty" id="aiResultsEmpty">
+      <div class="airx-empty-icon">🍿</div>
+      <div class="airx-empty-title" data-i18n="results.errorTitle">Something went sideways</div>
+      <div class="airx-empty-sub" data-i18n="results.errorSub">We couldn't reach the AI just now. Give it another try.</div>
+      <button class="state-btn state-btn-retry" id="aiResultsRetry" data-i18n="results.retry">Try Again</button>
+    </div>
+  </div>
+  <div class="airx-followups" id="aiResultsFollowups"></div>
 </div>
 
 <!-- Filters Drawer — genre / country / min-rating / sort collapse here (IDs preserved for existing handlers) -->
