@@ -4236,8 +4236,11 @@ main.browse-collapsed > .load-wrap { display: none !important; }
   transition: color 0.2s, background 0.2s;
 }
 .search-mic-btn:hover { color: #a78bfa; background: rgba(124,58,237,0.12); }
-.search-mic-btn.listening { color: #ef4444; animation: micPulse 1s ease-in-out infinite; }
-@keyframes micPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+.search-mic-btn.listening { color: #ef4444; animation: micPulse 1.1s ease-in-out infinite; }
+@keyframes micPulse {
+  0%, 100% { opacity: 1;    transform: translateY(-50%) scale(1); }
+  50%      { opacity: 0.5;  transform: translateY(-50%) scale(1.22); }
+}
 
 /* ─── First-visit onboarding overlay ──────────────────── */
 .fv-overlay {
@@ -13290,7 +13293,19 @@ function stopMobPlaceholder() {
 }
 
 // ─── VOICE SEARCH ──────────────────────────────────
-let _recognition = null, _isListening = false;
+let _recognition = null, _isListening = false, _finalTranscript = '';
+
+// Voice recognition locale is DECOUPLED from the site's UI language. We use the
+// user's real browser/system locale (navigator.language) so someone can speak
+// Ukrainian, Spanish, etc. even when the interface is set to English. The backend
+// intent step translates ANY spoken language to English, so recognition only has
+// to transcribe the user's actual spoken tongue accurately — the UI locale is
+// irrelevant to what they say out loud.
+function _voiceLang() {
+  return navigator.language
+      || (navigator.languages && navigator.languages[0])
+      || 'en-US';
+}
 
 // Detect speech support once; show mic buttons only if supported
 (function detectSpeech() {
@@ -13315,10 +13330,11 @@ function toggleVoiceSearch() {
   if (!SR) return;
 
   _recognition = new SR();
-  _recognition.lang = TMDB_LANG[CURRENT_LANG] || navigator.language || 'en-US';
-  _recognition.interimResults = true;
+  _recognition.lang = _voiceLang();       // user's system locale, NOT the site UI language
+  _recognition.interimResults = true;     // live-update the field as the user speaks
   _recognition.maxAlternatives = 1;
-  _recognition.continuous = false;
+  _recognition.continuous = false;        // single utterance → crisp final capture
+  _finalTranscript = '';
 
   _recognition.onstart = () => {
     _isListening = true;
@@ -13328,15 +13344,24 @@ function toggleVoiceSearch() {
     stopMobPlaceholder();
   };
   _recognition.onresult = e => {
-    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+    // Accumulate the confident FINAL transcript separately from live interim text.
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const res = e.results[i];
+      if (res.isFinal) _finalTranscript = (_finalTranscript + ' ' + res[0].transcript).trim();
+      else             interim += res[0].transcript;
+    }
     const inp = document.getElementById('mobSearchInput');
-    inp.value = transcript;
-    document.getElementById('mobAiInputWrap').classList.toggle('has-value', !!transcript);
+    const display = (_finalTranscript + ' ' + interim).trim();
+    inp.value = display;
+    document.getElementById('mobAiInputWrap').classList.toggle('has-value', !!display);
   };
   _recognition.onend = () => {
     _stopListening();
     const inp = document.getElementById('mobSearchInput');
-    if (inp.value.trim()) {
+    const spoken = (_finalTranscript || inp.value).trim();
+    if (spoken) {
+      inp.value = spoken;
       setTimeout(submitMobSearch, 300);
     } else {
       startMobPlaceholder();
@@ -13367,10 +13392,11 @@ function toggleDesktopVoice() {
   if (!SR) return;
 
   _recognition = new SR();
-  _recognition.lang = TMDB_LANG[CURRENT_LANG] || navigator.language || 'en-US';
-  _recognition.interimResults = true;
+  _recognition.lang = _voiceLang();       // user's system locale, NOT the site UI language
+  _recognition.interimResults = true;     // live-update the field as the user speaks
   _recognition.maxAlternatives = 1;
-  _recognition.continuous = false;
+  _recognition.continuous = false;        // single utterance → crisp final capture
+  _finalTranscript = '';
 
   const micBtn = document.getElementById('searchMicBtn');
   const inp    = document.getElementById('searchInput');
@@ -13381,16 +13407,23 @@ function toggleDesktopVoice() {
     if (inp)    inp.placeholder = t('search.listening');
   };
   _recognition.onresult = e => {
-    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+    // Accumulate the confident FINAL transcript separately from live interim text,
+    // so we search on the most-confident result while still showing live feedback.
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const res = e.results[i];
+      if (res.isFinal) _finalTranscript = (_finalTranscript + ' ' + res[0].transcript).trim();
+      else             interim += res[0].transcript;
+    }
     if (inp) {
-      inp.value = transcript;
+      inp.value = (_finalTranscript + ' ' + interim).trim();
       inp.dispatchEvent(new Event('input', { bubbles: true }));
     }
   };
   _recognition.onend = () => {
     _isListening = false;
     if (micBtn) micBtn.classList.remove('listening');
-    const spoken = inp ? inp.value.trim() : '';
+    const spoken = (_finalTranscript || (inp ? inp.value : '')).trim();
     // Auto-run semantic AI search on the spoken query — routes ANY spoken language
     // through the backend's English intent-translation step and opens the results modal.
     if (spoken && CONTENT_TYPE === 'movie') {
