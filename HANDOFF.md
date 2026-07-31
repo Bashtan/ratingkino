@@ -2,7 +2,21 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-31) — AI Search Upgrade: Dedicated Modal + Never-Empty + Multilingual Voice
+## ⚡ Most Recent Session (2026-07-31) — Language-Agnostic Voice Search
+
+**PREVIEW ONLY — branch `feat/voice-language-agnostic` (stacked on `feat/ai-search-upgrade`), NOT on `main`, NOT live on findfilm.ai.** Cloudflare Pages preview for review; production untouched pending approval.
+
+Fixed voice recognition being tied to the site's UI language and sharpened its accuracy/feedback. Previously both voice fns set `_recognition.lang = TMDB_LANG[CURRENT_LANG] || …`, so an English UI forced `en-US` and mis-transcribed Ukrainian/Spanish speech. Now recognition follows the user's **real browser/system locale** (`navigator.language`), decoupled from the UI — the backend intent step still translates any spoken language to English.
+
+| Commit | Feature |
+|--------|---------|
+| `3dc79fd` | **Language-agnostic voice search** (`index.html`, frontend-only). New **`_voiceLang()`** helper (returns `navigator.language` / `navigator.languages[0]` / `'en-US'`) + module var **`_finalTranscript`** (declared beside `_recognition`/`_isListening` in the VOICE SEARCH section). Both **`toggleDesktopVoice()`** and **`toggleVoiceSearch()`** (mobile) changed: `_recognition.lang = _voiceLang()` (was `TMDB_LANG[CURRENT_LANG]` — **decoupled from site UI language**); `interimResults=true`, `continuous=false`, `maxAlternatives=1`. **`onresult`** rewritten to loop `e.resultIndex→e.results.length` and accumulate the confident **`isFinal`** text into `_finalTranscript` separately from live `interim` text — the field shows `(_finalTranscript+' '+interim)` live while the search fires on the most-confident `_finalTranscript`. **`onend`** now uses `spoken = (_finalTranscript || inp.value).trim()` before routing to `aiSearch(spoken)` (desktop) / `submitMobSearch()` (mobile). Visual feedback: red pulsing mic — **`.search-mic-btn.listening`** color `#ef4444`, `@keyframes micPulse` upgraded to a scale pulse `translateY(-50%) scale(1)→scale(1.22)` @1.1s (preserves the vertical-centering transform); `.listening` classes on mobile `#mobAiInputWrap`/`#mobAiMic`; `t('search.listening')` = "Listening…" placeholder. **Verified on preview:** `_voiceLang()` stays `navigator.language` after `switchLang('uk')`/`switchLang('es')` (decoupled); simulated recognition — desktop interim "фільм про"→final "фільм про космос" reaches `aiSearch`; mobile interim "algo de miedo"→final "algo de miedo con fantasmas"; mic settles to red `rgb(239,68,68)` + `micPulse` (initial purple was just the 0.2s color-transition mid-flight). No JS errors (only static-host TMDb 404 noise). |
+
+**Changed this session:** `index.html` only — `_voiceLang()`/`_finalTranscript` added; `toggleDesktopVoice`/`toggleVoiceSearch` lang+transcript+onend rewired; `micPulse` keyframe. No backend/i18n/DOM-id changes (reuses existing `search.listening` key + `.listening` classes). **New fn:** `_voiceLang()`. **Note:** the `TMDB_LANG[CURRENT_LANG]` mapping is still used for TMDB title localization in `fetchPage`/discover — only the *voice* `.lang` was decoupled. **Deploy status:** preview branch only; **do NOT merge to `main` / deploy production until user approves.**
+
+---
+
+## ⚡ Session (2026-07-31) — AI Search Upgrade: Dedicated Modal + Never-Empty + Multilingual Voice
 
 **PREVIEW ONLY — branch `feat/ai-search-upgrade`, NOT on `main`, NOT live on findfilm.ai.** Deployed as a Cloudflare Pages **preview** build for user review; production untouched pending approval.
 
