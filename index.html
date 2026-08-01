@@ -103,6 +103,14 @@
   --ai-gradient: linear-gradient(135deg, #7c3aed 0%, #6366f1 50%, #06b6d4 100%);
 }
 
+html {
+  /* Reserve the scrollbar's width permanently so toggling overflow:hidden on
+     body (search modal, filters drawer, watchlist, etc.) never removes/adds
+     the scrollbar mid-transition — prevents the page content (esp. the sticky
+     .filters-bar) from jumping sideways and "flashing" when an overlay opens. */
+  scrollbar-gutter: stable;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
