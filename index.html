@@ -13392,6 +13392,8 @@ function stopMobPlaceholder() {
 
 // ─── VOICE SEARCH ──────────────────────────────────
 let _recognition = null, _isListening = false, _finalTranscript = '';
+let _voiceSilenceTimer = null;   // debounce: auto-stop only after N ms of silence (continuous mode)
+const VOICE_SILENCE_MS = 3500;   // wait this long after the user stops talking before auto-submitting
 
 // Voice recognition locale is DECOUPLED from the site's UI language. The user picks
 // the language they'll SPEAK in via a dedicated selector (default = their real
@@ -13527,8 +13529,9 @@ function toggleVoiceSearch() {
   _recognition.lang = _voiceLang();       // user's PICKED spoken language (or browser default)
   _recognition.interimResults = true;     // live-update the field as the user speaks
   _recognition.maxAlternatives = 1;
-  _recognition.continuous = false;        // single utterance → crisp final capture
+  _recognition.continuous = true;         // stay open through natural pauses while dictating a plot
   _finalTranscript = '';
+  clearTimeout(_voiceSilenceTimer);
 
   _recognition.onstart = () => {
     _isListening = true;
@@ -13549,8 +13552,13 @@ function toggleVoiceSearch() {
     const display = (_finalTranscript + ' ' + interim).trim();
     inp.value = display;
     document.getElementById('mobAiInputWrap').classList.toggle('has-value', !!display);
+    // Re-arm the silence debounce on every new word — only auto-stop once the
+    // user has been quiet for VOICE_SILENCE_MS (natural thinking pauses don't cut them off).
+    clearTimeout(_voiceSilenceTimer);
+    _voiceSilenceTimer = setTimeout(() => { if (_recognition) _recognition.stop(); }, VOICE_SILENCE_MS);
   };
   _recognition.onend = () => {
+    clearTimeout(_voiceSilenceTimer);
     // Language switch mid-listen: swallow this end; setVoiceLang reopens with new .lang.
     if (_recognition && _recognition._ffSwitch) { _stopListening(); return; }
     _stopListening();
@@ -13564,6 +13572,7 @@ function toggleVoiceSearch() {
     }
   };
   _recognition.onerror = e => {
+    clearTimeout(_voiceSilenceTimer);
     _stopListening();
     const inp = document.getElementById('mobSearchInput');
     if (e.error === 'not-allowed') {
@@ -13592,8 +13601,9 @@ function toggleDesktopVoice() {
   _recognition.lang = _voiceLang();       // user's PICKED spoken language (or browser default)
   _recognition.interimResults = true;     // live-update the field as the user speaks
   _recognition.maxAlternatives = 1;
-  _recognition.continuous = false;        // single utterance → crisp final capture
+  _recognition.continuous = true;         // stay open through natural pauses while dictating a plot
   _finalTranscript = '';
+  clearTimeout(_voiceSilenceTimer);
 
   const micBtn = document.getElementById('searchMicBtn');
   const inp    = document.getElementById('searchInput');
@@ -13616,8 +13626,13 @@ function toggleDesktopVoice() {
       inp.value = (_finalTranscript + ' ' + interim).trim();
       inp.dispatchEvent(new Event('input', { bubbles: true }));
     }
+    // Re-arm the silence debounce on every new word — only auto-stop once the
+    // user has been quiet for VOICE_SILENCE_MS (natural thinking pauses don't cut them off).
+    clearTimeout(_voiceSilenceTimer);
+    _voiceSilenceTimer = setTimeout(() => { if (_recognition) _recognition.stop(); }, VOICE_SILENCE_MS);
   };
   _recognition.onend = () => {
+    clearTimeout(_voiceSilenceTimer);
     // Language switch mid-listen: swallow this end; setVoiceLang reopens with new .lang.
     if (_recognition && _recognition._ffSwitch) { _isListening = false; if (micBtn) micBtn.classList.remove('listening'); return; }
     _isListening = false;
@@ -13635,6 +13650,7 @@ function toggleDesktopVoice() {
     }
   };
   _recognition.onerror = e => {
+    clearTimeout(_voiceSilenceTimer);
     _isListening = false;
     if (micBtn) micBtn.classList.remove('listening');
     if (inp) {
