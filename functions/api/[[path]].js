@@ -810,6 +810,9 @@ const _CURATOR_SYSTEM_PROMPT =
   '(4) TONE & subtext. Match on how the film FEELS, not merely what its plot is about. ' +
   'Recommend 5 to 7 real films, best emotional match first. It is good to mix a well-known pick ' +
   'with a deeper cut, but every film must genuinely deliver the requested feeling and must actually exist. ' +
+  'ALWAYS return at least 4 films (ideally 5-6). If no film is an exact match for the plot or request, ' +
+  'you MUST STILL fall back to the closest thematic/tonal matches — similar vibes, the same director or ' +
+  'genre, or the most iconic titles in that category — and never return fewer than 4 films, never an empty list. ' +
   'MULTILINGUAL: the user may write in ANY language. Silently detect it and interpret the request by MEANING, ' +
   'treating a query in any language EXACTLY like its English equivalent ' +
   '(e.g. Ukrainian "фільм про космос" ≡ "movie about space"; Spanish "algo aterrador" ≡ "something scary"). ' +
@@ -935,6 +938,46 @@ async function _tmdbFindMovie(title, year, env) {
     .sort((a, b) => b.s - a.s);
 
   return scored.length ? scored[0].m : null;
+}
+
+/* Guaranteed fallback — iconic / crowd-pleasing real films so AI search is
+ * NEVER empty. Returns raw TMDB movie objects (same shape as _tmdbFindMovie),
+ * poster-guaranteed, excluding any ids already chosen. Used to top a thin
+ * result set up to the 4-6 floor, and as a last resort when every other path
+ * fails, so the user never sees a "zero results" screen. */
+async function _tmdbPopularFallback(env, need, excludeIds = []) {
+  if (!env.TMDB_KEY || need <= 0) return [];
+  const exclude = new Set((excludeIds || []).map(Number));
+  const pull = async (path, extra = {}) => {
+    const u = new URL(`https://api.themoviedb.org/3${path}`);
+    u.searchParams.set('api_key', env.TMDB_KEY);
+    u.searchParams.set('include_adult', 'false');
+    u.searchParams.set('language', 'en-US');
+    for (const [k, v] of Object.entries(extra)) u.searchParams.set(k, String(v));
+    try {
+      const r = await fetch(u.toString(), { headers: { 'User-Agent': 'FindFilm.ai/1.0' } });
+      const d = r.ok ? await r.json() : null;
+      return d?.results || [];
+    } catch { return []; }
+  };
+  // Prefer highly-voted crowd-pleasers, then fall back to top-rated classics.
+  const pools = await Promise.all([
+    pull('/discover/movie', { sort_by: 'popularity.desc', 'vote_count.gte': 2000 }),
+    pull('/movie/top_rated', { page: 1 }),
+  ]);
+  const out = [];
+  const seen = new Set();
+  for (const list of pools) {
+    for (const m of list) {
+      if (!m || !m.poster_path) continue;
+      const id = Number(m.id);
+      if (exclude.has(id) || seen.has(id)) continue;
+      seen.add(id);
+      out.push(m);
+      if (out.length >= need) return out;
+    }
+  }
+  return out;
 }
 
 /* ─── Vibe Check handler ─────────────────────────────────────
@@ -1257,6 +1300,32 @@ async function handleAISearch(request, env, cors, waitUntil) {
     );
   }
 
+  const _userLang = intent?.user_language || 'en';
+
+  // ── ZERO-EMPTY-STATE GUARANTEE ─────────────────────────────────────────
+  // A last-resort payload of iconic/popular real films. Every failure path
+  // (cache empty, model error, thin hydration) routes through this instead of
+  // returning an error/empty set, so the user is NEVER shown a blank results
+  // screen. Shaped exactly like the open-world `aiCurated` branch.
+  const _guaranteePayload = async (note) => {
+    const movies = await _tmdbPopularFallback(env, 6, []);
+    if (!movies.length) return null;
+    const reasons = {};
+    for (const m of movies) reasons[m.id] = 'A crowd-favorite pick to get you started.';
+    return {
+      aiCurated: true,
+      movies,
+      reasons,
+      tags: {},
+      vibeTags: {},
+      suggestedRefinements: [],
+      message: note || 'Here are some popular films to explore.',
+      translatedQuery: searchQuery,
+      userLanguage: _userLang,
+      fallback: true,
+    };
+  };
+
   // Actor-focused queries ("Best movies with Leonardo DiCaprio") bypass the
   // closed-world KV catalog entirely — they return real TMDB filmography data.
   // Any failure here (actor not found, TMDB error) falls through unchanged to
@@ -1352,6 +1421,8 @@ async function handleAISearch(request, env, cors, waitUntil) {
             tags,
             suggestedRefinements,
             message: null,
+            translatedQuery: searchQuery,
+            userLanguage: _userLang,
           };
           cacheWrite(actorPayload);
           return json(actorPayload);
@@ -1390,7 +1461,21 @@ async function handleAISearch(request, env, cors, waitUntil) {
           if (h.pick.vibe_tag)    vibeTags[h.raw.id] = h.pick.vibe_tag;
         }
 
-        if (movies.length >= 3) {
+        // Zero-empty-state floor: if the curator/hydration produced at least one
+        // real film but fewer than 5, top up with iconic crowd-pleasers so the
+        // user always gets a full 4-6 result set (never a thin/empty screen).
+        const MIN_RESULTS = 5;
+        if (movies.length && movies.length < MIN_RESULTS) {
+          const extra = await _tmdbPopularFallback(env, MIN_RESULTS - movies.length, [...seenIds]);
+          for (const raw of extra) {
+            if (seenIds.has(raw.id)) continue;
+            seenIds.add(raw.id);
+            movies.push(raw);
+            reasons[raw.id] = 'A crowd-favorite in a similar vein.';
+          }
+        }
+
+        if (movies.length >= 4) {
           const payload = {
             aiCurated: true,
             movies,
@@ -1399,6 +1484,8 @@ async function handleAISearch(request, env, cors, waitUntil) {
             vibeTags,
             suggestedRefinements,
             message: message || null,
+            translatedQuery: searchQuery,
+            userLanguage: _userLang,
           };
           cacheWrite(payload);
           return json(payload);
@@ -1416,6 +1503,8 @@ async function handleAISearch(request, env, cors, waitUntil) {
 
   const cached = await env.MOVIES_CACHE.get('new-releases');
   if (!cached) {
+    const gp = await _guaranteePayload('Here are some popular films while our catalog warms up.');
+    if (gp) return json(gp);
     return json({ error: 'Movie cache empty', hint: 'Daily sync has not run yet' }, 404);
   }
 
@@ -1490,15 +1579,17 @@ async function handleAISearch(request, env, cors, waitUntil) {
     `}\n` +
     `Each result's "vibe_tag" MUST be a punchy 1-2 word mood label (e.g. "Neon Noir", "Pure Chaos", "Slow-burn").\n` +
     `Each result's "tags" MUST be 2-3 short labels (1-3 words each) describing that movie's standout traits.\n` +
-    `results ordered best-match first, max 20 entries.\n` +
+    `results ordered best-match first — return between 4 and 20 entries (aim for 6-12), NEVER fewer than 4.\n` +
     `Example reason for query "crime movie like Zodiac but faster": ` +
     `"Maintains the dark, gritty tone of Zodiac but with a much faster, action-packed pace."\n` +
     `suggestedRefinements must be 3-4 short (1-3 word) follow-up tweaks relevant to this ` +
     `exact query and result set, e.g. ["Darker tone", "More recent", "Based on true story", "Faster pace"].\n` +
-    `If no movie is a close match, return the 3 nearest IDs (each with a "reason" explaining ` +
-    `the closest connection you found) and set "message" to a short friendly note ` +
+    `If no movie is a close match, you MUST STILL return at least 4-6 of the nearest IDs ` +
+    `(fall back to closest thematic/tonal matches, same director or genre, or the most iconic ` +
+    `titles in that category) — each with a "reason" explaining the closest connection you found — ` +
+    `and set "message" to a short friendly note ` +
     `(e.g. "These are the closest recent releases to your request."). ` +
-    `Never return an empty results array.`;
+    `NEVER return fewer than 4 results. NEVER return an empty results array.`;
 
   if (!env.AI) {
     return json({ error: 'AI binding not configured — deploy to Cloudflare to enable' }, 503);
@@ -1584,12 +1675,39 @@ async function handleAISearch(request, env, cors, waitUntil) {
       if (suggestedRefinements.length >= 4) break;
     }
 
-    const payload = { ids, reasons, tags, vibeTags, suggestedRefinements, message: result.message || null };
+    // ── NEVER-EMPTY GUARANTEE: top up to at least 4 IDs from the catalog ──
+    // If the model returned too few, backfill with the most popular catalog
+    // entries (by vote/rating order they were synced in) so the user always
+    // sees a full shelf instead of a bare/empty result screen.
+    if (ids.length < 4) {
+      for (const m of movies) {
+        if (seen.has(m.id)) continue;
+        seen.add(m.id);
+        ids.push(m.id);
+        if (!reasons[m.id]) reasons[m.id] = 'A close pick in a similar vein to your search.';
+        if (ids.length >= 4) break;
+      }
+    }
+
+    // As a last resort (empty catalog / all filtered) fall back to TMDB popular.
+    if (ids.length < 4) {
+      const gp = await _guaranteePayload(result.message || null);
+      if (gp) { cacheWrite(gp); return json(gp); }
+    }
+
+    const payload = {
+      ids, reasons, tags, vibeTags, suggestedRefinements,
+      message: result.message || null,
+      translatedQuery: searchQuery,
+      userLanguage: _userLang,
+    };
     cacheWrite(payload);
     return json(payload);
 
   } catch (e) {
     console.error('[ai-search] error:', e.message);
+    const gp = await _guaranteePayload('Here are some popular films to explore while we retry.');
+    if (gp) return json(gp);
     return json({ error: 'AI search failed', detail: e.message }, 500);
   }
 }

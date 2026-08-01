@@ -638,6 +638,64 @@ header {
 }
 .search-vibe-btn svg { width: 20px; height: 20px; }
 .search-vibe-btn:hover { color: #fff; background: rgba(99,102,241,0.16); }
+
+/* ── Voice-language selector (desktop): compact badge trigger + popover ── */
+.voice-lang-wrap { position: relative; z-index: 3; flex: none; display: none; align-items: center; }
+.search-wrap.has-mic .voice-lang-wrap { display: inline-flex; }   /* only when speech is supported */
+.voice-lang-trigger {
+  display: inline-flex; align-items: center; gap: 3px;
+  height: 26px; padding: 0 7px 0 8px;
+  background: rgba(148,163,184,0.10); border: 1px solid rgba(148,163,184,0.22);
+  border-radius: 13px; color: #cbd5e1; cursor: pointer;
+  font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: .3px;
+  transition: background .18s, border-color .18s, color .18s;
+}
+.voice-lang-trigger:hover { background: rgba(99,102,241,0.18); border-color: rgba(129,140,248,0.55); color: #fff; }
+.vl-badge-trigger { line-height: 1; }
+.vl-caret { opacity: .7; transition: transform .2s; }
+.voice-lang-wrap.open .vl-caret { transform: rotate(180deg); }
+.voice-lang-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 60;
+  width: 220px; max-height: 320px; overflow-y: auto;
+  background: linear-gradient(180deg, rgba(24,22,44,.98) 0%, rgba(14,13,28,.99) 100%);
+  border: 1px solid rgba(255,255,255,.1); border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  padding: 8px; opacity: 0; transform: translateY(-6px) scale(.98);
+  pointer-events: none; transition: opacity .18s, transform .18s;
+}
+.voice-lang-wrap.open .voice-lang-menu { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.vl-menu-title {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: #94a3b8; padding: 4px 8px 8px; font-family: 'Montserrat', sans-serif;
+}
+.vl-menu-list { display: flex; flex-direction: column; gap: 2px; }
+.vl-opt {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 10px; border-radius: 9px; border: 1px solid transparent;
+  background: transparent; color: #e5e7eb; cursor: pointer; text-align: left;
+  font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 500;
+  transition: background .14s, border-color .14s;
+}
+.vl-opt:hover { background: rgba(99,102,241,0.14); }
+.vl-opt.active { background: rgba(99,102,241,0.20); border-color: rgba(129,140,248,0.55); }
+.vl-badge {
+  flex: none; min-width: 30px; text-align: center;
+  font-size: 10px; font-weight: 800; letter-spacing: .5px; color: #a5b4fc;
+  background: rgba(99,102,241,0.16); border-radius: 6px; padding: 3px 4px;
+}
+.vl-native { flex: 1; }
+/* Lift the whole search bar above the sticky filters-bar (z:99) while the popover is
+   open, so the menu isn't clipped behind it. Scoped to the open state only. */
+#searchWrap:has(.voice-lang-wrap.open) { z-index: 250; }
+/* Mobile: the hero search bar is shared, so the selector lives here too — just made
+   ultra-compact (badge only, no caret) and the icon row is tightened a touch so the
+   crowded row still fits down to ~360px phones. */
+@media (max-width: 768px) {
+  .search-wrap--hero { gap: 3px; }
+  .voice-lang-trigger { height: 28px; padding: 0 5px; gap: 0; font-size: 10.5px; }
+  .voice-lang-trigger .vl-caret { display: none; }
+  .voice-lang-menu { width: 200px; }
+}
 .search-wrap--hero .search-icon {
   position: static; transform: none; flex: none;
   width: 18px; height: 18px; margin-right: 4px;
@@ -845,6 +903,91 @@ header {
   box-shadow: 0 6px 20px rgba(99,102,241,0.32);
 }
 .fd-apply:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99,102,241,0.5); }
+
+/* ═══════════ AI RESULTS MODAL ═══════════ */
+/* Dedicated overlay for semantic search results. Desktop: centred card over a
+   dimmed/blurred feed. Mobile: bottom sheet. z-index 150 keeps it below the movie
+   detail modal (#overlay @200) so a result card opens details on top of it. */
+.airx-backdrop {
+  position: fixed; inset: 0; z-index: 150;
+  background: rgba(4,2,14,0.72);
+  backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px);
+  opacity: 0; pointer-events: none; transition: opacity .3s ease;
+}
+.airx-backdrop.open { opacity: 1; pointer-events: auto; }
+.airx-modal {
+  position: fixed; z-index: 151;
+  top: 50%; left: 50%; transform: translate(-50%, -48%) scale(.97);
+  width: min(1120px, 94vw); max-height: 88vh;
+  display: flex; flex-direction: column;
+  background: linear-gradient(180deg, rgba(22,18,44,0.97) 0%, rgba(12,9,26,0.98) 100%);
+  backdrop-filter: blur(26px) saturate(1.4); -webkit-backdrop-filter: blur(26px) saturate(1.4);
+  border: 1px solid rgba(129,140,248,0.28);
+  border-radius: 24px;
+  box-shadow: 0 40px 120px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04) inset;
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s ease, transform .35s cubic-bezier(.22,1,.36,1);
+}
+.airx-modal.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+.airx-head {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 22px 26px 10px;
+}
+.airx-head-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.airx-eyebrow {
+  font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700;
+  letter-spacing: 1.4px; text-transform: uppercase;
+  color: #a5b4fc;
+}
+.airx-title {
+  font-family: 'Montserrat', sans-serif; font-size: 21px; font-weight: 800;
+  color: #fff; line-height: 1.25;
+  overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.airx-close {
+  flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.6); font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .18s, color .18s, transform .18s;
+}
+.airx-close:hover { background: rgba(239,68,68,0.2); color: #fff; transform: rotate(90deg); }
+.airx-summary {
+  padding: 0 26px 6px; min-height: 20px;
+  font-family: 'Inter', sans-serif; font-size: 13.5px; color: #c7d2fe; font-weight: 500;
+}
+.airx-body { overflow-y: auto; padding: 14px 26px 22px; flex: 1; }
+.airx-grid { min-height: 200px; }
+.airx-empty { display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 48px 20px; text-align: center; }
+.airx-empty.show { display: flex; }
+.airx-empty-icon { font-size: 40px; }
+.airx-empty-title { font-family: 'Montserrat', sans-serif; font-size: 17px; font-weight: 700; color: #fff; }
+.airx-empty-sub { font-size: 13px; color: #9ca3af; max-width: 340px; }
+.airx-followups { padding: 0 26px; }
+.airx-followups:empty { display: none; }
+.airx-followups .ai-sug-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase;
+  color: #94a3b8; font-family: 'Montserrat', sans-serif; margin-bottom: 8px;
+}
+.airx-foot-space { height: 14px; }
+body.airx-open { overflow: hidden; }
+@media (max-width: 768px) {
+  .airx-modal {
+    top: auto; bottom: 0; left: 0;
+    transform: translateY(100%); width: 100%; max-height: 90vh;
+    border-radius: 22px 22px 0 0;
+    border: none; border-top: 1px solid rgba(129,140,248,0.28);
+  }
+  .airx-modal.open { transform: translateY(0); }
+  .airx-head { padding: 18px 18px 8px; }
+  .airx-title { font-size: 18px; }
+  .airx-summary { padding: 0 18px 4px; }
+  .airx-body { padding: 12px 16px 20px; }
+  .airx-followups { padding: 0 18px; }
+  .airx-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+}
 
 /* ─── FILTER BAR (Netflix-style) ─────────────── */
 .filters-bar {
@@ -4151,8 +4294,23 @@ main.browse-collapsed > .load-wrap { display: none !important; }
   transition: color 0.2s, background 0.2s;
 }
 .search-mic-btn:hover { color: #a78bfa; background: rgba(124,58,237,0.12); }
-.search-mic-btn.listening { color: #ef4444; animation: micPulse 1s ease-in-out infinite; }
-@keyframes micPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+/* Recording state must ALWAYS read red — beat the hero/hover mic-color rules
+   (.search-wrap--hero .search-mic-btn:hover is specificity 0,3,0) even mid-hover. */
+.search-mic-btn.listening,
+.search-wrap--hero .search-mic-btn.listening,
+.search-wrap--hero .search-mic-btn.listening:hover {
+  color: #ef4444; animation: micPulse 1.1s ease-in-out infinite;
+}
+@keyframes micPulse {
+  0%, 100% { opacity: 1;    transform: translateY(-50%) scale(1); }
+  50%      { opacity: 0.5;  transform: translateY(-50%) scale(1.22); }
+}
+/* Hero placement overrides transform (position:static) — pulse without translateY. */
+.search-wrap--hero .search-mic-btn.listening { animation: micPulseHero 1.1s ease-in-out infinite; }
+@keyframes micPulseHero {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(1.18); }
+}
 
 /* ─── First-visit onboarding overlay ──────────────────── */
 .fv-overlay {
@@ -4594,6 +4752,17 @@ if ('serviceWorker' in navigator) {
         <path d="M18.5 2.2l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7z" fill="currentColor" stroke="none"/>
       </svg>
     </button>
+    <!-- Spoken-language selector: pick which language you'll SPEAK; sets recognition.lang -->
+    <div class="voice-lang-wrap" id="voiceLangWrap">
+      <button class="voice-lang-trigger" type="button" onclick="toggleVoiceLangMenu(event)" aria-label="Choose voice language" data-i18n-aria="voicelang.title" title="Voice language">
+        <span class="vl-badge-trigger" id="voiceLangBadge">🌐</span>
+        <svg class="vl-caret" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="voice-lang-menu" id="voiceLangMenuBox" role="listbox" aria-label="Voice language">
+        <div class="vl-menu-title" data-i18n="voicelang.title">Language you'll speak</div>
+        <div class="vl-menu-list" id="voiceLangMenu"></div>
+      </div>
+    </div>
     <!-- Vibe Check: photo (camera) — opens the Photo Vibe modal -->
     <button class="search-vibe-btn" id="searchPhotoBtn" type="button" onclick="openVibeCheck('photo')" aria-label="Photo vibe search" data-i18n-title="vibe.photoTip" data-i18n-aria="vibe.photoTip">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -5446,6 +5615,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Search',
     'search.mood':          'Mood',
     'search.tryAsking':     'Try asking:',
+    'results.eyebrow':      '✦ AI Results for',
+    'results.close':        'Close',
+    'results.thinking':     'Finding your films…',
+    'results.refine':       'Refine your search',
+    'results.closest':      'Here are the closest matches we could find.',
+    'results.errorTitle':   'Something went sideways',
+    'results.errorSub':     "We couldn't reach the AI just now. Give it another try.",
+    'results.retry':        'Try Again',
     'search.chips.darkThriller': 'Dark thriller',
     'search.chips.romCom':       'Rom-com',
     'search.chips.scifi':        'Epic sci-fi',
@@ -5492,6 +5669,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   'No exact match found for',
     'search.noMatchHint':  'Check out these titles instead.',
     'search.listening':    'Listening…',
+    'voicelang.title':     'Language you\'ll speak',
     'search.micDenied':    'Mic permission denied — type your search',
     // Animated placeholder cycling strings
     'search.ph0':          'Describe a movie in your own words…',
@@ -5788,6 +5966,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Buscar',
     'search.mood':          'Estado de ánimo',
     'search.tryAsking':     'Prueba preguntar:',
+    'results.eyebrow':      '✦ Resultados IA para',
+    'results.close':        'Cerrar',
+    'results.thinking':     'Buscando tus películas…',
+    'results.refine':       'Afina tu búsqueda',
+    'results.closest':      'Estas son las coincidencias más cercanas que encontramos.',
+    'results.errorTitle':   'Algo salió mal',
+    'results.errorSub':     'No pudimos contactar con la IA. Inténtalo de nuevo.',
+    'results.retry':        'Reintentar',
     'search.chips.darkThriller': 'Thriller oscuro',
     'search.chips.romCom':       'Comedia romántica',
     'search.chips.scifi':        'Ciencia ficción',
@@ -5814,6 +6000,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   'No se encontró coincidencia exacta para',
     'search.noMatchHint':  'Mira estos títulos en su lugar.',
     'search.listening':    'Escuchando…',
+    'voicelang.title':     'Idioma que hablarás',
     'search.micDenied':    'Micrófono denegado — escribe tu búsqueda',
     'search.ph0':          'Busca por título, género o año…',
     'search.ph1':          "Prueba: 'Una película en el espacio con Matthew McConaughey'",
@@ -6094,6 +6281,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Rechercher',
     'search.mood':          'Ambiance',
     'search.tryAsking':     'Essayez de demander :',
+    'results.eyebrow':      '✦ Résultats IA pour',
+    'results.close':        'Fermer',
+    'results.thinking':     'Recherche de vos films…',
+    'results.refine':       'Affinez votre recherche',
+    'results.closest':      'Voici les correspondances les plus proches trouvées.',
+    'results.errorTitle':   'Un souci est survenu',
+    'results.errorSub':     "Impossible de joindre l'IA pour l'instant. Réessayez.",
+    'results.retry':        'Réessayer',
     'search.chips.darkThriller': 'Thriller sombre',
     'search.chips.romCom':       'Comédie romantique',
     'search.chips.scifi':        'Sci-fi épique',
@@ -6120,6 +6315,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   'Aucune correspondance exacte pour',
     'search.noMatchHint':  'Découvrez ces titres à la place.',
     'search.listening':    'Écoute…',
+    'voicelang.title':     'Langue que vous parlerez',
     'search.micDenied':    'Microphone refusé — tapez votre recherche',
     'search.ph0':          'Cherchez par titre, genre ou année…',
     'search.ph1':          "Essayez : 'Un film sur l'espace avec Matthew McConaughey'",
@@ -6400,6 +6596,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       '搜索',
     'search.mood':          '心情',
     'search.tryAsking':     '试着问一问：',
+    'results.eyebrow':      '✦ AI 结果：',
+    'results.close':        '关闭',
+    'results.thinking':     '正在为你寻找影片…',
+    'results.refine':       '优化你的搜索',
+    'results.closest':      '这些是我们能找到的最接近的结果。',
+    'results.errorTitle':   '出了点问题',
+    'results.errorSub':     '暂时无法连接 AI，请再试一次。',
+    'results.retry':        '再试一次',
     'search.chips.darkThriller': '黑暗惊悚',
     'search.chips.romCom':       '浪漫喜剧',
     'search.chips.scifi':        '科幻史诗',
@@ -6426,6 +6630,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   '未找到精确匹配：',
     'search.noMatchHint':  '看看这些推荐标题。',
     'search.listening':    '正在聆听…',
+    'voicelang.title':     '你说的语言',
     'search.micDenied':    '麦克风权限被拒绝 — 请键入搜索内容',
     'search.ph0':          '按标题、类型或年份搜索…',
     'search.ph1':          "试试：'一部关于太空的电影，主演马修·麦康纳'",
@@ -6706,6 +6911,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       'بحث',
     'search.mood':          'المزاج',
     'search.tryAsking':     'جرب السؤال عن:',
+    'results.eyebrow':      '✦ نتائج الذكاء الاصطناعي لـ',
+    'results.close':        'إغلاق',
+    'results.thinking':     'نبحث عن أفلامك…',
+    'results.refine':       'حسّن بحثك',
+    'results.closest':      'إليك أقرب النتائج التي وجدناها.',
+    'results.errorTitle':   'حدث خطأ ما',
+    'results.errorSub':     'تعذّر الوصول إلى الذكاء الاصطناعي الآن. حاول مرة أخرى.',
+    'results.retry':        'حاول مجددًا',
     'search.chips.darkThriller': 'إثارة مظلمة',
     'search.chips.romCom':       'كوميديا رومانسية',
     'search.chips.scifi':        'خيال علمي ملحمي',
@@ -6732,6 +6945,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   'لم يتم العثور على تطابق دقيق لـ',
     'search.noMatchHint':  'اطّلع على هذه العناوين بدلاً من ذلك.',
     'search.listening':    'جارٍ الاستماع…',
+    'voicelang.title':     'اللغة التي ستتحدث بها',
     'search.micDenied':    'تم رفض إذن الميكروفون — اكتب بحثك',
     'search.ph0':          'ابحث بالعنوان أو النوع أو السنة…',
     'search.ph1':          "جرّب: 'فيلم عن الفضاء مع ماثيو ماكونهي'",
@@ -7013,6 +7227,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Пошук',
     'search.mood':          'Настрій',
     'search.tryAsking':     'Спробуй запитати:',
+    'results.eyebrow':      '✦ Результати ШІ для',
+    'results.close':        'Закрити',
+    'results.thinking':     'Шукаємо твої фільми…',
+    'results.refine':       'Уточни свій пошук',
+    'results.closest':      'Ось найближчі збіги, які ми знайшли.',
+    'results.errorTitle':   'Щось пішло не так',
+    'results.errorSub':     'Не вдалося зʼєднатися з ШІ. Спробуй ще раз.',
+    'results.retry':        'Спробувати ще раз',
     'search.chips.darkThriller': 'Темний трилер',
     'search.chips.romCom':       'Ромком',
     'search.chips.scifi':        'Фантастика',
@@ -7039,6 +7261,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   'Точних збігів не знайдено для',
     'search.noMatchHint':  'Перегляньте ці назви натомість.',
     'search.listening':    'Слухаю…',
+    'voicelang.title':     'Мова, якою ви говоритимете',
     'search.micDenied':    'Мікрофон заблоковано — введіть пошук вручну',
     'search.ph0':          'Опишіть фільм своїми словами…',
     'search.ph1':          "Спробуй: 'Фільм про космос з Меттью МакКонахі'",
@@ -7337,6 +7560,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Suchen',
     'search.mood':          'Stimmung',
     'search.tryAsking':     'Frag doch mal:',
+    'results.eyebrow':      '✦ KI-Ergebnisse für',
+    'results.close':        'Schließen',
+    'results.thinking':     'Wir suchen deine Filme…',
+    'results.refine':       'Verfeinere deine Suche',
+    'results.closest':      'Hier sind die nächstgelegenen Treffer, die wir gefunden haben.',
+    'results.errorTitle':   'Da ist etwas schiefgelaufen',
+    'results.errorSub':     'Die KI ist gerade nicht erreichbar. Versuch es noch mal.',
+    'results.retry':        'Erneut versuchen',
     'search.chips.darkThriller': 'Düsterer Thriller',
     'search.chips.romCom':       'Romantische Komödie',
     'search.chips.scifi':        'Epische Sci-Fi',
@@ -7374,6 +7605,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   'Kein exakter Treffer für',
     'search.noMatchHint':  'Schau dir stattdessen diese Titel an.',
     'search.listening':    'Höre zu …',
+    'voicelang.title':     'Sprache, die du sprichst',
     'search.micDenied':    'Mikrofonzugriff verweigert – tippe deine Suche',
     'search.ph0':          'Beschreibe einen Film mit eigenen Worten …',
     'search.ph1':          'Versuch: „Ein Film über das Weltall mit Matthew McConaughey“',
@@ -7667,6 +7899,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Sök',
     'search.mood':          'Känsla',
     'search.tryAsking':     'Prova att fråga:',
+    'results.eyebrow':      '✦ AI-resultat för',
+    'results.close':        'Stäng',
+    'results.thinking':     'Letar efter dina filmer…',
+    'results.refine':       'Förfina din sökning',
+    'results.closest':      'Här är de närmaste träffarna vi kunde hitta.',
+    'results.errorTitle':   'Något gick snett',
+    'results.errorSub':     'Vi kunde inte nå AI:n just nu. Försök igen.',
+    'results.retry':        'Försök igen',
     'search.chips.darkThriller': 'Mörk thriller',
     'search.chips.romCom':       'Romantisk komedi',
     'search.chips.scifi':        'Episk sci-fi',
@@ -7704,6 +7944,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   'Ingen exakt träff för',
     'search.noMatchHint':  'Kolla in de här titlarna istället.',
     'search.listening':    'Lyssnar …',
+    'voicelang.title':     'Språk du talar',
     'search.micDenied':    'Mikrofon nekades – skriv din sökning',
     'search.ph0':          'Beskriv en film med egna ord …',
     'search.ph1':          'Prova: ”En film om rymden med Matthew McConaughey”',
@@ -7997,6 +8238,14 @@ const TRANSLATIONS = {
     'search.sendBtn':       'Søk',
     'search.mood':          'Stemning',
     'search.tryAsking':     'Prøv å spørre:',
+    'results.eyebrow':      '✦ AI-resultater for',
+    'results.close':        'Lukk',
+    'results.thinking':     'Finner filmene dine…',
+    'results.refine':       'Forfin søket ditt',
+    'results.closest':      'Her er de nærmeste treffene vi fant.',
+    'results.errorTitle':   'Noe gikk galt',
+    'results.errorSub':     'Vi fikk ikke kontakt med AI-en nå. Prøv igjen.',
+    'results.retry':        'Prøv igjen',
     'search.chips.darkThriller': 'Mørk thriller',
     'search.chips.romCom':       'Romantisk komedie',
     'search.chips.scifi':        'Episk sci-fi',
@@ -8034,6 +8283,7 @@ const TRANSLATIONS = {
     'search.noMatchFor':   'Ingen eksakt treff for',
     'search.noMatchHint':  'Sjekk ut disse titlene i stedet.',
     'search.listening':    'Lytter …',
+    'voicelang.title':     'Språket du snakker',
     'search.micDenied':    'Mikrofontilgang avslått – skriv søket ditt',
     'search.ph0':          'Beskriv en film med egne ord …',
     'search.ph1':          'Prøv: «En film om verdensrommet med Matthew McConaughey»',
@@ -10375,25 +10625,114 @@ function vibeSearch(text) {
   aiSearch(q);
 }
 
-/* Main AI search function */
-async function aiSearch(query) {
-  AI_SEARCH_ACTIVE = true;
-  clearFollowUps();
+/* ═══════════════════════════════════
+   AI RESULTS MODAL — dedicated overlay
+   Renders semantic-search results in a centred card (desktop) / bottom sheet
+   (mobile) that floats ABOVE the feed. The feed is never replaced or hidden,
+   so closing the modal returns the user exactly where they were.
+═══════════════════════════════════ */
+function openAiResults(query) {
+  const titleEl = document.getElementById('aiResultsTitle');
+  if (titleEl) titleEl.textContent = query || '';
+  document.getElementById('aiResultsSummary').textContent = t('results.thinking');
+  document.getElementById('aiResultsFollowups').innerHTML = '';
+  document.getElementById('aiResultsEmpty').classList.remove('show');
+  document.getElementById('aiResultsGrid').innerHTML =
+    Array(8).fill(null).map(skeletonCard).join('');
+  document.getElementById('aiResultsBackdrop').classList.add('open');
+  document.getElementById('aiResultsModal').classList.add('open');
+  document.body.classList.add('airx-open');
+  const body = document.getElementById('aiResultsBody');
+  if (body) body.scrollTop = 0;
+}
+
+function closeAiResults() {
+  document.getElementById('aiResultsModal').classList.remove('open');
+  document.getElementById('aiResultsBackdrop').classList.remove('open');
+  document.body.classList.remove('airx-open');
+  // Only fully release the scroll lock if the detail modal isn't stacked on top.
+  if (!document.getElementById('overlay')?.classList.contains('open')) {
+    document.body.style.overflow = '';
+  }
   _aiMatchScores.clear();
   _aiMatchReasons.clear();
   _aiMatchTags.clear();
   _aiVibeTags.clear();
-  document.getElementById('searchWrap').classList.add('ai-active');
-  document.getElementById('feedSections').style.display = 'none';
-  applyBrowseCollapse(); // AI results always use the full grid
-  showSkeletons(12);
-  showAIBanner('', true); // triggers startThinkingText()
+}
+
+function aiResultsBackdropClick(e) {
+  if (e.target === e.currentTarget) closeAiResults();
+}
+
+function renderAiResults(results) {
+  const grid  = document.getElementById('aiResultsGrid');
+  const empty = document.getElementById('aiResultsEmpty');
+  empty.classList.remove('show');
+  if (!results.length) { grid.innerHTML = ''; showAiResultsError(); return; }
+  grid.innerHTML = results.map(renderCardHTML).join('');
+}
+
+function renderAiFollowUps(query, dynamicChips) {
+  const el = document.getElementById('aiResultsFollowups');
+  if (!el) return;
+  const chips = (Array.isArray(dynamicChips) && dynamicChips.length)
+    ? dynamicChips.slice(0, 4)
+    : _followUpPool(query).slice(0, 4);
+  if (!chips.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="ai-sug-label">${esc(t('results.refine'))}</div>
+    <div class="ai-sug-chips">${chips.map((c, i) =>
+      `<button class="ai-sug-chip" style="animation-delay:${i*65}ms"
+         onclick="applyFollowUp(this.dataset.q)" data-q="${esc(c)}">↺ ${esc(c)}</button>`
+    ).join('')}</div><div class="airx-foot-space"></div>`;
+}
+
+function showAiResultsError() {
+  document.getElementById('aiResultsGrid').innerHTML = '';
+  document.getElementById('aiResultsSummary').textContent = '';
+  document.getElementById('aiResultsEmpty').classList.add('show');
+  const retry = document.getElementById('aiResultsRetry');
+  if (retry) retry.onclick = () =>
+    aiSearch(_lastQuery || (document.getElementById('searchInput')?.value || '').trim());
+}
+
+/* Pure keyword ranker (no side effects) — client-side safety net that fills the
+   modal from the local cache when /api/ai-search is unreachable. */
+function _keywordResultsForModal(query) {
+  const q     = (query || '').toLowerCase().trim();
+  const words = q.split(/\s+/).filter(Boolean);
+  if (!words.length || !CACHE_MOVIES.length) return [];
+  const score = m => {
+    const ts = _titleMatchScore(m, q, words);
+    if (ts > 0) return 500 + ts * 10;
+    const desc = (m.desc || '').toLowerCase();
+    if (words.every(w => desc.includes(w))) return 300;
+    if (words.some(w  => desc.includes(w))) return 200;
+    const hay = ((m.genres || []).join(' ') + ' ' + (m.director || '') + ' ' +
+                 (m.actors || []).join(' ')).toLowerCase();
+    if (words.some(w => hay.includes(w))) return 100;
+    return 0;
+  };
+  return CACHE_MOVIES.map(m => ({ m, s: score(m) }))
+    .filter(x => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 18).map(x => x.m);
+}
+
+/* Main AI search — routes every query through the backend's English intent
+   translation + never-empty guarantee, then renders into the AI Results modal. */
+async function aiSearch(query) {
+  query = (query || '').trim();
+  if (!query) return;
+  _lastQuery = query;
+  _aiMatchScores.clear();
+  _aiMatchReasons.clear();
+  _aiMatchTags.clear();
+  _aiVibeTags.clear();
+  openAiResults(query);
 
   const { cleanQuery, exclude } = parseVibeQuery(query);
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 12000);
 
     const r = await fetch('/api/ai-search', {
       method:  'POST',
@@ -10406,106 +10745,72 @@ async function aiSearch(query) {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
 
-    // Open-world results return real TMDB movie objects directly — bypasses the
-    // closed-world CACHE_MOVIES filtering below entirely. Two flavours:
-    //   • actorQuery — an actor's filmography ("movies with DiCaprio").
-    //   • aiCurated  — LLM-First "By Plot" curation: the model names real films
-    //     from its own deep knowledge, hydrated via TMDB (open-world vibe search).
+    // Header shows the ENGLISH translated intent the backend actually searched on.
+    const headerQuery = data.translatedQuery || query;
+    const titleEl = document.getElementById('aiResultsTitle');
+    if (titleEl) titleEl.textContent = headerQuery;
+
+    // ── Open-world path: actor filmography or LLM-curated real films ──
     if ((data.actorQuery || data.aiCurated) && data.movies?.length) {
       data.movies.forEach(raw => {
         if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromTMDb(raw));
       });
       const results = data.movies.map(raw => MOVIES.find(x => x.id === raw.id)).filter(Boolean);
 
-      MOVIES      = results;
-      TOTAL_COUNT = results.length;
-      _lastQuery  = query;
-
-      _aiMatchScores.clear();
-      _aiMatchReasons.clear();
-      _aiMatchTags.clear();
-      _aiVibeTags.clear();
-      Object.entries(data.reasons || {}).forEach(([id, reason]) => _aiMatchReasons.set(Number(id), reason));
-      Object.entries(data.tags || {}).forEach(([id, arr]) => _aiMatchTags.set(Number(id), arr));
+      Object.entries(data.reasons  || {}).forEach(([id, v]) => _aiMatchReasons.set(Number(id), v));
+      Object.entries(data.tags     || {}).forEach(([id, v]) => _aiMatchTags.set(Number(id), v));
       Object.entries(data.vibeTags || {}).forEach(([id, v]) => _aiVibeTags.set(Number(id), v));
 
-      const banner = document.getElementById('aiBanner');
-      banner.classList.remove('loading');
-      if (data.actorQuery) {
-        typewriterBanner(t('ai.foundForActor', { name: data.personName }));
-      } else {
-        const n = results.length;
-        typewriterBanner(
-          data.message
-            ? '✦ ' + data.message
-            : (n === 1 ? t('ai.found', { n, q: query }) : t('ai.foundPlural', { n, q: query }))
-        );
-      }
-
-      renderGrid(results, false);
-      document.getElementById('countTotal').textContent = results.length.toLocaleString();
-
-      setTimeout(() => renderFollowUps(query, data.suggestedRefinements), 600);
+      renderAiResults(results);
+      const n = results.length;
+      const summary = data.actorQuery
+        ? t('ai.foundForActor', { name: data.personName })
+        : (data.message || (n === 1 ? t('ai.found', { n, q: headerQuery })
+                                    : t('ai.foundPlural', { n, q: headerQuery })));
+      document.getElementById('aiResultsSummary').textContent = '✦ ' + summary;
+      renderAiFollowUps(query, data.suggestedRefinements);
       return;
     }
 
+    // ── Closed-world path: KV catalog reorder ──
     const { ids, reasons, tags, suggestedRefinements, message } = data;
-
     if (!ids || !ids.length) throw new Error('Empty AI response');
 
-    // Reorder CACHE_MOVIES to match AI ranking
     const idOrder = new Map(ids.map((id, i) => [id, i]));
     const aiRanked = CACHE_MOVIES
       .filter(m => idOrder.has(m.id))
       .sort((a, b) => idOrder.get(a.id) - idOrder.get(b.id));
-
-    // Client-side title boost: guarantee title matches surface above desc/theme matches.
-    // Stable sort — within each tier, LLM order is preserved.
     const results = titleBoostResults(aiRanked, query);
 
-    MOVIES      = results;
-    TOTAL_COUNT = CACHE_MOVIES.length;
-    _lastQuery  = query;
+    // Union into MOVIES (no clobber) so result cards resolve via openMovie().
+    results.forEach(m => { if (!MOVIES.find(x => x.id === m.id)) MOVIES.push(m); });
 
-    // Build per-card match scores + "why recommended" reasons before rendering
     buildMatchScores(results);
-    _aiMatchReasons.clear();
-    if (reasons) {
-      Object.entries(reasons).forEach(([id, reason]) => _aiMatchReasons.set(Number(id), reason));
-    }
-    _aiMatchTags.clear();
-    if (tags) {
-      Object.entries(tags).forEach(([id, arr]) => _aiMatchTags.set(Number(id), arr));
-    }
-    _aiVibeTags.clear();
-    if (data.vibeTags) {
-      Object.entries(data.vibeTags).forEach(([id, v]) => _aiVibeTags.set(Number(id), v));
-    }
+    if (reasons)       Object.entries(reasons).forEach(([id, v]) => _aiMatchReasons.set(Number(id), v));
+    if (tags)          Object.entries(tags).forEach(([id, v]) => _aiMatchTags.set(Number(id), v));
+    if (data.vibeTags) Object.entries(data.vibeTags).forEach(([id, v]) => _aiVibeTags.set(Number(id), v));
 
-    // Switch banner from loading → result with typewriter
-    const banner = document.getElementById('aiBanner');
-    banner.classList.remove('loading');
+    renderAiResults(results);
     const n = results.length;
-    const reasonText = message
-      ? message
-      : (n === 1 ? t('ai.found', { n, q: query }) : t('ai.foundPlural', { n, q: query }));
-    typewriterBanner(`✦ ${reasonText}`);
-
-    renderGrid(results, false);
-    document.getElementById('countTotal').textContent = CACHE_MOVIES.length.toLocaleString();
-
-    // Show follow-up chips after a short delay (AI-generated when available)
-    setTimeout(() => renderFollowUps(query, suggestedRefinements), 600);
+    const summary = message || (n === 1 ? t('ai.found', { n, q: headerQuery })
+                                        : t('ai.foundPlural', { n, q: headerQuery }));
+    document.getElementById('aiResultsSummary').textContent = '✦ ' + summary;
+    renderAiFollowUps(query, suggestedRefinements);
 
   } catch (e) {
-    // Fallback: client-side keyword filter
-    console.warn('[AI search] falling back to keyword:', e.message);
-    AI_SEARCH_ACTIVE = false;
-    _aiMatchScores.clear();
-    _aiMatchTags.clear();
-    hideAIBanner();
-    document.getElementById('searchWrap').classList.remove('ai-active');
-    keywordFilterCache(query);
+    // Backend guarantees ≥4 films, so this only fires on network/timeout. Fill the
+    // modal from the local cache when possible; otherwise show a retry state.
+    console.warn('[AI search] failed:', e.message);
+    const fallback = _keywordResultsForModal(query);
+    if (fallback.length) {
+      fallback.forEach(m => { if (!MOVIES.find(x => x.id === m.id)) MOVIES.push(m); });
+      buildMatchScores(fallback);
+      renderAiResults(fallback);
+      document.getElementById('aiResultsSummary').textContent = '✦ ' + t('results.closest');
+      renderAiFollowUps(query, null);
+    } else {
+      showAiResultsError();
+    }
   }
 }
 
@@ -12957,6 +13262,9 @@ async function pitchToFriends() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closeSearch(); closeMobSearch();
+    // AI Results modal closes first (unless the detail modal is stacked on top of it)
+    if (document.getElementById('aiResultsModal')?.classList.contains('open')
+        && !document.getElementById('overlay')?.classList.contains('open')) closeAiResults();
     if (document.getElementById('filtersDrawer')?.classList.contains('open')) closeFilters();
     if (document.getElementById('ratingsInfoModal')?.classList.contains('open')) closeRatingsInfo();
     if (document.getElementById('iosPwaSim')?.classList.contains('visible')) closeIosSim();
@@ -13005,7 +13313,15 @@ function submitMobSearch() {
   const finalQ = rawQ && mood ? `${rawQ} — ${mood}` : rawQ || mood || '';
   document.getElementById('searchInput').value = finalQ;
   closeMobSearch();
-  if (finalQ) applyFilters();
+  if (!finalQ) return;
+  // Route mobile search (voice, Enter, or mood chip) through the semantic AI path so
+  // every query passes the backend English intent-translation step and opens the
+  // AI Results bottom sheet. TV falls back to the classic title search.
+  if (CONTENT_TYPE === 'movie') {
+    aiSearch(finalQ);
+  } else {
+    applyFilters();
+  }
 }
 
 function clearMobSearch() {
@@ -13067,7 +13383,113 @@ function stopMobPlaceholder() {
 }
 
 // ─── VOICE SEARCH ──────────────────────────────────
-let _recognition = null, _isListening = false;
+let _recognition = null, _isListening = false, _finalTranscript = '';
+
+// Voice recognition locale is DECOUPLED from the site's UI language. The user picks
+// the language they'll SPEAK in via a dedicated selector (default = their real
+// browser/system locale) so someone can speak Ukrainian, Spanish, Chinese, etc. even
+// when the interface is set to English. The backend intent step translates ANY spoken
+// language to English, so recognition only has to transcribe the user's actual spoken
+// tongue accurately — the UI locale is irrelevant to what they say out loud.
+//
+// Each entry: code (persisted key), short badge, BCP-47 tag for SpeechRecognition.lang,
+// and the native language name shown in the menu. 'auto' = follow navigator.language.
+const VOICE_LANGS = [
+  { code: 'auto', badge: 'AUTO', bcp: '',      native: 'Browser Default' },
+  { code: 'en',   badge: 'EN',   bcp: 'en-US', native: 'English' },
+  { code: 'es',   badge: 'ES',   bcp: 'es-ES', native: 'Español' },
+  { code: 'uk',   badge: 'UK',   bcp: 'uk-UA', native: 'Українська' },
+  { code: 'zh',   badge: 'ZH',   bcp: 'zh-CN', native: '中文' },
+  { code: 'de',   badge: 'DE',   bcp: 'de-DE', native: 'Deutsch' },
+  { code: 'fr',   badge: 'FR',   bcp: 'fr-FR', native: 'Français' },
+  { code: 'hi',   badge: 'HI',   bcp: 'hi-IN', native: 'हिन्दी' },
+  { code: 'ar',   badge: 'AR',   bcp: 'ar-SA', native: 'العربية' },
+  { code: 'ja',   badge: 'JA',   bcp: 'ja-JP', native: '日本語' },
+  { code: 'ko',   badge: 'KO',   bcp: 'ko-KR', native: '한국어' },
+  { code: 'pt',   badge: 'PT',   bcp: 'pt-BR', native: 'Português' },
+  { code: 'ru',   badge: 'RU',   bcp: 'ru-RU', native: 'Русский' },
+  { code: 'it',   badge: 'IT',   bcp: 'it-IT', native: 'Italiano' }
+];
+
+// Last spoken-language choice persists across sessions.
+let _voiceLangPref = (function() {
+  try { return localStorage.getItem('ff_voice_lang') || 'auto'; }
+  catch(e) { return 'auto'; }
+})();
+
+function _browserVoiceLang() {
+  return navigator.language
+      || (navigator.languages && navigator.languages[0])
+      || 'en-US';
+}
+
+// Resolve the BCP-47 tag to hand SpeechRecognition, honouring the user's pick.
+function _voiceLang() {
+  if (_voiceLangPref && _voiceLangPref !== 'auto') {
+    const hit = VOICE_LANGS.find(l => l.code === _voiceLangPref);
+    if (hit && hit.bcp) return hit.bcp;
+  }
+  return _browserVoiceLang();
+}
+
+// User selected a spoken language from a selector. Persist it, refresh both selectors,
+// and — if we're mid-listening — restart recognition so the new locale takes effect.
+function setVoiceLang(code) {
+  _voiceLangPref = code || 'auto';
+  try { localStorage.setItem('ff_voice_lang', _voiceLangPref); } catch(e) {}
+  _syncVoiceLangUI();
+  closeVoiceLangMenu();
+  if (_isListening && _recognition) {
+    // Bounce recognition; the shared onend fires but we swallow the auto-submit
+    // because there's no transcript yet, then reopen with the new .lang.
+    const wasDesktop = _recognition._ffDesktop;
+    _recognition._ffSwitch = true;
+    try { _recognition.stop(); } catch(e) {}
+    setTimeout(() => { wasDesktop ? toggleDesktopVoice() : toggleVoiceSearch(); }, 150);
+  }
+}
+
+// Human label for the current pick (badge for pills, native for menu rows).
+function _voiceLangEntry() {
+  return VOICE_LANGS.find(l => l.code === _voiceLangPref) || VOICE_LANGS[0];
+}
+
+// Build the selector's option list once, then reflect the active choice.
+function _renderVoiceLangOptions() {
+  const menu = document.getElementById('voiceLangMenu');
+  if (menu) {
+    menu.innerHTML = VOICE_LANGS.map(l =>
+      `<button type="button" class="vl-opt" data-vl="${l.code}" onclick="setVoiceLang('${l.code}')">`
+      + `<span class="vl-badge">${l.badge}</span><span class="vl-native">${l.native}</span></button>`
+    ).join('');
+  }
+  _syncVoiceLangUI();
+}
+
+function _syncVoiceLangUI() {
+  const entry = _voiceLangEntry();
+  // Trigger badge (globe for Browser Default, 2-letter code otherwise)
+  const trig = document.getElementById('voiceLangBadge');
+  if (trig) trig.textContent = entry.code === 'auto' ? '🌐' : entry.badge;
+  // Active state on the open menu's rows
+  document.querySelectorAll('.vl-opt').forEach(b =>
+    b.classList.toggle('active', b.dataset.vl === _voiceLangPref));
+}
+
+function toggleVoiceLangMenu(e) {
+  if (e) e.stopPropagation();
+  const m = document.getElementById('voiceLangWrap');
+  if (m) m.classList.toggle('open');
+}
+function closeVoiceLangMenu() {
+  const m = document.getElementById('voiceLangWrap');
+  if (m) m.classList.remove('open');
+}
+// Close the desktop popover on any outside click.
+document.addEventListener('click', e => {
+  const w = document.getElementById('voiceLangWrap');
+  if (w && w.classList.contains('open') && !w.contains(e.target)) closeVoiceLangMenu();
+});
 
 // Detect speech support once; show mic buttons only if supported
 (function detectSpeech() {
@@ -13077,6 +13499,7 @@ let _recognition = null, _isListening = false;
     if (sw) sw.classList.add('has-mic');
     const dm = document.getElementById('searchMicBtn');
     if (dm) dm.style.display = 'flex';
+    _renderVoiceLangOptions();   // build both spoken-language selectors + reflect saved pick
   }
 })();
 
@@ -13092,10 +13515,12 @@ function toggleVoiceSearch() {
   if (!SR) return;
 
   _recognition = new SR();
-  _recognition.lang = TMDB_LANG[CURRENT_LANG] || navigator.language || 'en-US';
-  _recognition.interimResults = true;
+  _recognition._ffDesktop = false;
+  _recognition.lang = _voiceLang();       // user's PICKED spoken language (or browser default)
+  _recognition.interimResults = true;     // live-update the field as the user speaks
   _recognition.maxAlternatives = 1;
-  _recognition.continuous = false;
+  _recognition.continuous = false;        // single utterance → crisp final capture
+  _finalTranscript = '';
 
   _recognition.onstart = () => {
     _isListening = true;
@@ -13105,15 +13530,26 @@ function toggleVoiceSearch() {
     stopMobPlaceholder();
   };
   _recognition.onresult = e => {
-    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+    // Accumulate the confident FINAL transcript separately from live interim text.
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const res = e.results[i];
+      if (res.isFinal) _finalTranscript = (_finalTranscript + ' ' + res[0].transcript).trim();
+      else             interim += res[0].transcript;
+    }
     const inp = document.getElementById('mobSearchInput');
-    inp.value = transcript;
-    document.getElementById('mobAiInputWrap').classList.toggle('has-value', !!transcript);
+    const display = (_finalTranscript + ' ' + interim).trim();
+    inp.value = display;
+    document.getElementById('mobAiInputWrap').classList.toggle('has-value', !!display);
   };
   _recognition.onend = () => {
+    // Language switch mid-listen: swallow this end; setVoiceLang reopens with new .lang.
+    if (_recognition && _recognition._ffSwitch) { _stopListening(); return; }
     _stopListening();
     const inp = document.getElementById('mobSearchInput');
-    if (inp.value.trim()) {
+    const spoken = (_finalTranscript || inp.value).trim();
+    if (spoken) {
+      inp.value = spoken;
       setTimeout(submitMobSearch, 300);
     } else {
       startMobPlaceholder();
@@ -13144,10 +13580,12 @@ function toggleDesktopVoice() {
   if (!SR) return;
 
   _recognition = new SR();
-  _recognition.lang = TMDB_LANG[CURRENT_LANG] || navigator.language || 'en-US';
-  _recognition.interimResults = true;
+  _recognition._ffDesktop = true;
+  _recognition.lang = _voiceLang();       // user's PICKED spoken language (or browser default)
+  _recognition.interimResults = true;     // live-update the field as the user speaks
   _recognition.maxAlternatives = 1;
-  _recognition.continuous = false;
+  _recognition.continuous = false;        // single utterance → crisp final capture
+  _finalTranscript = '';
 
   const micBtn = document.getElementById('searchMicBtn');
   const inp    = document.getElementById('searchInput');
@@ -13158,16 +13596,33 @@ function toggleDesktopVoice() {
     if (inp)    inp.placeholder = t('search.listening');
   };
   _recognition.onresult = e => {
-    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+    // Accumulate the confident FINAL transcript separately from live interim text,
+    // so we search on the most-confident result while still showing live feedback.
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const res = e.results[i];
+      if (res.isFinal) _finalTranscript = (_finalTranscript + ' ' + res[0].transcript).trim();
+      else             interim += res[0].transcript;
+    }
     if (inp) {
-      inp.value = transcript;
+      inp.value = (_finalTranscript + ' ' + interim).trim();
       inp.dispatchEvent(new Event('input', { bubbles: true }));
     }
   };
   _recognition.onend = () => {
+    // Language switch mid-listen: swallow this end; setVoiceLang reopens with new .lang.
+    if (_recognition && _recognition._ffSwitch) { _isListening = false; if (micBtn) micBtn.classList.remove('listening'); return; }
     _isListening = false;
     if (micBtn) micBtn.classList.remove('listening');
-    if (inp && !inp.value.trim()) {
+    const spoken = (_finalTranscript || (inp ? inp.value : '')).trim();
+    // Auto-run semantic AI search on the spoken query — routes ANY spoken language
+    // through the backend's English intent-translation step and opens the results modal.
+    if (spoken && CONTENT_TYPE === 'movie') {
+      clearTimeout(filterTimer);
+      clearTimeout(AI_SEARCH_TIMER);
+      setSearchMode('ai');
+      aiSearch(spoken);
+    } else if (inp && !spoken) {
       inp.placeholder = t('search.placeholder');
     }
   };
@@ -13647,6 +14102,32 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
     <!-- animated tap indicator -->
     <div class="sim-tap"></div>
   </div>
+</div>
+
+<!-- ════════════ AI RESULTS MODAL — dedicated overlay for semantic search ════════════ -->
+<!-- Desktop: centred card over dimmed/blurred feed. Mobile: bottom sheet. z-index 150
+     (below the movie detail modal @200 so tapping a result opens details on top and
+     closing returns exactly here). Feed is NEVER replaced — it stays intact behind. -->
+<div class="airx-backdrop" id="aiResultsBackdrop" onclick="aiResultsBackdropClick(event)"></div>
+<div class="airx-modal" id="aiResultsModal" role="dialog" aria-modal="true" aria-labelledby="aiResultsTitle">
+  <div class="airx-head">
+    <div class="airx-head-main">
+      <span class="airx-eyebrow" id="aiResultsEyebrow" data-i18n="results.eyebrow">✦ AI Results for</span>
+      <span class="airx-title" id="aiResultsTitle"></span>
+    </div>
+    <button class="airx-close" onclick="closeAiResults()" aria-label="Close" data-i18n-aria="results.close">✕</button>
+  </div>
+  <div class="airx-summary" id="aiResultsSummary"></div>
+  <div class="airx-body" id="aiResultsBody">
+    <div class="movie-grid airx-grid" id="aiResultsGrid"></div>
+    <div class="airx-empty" id="aiResultsEmpty">
+      <div class="airx-empty-icon">🍿</div>
+      <div class="airx-empty-title" data-i18n="results.errorTitle">Something went sideways</div>
+      <div class="airx-empty-sub" data-i18n="results.errorSub">We couldn't reach the AI just now. Give it another try.</div>
+      <button class="state-btn state-btn-retry" id="aiResultsRetry" data-i18n="results.retry">Try Again</button>
+    </div>
+  </div>
+  <div class="airx-followups" id="aiResultsFollowups"></div>
 </div>
 
 <!-- Filters Drawer — genre / country / min-rating / sort collapse here (IDs preserved for existing handlers) -->
