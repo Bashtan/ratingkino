@@ -2,7 +2,21 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-07-31) — Voice Language Selector (pick the language you speak)
+## ⚡ Most Recent Session (2026-08-01) — Fix: Search-Modal Screen Flash
+
+**PREVIEW ONLY — branch `fix/search-flash`, NOT on `main`, NOT live on findfilm.ai.** Cloudflare Pages preview for review; production untouched pending approval.
+
+User reported a screen flash/blink right as the AI Results modal appears after a search. Root cause: `openAiResults()` synchronously adds `body.airx-open` (CSS `overflow:hidden`, L975) before the fetch even starts. Removing `overflow` instantly deletes the browser's scrollbar, and every other overlay in the app (Watchlist, Filters Drawer, Movie Detail Modal, Wizard, etc.) does the same via direct `document.body.style.overflow='hidden'` toggling — so the page's content width jumps by the scrollbar's width in the same frame the modal's opacity/transform transition starts, most visible on the sticky `.filters-bar` (top:64px, z:99). The backdrop/modal transitions themselves were already smooth (0.3s/0.35s), and the background feed does not re-render during modal-open — neither was the cause.
+
+| Commit | Feature |
+|--------|---------|
+| `f19d165` | **Fix: reserve scrollbar gutter to stop search-modal flash** (`index.html`, CSS-only, 1 rule). Added `html { scrollbar-gutter: stable; }` (new rule, right before the existing `body{}` block, ~L106) — reserves the scrollbar's track width permanently regardless of `overflow` state, so toggling `overflow:hidden` on `body` (any overlay, not just AI Results) no longer causes a reflow/content-shift. Global, one-line, no JS changes. **Verified on preview** (1280 desktop + 375 mobile): `document.documentElement.clientWidth` identical before/after toggling `body.airx-open` (no shift); AI Results modal open/close still smooth, skeleton shimmer intact; Filters Drawer still opens/closes normally (no regression); console clean (only expected static-host TMDb/Search 404 noise). |
+
+**Changed this session:** `index.html` only — one new CSS rule (`html{scrollbar-gutter:stable}`). No new selectors/IDs/functions/i18n keys. **Deploy status:** preview branch only; **do NOT merge to `main` / deploy production until user approves.**
+
+---
+
+## ⚡ Session (2026-07-31) — Voice Language Selector (pick the language you speak)
 
 **PREVIEW ONLY — branch `feat/voice-language-selector` (stacked on `feat/voice-language-agnostic`), NOT on `main`, NOT live on findfilm.ai.** Cloudflare Pages preview for review; production untouched pending approval.
 
