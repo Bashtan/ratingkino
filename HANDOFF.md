@@ -2,7 +2,21 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-01) — Fix: Search-Modal Screen Flash
+## ⚡ Most Recent Session (2026-08-01) — Extend Voice Search Listening (Long Plot Dictation)
+
+**PREVIEW ONLY — branch `feat/voice-timeout-extend`, NOT on `main`, NOT live on findfilm.ai.** Cloudflare Pages preview for review; production untouched pending approval.
+
+Voice search was cutting users off the instant they took a brief thinking pause while dictating a plot description, because both recognition fns used `continuous=false` (single-utterance mode — the browser auto-stops on any short gap). Switched to continuous mode + an explicit silence-debounce so the mic stays open through natural pauses and only auto-submits after real silence.
+
+| Commit | Feature |
+|--------|---------|
+| `52ef571` | **Extend voice search listening for long plot dictation** (`index.html`, frontend-only, VOICE SEARCH section ~L13394–13660). New module state (beside `_recognition`/`_isListening`/`_finalTranscript`, ~L13394): **`let _voiceSilenceTimer = null`** + **`const VOICE_SILENCE_MS = 3500`**. Both **`toggleDesktopVoice()`** and **`toggleVoiceSearch()`** (mobile): `_recognition.continuous` flipped `false→true` (was single-utterance; now stays open across pauses). **`onresult`** now re-arms the debounce on every chunk: `clearTimeout(_voiceSilenceTimer); _voiceSilenceTimer = setTimeout(() => _recognition.stop(), VOICE_SILENCE_MS)` — so `recognition.stop()` only fires after 3.5s of continuous silence, not on every pause. **`onend`**/**`onerror`** both `clearTimeout(_voiceSilenceTimer)` first (prevents a stray stop() on an already-ended session, e.g. mid-listen language switch via `setVoiceLang()`). **Manual stop unchanged** — tapping the mic while `_isListening` still calls `_recognition.stop()` immediately, which routes through the same `onend`→submit path (no new code path for manual vs. auto-stop). Listening UI (`.listening` class / `micPulse` animation) requires no changes — it was already tied to `onstart`/`onend`, which now simply span the whole continuous session. **Verified on preview:** stubbed `SpeechRecognition` to simulate real dictation — desktop: 2s pause between two `isFinal` chunks kept `.listening` active and merged both chunks into one query passed to `aiSearch()`; separately confirmed manual re-tap stops+submits immediately without waiting for the 3.5s window. Mobile: identical pause-tolerance + full-transcript capture, auto-routes through `submitMobSearch()`. No JS errors (only expected static-host TMDb/Search 404 noise); homepage/search bar unaffected. |
+
+**Changed this session:** `index.html` only. **New state:** `_voiceSilenceTimer`, `VOICE_SILENCE_MS`. No new selectors/IDs/i18n keys — `toggleDesktopVoice`/`toggleVoiceSearch` signatures unchanged. **Deploy status:** preview branch only; **do NOT merge to `main` / deploy production until user approves.**
+
+---
+
+## ⚡ Session (2026-08-01) — Fix: Search-Modal Screen Flash
 
 **PREVIEW ONLY — branch `fix/search-flash`, NOT on `main`, NOT live on findfilm.ai.** Cloudflare Pages preview for review; production untouched pending approval.
 
