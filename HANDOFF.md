@@ -2,9 +2,23 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-01) — Extend Voice Search Listening (Long Plot Dictation)
+## ⚡ Most Recent Session (2026-08-02) — Ultra-Forgiving Voice Dictation + Backend Plot-Comprehension Overhaul
 
-**PREVIEW ONLY — branch `feat/voice-timeout-extend`, NOT on `main`, NOT live on findfilm.ai.** Cloudflare Pages preview for review; production untouched pending approval.
+All commits on `main`, all live on https://findfilm.ai.
+
+Follow-up to the voice-timeout-extend session: users dictating a complex plot were still getting cut off during long thinking pauses, and rambling/unstructured voice transcripts produced poor AI search results because the backend never actually cleaned up English input before searching on it.
+
+| Commit | Feature |
+|--------|---------|
+| `0590605` | **Ultra-forgiving voice dictation + backend plot-comprehension overhaul** — Frontend (`index.html`, VOICE SEARCH section ~L13394–13700): `VOICE_SILENCE_MS` raised `3500→8000`; new module state `_voiceStopRequested`/`_voiceDebounceFired` (~L13396) distinguish an intentional stop (manual click, or the debounce timer itself firing) from the browser force-stopping `SpeechRecognition` on its own internal silence detection. `onend` in both `toggleDesktopVoice()` and `toggleVoiceSearch()` now auto-restarts (`_recognition.start()`) when neither flag is set — mic stays visually "listening" and `_finalTranscript` is left untouched so dictation continues seamlessly across the invisible restart. `onerror` now only tears down the UI for fatal errors (`not-allowed`/`audio-capture`/`service-not-allowed`); recoverable errors (`no-speech`/`network`/`aborted`) defer to `onend`'s restart logic per the Web Speech API spec. Manual-stop branches (`if (_isListening) {...}`) set `_voiceStopRequested=true` before calling `.stop()`; both flags reset at the start of every new session alongside `_finalTranscript=''`. Backend (`functions/api/[[path]].js`): `_parseIntent()` (~L293–348) system prompt rewritten to explicitly instruct the model to look past voice-dictation rambling (filler words, false starts, repetition) and extract narrative tropes/settings/plot devices/character archetypes; `english_keywords` is now a dense 5-12 term list, `english_query` is **always** rewritten/cleaned (previously told to "repeat verbatim" for English input — the primary case — meaning zero cleanup ever happened for English voice search). Truncation caps raised to stop silently cutting off long dictations: query cap at API entry `300→1000` (`handleAISearch` ~L1255), intent-parser input `200→1000`, `english_query` output `300→600`, `max_tokens` `150→350`. Removed the `intent.user_language !== 'en'` gate in `handleAISearch` (~L1291–1314) — the cleaned/de-rambled query is now used for **every** query (English included), not just translated ones; both `_llmFirstCuration()` and the KV catalog fallback already consume `searchQuery` so they benefit automatically. **Verified on preview:** stubbed `SpeechRecognition` — unexpected `onend` (neither flag set) correctly triggered `.start()` again with transcript/listening-UI preserved; the real 8s debounce firing correctly finalized and submitted the full accumulated transcript; manual stop and fatal `onerror` both correctly suppressed auto-restart; recoverable `onerror`→`onend` correctly deferred to the restart path. No JS errors (only expected static-host TMDb/Search 404 noise); homepage clean after test cleanup. |
+
+**Changed this session:** `index.html` + `functions/api/[[path]].js`. **New state:** `_voiceStopRequested`, `_voiceDebounceFired`. No new selectors/IDs/i18n keys — `toggleDesktopVoice`/`toggleVoiceSearch`/`_parseIntent`/`handleAISearch` signatures unchanged.
+
+---
+
+## ⚡ Session (2026-08-01) — Extend Voice Search Listening (Long Plot Dictation)
+
+**MERGED & LIVE — `feat/voice-timeout-extend` merged to `main`, deployed to production. Live on https://findfilm.ai.** (`VOICE_SILENCE_MS` further raised to 8000ms in the 2026-08-02 session above.)
 
 Voice search was cutting users off the instant they took a brief thinking pause while dictating a plot description, because both recognition fns used `continuous=false` (single-utterance mode — the browser auto-stops on any short gap). Switched to continuous mode + an explicit silence-debounce so the mic stays open through natural pauses and only auto-submits after real silence.
 
@@ -12,7 +26,7 @@ Voice search was cutting users off the instant they took a brief thinking pause 
 |--------|---------|
 | `52ef571` | **Extend voice search listening for long plot dictation** (`index.html`, frontend-only, VOICE SEARCH section ~L13394–13660). New module state (beside `_recognition`/`_isListening`/`_finalTranscript`, ~L13394): **`let _voiceSilenceTimer = null`** + **`const VOICE_SILENCE_MS = 3500`**. Both **`toggleDesktopVoice()`** and **`toggleVoiceSearch()`** (mobile): `_recognition.continuous` flipped `false→true` (was single-utterance; now stays open across pauses). **`onresult`** now re-arms the debounce on every chunk: `clearTimeout(_voiceSilenceTimer); _voiceSilenceTimer = setTimeout(() => _recognition.stop(), VOICE_SILENCE_MS)` — so `recognition.stop()` only fires after 3.5s of continuous silence, not on every pause. **`onend`**/**`onerror`** both `clearTimeout(_voiceSilenceTimer)` first (prevents a stray stop() on an already-ended session, e.g. mid-listen language switch via `setVoiceLang()`). **Manual stop unchanged** — tapping the mic while `_isListening` still calls `_recognition.stop()` immediately, which routes through the same `onend`→submit path (no new code path for manual vs. auto-stop). Listening UI (`.listening` class / `micPulse` animation) requires no changes — it was already tied to `onstart`/`onend`, which now simply span the whole continuous session. **Verified on preview:** stubbed `SpeechRecognition` to simulate real dictation — desktop: 2s pause between two `isFinal` chunks kept `.listening` active and merged both chunks into one query passed to `aiSearch()`; separately confirmed manual re-tap stops+submits immediately without waiting for the 3.5s window. Mobile: identical pause-tolerance + full-transcript capture, auto-routes through `submitMobSearch()`. No JS errors (only expected static-host TMDb/Search 404 noise); homepage/search bar unaffected. |
 
-**Changed this session:** `index.html` only. **New state:** `_voiceSilenceTimer`, `VOICE_SILENCE_MS`. No new selectors/IDs/i18n keys — `toggleDesktopVoice`/`toggleVoiceSearch` signatures unchanged. **Deploy status:** preview branch only; **do NOT merge to `main` / deploy production until user approves.**
+**Changed this session:** `index.html` only. **New state:** `_voiceSilenceTimer`, `VOICE_SILENCE_MS`. No new selectors/IDs/i18n keys — `toggleDesktopVoice`/`toggleVoiceSearch` signatures unchanged. **Deploy status:** merged to `main`, live in production.
 
 ---
 
