@@ -293,21 +293,36 @@ function _stripFillers(raw) {
 async function _parseIntent(query, env) {
   try {
     const system =
-      'You are a search query parser. Return ONLY a valid JSON object — no markdown, no extra text. ' +
-      'Fields: ' +
-      '"clean_title_guess": if the user is searching for a specific movie title (with possible typos or in another language), normalise it to English; otherwise empty string. ' +
-      '"english_keywords": core plot or vibe elements translated to English, 3-5 words max. ' +
-      '"english_query": the FULL search request faithfully translated into natural English, preserving the COMPLETE intent (plot, mood, constraints), not just keywords. If the input is already English, repeat it verbatim. ' +
-      '"intent": "title_search" if they want a specific movie, "vibe_search" if describing a theme or mood, "actor_search" if the query is specifically about movies featuring a particular real actor/actress. ' +
+      'You are a search-query intent parser for a movie discovery engine. Input may be typed or a ' +
+      'raw voice-dictation transcript — voice input is often RAMBLING and UNSTRUCTURED: filler words ' +
+      '("umm", "so", "like"), false starts, mid-sentence self-corrections, and long thinking pauses that ' +
+      'produce run-on, repetitive phrasing. Look past the rambling and extract the underlying intent: the ' +
+      'core narrative trope or premise, specific settings (era, location, world), unique or unusual plot ' +
+      'devices (time loop, body swap, unreliable narrator, twist reveal, etc.), and character archetypes ' +
+      'or relationships (rival siblings, disgraced detective, chosen one, found family). ' +
+      'Return ONLY a valid JSON object — no markdown, no extra text. Fields: ' +
+      '"clean_title_guess": if the user is searching for a specific movie title (with possible typos or ' +
+      'in another language), normalise it to English; otherwise empty string. ' +
+      '"english_keywords": the extracted narrative tropes, setting, plot devices, and character ' +
+      'archetypes as a dense, comma-separated list of concrete English search terms (5-12 words total, ' +
+      'e.g. "time loop, small town, disgraced detective, body swap, revenge plot"), not a restatement of ' +
+      'the rambling sentence. ' +
+      '"english_query": a CLEAN, well-formed English rewrite of the full request — strip filler, false ' +
+      'starts and repetition, but preserve every plot detail, mood, and constraint the user actually ' +
+      'described, reorganised into one or two coherent sentences. ALWAYS rewrite/clean this field, even ' +
+      'when the input is already in English — never just repeat the raw rambling transcript verbatim. ' +
+      '"intent": "title_search" if they want a specific movie, "vibe_search" if describing a theme, mood, ' +
+      'or plot, "actor_search" if the query is specifically about movies featuring a particular real ' +
+      'actor/actress. ' +
       '"actor_name": the actor/actress\'s name in English if intent is actor_search; otherwise empty string. ' +
       '"user_language": ISO 639-1 code of the input language.';
 
     const aiResp = await env.AI.run(_INTENT_MODEL, {
       messages: [
         { role: 'system', content: system },
-        { role: 'user',   content: `Query: "${query.slice(0, 200)}"` },
+        { role: 'user',   content: `Query: "${query.slice(0, 1000)}"` },
       ],
-      max_tokens:  150,
+      max_tokens:  350,
       temperature: 0.1,
       stream:      false,
     });
@@ -326,7 +341,7 @@ async function _parseIntent(query, env) {
     return {
       clean_title_guess: String(parsed.clean_title_guess || '').trim(),
       english_keywords:  String(parsed.english_keywords  || '').trim(),
-      english_query:     String(parsed.english_query     || '').trim().slice(0, 300),
+      english_query:     String(parsed.english_query     || '').trim().slice(0, 600),
       intent,
       actor_name:        String(parsed.actor_name || '').trim(),
       user_language:     String(parsed.user_language     || 'en').trim().slice(0, 10),
@@ -1237,7 +1252,7 @@ async function handleAISearch(request, env, cors, waitUntil) {
   let exclude = [];
   try {
     const body = await request.json();
-    query = (body.query || '').trim().slice(0, 300); // cap query length
+    query = (body.query || '').trim().slice(0, 1000); // cap query length — generous enough for a full rambling voice-dictated plot description
     // Natural negative filters: themes/traits the user wants to avoid.
     // Parsed on the frontend (parseVibeQuery) from phrases like "no gore, not sad".
     // NOTE: numeric/duration excludes (e.g. "under 100 min") are only soft hints —
@@ -1276,22 +1291,25 @@ async function handleAISearch(request, env, cors, waitUntil) {
     } catch {}
   }
 
-  // ── EXPLICIT INPUT TRANSLATION (multilingual → English) ────────────────
+  // ── EXPLICIT INPUT TRANSLATION + DE-RAMBLING (multilingual/voice → English) ──
   // Root fix for non-English search: instead of relying on the downstream
   // curator/ranker to translate internally (inconsistent — non-English queries
   // often fell through to the tiny KV catalog and returned poor results), we
   // translate the query to English HERE, once, BEFORE any curation, ranking, or
   // TMDB lookup runs. `_parseIntent` is parsed a single time and reused by the
-  // actor + LLM-first + KV paths. When the input is not English, `searchQuery`
-  // becomes the English translation; results/output stay strictly English.
+  // actor + LLM-first + KV paths.
+  // ALWAYS prefer the LLM's cleaned rewrite (not just for non-English input) —
+  // it also strips voice-dictation rambling (filler, false starts, repetition)
+  // from English queries, while preserving every plot detail/mood/constraint the
+  // user actually described. Raw `query` is only kept as a fallback if parsing fails.
   let intent = null;
   let searchQuery = query;                      // English query fed to EVERY search path
   if (env.AI) {
     intent = await _parseIntent(query, env);
-    if (intent && intent.user_language && intent.user_language !== 'en') {
-      const englishQuery =
+    if (intent) {
+      const cleanedQuery =
         (intent.english_query || intent.clean_title_guess || intent.english_keywords || '').trim();
-      if (englishQuery) searchQuery = englishQuery;
+      if (cleanedQuery) searchQuery = cleanedQuery;
     }
     console.log(
       '[ai-search] Raw query:', JSON.stringify(query),
