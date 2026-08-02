@@ -13411,6 +13411,13 @@ function stopMobPlaceholder() {
 
 // ─── VOICE SEARCH ──────────────────────────────────
 let _recognition = null, _isListening = false, _finalTranscript = '';
+let _voiceSilenceTimer = null;   // debounce: auto-stop only after N ms of silence (continuous mode)
+const VOICE_SILENCE_MS = 8000;   // wait this long after the user stops talking before auto-submitting —
+                                  // generous ceiling so long thinking pauses mid-plot don't cut dictation short
+let _voiceStopRequested = false; // true once the user manually clicks stop, or a fatal mic error occurs —
+                                  // suppresses auto-restart so we don't fight the user's own stop action
+let _voiceDebounceFired  = false; // true once the silence debounce itself calls .stop() — this is the
+                                  // INTENDED natural end of dictation, so auto-restart must not kick in
 
 // Voice recognition locale is DECOUPLED from the site's UI language. The user picks
 // the language they'll SPEAK in via a dedicated selector (default = their real
@@ -13537,7 +13544,7 @@ function _stopListening() {
 }
 
 function toggleVoiceSearch() {
-  if (_isListening) { _recognition.stop(); return; }
+  if (_isListening) { _voiceStopRequested = true; _recognition.stop(); return; }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return;
 
@@ -13546,8 +13553,11 @@ function toggleVoiceSearch() {
   _recognition.lang = _voiceLang();       // user's PICKED spoken language (or browser default)
   _recognition.interimResults = true;     // live-update the field as the user speaks
   _recognition.maxAlternatives = 1;
-  _recognition.continuous = false;        // single utterance → crisp final capture
+  _recognition.continuous = true;         // stay open through natural pauses while dictating a plot
   _finalTranscript = '';
+  _voiceStopRequested = false;
+  _voiceDebounceFired = false;
+  clearTimeout(_voiceSilenceTimer);
 
   _recognition.onstart = () => {
     _isListening = true;
@@ -13568,10 +13578,26 @@ function toggleVoiceSearch() {
     const display = (_finalTranscript + ' ' + interim).trim();
     inp.value = display;
     document.getElementById('mobAiInputWrap').classList.toggle('has-value', !!display);
+    // Re-arm the silence debounce on every new word — only auto-stop once the
+    // user has been quiet for VOICE_SILENCE_MS (natural thinking pauses don't cut them off).
+    clearTimeout(_voiceSilenceTimer);
+    _voiceSilenceTimer = setTimeout(() => {
+      _voiceDebounceFired = true;
+      if (_recognition) _recognition.stop();
+    }, VOICE_SILENCE_MS);
   };
   _recognition.onend = () => {
     // Language switch mid-listen: swallow this end; setVoiceLang reopens with new .lang.
-    if (_recognition && _recognition._ffSwitch) { _stopListening(); return; }
+    if (_recognition && _recognition._ffSwitch) { clearTimeout(_voiceSilenceTimer); _stopListening(); return; }
+    // The browser force-stopped recognition on its own (its own internal silence/no-speech
+    // detection, network blip, etc.) even though our debounce hasn't fired and the user
+    // hasn't clicked stop. Transparently restart so dictation keeps going — the mic UI
+    // stays in its "listening" state throughout, and _finalTranscript is left untouched
+    // so accumulated speech carries over across the restart.
+    if (!_voiceStopRequested && !_voiceDebounceFired) {
+      try { _recognition.start(); return; } catch(e) { /* fall through to finalize below */ }
+    }
+    clearTimeout(_voiceSilenceTimer);
     _stopListening();
     const inp = document.getElementById('mobSearchInput');
     const spoken = (_finalTranscript || inp.value).trim();
@@ -13583,6 +13609,13 @@ function toggleVoiceSearch() {
     }
   };
   _recognition.onerror = e => {
+    // Recoverable/transient errors (no-speech, network blip, an aborted internal
+    // restart) are followed by onend per the Web Speech API spec — let onend's
+    // auto-restart logic handle continuation instead of tearing down the UI here.
+    const fatal = e.error === 'not-allowed' || e.error === 'audio-capture' || e.error === 'service-not-allowed';
+    if (!fatal) return;
+    _voiceStopRequested = true;
+    clearTimeout(_voiceSilenceTimer);
     _stopListening();
     const inp = document.getElementById('mobSearchInput');
     if (e.error === 'not-allowed') {
@@ -13602,7 +13635,7 @@ function toggleVoiceSearch() {
 }
 
 function toggleDesktopVoice() {
-  if (_isListening) { if (_recognition) _recognition.stop(); return; }
+  if (_isListening) { _voiceStopRequested = true; if (_recognition) _recognition.stop(); return; }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return;
 
@@ -13611,8 +13644,11 @@ function toggleDesktopVoice() {
   _recognition.lang = _voiceLang();       // user's PICKED spoken language (or browser default)
   _recognition.interimResults = true;     // live-update the field as the user speaks
   _recognition.maxAlternatives = 1;
-  _recognition.continuous = false;        // single utterance → crisp final capture
+  _recognition.continuous = true;         // stay open through natural pauses while dictating a plot
   _finalTranscript = '';
+  _voiceStopRequested = false;
+  _voiceDebounceFired = false;
+  clearTimeout(_voiceSilenceTimer);
 
   const micBtn = document.getElementById('searchMicBtn');
   const inp    = document.getElementById('searchInput');
@@ -13635,10 +13671,26 @@ function toggleDesktopVoice() {
       inp.value = (_finalTranscript + ' ' + interim).trim();
       inp.dispatchEvent(new Event('input', { bubbles: true }));
     }
+    // Re-arm the silence debounce on every new word — only auto-stop once the
+    // user has been quiet for VOICE_SILENCE_MS (natural thinking pauses don't cut them off).
+    clearTimeout(_voiceSilenceTimer);
+    _voiceSilenceTimer = setTimeout(() => {
+      _voiceDebounceFired = true;
+      if (_recognition) _recognition.stop();
+    }, VOICE_SILENCE_MS);
   };
   _recognition.onend = () => {
     // Language switch mid-listen: swallow this end; setVoiceLang reopens with new .lang.
-    if (_recognition && _recognition._ffSwitch) { _isListening = false; if (micBtn) micBtn.classList.remove('listening'); return; }
+    if (_recognition && _recognition._ffSwitch) { clearTimeout(_voiceSilenceTimer); _isListening = false; if (micBtn) micBtn.classList.remove('listening'); return; }
+    // The browser force-stopped recognition on its own (its own internal silence/no-speech
+    // detection, network blip, etc.) even though our debounce hasn't fired and the user
+    // hasn't clicked stop. Transparently restart so dictation keeps going — the mic button
+    // stays in its "listening" state throughout, and _finalTranscript is left untouched
+    // so accumulated speech carries over across the restart.
+    if (!_voiceStopRequested && !_voiceDebounceFired) {
+      try { _recognition.start(); return; } catch(e) { /* fall through to finalize below */ }
+    }
+    clearTimeout(_voiceSilenceTimer);
     _isListening = false;
     if (micBtn) micBtn.classList.remove('listening');
     const spoken = (_finalTranscript || (inp ? inp.value : '')).trim();
@@ -13654,6 +13706,13 @@ function toggleDesktopVoice() {
     }
   };
   _recognition.onerror = e => {
+    // Recoverable/transient errors (no-speech, network blip, an aborted internal
+    // restart) are followed by onend per the Web Speech API spec — let onend's
+    // auto-restart logic handle continuation instead of tearing down the UI here.
+    const fatal = e.error === 'not-allowed' || e.error === 'audio-capture' || e.error === 'service-not-allowed';
+    if (!fatal) return;
+    _voiceStopRequested = true;
+    clearTimeout(_voiceSilenceTimer);
     _isListening = false;
     if (micBtn) micBtn.classList.remove('listening');
     if (inp) {
