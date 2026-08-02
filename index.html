@@ -8852,6 +8852,8 @@ let AI_SEARCH_ACTIVE  = false;
 let SEARCH_MODE       = 'title';   // 'title' = exact title search · 'ai' = plot/mood semantic search
 let AI_SEARCH_TIMER   = null;
 let _lastQuery        = '';        // last AI query for follow-up context
+let _aiSearchSeq      = 0;         // generation counter — discards stale responses from superseded calls
+let _aiSearchAbort    = null;      // AbortController of the in-flight aiSearch() request, so a new call can cancel it
 let _aiMatchScores    = new Map(); // tmdbId → match % for current AI results
 let _aiMatchReasons   = new Map(); // tmdbId → "why recommended" AI explanation
 let _aiMatchTags      = new Map(); // tmdbId → ["Slow-burn mystery", ...] "why matches" chips
@@ -10729,6 +10731,12 @@ function _keywordResultsForModal(query) {
 async function aiSearch(query) {
   query = (query || '').trim();
   if (!query) return;
+
+  // Cancel any still-in-flight request from a previous call so its response
+  // (success or failure) can never race this one to the DOM.
+  if (_aiSearchAbort) _aiSearchAbort.abort();
+  const seq = ++_aiSearchSeq;
+
   _lastQuery = query;
   _aiMatchScores.clear();
   _aiMatchReasons.clear();
@@ -10740,6 +10748,7 @@ async function aiSearch(query) {
 
   try {
     const controller = new AbortController();
+    _aiSearchAbort = controller;
     const timeout = setTimeout(() => controller.abort(), 12000);
 
     const r = await fetch('/api/ai-search', {
@@ -10752,6 +10761,11 @@ async function aiSearch(query) {
 
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
+
+    // A newer aiSearch() call has since superseded this one — discard this
+    // response silently, the newer call already owns the modal's UI state.
+    if (seq !== _aiSearchSeq) return;
+    if (_aiSearchAbort === controller) _aiSearchAbort = null;
 
     // Header shows the ENGLISH translated intent the backend actually searched on.
     const headerQuery = data.translatedQuery || query;
@@ -10806,6 +10820,11 @@ async function aiSearch(query) {
     renderAiFollowUps(query, suggestedRefinements);
 
   } catch (e) {
+    // A newer aiSearch() call already superseded this one (either it aborted
+    // this fetch directly, or it simply started after this one failed) — never
+    // let a stale/cancelled request flash the error state over live results.
+    if (seq !== _aiSearchSeq) return;
+
     // Backend guarantees ≥4 films, so this only fires on network/timeout. Fill the
     // modal from the local cache when possible; otherwise show a retry state.
     console.warn('[AI search] failed:', e.message);

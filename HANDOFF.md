@@ -2,9 +2,23 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-01) — Fix: Search-Modal Screen Flash
+## ⚡ Most Recent Session (2026-08-01) — Fix: AI-Search Stale-Response Race Condition
 
-**PREVIEW ONLY — branch `fix/search-flash`, NOT on `main`, NOT live on findfilm.ai.** Cloudflare Pages preview for review; production untouched pending approval.
+**PREVIEW ONLY — branch `fix/ai-search-race` (off `main`), NOT on `main`, NOT live on findfilm.ai.** Cloudflare Pages preview for review; production untouched pending approval.
+
+User reported the "Something went wrong" error screen briefly flashing in the AI Results modal right before real results loaded and overwrote it. Root cause: `aiSearch()` had **zero staleness/cancellation guards** — if it was ever invoked more than once in quick succession (e.g. amplified by the continuous-listening voice debounce from the prior session's `feat/voice-timeout-extend` work), an older/stale call's `fetch()` could resolve or reject *after* a newer call had already reset the modal via `openAiResults()`. If the stale call failed or returned empty, it called `showAiResultsError()` and clobbered the newer call's in-progress loading state — moments later the newer call's success handler overwrote it again, producing the flash. (Investigated and ruled out: `AI_SEARCH_TIMER` is dead/unused code — declared, only ever cleared, never assigned — not related to this bug.)
+
+| Commit | Feature |
+|--------|---------|
+| `745c966` | **Fix: guard `aiSearch()` against stale-response race** (`index.html`, JS-only, one function). Added module state beside `_lastQuery` (~L8854): `_aiSearchSeq` (generation counter) + `_aiSearchAbort` (holds the in-flight request's `AbortController`). `aiSearch()` now: (1) aborts any previous in-flight request via `_aiSearchAbort.abort()` and increments `_aiSearchSeq`, capturing `seq` locally, before doing anything else; (2) stores its own `AbortController` in `_aiSearchAbort`; (3) checks `if (seq !== _aiSearchSeq) return;` immediately after `await r.json()` (before any DOM writes) in the success path; (4) checks the same guard at the top of the `catch` block, before the local-cache fallback or `showAiResultsError()`. Net effect: only the most-recently-started `aiSearch()` call is ever allowed to mutate `#aiResultsGrid`/`#aiResultsSummary`/`#aiResultsEmpty` — superseded calls are cancelled outright (their fetch aborts) and, even if one still resolves, its response is silently discarded. **Verified on preview** via stubbed `fetch`: simulated a stale call that rejects 800ms after a fresh call (started 50ms later) succeeds — confirmed the fresh 4-result render is never overwritten by the stale rejection (`errorShown:false` before AND after the stale rejection fires); confirmed a genuine single-request failure with no local-cache fallback still correctly shows the error state + working "Try Again" retry button (no regression); console clean (only expected static-host TMDb/Search 404 noise); clean homepage screenshot after all test manipulation. |
+
+**Changed this session:** `index.html` only — 2 new module vars (`_aiSearchSeq`, `_aiSearchAbort`) + `aiSearch()` staleness guards. No new selectors/IDs/i18n keys. **Note:** this branch was cut from `main` (not from `feat/voice-timeout-extend`, which is still awaiting separate approval) since the race condition is a pre-existing `aiSearch()` gap, not specific to the voice-debounce change. **Deploy status:** preview branch only; **do NOT merge to `main` / deploy production until user approves.**
+
+---
+
+## ⚡ Session (2026-08-01) — Fix: Search-Modal Screen Flash
+
+**MERGED & LIVE — `fix/search-flash` merged to `main` (`4eecc13`), deployed to production. Live on https://findfilm.ai.**
 
 User reported a screen flash/blink right as the AI Results modal appears after a search. Root cause: `openAiResults()` synchronously adds `body.airx-open` (CSS `overflow:hidden`, L975) before the fetch even starts. Removing `overflow` instantly deletes the browser's scrollbar, and every other overlay in the app (Watchlist, Filters Drawer, Movie Detail Modal, Wizard, etc.) does the same via direct `document.body.style.overflow='hidden'` toggling — so the page's content width jumps by the scrollbar's width in the same frame the modal's opacity/transform transition starts, most visible on the sticky `.filters-bar` (top:64px, z:99). The backdrop/modal transitions themselves were already smooth (0.3s/0.35s), and the background feed does not re-render during modal-open — neither was the cause.
 
@@ -12,7 +26,7 @@ User reported a screen flash/blink right as the AI Results modal appears after a
 |--------|---------|
 | `f19d165` | **Fix: reserve scrollbar gutter to stop search-modal flash** (`index.html`, CSS-only, 1 rule). Added `html { scrollbar-gutter: stable; }` (new rule, right before the existing `body{}` block, ~L106) — reserves the scrollbar's track width permanently regardless of `overflow` state, so toggling `overflow:hidden` on `body` (any overlay, not just AI Results) no longer causes a reflow/content-shift. Global, one-line, no JS changes. **Verified on preview** (1280 desktop + 375 mobile): `document.documentElement.clientWidth` identical before/after toggling `body.airx-open` (no shift); AI Results modal open/close still smooth, skeleton shimmer intact; Filters Drawer still opens/closes normally (no regression); console clean (only expected static-host TMDb/Search 404 noise). |
 
-**Changed this session:** `index.html` only — one new CSS rule (`html{scrollbar-gutter:stable}`). No new selectors/IDs/functions/i18n keys. **Deploy status:** preview branch only; **do NOT merge to `main` / deploy production until user approves.**
+**Changed this session:** `index.html` only — one new CSS rule (`html{scrollbar-gutter:stable}`). No new selectors/IDs/functions/i18n keys. **Deploy status:** merged to `main`, live in production.
 
 ---
 
