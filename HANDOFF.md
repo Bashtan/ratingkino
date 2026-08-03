@@ -2,7 +2,22 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-02) — Ultra-Forgiving Voice Dictation + Backend Plot-Comprehension Overhaul
+## ⚡ Most Recent Session (2026-08-02) — Search Bar Flicker Fix (PREVIEW, not yet merged)
+
+Branch `fix/search-bar-flicker` off `main`, **not merged to main / not deployed to production** — awaiting user's manual verification of the Cloudflare Pages preview build.
+
+Pure CSS/DOM rendering fix (no `fetch`/race-condition changes) for a reported flicker/blink on the Hero Search Bar right after submit (desktop Enter / mobile Send) and right when a voice-search session finishes. Root-caused via direct tracing of every class add/remove and every CSS `transition`/`animation` touching `.search-wrap`, `.search-input`, `.search-mic-btn`, and the AI Results modal — three distinct, concrete bugs found and fixed.
+
+| Commit | Feature |
+|--------|---------|
+| `b0206e4` | **Eliminate search bar UI flicker on submit and voice-finish** — (1) `.search-mic-btn` CSS (~L4295-4303): `transition` now includes `opacity 0.2s, transform 0.2s` (previously only `color`/`background`) — `micPulse`/`micPulseHero` `@keyframes` animate `opacity`/`transform`, so `toggleDesktopVoice()`'s `onend` removing `.listening` mid-pulse was snapping the mic icon instantly to resting state instead of easing — the voice-finish "blink". (2) Removed a redundant duplicate `keydown` 'Enter' listener on `#searchInput` (previously ~L13812, called only `e.target.blur()`) that fired in the same synchronous tick as the primary submit listener's (~L10886) `aiSearch()`/`openAiResults()` heavy DOM writes (8 skeleton cards + modal/backdrop `.open` classes + `body.airx-open`), colliding the focus-loss `:focus-within` CSS transition on `.search-wrap--hero` with the modal appearing — the desktop submit flash. Blur is now a single `requestAnimationFrame(() => e.target.blur())` at the end of the one remaining listener. (3) `submitMobSearch()` (~L13343): the `aiSearch(finalQ)`/`applyFilters()` call is now wrapped in `setTimeout(..., 260)` so it fires after `#mobSearchOverlay`'s own `opacity 0.25s` fade-out visually clears, instead of both blurred overlay layers (`.mob-search-overlay` `blur(28px)` z-index 500 fading out, `.airx-backdrop`/`.airx-modal` `blur(9px)/26px` fading in underneath) cross-fading simultaneously over the search input row — the mobile submit flash. |
+| `347aa64` | **Voice-lang dropdown z-index trap + remaining desktop submit flash** — Found from a fresh screenshot/test pass after the first commit. (1) `.voice-lang-wrap` (~L651) had its own `z-index:3`, which makes it a stacking context — that TRAPS its `.voice-lang-menu` popover (`z-index:60`) at effective level 3 against outside siblings like `.search-suggestions` (`z-index:200`), no matter what z-index the popover itself declares — the popover's own `z:60` never actually got compared. Added `.voice-lang-wrap.open { z-index: 260; }` to lift the whole stacking context above every other hero-row overlay while open. (2) The desktop Enter-key handler (~L10895) still blurred `#searchInput` (via rAF, one frame later) right as `aiSearch()` opens the AI Results modal — the blur collapses `.search-wrap--hero`'s large `:focus-within` glow while racing the modal's own `opacity .3s` fade-in, reading as a flash. Blur is now deferred `setTimeout(..., 300)` (matching the modal's fade duration) **only** on the `aiSearch()` branch, so the collapse happens invisibly behind an already-opaque backdrop; the plain title-search branch (no modal) keeps the original snappy rAF blur. |
+
+**Changed this session:** `index.html` only — `.search-mic-btn` transition property, `#searchInput` keydown listener (merged from two into one, blur timing branched by search mode), `submitMobSearch()` sequencing, `.voice-lang-wrap.open` z-index. No new selectors/IDs/state vars.
+
+---
+
+## ⚡ Session (2026-08-02) — Ultra-Forgiving Voice Dictation + Backend Plot-Comprehension Overhaul
 
 All commits on `main`, all live on https://findfilm.ai.
 
