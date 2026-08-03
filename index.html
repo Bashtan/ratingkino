@@ -649,6 +649,13 @@ header {
 
 /* ── Voice-language selector (desktop): compact badge trigger + popover ── */
 .voice-lang-wrap { position: relative; z-index: 3; flex: none; display: none; align-items: center; }
+/* .voice-lang-wrap's own z-index:3 makes it a stacking context — that TRAPS its
+   .voice-lang-menu popover (z-index:60) at effective level 3 when compared against
+   sibling elements outside it, regardless of the popover's own z-index. That's why
+   the menu was rendering underneath .search-suggestions (z-index:200): the popover
+   never actually competed at z:60, its whole context was stuck at z:3. Lift the
+   context itself above every other hero-row overlay while open. */
+.voice-lang-wrap.open { z-index: 260; }
 .search-wrap.has-mic .voice-lang-wrap { display: inline-flex; }   /* only when speech is supported */
 .voice-lang-trigger {
   display: inline-flex; align-items: center; gap: 3px;
@@ -10885,9 +10892,6 @@ document.getElementById('searchInput').addEventListener('input', function() {
 
 // Enter key runs the search using the logic for the active mode:
 //   • Plot/AI mode → semantic aiSearch()  • Title mode → exact-title loadMovies()
-// Blur is deferred to the next frame (rAF) so the focus-loss CSS transition on
-// .search-wrap--hero doesn't collide with the AI modal's own synchronous DOM
-// writes in the same tick — that collision was the desktop submit flicker.
 document.getElementById('searchInput').addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   clearTimeout(filterTimer);
@@ -10896,10 +10900,20 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
   if (!q) { clearAISearch(); return; }
   if (SEARCH_MODE === 'ai' && CACHE_MOVIES.length && CONTENT_TYPE === 'movie') {
     aiSearch(q);
+    // Defer blur until the AI Results modal's own opacity fade-in (.airx-backdrop/
+    // .airx-modal, both `transition: opacity .3s`) has visually gone opaque. Blurring
+    // immediately (even one rAF later) collapses .search-wrap--hero's big :focus-within
+    // glow (0 0 40px/80px → resting 0.18-opacity ring) while that same screen region is
+    // still see-through — the collapse reads as a flash/jump right under the appearing
+    // modal. Waiting out the modal's own fade means the glow collapses invisibly, behind
+    // an already-opaque backdrop.
+    setTimeout(() => e.target.blur(), 300);
   } else {
     loadMovies(1, false);
+    // No modal opens for a plain title search, so there's nothing to hide the
+    // focus-loss transition behind — blur right away (next frame) as before.
+    requestAnimationFrame(() => e.target.blur());
   }
-  requestAnimationFrame(() => e.target.blur());
 });
 
 function toggleSrc(src) {
