@@ -310,6 +310,18 @@ header {
   transform: translateY(-1px);
 }
 .ss-pill:active { transform: translateY(0); }
+/* ── Stacking-context lift (the "nav bar cuts off the prompt chips" bug) ──────
+   .search-wrap declares `position: relative; z-index: 1`, which makes it a
+   stacking context. That TRAPS this panel: its own `z-index: 200` is only ever
+   compared against its siblings INSIDE the wrap, and from the outside the whole
+   subtree paints at the wrap's level 1. The sticky .filters-bar (Movies / TV
+   Shows / Filters) sits at z-index 99 with an opaque background, so it painted
+   straight over the dropdown and sliced the pills in half.
+   Raising .search-suggestions' own z-index cannot fix this — the context itself
+   has to be lifted, which is exactly what the .sw-mode / .voice-lang-wrap rules
+   already do for their popovers. Scoped to the visible state so the wrap drops
+   back to its resting level the moment the panel closes. */
+#searchWrap:has(.search-suggestions.ss-visible) { z-index: 130; }
 @media (max-width: 768px) { .search-suggestions { display: none; } }
 
 /* ─── AI results banner ──────────────────────────────────────── */
@@ -512,6 +524,16 @@ header {
 .vibe-chips {
   display: flex; flex-wrap: nowrap; justify-content: center; gap: 8px;
   width: 100%; max-width: none; margin-top: 2px;
+  transition: opacity 0.18s ease;
+}
+/* The suggestion panel is absolutely positioned and drops straight over this
+   row. The panel is capped at the search bar's 820px while the chip row runs
+   wider, so the chips used to poke out from behind it — two competing rows of
+   pills reading as one crashed-together mess. Recede them for the moment the
+   panel owns that space. Opacity only: the row keeps its box, so nothing in the
+   hero shifts. */
+.hero-search-anchor:has(.search-suggestions.ss-visible) ~ .vibe-chips {
+  opacity: 0.18; pointer-events: none;
 }
 .vibe-chip {
   display: inline-flex; align-items: center; gap: 5px;
@@ -1001,6 +1023,94 @@ header {
   font-family: 'Inter', sans-serif; font-size: 13.5px; color: #c7d2fe; font-weight: 500;
 }
 .airx-body { overflow-y: auto; padding: 14px 26px 22px; flex: 1; }
+
+/* ═══ THEMATIC AI LOADER ═══════════════════════════════════════════════════
+   Shown above the skeleton cards for the whole time /api/ai-search is in
+   flight, so the wait reads as "the AI is doing heavy lifting" rather than
+   "the page is broken". Pure CSS + inline SVG, no images, no JS animation
+   loop — only the phrase text is driven from JS (see startAiLoaderPhrases).
+   Composition: a spinning film reel, a steady glowing AI core at its hub, a
+   spark orbiting against the reel's rotation, and a film strip running
+   underneath with scrolling sprocket holes. */
+.ai-loader {
+  display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 15px; padding: 26px 20px 30px;
+}
+.ai-loader.show { display: flex; }
+
+.ail-stage { position: relative; width: 92px; height: 92px; display: grid; place-items: center; }
+
+/* Soft purple→cyan bloom breathing behind the reel. */
+.ail-glow {
+  position: absolute; inset: -16px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle,
+    rgba(124,58,237,0.38) 0%, rgba(6,182,212,0.14) 45%, transparent 70%);
+  animation: ailGlow 2.4s ease-in-out infinite;
+}
+@keyframes ailGlow {
+  0%,100% { opacity: 0.5; transform: scale(1); }
+  50%     { opacity: 1;   transform: scale(1.14); }
+}
+
+.ail-reel { position: absolute; inset: 0; animation: ailSpin 3.6s linear infinite; }
+.ail-reel svg { width: 100%; height: 100%; display: block; }
+@keyframes ailSpin { to { transform: rotate(360deg); } }
+
+/* Counter-rotating spark — reads as the AI "scanning" the reel. */
+.ail-orbit { position: absolute; inset: 4px; animation: ailSpin 2.1s linear infinite reverse; }
+.ail-orbit::after {
+  content: ''; position: absolute; top: -3px; left: 50%; margin-left: -3px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #a78bfa; box-shadow: 0 0 10px 2px rgba(167,139,250,0.85);
+}
+
+/* The hub sits OUTSIDE .ail-reel so it stays upright while the reel turns. */
+.ail-core { position: relative; width: 25px; height: 25px; color: #22d3ee; animation: ailCore 1.6s ease-in-out infinite; }
+.ail-core svg { width: 100%; height: 100%; display: block; }
+@keyframes ailCore {
+  0%,100% { opacity: 0.85; filter: drop-shadow(0 0 5px rgba(34,211,238,0.7)); }
+  50%     { opacity: 1;    filter: drop-shadow(0 0 13px rgba(34,211,238,1)); }
+}
+
+/* Film strip: two rows of sprocket holes translating by exactly one gradient
+   period (11px), so the loop is seamless with no visible jump. */
+.ail-strip {
+  position: relative; width: 196px; height: 18px; overflow: hidden;
+  border-radius: 4px; border: 1px solid rgba(167,139,250,0.22);
+  background: linear-gradient(180deg, rgba(124,58,237,0.22), rgba(6,182,212,0.13));
+}
+.ail-strip::before, .ail-strip::after {
+  content: ''; position: absolute; left: 0; width: 200%; height: 3px;
+  background: repeating-linear-gradient(90deg,
+    rgba(226,232,240,0.6) 0 4px, transparent 4px 11px);
+  animation: ailStrip 1.05s linear infinite;
+}
+.ail-strip::before { top: 3px; }
+.ail-strip::after  { bottom: 3px; }
+@keyframes ailStrip { to { transform: translateX(-11px); } }
+
+.ail-phrase {
+  min-height: 19px;
+  font-family: 'Inter', sans-serif; font-size: 13.5px; font-weight: 600;
+  letter-spacing: 0.2px; color: #c7d2fe; text-align: center;
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+.ail-phrase.ail-fade { opacity: 0; transform: translateY(4px); }
+
+/* Motion-sensitive users get the same loader, held still. */
+@media (prefers-reduced-motion: reduce) {
+  .ail-glow, .ail-reel, .ail-orbit, .ail-core,
+  .ail-strip::before, .ail-strip::after { animation: none; }
+  .ail-phrase { transition: none; }
+}
+@media (max-width: 768px) {
+  .ai-loader { gap: 13px; padding: 18px 16px 22px; }
+  .ail-stage { width: 76px; height: 76px; }
+  .ail-strip { width: 164px; }
+  .ail-phrase { font-size: 12.5px; }
+}
+
 .airx-grid { min-height: 200px; }
 /* Applied by renderAiResults() the frame after the real cards replace the
    loading skeletons, so results ease in instead of hard-cutting over them. */
@@ -5681,6 +5791,12 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ AI Results for',
     'results.close':        'Close',
     'results.thinking':     'Finding your films…',
+    /* Thematic AI loader — cycled by showAiLoader() while the search is in flight */
+    'loader.p1':            'Asking the AI director…',
+    'loader.p2':            'Watching 10,000 trailers…',
+    'loader.p3':            'Reading between the plot lines…',
+    'loader.p4':            'Cross-checking the critics…',
+    'loader.p5':            'Finding your perfect movie night…',
     'results.refine':       'Refine your search',
     'results.closest':      'Here are the closest matches we could find.',
     'results.errorTitle':   'Something went sideways',
@@ -6032,6 +6148,11 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ Resultados IA para',
     'results.close':        'Cerrar',
     'results.thinking':     'Buscando tus películas…',
+    'loader.p1':            'Consultando al director de IA…',
+    'loader.p2':            'Viendo 10 000 tráileres…',
+    'loader.p3':            'Leyendo entre líneas del guion…',
+    'loader.p4':            'Contrastando a la crítica…',
+    'loader.p5':            'Buscando tu noche de cine perfecta…',
     'results.refine':       'Afina tu búsqueda',
     'results.closest':      'Estas son las coincidencias más cercanas que encontramos.',
     'results.errorTitle':   'Algo salió mal',
@@ -6347,6 +6468,11 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ Résultats IA pour',
     'results.close':        'Fermer',
     'results.thinking':     'Recherche de vos films…',
+    'loader.p1':            'On consulte le réalisateur IA…',
+    'loader.p2':            'On regarde 10 000 bandes-annonces…',
+    'loader.p3':            'On lit entre les lignes du scénario…',
+    'loader.p4':            'On recoupe l\'avis des critiques…',
+    'loader.p5':            'On trouve ta soirée ciné parfaite…',
     'results.refine':       'Affinez votre recherche',
     'results.closest':      'Voici les correspondances les plus proches trouvées.',
     'results.errorTitle':   'Un souci est survenu',
@@ -6662,6 +6788,11 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ AI 结果：',
     'results.close':        '关闭',
     'results.thinking':     '正在为你寻找影片…',
+    'loader.p1':            '正在询问 AI 导演…',
+    'loader.p2':            '正在观看一万部预告片…',
+    'loader.p3':            '正在读懂剧情的言外之意…',
+    'loader.p4':            '正在比对影评人评分…',
+    'loader.p5':            '正在找出你的完美观影夜…',
     'results.refine':       '优化你的搜索',
     'results.closest':      '这些是我们能找到的最接近的结果。',
     'results.errorTitle':   '出了点问题',
@@ -6977,6 +7108,11 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ نتائج الذكاء الاصطناعي لـ',
     'results.close':        'إغلاق',
     'results.thinking':     'نبحث عن أفلامك…',
+    'loader.p1':            'نستشير مخرج الذكاء الاصطناعي…',
+    'loader.p2':            'نشاهد 10,000 إعلان تشويقي…',
+    'loader.p3':            'نقرأ ما بين سطور الحبكة…',
+    'loader.p4':            'نراجع آراء النقاد…',
+    'loader.p5':            'نجد ليلة أفلامك المثالية…',
     'results.refine':       'حسّن بحثك',
     'results.closest':      'إليك أقرب النتائج التي وجدناها.',
     'results.errorTitle':   'حدث خطأ ما',
@@ -7293,6 +7429,11 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ Результати ШІ для',
     'results.close':        'Закрити',
     'results.thinking':     'Шукаємо твої фільми…',
+    'loader.p1':            'Питаємо AI-режисера…',
+    'loader.p2':            'Дивимось 10 000 трейлерів…',
+    'loader.p3':            'Читаємо між рядків сюжету…',
+    'loader.p4':            'Звіряємо оцінки критиків…',
+    'loader.p5':            'Шукаємо твій ідеальний кіновечір…',
     'results.refine':       'Уточни свій пошук',
     'results.closest':      'Ось найближчі збіги, які ми знайшли.',
     'results.errorTitle':   'Щось пішло не так',
@@ -7626,6 +7767,11 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ KI-Ergebnisse für',
     'results.close':        'Schließen',
     'results.thinking':     'Wir suchen deine Filme…',
+    'loader.p1':            'Wir fragen den KI-Regisseur…',
+    'loader.p2':            'Wir schauen 10.000 Trailer…',
+    'loader.p3':            'Wir lesen zwischen den Handlungszeilen…',
+    'loader.p4':            'Wir gleichen die Kritiken ab…',
+    'loader.p5':            'Wir finden deinen perfekten Filmabend…',
     'results.refine':       'Verfeinere deine Suche',
     'results.closest':      'Hier sind die nächstgelegenen Treffer, die wir gefunden haben.',
     'results.errorTitle':   'Da ist etwas schiefgelaufen',
@@ -7965,6 +8111,11 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ AI-resultat för',
     'results.close':        'Stäng',
     'results.thinking':     'Letar efter dina filmer…',
+    'loader.p1':            'Vi frågar AI-regissören…',
+    'loader.p2':            'Vi ser 10 000 trailers…',
+    'loader.p3':            'Vi läser mellan handlingens rader…',
+    'loader.p4':            'Vi stämmer av med kritikerna…',
+    'loader.p5':            'Vi hittar din perfekta filmkväll…',
     'results.refine':       'Förfina din sökning',
     'results.closest':      'Här är de närmaste träffarna vi kunde hitta.',
     'results.errorTitle':   'Något gick snett',
@@ -8304,6 +8455,11 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ AI-resultater for',
     'results.close':        'Lukk',
     'results.thinking':     'Finner filmene dine…',
+    'loader.p1':            'Vi spør AI-regissøren…',
+    'loader.p2':            'Vi ser 10 000 trailere…',
+    'loader.p3':            'Vi leser mellom handlingens linjer…',
+    'loader.p4':            'Vi sjekker anmelderne…',
+    'loader.p5':            'Vi finner din perfekte filmkveld…',
     'results.refine':       'Forfin søket ditt',
     'results.closest':      'Her er de nærmeste treffene vi fant.',
     'results.errorTitle':   'Noe gikk galt',
@@ -10702,9 +10858,46 @@ function vibeSearch(text) {
    (mobile) that floats ABOVE the feed. The feed is never replaced or hidden,
    so closing the modal returns the user exactly where they were.
 ═══════════════════════════════════ */
+/* ── Thematic AI loader ────────────────────────────────────────────────────
+   The reel/strip/glow are pure CSS; JS only owns the cycling phrase, so the
+   animation keeps running smoothly even while the main thread is busy parsing
+   the search response. showAiLoader() is called by openAiResults() at submit
+   and hideAiLoader() by whichever path finishes the search (results, empty
+   state, or error), so the loader's lifetime is exactly the fetch's. */
+let _ailPhraseTimer = null;
+let _ailPhraseIdx   = 0;
+const AIL_PHRASE_KEYS = ['loader.p1', 'loader.p2', 'loader.p3', 'loader.p4', 'loader.p5'];
+
+function showAiLoader() {
+  const el = document.getElementById('aiLoader');
+  const ph = document.getElementById('aiLoaderPhrase');
+  if (!el || !ph) return;
+  clearInterval(_ailPhraseTimer);
+  // Start on a random phrase so back-to-back searches don't feel scripted.
+  _ailPhraseIdx = Math.floor(Math.random() * AIL_PHRASE_KEYS.length);
+  ph.classList.remove('ail-fade');
+  ph.textContent = t(AIL_PHRASE_KEYS[_ailPhraseIdx]);
+  el.classList.add('show');
+  _ailPhraseTimer = setInterval(() => {
+    ph.classList.add('ail-fade');
+    setTimeout(() => {
+      _ailPhraseIdx = (_ailPhraseIdx + 1) % AIL_PHRASE_KEYS.length;
+      ph.textContent = t(AIL_PHRASE_KEYS[_ailPhraseIdx]);
+      ph.classList.remove('ail-fade');
+    }, 280);                       // matches .ail-phrase's 0.28s fade-out
+  }, 2200);
+}
+
+function hideAiLoader() {
+  clearInterval(_ailPhraseTimer);
+  _ailPhraseTimer = null;
+  document.getElementById('aiLoader')?.classList.remove('show');
+}
+
 function openAiResults(query) {
   const titleEl = document.getElementById('aiResultsTitle');
   if (titleEl) titleEl.textContent = query || '';
+  showAiLoader();
   document.getElementById('aiResultsSummary').textContent = t('results.thinking');
   document.getElementById('aiResultsFollowups').innerHTML = '';
   document.getElementById('aiResultsEmpty').classList.remove('show');
@@ -10718,6 +10911,7 @@ function openAiResults(query) {
 }
 
 function closeAiResults() {
+  hideAiLoader();   // stop the phrase interval if the user bails mid-search
   document.getElementById('aiResultsModal').classList.remove('open');
   document.getElementById('aiResultsBackdrop').classList.remove('open');
   document.body.classList.remove('airx-open');
@@ -10738,6 +10932,7 @@ function aiResultsBackdropClick(e) {
 function renderAiResults(results) {
   const grid  = document.getElementById('aiResultsGrid');
   const empty = document.getElementById('aiResultsEmpty');
+  hideAiLoader();   // the AI is done thinking — retire the reel
   empty.classList.remove('show');
   if (!results.length) { grid.innerHTML = ''; showAiResultsError(); return; }
   // Skeletons → real cards used to be a bare innerHTML swap: eight shimmering
@@ -10767,6 +10962,7 @@ function renderAiFollowUps(query, dynamicChips) {
 }
 
 function showAiResultsError() {
+  hideAiLoader();
   document.getElementById('aiResultsGrid').innerHTML = '';
   document.getElementById('aiResultsSummary').textContent = '';
   document.getElementById('aiResultsEmpty').classList.add('show');
@@ -14312,6 +14508,38 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
   </div>
   <div class="airx-summary" id="aiResultsSummary"></div>
   <div class="airx-body" id="aiResultsBody">
+    <!-- Thematic AI loader — visible only while /api/ai-search is in flight,
+         sitting directly above the skeleton cards. See .ai-loader CSS. -->
+    <div class="ai-loader" id="aiLoader" role="status" aria-live="polite">
+      <div class="ail-stage">
+        <span class="ail-glow" aria-hidden="true"></span>
+        <!-- Film reel: rim, 6 sprocket windows, hub ring -->
+        <span class="ail-reel" aria-hidden="true">
+          <svg viewBox="0 0 64 64" fill="none" stroke="#a78bfa" stroke-width="2.2">
+            <circle cx="32" cy="32" r="28.5" opacity="0.9"/>
+            <circle cx="32" cy="32" r="8.5" opacity="0.55"/>
+            <g fill="rgba(167,139,250,0.20)" stroke="#c4b5fd" stroke-width="1.8">
+              <circle cx="49"   cy="32"    r="5.6"/>
+              <circle cx="40.5" cy="46.72" r="5.6"/>
+              <circle cx="23.5" cy="46.72" r="5.6"/>
+              <circle cx="15"   cy="32"    r="5.6"/>
+              <circle cx="23.5" cy="17.28" r="5.6"/>
+              <circle cx="40.5" cy="17.28" r="5.6"/>
+            </g>
+          </svg>
+        </span>
+        <span class="ail-orbit" aria-hidden="true"></span>
+        <!-- AI core: a play triangle inside a spark, held upright over the hub -->
+        <span class="ail-core" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 1.6l1.85 5.7 5.7 1.85-5.7 1.85L12 16.65l-1.85-5.65-5.7-1.85 5.7-1.85z" opacity="0.95"/>
+            <path d="M10 18.4l5.6 2.6-5.6 2.6z" opacity="0.8"/>
+          </svg>
+        </span>
+      </div>
+      <span class="ail-strip" aria-hidden="true"></span>
+      <div class="ail-phrase" id="aiLoaderPhrase"></div>
+    </div>
     <div class="movie-grid airx-grid" id="aiResultsGrid"></div>
     <div class="airx-empty" id="aiResultsEmpty">
       <div class="airx-empty-icon">🍿</div>
