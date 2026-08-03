@@ -4299,7 +4299,9 @@ main.browse-collapsed > .load-wrap { display: none !important; }
   color: rgba(203,213,225,0.85);   /* slate-300 — match brighter placeholder */
   display: none; align-items: center; justify-content: center;
   border-radius: 6px; z-index: 2;
-  transition: color 0.2s, background 0.2s;
+  /* opacity/transform included so removing .listening mid-pulse (micPulse/micPulseHero
+     animate both) eases back to rest instead of snapping instantly — see onend handlers. */
+  transition: color 0.2s, background 0.2s, opacity 0.2s, transform 0.2s;
 }
 .search-mic-btn:hover { color: #a78bfa; background: rgba(124,58,237,0.12); }
 /* Recording state must ALWAYS read red — beat the hero/hover mic-color rules
@@ -10883,6 +10885,9 @@ document.getElementById('searchInput').addEventListener('input', function() {
 
 // Enter key runs the search using the logic for the active mode:
 //   • Plot/AI mode → semantic aiSearch()  • Title mode → exact-title loadMovies()
+// Blur is deferred to the next frame (rAF) so the focus-loss CSS transition on
+// .search-wrap--hero doesn't collide with the AI modal's own synchronous DOM
+// writes in the same tick — that collision was the desktop submit flicker.
 document.getElementById('searchInput').addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   clearTimeout(filterTimer);
@@ -10894,6 +10899,7 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
   } else {
     loadMovies(1, false);
   }
+  requestAnimationFrame(() => e.target.blur());
 });
 
 function toggleSrc(src) {
@@ -13344,11 +13350,16 @@ function submitMobSearch() {
   // Route mobile search (voice, Enter, or mood chip) through the semantic AI path so
   // every query passes the backend English intent-translation step and opens the
   // AI Results bottom sheet. TV falls back to the classic title search.
-  if (CONTENT_TYPE === 'movie') {
-    aiSearch(finalQ);
-  } else {
-    applyFilters();
-  }
+  // Deferred to match #mobSearchOverlay's own 0.25s fade-out — opening the AI modal's
+  // blurred backdrop in the same tick as the overlay close made two backdrop-filter
+  // layers cross-fade over the search input row at once (the mobile submit flicker).
+  setTimeout(() => {
+    if (CONTENT_TYPE === 'movie') {
+      aiSearch(finalQ);
+    } else {
+      applyFilters();
+    }
+  }, 260);
 }
 
 function clearMobSearch() {
@@ -13801,11 +13812,6 @@ document.getElementById('mobSearchInput').addEventListener('input', e => {
     document.getElementById('mobRefineSection').style.display = 'none';
   }
   checkRefinements(e.target.value);
-});
-
-// Close search when user submits (hits enter / blur on mobile)
-document.getElementById('searchInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.target.blur(); }
 });
 
 /* ═══════════════════════════════════
