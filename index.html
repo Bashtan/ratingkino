@@ -232,7 +232,12 @@ header {
   display: flex; align-items: center;
   color: rgba(124,58,237,0.55);
   pointer-events: none; z-index: 2;
-  transition: color 0.3s, filter 0.3s;
+  /* opacity is transitioned too: submitting swaps this icon's running animation
+     (aiIconPulse, from .typing) for a different one (aiStarSpin, from
+     .ai-active). Without opacity in the transition list, that swap snapped the
+     icon from wherever the pulse happened to be back to full opacity in a
+     single frame — a blink inside the search bar at the exact moment of submit. */
+  transition: color 0.3s, filter 0.3s, opacity 0.3s;
 }
 .ai-icon svg { flex-shrink: 0; }
 .search-wrap:focus-within .ai-icon { color: #a78bfa; filter: drop-shadow(0 0 4px rgba(167,139,250,0.6)); }
@@ -392,9 +397,14 @@ header {
 @keyframes twBlink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
 
 /* ─── Pulsing AI spark while typing ────────────────────────────── */
+/* Opacity/glow-only pulse — deliberately does NOT animate transform. The
+   .ai-active state that replaces it on submit runs aiStarSpin, which owns
+   transform; if both animated transform, the handover mid-pulse jumped the icon
+   from a scaled-up frame straight to rotate(0). Keeping transform out of this
+   keyframe means the swap is a pure, transitionable opacity change. */
 @keyframes aiIconPulse {
-  0%,100% { transform: translateY(-50%) scale(1);     opacity: 1; }
-  50%      { transform: translateY(-50%) scale(1.45);  opacity: 0.55; }
+  0%,100% { opacity: 1;    filter: drop-shadow(0 0 5px rgba(167,139,250,0.75)); }
+  50%     { opacity: 0.55; filter: drop-shadow(0 0 11px rgba(167,139,250,0.95)); }
 }
 .search-wrap.typing:not(.ai-active) .ai-icon {
   color: #a78bfa;
@@ -621,7 +631,25 @@ header {
 }
 .search-clear-btn svg { width: 11px; height: 11px; }
 .search-clear-btn:hover { background: rgba(255,255,255,0.16); color: #fff; }
-.search-wrap--hero.typing .search-clear-btn { display: inline-flex; }
+
+/* ── Hero bar layout lock ───────────────────────────────────────────────────
+   In the hero bar the X is a flex child of a fixed-height flex row, so toggling
+   it between `display:none` and `display:inline-flex` on every .typing change
+   inserted/removed 26px + the row's 4px gap — which shoved .sw-input-zone (and
+   with it the caret and the placeholder) sideways on the first keystroke, on
+   clear, and again on every submit path that touches .typing. That is the
+   search-bar "jump".
+   Fix: the button ALWAYS occupies its slot in the hero row; only its paint
+   state changes. Row geometry is now constant for the entire lifetime of the
+   bar, so no state change can produce a layout shift. */
+.search-wrap--hero .search-clear-btn {
+  display: inline-flex;
+  visibility: hidden; opacity: 0; pointer-events: none;
+  transition: opacity 0.18s ease, background 0.18s, color 0.18s;
+}
+.search-wrap--hero.typing .search-clear-btn {
+  visibility: visible; opacity: 1; pointer-events: auto;
+}
 
 /* AI-voice + search magnifier become inline flex children (no absolute pos) */
 .search-wrap--hero .search-mic-btn {
@@ -974,6 +1002,16 @@ header {
 }
 .airx-body { overflow-y: auto; padding: 14px 26px 22px; flex: 1; }
 .airx-grid { min-height: 200px; }
+/* Applied by renderAiResults() the frame after the real cards replace the
+   loading skeletons, so results ease in instead of hard-cutting over them. */
+.airx-grid-in { animation: airxGridIn 0.32s cubic-bezier(.22,1,.36,1) both; }
+@keyframes airxGridIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .airx-grid-in { animation: none; }
+}
 .airx-empty { display: none; flex-direction: column; align-items: center; justify-content: center;
   gap: 10px; padding: 48px 20px; text-align: center; }
 .airx-empty.show { display: flex; }
@@ -2852,6 +2890,14 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .mob-search-overlay.open {
   opacity: 1; pointer-events: all;
 }
+/* Submit path only: the overlay must vanish in a single frame rather than
+   fade. Its 0.25s fade meant it was still painting (z-index:500,
+   backdrop-filter: blur(28px)) on top of the AI Results modal opening
+   underneath it (z-index:150/151, its own backdrop-filter) — two blurred
+   layers cross-fading over the exact spot the user just typed into. Killing
+   the transition here lets the modal's own fade-in be the only animation the
+   user sees, with no dead gap in between. Cancel/back still fades normally. */
+.mob-search-overlay.instant-close { transition: none; }
 .mob-search-inner {
   padding: 20px 20px 36px;
   display: flex; flex-direction: column; gap: 18px;
@@ -9968,6 +10014,12 @@ async function tryCache() {
 
 async function loadMovies(page = 1, append = false) {
   if (IS_LOADING) return;
+  // Hard backstop for the background-feed lockdown (see applyFilters). A full
+  // grid rebuild (append === false) tears down #feedSections and repaints the
+  // whole page body; if that lands while the AI Results modal is open the user
+  // sees the page behind the modal lurch. Pagination (append === true) is a
+  // deliberate user action on the main page and is left untouched.
+  if (!append && document.body.classList.contains('airx-open')) return;
   IS_LOADING = true;
 
   // ── Show/hide discovery rows based on whether a search query is active ──
@@ -10688,7 +10740,16 @@ function renderAiResults(results) {
   const empty = document.getElementById('aiResultsEmpty');
   empty.classList.remove('show');
   if (!results.length) { grid.innerHTML = ''; showAiResultsError(); return; }
+  // Skeletons → real cards used to be a bare innerHTML swap: eight shimmering
+  // placeholders were replaced by eight posters in a single frame, which read as
+  // an abrupt "screen switch" rather than the search resolving. Fade the new
+  // cards in instead, so loading and results are visibly the same continuous
+  // step. The class is removed + reflowed first so the animation re-fires on
+  // every subsequent search, not just the first.
+  grid.classList.remove('airx-grid-in');
   grid.innerHTML = results.map(renderCardHTML).join('');
+  void grid.offsetWidth;
+  grid.classList.add('airx-grid-in');
 }
 
 function renderAiFollowUps(query, dynamicChips) {
@@ -10776,10 +10837,14 @@ async function aiSearch(query) {
     if (seq !== _aiSearchSeq) return;
     if (_aiSearchAbort === controller) _aiSearchAbort = null;
 
-    // Header shows the ENGLISH translated intent the backend actually searched on.
-    const headerQuery = data.translatedQuery || query;
-    const titleEl = document.getElementById('aiResultsTitle');
-    if (titleEl) titleEl.textContent = headerQuery;
+    // The modal header keeps the user's OWN words, exactly as openAiResults()
+    // painted them at submit time. It used to be overwritten here with the
+    // backend's English `translatedQuery`, which meant the header visibly
+    // re-wrote itself (and re-wrapped, for long non-English queries) the moment
+    // the fetch resolved — a text jump right in the middle of the loading→results
+    // transition. The translation is an internal search detail; the user should
+    // see their own sentence sitting still from submit through to results.
+    const headerQuery = query;
 
     // ── Open-world path: actor filmography or LLM-curated real films ──
     if ((data.actorQuery || data.aiCurated) && data.movies?.length) {
@@ -10882,6 +10947,19 @@ function applyFilters() {
     document.getElementById('searchWrap').classList.remove('ai-active');
   }
   saveSession();
+  // ── Background-feed lockdown ──────────────────────────────────────────────
+  // loadMovies() is a heavy, visually destructive operation: it hides
+  // #feedSections, runs applyBrowseCollapse(), blows the grid away with 20
+  // skeletons, re-renders, and can flash a zero-result empty state. Running it
+  // *behind* the AI Results modal, or on every interim voice transcript, is
+  // what made the page feel like it was "switching screens by itself".
+  // Two situations where the background must stay frozen:
+  //   1. The AI Results modal is open — the user is looking at the modal, the
+  //      page underneath must not move a pixel while they're in it.
+  //   2. Voice dictation is live — toggleDesktopVoice()'s onresult dispatches a
+  //      synthetic 'input' event on every interim transcript, so this debounce
+  //      would otherwise re-run a full feed rebuild several times per sentence.
+  if (document.body.classList.contains('airx-open') || _isListening) return;
   filterTimer = setTimeout(() => loadMovies(1, false), 300);
 }
 
@@ -13359,21 +13437,30 @@ function submitMobSearch() {
   const mood  = _activeMoodEl ? _activeMoodEl.dataset.modifier : null;
   const finalQ = rawQ && mood ? `${rawQ} — ${mood}` : rawQ || mood || '';
   document.getElementById('searchInput').value = finalQ;
+
+  // Linearized submit: overlay OFF in one frame, modal fade-in starts in the
+  // same tick. Previously this closed the overlay (0.25s fade) and then waited
+  // 260ms before opening the modal — which removed the double-blur overlap but
+  // left a quarter-second where the user had tapped Send and nothing at all was
+  // on screen responding. Now the overlay is cut instantly (.instant-close) so
+  // there is nothing left to overlap with, and the AI modal's own fade to the
+  // loading skeletons is the single, continuous transition the user perceives.
+  const ov = document.getElementById('mobSearchOverlay');
+  if (ov) ov.classList.add('instant-close');
   closeMobSearch();
+  // Restore the normal fade for the next cancel/back close, after this frame's
+  // instant hide has been committed.
+  if (ov) requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.remove('instant-close')));
+
   if (!finalQ) return;
   // Route mobile search (voice, Enter, or mood chip) through the semantic AI path so
   // every query passes the backend English intent-translation step and opens the
   // AI Results bottom sheet. TV falls back to the classic title search.
-  // Deferred to match #mobSearchOverlay's own 0.25s fade-out — opening the AI modal's
-  // blurred backdrop in the same tick as the overlay close made two backdrop-filter
-  // layers cross-fade over the search input row at once (the mobile submit flicker).
-  setTimeout(() => {
-    if (CONTENT_TYPE === 'movie') {
-      aiSearch(finalQ);
-    } else {
-      applyFilters();
-    }
-  }, 260);
+  if (CONTENT_TYPE === 'movie') {
+    aiSearch(finalQ);
+  } else {
+    applyFilters();
+  }
 }
 
 function clearMobSearch() {
