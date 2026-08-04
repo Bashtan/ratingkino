@@ -232,7 +232,12 @@ header {
   display: flex; align-items: center;
   color: rgba(124,58,237,0.55);
   pointer-events: none; z-index: 2;
-  transition: color 0.3s, filter 0.3s;
+  /* opacity is transitioned too: submitting swaps this icon's running animation
+     (aiIconPulse, from .typing) for a different one (aiStarSpin, from
+     .ai-active). Without opacity in the transition list, that swap snapped the
+     icon from wherever the pulse happened to be back to full opacity in a
+     single frame — a blink inside the search bar at the exact moment of submit. */
+  transition: color 0.3s, filter 0.3s, opacity 0.3s;
 }
 .ai-icon svg { flex-shrink: 0; }
 .search-wrap:focus-within .ai-icon { color: #a78bfa; filter: drop-shadow(0 0 4px rgba(167,139,250,0.6)); }
@@ -305,6 +310,18 @@ header {
   transform: translateY(-1px);
 }
 .ss-pill:active { transform: translateY(0); }
+/* ── Stacking-context lift (the "nav bar cuts off the prompt chips" bug) ──────
+   .search-wrap declares `position: relative; z-index: 1`, which makes it a
+   stacking context. That TRAPS this panel: its own `z-index: 200` is only ever
+   compared against its siblings INSIDE the wrap, and from the outside the whole
+   subtree paints at the wrap's level 1. The sticky .filters-bar (Movies / TV
+   Shows / Filters) sits at z-index 99 with an opaque background, so it painted
+   straight over the dropdown and sliced the pills in half.
+   Raising .search-suggestions' own z-index cannot fix this — the context itself
+   has to be lifted, which is exactly what the .sw-mode / .voice-lang-wrap rules
+   already do for their popovers. Scoped to the visible state so the wrap drops
+   back to its resting level the moment the panel closes. */
+#searchWrap:has(.search-suggestions.ss-visible) { z-index: 130; }
 @media (max-width: 768px) { .search-suggestions { display: none; } }
 
 /* ─── AI results banner ──────────────────────────────────────── */
@@ -392,9 +409,14 @@ header {
 @keyframes twBlink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
 
 /* ─── Pulsing AI spark while typing ────────────────────────────── */
+/* Opacity/glow-only pulse — deliberately does NOT animate transform. The
+   .ai-active state that replaces it on submit runs aiStarSpin, which owns
+   transform; if both animated transform, the handover mid-pulse jumped the icon
+   from a scaled-up frame straight to rotate(0). Keeping transform out of this
+   keyframe means the swap is a pure, transitionable opacity change. */
 @keyframes aiIconPulse {
-  0%,100% { transform: translateY(-50%) scale(1);     opacity: 1; }
-  50%      { transform: translateY(-50%) scale(1.45);  opacity: 0.55; }
+  0%,100% { opacity: 1;    filter: drop-shadow(0 0 5px rgba(167,139,250,0.75)); }
+  50%     { opacity: 0.55; filter: drop-shadow(0 0 11px rgba(167,139,250,0.95)); }
 }
 .search-wrap.typing:not(.ai-active) .ai-icon {
   color: #a78bfa;
@@ -502,6 +524,16 @@ header {
 .vibe-chips {
   display: flex; flex-wrap: nowrap; justify-content: center; gap: 8px;
   width: 100%; max-width: none; margin-top: 2px;
+  transition: opacity 0.18s ease;
+}
+/* The suggestion panel is absolutely positioned and drops straight over this
+   row. The panel is capped at the search bar's 820px while the chip row runs
+   wider, so the chips used to poke out from behind it — two competing rows of
+   pills reading as one crashed-together mess. Recede them for the moment the
+   panel owns that space. Opacity only: the row keeps its box, so nothing in the
+   hero shifts. */
+.hero-search-anchor:has(.search-suggestions.ss-visible) ~ .vibe-chips {
+  opacity: 0.18; pointer-events: none;
 }
 .vibe-chip {
   display: inline-flex; align-items: center; gap: 5px;
@@ -621,7 +653,25 @@ header {
 }
 .search-clear-btn svg { width: 11px; height: 11px; }
 .search-clear-btn:hover { background: rgba(255,255,255,0.16); color: #fff; }
-.search-wrap--hero.typing .search-clear-btn { display: inline-flex; }
+
+/* ── Hero bar layout lock ───────────────────────────────────────────────────
+   In the hero bar the X is a flex child of a fixed-height flex row, so toggling
+   it between `display:none` and `display:inline-flex` on every .typing change
+   inserted/removed 26px + the row's 4px gap — which shoved .sw-input-zone (and
+   with it the caret and the placeholder) sideways on the first keystroke, on
+   clear, and again on every submit path that touches .typing. That is the
+   search-bar "jump".
+   Fix: the button ALWAYS occupies its slot in the hero row; only its paint
+   state changes. Row geometry is now constant for the entire lifetime of the
+   bar, so no state change can produce a layout shift. */
+.search-wrap--hero .search-clear-btn {
+  display: inline-flex;
+  visibility: hidden; opacity: 0; pointer-events: none;
+  transition: opacity 0.18s ease, background 0.18s, color 0.18s;
+}
+.search-wrap--hero.typing .search-clear-btn {
+  visibility: visible; opacity: 1; pointer-events: auto;
+}
 
 /* AI-voice + search magnifier become inline flex children (no absolute pos) */
 .search-wrap--hero .search-mic-btn {
@@ -973,7 +1023,105 @@ header {
   font-family: 'Inter', sans-serif; font-size: 13.5px; color: #c7d2fe; font-weight: 500;
 }
 .airx-body { overflow-y: auto; padding: 14px 26px 22px; flex: 1; }
+
+/* ═══ THEMATIC AI LOADER ═══════════════════════════════════════════════════
+   Shown above the skeleton cards for the whole time /api/ai-search is in
+   flight, so the wait reads as "the AI is doing heavy lifting" rather than
+   "the page is broken". Pure CSS + inline SVG, no images, no JS animation
+   loop — only the phrase text is driven from JS (see startAiLoaderPhrases).
+   Composition: a spinning film reel, a steady glowing AI core at its hub, a
+   spark orbiting against the reel's rotation, and a film strip running
+   underneath with scrolling sprocket holes. */
+.ai-loader {
+  display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 15px; padding: 26px 20px 30px;
+}
+.ai-loader.show { display: flex; }
+
+.ail-stage { position: relative; width: 92px; height: 92px; display: grid; place-items: center; }
+
+/* Soft purple→cyan bloom breathing behind the reel. */
+.ail-glow {
+  position: absolute; inset: -16px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle,
+    rgba(124,58,237,0.38) 0%, rgba(6,182,212,0.14) 45%, transparent 70%);
+  animation: ailGlow 2.4s ease-in-out infinite;
+}
+@keyframes ailGlow {
+  0%,100% { opacity: 0.5; transform: scale(1); }
+  50%     { opacity: 1;   transform: scale(1.14); }
+}
+
+.ail-reel { position: absolute; inset: 0; animation: ailSpin 3.6s linear infinite; }
+.ail-reel svg { width: 100%; height: 100%; display: block; }
+@keyframes ailSpin { to { transform: rotate(360deg); } }
+
+/* Counter-rotating spark — reads as the AI "scanning" the reel. */
+.ail-orbit { position: absolute; inset: 4px; animation: ailSpin 2.1s linear infinite reverse; }
+.ail-orbit::after {
+  content: ''; position: absolute; top: -3px; left: 50%; margin-left: -3px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #a78bfa; box-shadow: 0 0 10px 2px rgba(167,139,250,0.85);
+}
+
+/* The hub sits OUTSIDE .ail-reel so it stays upright while the reel turns. */
+.ail-core { position: relative; width: 25px; height: 25px; color: #22d3ee; animation: ailCore 1.6s ease-in-out infinite; }
+.ail-core svg { width: 100%; height: 100%; display: block; }
+@keyframes ailCore {
+  0%,100% { opacity: 0.85; filter: drop-shadow(0 0 5px rgba(34,211,238,0.7)); }
+  50%     { opacity: 1;    filter: drop-shadow(0 0 13px rgba(34,211,238,1)); }
+}
+
+/* Film strip: two rows of sprocket holes translating by exactly one gradient
+   period (11px), so the loop is seamless with no visible jump. */
+.ail-strip {
+  position: relative; width: 196px; height: 18px; overflow: hidden;
+  border-radius: 4px; border: 1px solid rgba(167,139,250,0.22);
+  background: linear-gradient(180deg, rgba(124,58,237,0.22), rgba(6,182,212,0.13));
+}
+.ail-strip::before, .ail-strip::after {
+  content: ''; position: absolute; left: 0; width: 200%; height: 3px;
+  background: repeating-linear-gradient(90deg,
+    rgba(226,232,240,0.6) 0 4px, transparent 4px 11px);
+  animation: ailStrip 1.05s linear infinite;
+}
+.ail-strip::before { top: 3px; }
+.ail-strip::after  { bottom: 3px; }
+@keyframes ailStrip { to { transform: translateX(-11px); } }
+
+.ail-phrase {
+  min-height: 19px;
+  font-family: 'Inter', sans-serif; font-size: 13.5px; font-weight: 600;
+  letter-spacing: 0.2px; color: #c7d2fe; text-align: center;
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+.ail-phrase.ail-fade { opacity: 0; transform: translateY(4px); }
+
+/* Motion-sensitive users get the same loader, held still. */
+@media (prefers-reduced-motion: reduce) {
+  .ail-glow, .ail-reel, .ail-orbit, .ail-core,
+  .ail-strip::before, .ail-strip::after { animation: none; }
+  .ail-phrase { transition: none; }
+}
+@media (max-width: 768px) {
+  .ai-loader { gap: 13px; padding: 18px 16px 22px; }
+  .ail-stage { width: 76px; height: 76px; }
+  .ail-strip { width: 164px; }
+  .ail-phrase { font-size: 12.5px; }
+}
+
 .airx-grid { min-height: 200px; }
+/* Applied by renderAiResults() the frame after the real cards replace the
+   loading skeletons, so results ease in instead of hard-cutting over them. */
+.airx-grid-in { animation: airxGridIn 0.32s cubic-bezier(.22,1,.36,1) both; }
+@keyframes airxGridIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .airx-grid-in { animation: none; }
+}
 .airx-empty { display: none; flex-direction: column; align-items: center; justify-content: center;
   gap: 10px; padding: 48px 20px; text-align: center; }
 .airx-empty.show { display: flex; }
@@ -1980,9 +2128,16 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .m-orig { font-size: 12px; color: var(--text-sub); font-style: italic; margin-bottom: 14px; }
 .m-starring {
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; flex-wrap: wrap;
+  /* row-gap 8px / column-gap 14px. The column gap replaces the old "," separator
+     as the only thing dividing actors, so it has to read as a deliberate break;
+     the row gap is tighter because wrapped lines already read as separate.
+     `overflow: hidden` was removed with the same change — it existed to clip a
+     single non-wrapping line, and with flex-wrap it can only clip hover/focus
+     rings on the wrapped rows. */
+  gap: 8px 14px;
   margin-bottom: 14px; font-size: 12px; color: var(--text-sub);
-  line-height: 1; overflow: hidden;
+  line-height: 1;
 }
 .m-starring-label { flex-shrink: 0; }
 .m-starring-avatar {
@@ -1998,7 +2153,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .m-starring-static { cursor: default; }
 .m-starring-actor:hover .m-starring-name { color: var(--text-main); text-decoration: underline; }
-.m-starring-sep { margin-right: 4px; flex-shrink: 0; }
 .m-starring-name { white-space: nowrap; }
 .m-ratings-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 
@@ -2852,6 +3006,14 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .mob-search-overlay.open {
   opacity: 1; pointer-events: all;
 }
+/* Submit path only: the overlay must vanish in a single frame rather than
+   fade. Its 0.25s fade meant it was still painting (z-index:500,
+   backdrop-filter: blur(28px)) on top of the AI Results modal opening
+   underneath it (z-index:150/151, its own backdrop-filter) — two blurred
+   layers cross-fading over the exact spot the user just typed into. Killing
+   the transition here lets the modal's own fade-in be the only animation the
+   user sees, with no dead gap in between. Cancel/back still fades normally. */
+.mob-search-overlay.instant-close { transition: none; }
 .mob-search-inner {
   padding: 20px 20px 36px;
   display: flex; flex-direction: column; gap: 18px;
@@ -3227,7 +3389,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .m-info-strip { flex-direction: row; }
   /* Ratings card: single-line inline pill for mobile hero */
   .m-orig        { margin-bottom: 3px; font-size: 11px; }
-  .m-starring    { gap: 5px; margin-bottom: 8px; font-size: 10.5px; }
+  .m-starring    { gap: 7px 11px; margin-bottom: 8px; font-size: 10.5px; }
   .m-starring-avatar { width: 18px; height: 18px; font-size: 7px; }
   .m-ratings-row { margin-bottom: 5px; }
   .mr-score-card { flex-direction: row; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; }
@@ -5436,6 +5598,9 @@ const TMDB_LANG  = { en:'en-US', es:'es-ES', fr:'fr-FR', zh:'zh-CN', ar:'ar-SA',
 const TIMG_W500  = 'https://image.tmdb.org/t/p/w500';
 const TIMG_W780  = 'https://image.tmdb.org/t/p/w780';
 const TIMG_W1280 = 'https://image.tmdb.org/t/p/w1280';
+// How many actors the modal's "Starring:" row shows. Referenced by both
+// castPhotos build sites and the backfill guard so the three can't drift apart.
+const CAST_LIMIT = 5;
 const TIMG_W45   = 'https://image.tmdb.org/t/p/w45';
 const TIMG_W185  = 'https://image.tmdb.org/t/p/w185';
 const OMDB_BASE  = PROXY_BASE + '/omdb';
@@ -5635,6 +5800,12 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ AI Results for',
     'results.close':        'Close',
     'results.thinking':     'Finding your films…',
+    /* Thematic AI loader — cycled by showAiLoader() while the search is in flight */
+    'loader.p1':            'Asking the AI director…',
+    'loader.p2':            'Watching 10,000 trailers…',
+    'loader.p3':            'Reading between the plot lines…',
+    'loader.p4':            'Cross-checking the critics…',
+    'loader.p5':            'Finding your perfect movie night…',
     'results.refine':       'Refine your search',
     'results.closest':      'Here are the closest matches we could find.',
     'results.errorTitle':   'Something went sideways',
@@ -5986,6 +6157,11 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ Resultados IA para',
     'results.close':        'Cerrar',
     'results.thinking':     'Buscando tus películas…',
+    'loader.p1':            'Consultando al director de IA…',
+    'loader.p2':            'Viendo 10 000 tráileres…',
+    'loader.p3':            'Leyendo entre líneas del guion…',
+    'loader.p4':            'Contrastando a la crítica…',
+    'loader.p5':            'Buscando tu noche de cine perfecta…',
     'results.refine':       'Afina tu búsqueda',
     'results.closest':      'Estas son las coincidencias más cercanas que encontramos.',
     'results.errorTitle':   'Algo salió mal',
@@ -6301,6 +6477,11 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ Résultats IA pour',
     'results.close':        'Fermer',
     'results.thinking':     'Recherche de vos films…',
+    'loader.p1':            'On consulte le réalisateur IA…',
+    'loader.p2':            'On regarde 10 000 bandes-annonces…',
+    'loader.p3':            'On lit entre les lignes du scénario…',
+    'loader.p4':            'On recoupe l\'avis des critiques…',
+    'loader.p5':            'On trouve ta soirée ciné parfaite…',
     'results.refine':       'Affinez votre recherche',
     'results.closest':      'Voici les correspondances les plus proches trouvées.',
     'results.errorTitle':   'Un souci est survenu',
@@ -6616,6 +6797,11 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ AI 结果：',
     'results.close':        '关闭',
     'results.thinking':     '正在为你寻找影片…',
+    'loader.p1':            '正在询问 AI 导演…',
+    'loader.p2':            '正在观看一万部预告片…',
+    'loader.p3':            '正在读懂剧情的言外之意…',
+    'loader.p4':            '正在比对影评人评分…',
+    'loader.p5':            '正在找出你的完美观影夜…',
     'results.refine':       '优化你的搜索',
     'results.closest':      '这些是我们能找到的最接近的结果。',
     'results.errorTitle':   '出了点问题',
@@ -6931,6 +7117,11 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ نتائج الذكاء الاصطناعي لـ',
     'results.close':        'إغلاق',
     'results.thinking':     'نبحث عن أفلامك…',
+    'loader.p1':            'نستشير مخرج الذكاء الاصطناعي…',
+    'loader.p2':            'نشاهد 10,000 إعلان تشويقي…',
+    'loader.p3':            'نقرأ ما بين سطور الحبكة…',
+    'loader.p4':            'نراجع آراء النقاد…',
+    'loader.p5':            'نجد ليلة أفلامك المثالية…',
     'results.refine':       'حسّن بحثك',
     'results.closest':      'إليك أقرب النتائج التي وجدناها.',
     'results.errorTitle':   'حدث خطأ ما',
@@ -7247,6 +7438,11 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ Результати ШІ для',
     'results.close':        'Закрити',
     'results.thinking':     'Шукаємо твої фільми…',
+    'loader.p1':            'Питаємо AI-режисера…',
+    'loader.p2':            'Дивимось 10 000 трейлерів…',
+    'loader.p3':            'Читаємо між рядків сюжету…',
+    'loader.p4':            'Звіряємо оцінки критиків…',
+    'loader.p5':            'Шукаємо твій ідеальний кіновечір…',
     'results.refine':       'Уточни свій пошук',
     'results.closest':      'Ось найближчі збіги, які ми знайшли.',
     'results.errorTitle':   'Щось пішло не так',
@@ -7580,6 +7776,11 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ KI-Ergebnisse für',
     'results.close':        'Schließen',
     'results.thinking':     'Wir suchen deine Filme…',
+    'loader.p1':            'Wir fragen den KI-Regisseur…',
+    'loader.p2':            'Wir schauen 10.000 Trailer…',
+    'loader.p3':            'Wir lesen zwischen den Handlungszeilen…',
+    'loader.p4':            'Wir gleichen die Kritiken ab…',
+    'loader.p5':            'Wir finden deinen perfekten Filmabend…',
     'results.refine':       'Verfeinere deine Suche',
     'results.closest':      'Hier sind die nächstgelegenen Treffer, die wir gefunden haben.',
     'results.errorTitle':   'Da ist etwas schiefgelaufen',
@@ -7919,6 +8120,11 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ AI-resultat för',
     'results.close':        'Stäng',
     'results.thinking':     'Letar efter dina filmer…',
+    'loader.p1':            'Vi frågar AI-regissören…',
+    'loader.p2':            'Vi ser 10 000 trailers…',
+    'loader.p3':            'Vi läser mellan handlingens rader…',
+    'loader.p4':            'Vi stämmer av med kritikerna…',
+    'loader.p5':            'Vi hittar din perfekta filmkväll…',
     'results.refine':       'Förfina din sökning',
     'results.closest':      'Här är de närmaste träffarna vi kunde hitta.',
     'results.errorTitle':   'Något gick snett',
@@ -8258,6 +8464,11 @@ const TRANSLATIONS = {
     'results.eyebrow':      '✦ AI-resultater for',
     'results.close':        'Lukk',
     'results.thinking':     'Finner filmene dine…',
+    'loader.p1':            'Vi spør AI-regissøren…',
+    'loader.p2':            'Vi ser 10 000 trailere…',
+    'loader.p3':            'Vi leser mellom handlingens linjer…',
+    'loader.p4':            'Vi sjekker anmelderne…',
+    'loader.p5':            'Vi finner din perfekte filmkveld…',
     'results.refine':       'Forfin søket ditt',
     'results.closest':      'Her er de nærmeste treffene vi fant.',
     'results.errorTitle':   'Noe gikk galt',
@@ -9535,11 +9746,14 @@ function mergeMovieData(movie, det, od, country = DETECTED_COUNTRY) {
     ? ((det.created_by || []).map(p => p.name).join(', ') || null)
     : (crew.find(p => p.job === 'Director')?.name || null);
   movie.actors = cast.slice(0, 6).map(a => a.name);
-  movie.castPhotos = cast.slice(0, 2).map(a => ({
-    id:    a.id,
-    name:  a.name,
-    photo: a.profile_path ? TIMG_W45 + a.profile_path : null,
-  }));
+  movie.castPhotos = cast
+    .filter(a => a && a.name)
+    .slice(0, CAST_LIMIT)
+    .map(a => ({
+      id:    a.id ?? null,
+      name:  a.name,
+      photo: a.profile_path ? TIMG_W45 + a.profile_path : null,
+    }));
 
   // Trailer — prefer official Trailer, fallback to any YouTube video
   const vids = det.videos?.results || [];
@@ -9968,6 +10182,12 @@ async function tryCache() {
 
 async function loadMovies(page = 1, append = false) {
   if (IS_LOADING) return;
+  // Hard backstop for the background-feed lockdown (see applyFilters). A full
+  // grid rebuild (append === false) tears down #feedSections and repaints the
+  // whole page body; if that lands while the AI Results modal is open the user
+  // sees the page behind the modal lurch. Pagination (append === true) is a
+  // deliberate user action on the main page and is left untouched.
+  if (!append && document.body.classList.contains('airx-open')) return;
   IS_LOADING = true;
 
   // ── Show/hide discovery rows based on whether a search query is active ──
@@ -10650,9 +10870,46 @@ function vibeSearch(text) {
    (mobile) that floats ABOVE the feed. The feed is never replaced or hidden,
    so closing the modal returns the user exactly where they were.
 ═══════════════════════════════════ */
+/* ── Thematic AI loader ────────────────────────────────────────────────────
+   The reel/strip/glow are pure CSS; JS only owns the cycling phrase, so the
+   animation keeps running smoothly even while the main thread is busy parsing
+   the search response. showAiLoader() is called by openAiResults() at submit
+   and hideAiLoader() by whichever path finishes the search (results, empty
+   state, or error), so the loader's lifetime is exactly the fetch's. */
+let _ailPhraseTimer = null;
+let _ailPhraseIdx   = 0;
+const AIL_PHRASE_KEYS = ['loader.p1', 'loader.p2', 'loader.p3', 'loader.p4', 'loader.p5'];
+
+function showAiLoader() {
+  const el = document.getElementById('aiLoader');
+  const ph = document.getElementById('aiLoaderPhrase');
+  if (!el || !ph) return;
+  clearInterval(_ailPhraseTimer);
+  // Start on a random phrase so back-to-back searches don't feel scripted.
+  _ailPhraseIdx = Math.floor(Math.random() * AIL_PHRASE_KEYS.length);
+  ph.classList.remove('ail-fade');
+  ph.textContent = t(AIL_PHRASE_KEYS[_ailPhraseIdx]);
+  el.classList.add('show');
+  _ailPhraseTimer = setInterval(() => {
+    ph.classList.add('ail-fade');
+    setTimeout(() => {
+      _ailPhraseIdx = (_ailPhraseIdx + 1) % AIL_PHRASE_KEYS.length;
+      ph.textContent = t(AIL_PHRASE_KEYS[_ailPhraseIdx]);
+      ph.classList.remove('ail-fade');
+    }, 280);                       // matches .ail-phrase's 0.28s fade-out
+  }, 2200);
+}
+
+function hideAiLoader() {
+  clearInterval(_ailPhraseTimer);
+  _ailPhraseTimer = null;
+  document.getElementById('aiLoader')?.classList.remove('show');
+}
+
 function openAiResults(query) {
   const titleEl = document.getElementById('aiResultsTitle');
   if (titleEl) titleEl.textContent = query || '';
+  showAiLoader();
   document.getElementById('aiResultsSummary').textContent = t('results.thinking');
   document.getElementById('aiResultsFollowups').innerHTML = '';
   document.getElementById('aiResultsEmpty').classList.remove('show');
@@ -10666,6 +10923,7 @@ function openAiResults(query) {
 }
 
 function closeAiResults() {
+  hideAiLoader();   // stop the phrase interval if the user bails mid-search
   document.getElementById('aiResultsModal').classList.remove('open');
   document.getElementById('aiResultsBackdrop').classList.remove('open');
   document.body.classList.remove('airx-open');
@@ -10686,9 +10944,19 @@ function aiResultsBackdropClick(e) {
 function renderAiResults(results) {
   const grid  = document.getElementById('aiResultsGrid');
   const empty = document.getElementById('aiResultsEmpty');
+  hideAiLoader();   // the AI is done thinking — retire the reel
   empty.classList.remove('show');
   if (!results.length) { grid.innerHTML = ''; showAiResultsError(); return; }
+  // Skeletons → real cards used to be a bare innerHTML swap: eight shimmering
+  // placeholders were replaced by eight posters in a single frame, which read as
+  // an abrupt "screen switch" rather than the search resolving. Fade the new
+  // cards in instead, so loading and results are visibly the same continuous
+  // step. The class is removed + reflowed first so the animation re-fires on
+  // every subsequent search, not just the first.
+  grid.classList.remove('airx-grid-in');
   grid.innerHTML = results.map(renderCardHTML).join('');
+  void grid.offsetWidth;
+  grid.classList.add('airx-grid-in');
 }
 
 function renderAiFollowUps(query, dynamicChips) {
@@ -10706,6 +10974,7 @@ function renderAiFollowUps(query, dynamicChips) {
 }
 
 function showAiResultsError() {
+  hideAiLoader();
   document.getElementById('aiResultsGrid').innerHTML = '';
   document.getElementById('aiResultsSummary').textContent = '';
   document.getElementById('aiResultsEmpty').classList.add('show');
@@ -10776,10 +11045,14 @@ async function aiSearch(query) {
     if (seq !== _aiSearchSeq) return;
     if (_aiSearchAbort === controller) _aiSearchAbort = null;
 
-    // Header shows the ENGLISH translated intent the backend actually searched on.
-    const headerQuery = data.translatedQuery || query;
-    const titleEl = document.getElementById('aiResultsTitle');
-    if (titleEl) titleEl.textContent = headerQuery;
+    // The modal header keeps the user's OWN words, exactly as openAiResults()
+    // painted them at submit time. It used to be overwritten here with the
+    // backend's English `translatedQuery`, which meant the header visibly
+    // re-wrote itself (and re-wrapped, for long non-English queries) the moment
+    // the fetch resolved — a text jump right in the middle of the loading→results
+    // transition. The translation is an internal search detail; the user should
+    // see their own sentence sitting still from submit through to results.
+    const headerQuery = query;
 
     // ── Open-world path: actor filmography or LLM-curated real films ──
     if ((data.actorQuery || data.aiCurated) && data.movies?.length) {
@@ -10882,6 +11155,19 @@ function applyFilters() {
     document.getElementById('searchWrap').classList.remove('ai-active');
   }
   saveSession();
+  // ── Background-feed lockdown ──────────────────────────────────────────────
+  // loadMovies() is a heavy, visually destructive operation: it hides
+  // #feedSections, runs applyBrowseCollapse(), blows the grid away with 20
+  // skeletons, re-renders, and can flash a zero-result empty state. Running it
+  // *behind* the AI Results modal, or on every interim voice transcript, is
+  // what made the page feel like it was "switching screens by itself".
+  // Two situations where the background must stay frozen:
+  //   1. The AI Results modal is open — the user is looking at the modal, the
+  //      page underneath must not move a pixel while they're in it.
+  //   2. Voice dictation is live — toggleDesktopVoice()'s onresult dispatches a
+  //      synthetic 'input' event on every interim transcript, so this debounce
+  //      would otherwise re-run a full feed rebuild several times per sentence.
+  if (document.body.classList.contains('airx-open') || _isListening) return;
   filterTimer = setTimeout(() => loadMovies(1, false), 300);
 }
 
@@ -11083,22 +11369,48 @@ async function openMovie(tmdbId, listName = '') {
   // KV data predates the Starring-row feature. Without this the clickable-actor
   // Starring row never renders for the homepage feed — those movies are enriched:true
   // and skip enrichNow, so mergeMovieData never populates castPhotos.
-  if (m.enriched && !m.castPhotos?.length) {
+  //
+  // The guard is `< CAST_LIMIT`, not `!length`: castPhotos is persisted into the
+  // cached movie object (see normalizer, ~L10136) and sync-worker still writes
+  // whatever its own cap was, so movies already in KV arrive with fewer than
+  // CAST_LIMIT entries. A bare `!length` check would skip all of them and they'd
+  // keep showing the old count forever.
+  //
+  // `_castBackfilled` is a claim-then-release latch, NOT a fire-once flag:
+  //   • set before the request so a close/reopen mid-flight can't fire a duplicate
+  //   • left set when the request SUCCEEDS, even if TMDB returned fewer than
+  //     CAST_LIMIT actors — that's the real cast size, so re-asking is pointless
+  //     and would refetch on every single modal open
+  //   • CLEARED when the request fails, so a transient error (proxy 429, offline)
+  //     is retried next time instead of permanently locking this movie out.
+  // That last case is what made the row vanish entirely: widening the guard made
+  // this fire for every enriched movie rather than only cast-less ones, the extra
+  // load produced failures, and a latch that was set before the fetch and never
+  // released meant castPhotos stayed [] — which sends refreshModalDetails down
+  // its `display: none` branch and hides the label along with the actors.
+  if (m.enriched && (m.castPhotos?.length || 0) < CAST_LIMIT && !m._castBackfilled) {
+    m._castBackfilled = true;
     const lang = TMDB_LANG[CURRENT_LANG] || 'en-US';
     tmdbGet(`/movie/${tmdbId}`, { append_to_response: 'credits', language: lang })
       .then(det => {
-        if (ACTIVE_MOVIE?.id !== tmdbId) return;
-        const cast = det.credits?.cast || [];
+        const cast = det?.credits?.cast || [];
         if (!cast.length) return;
-        m.castPhotos = cast.slice(0, 2).map(a => ({
-          id:    a.id,
-          name:  a.name,
-          photo: a.profile_path ? TIMG_W45 + a.profile_path : null,
-        }));
-        if (!m.actors?.length) m.actors = cast.slice(0, 6).map(a => a.name);
-        refreshModalDetails(m);
+        const photos = cast
+          .filter(a => a && a.name)
+          .slice(0, CAST_LIMIT)
+          .map(a => ({
+            id:    a.id ?? null,
+            name:  a.name,
+            photo: a.profile_path ? TIMG_W45 + a.profile_path : null,
+          }));
+        if (!photos.length) return;
+        // Cache onto the movie even if the user already navigated away, so the
+        // work isn't wasted; only touch the DOM if this movie is still open.
+        m.castPhotos = photos;
+        if (!m.actors?.length) m.actors = photos.map(a => a.name);
+        if (ACTIVE_MOVIE?.id === tmdbId) refreshModalDetails(m);
       })
-      .catch(() => {});
+      .catch(() => { m._castBackfilled = false; });
   }
 }
 
@@ -11613,20 +11925,52 @@ function refreshModalRatings(m) {
   </div>${localBadge}`;
 }
 
+/* Cast entries for the modal's Starring row, in priority order.
+   1. `castPhotos` — rich: headshot + TMDB person_id (clickable → actor profile).
+   2. `actors`     — plain name strings. EVERY KV cache record has these (the
+      sync-worker writes cast.slice(0,5).map(name)); almost none have castPhotos.
+   The fallback is what makes the row render at all on the homepage feed. Those
+   movies are `enriched: true`, so they skip enrichNow() and their castPhotos can
+   only ever be filled by the async /movie/{id}?append_to_response=credits
+   backfill in openMovie(). Any reason that one call doesn't come back — TMDB
+   proxy 401/429, offline, an environment without the API key bound — used to
+   leave castPhotos [] and hide the entire row, label included. Names alone are
+   already in memory, so render them immediately (initials avatar, not
+   clickable) and let the backfill upgrade the row in place when it lands. */
+function _modalCastList(m) {
+  // Drop anything unusable before deciding whether to show the row at all. KV
+  // records predate several shape changes, so an entry can be null or missing a
+  // name; `initials()` runs before esc() and would throw on a non-string name,
+  // which would take out the whole function (and with it #mMeta below).
+  const photos = (Array.isArray(m.castPhotos) ? m.castPhotos : [])
+    .filter(a => a && typeof a.name === 'string' && a.name.trim());
+  if (photos.length) return photos.slice(0, CAST_LIMIT);
+  return (Array.isArray(m.actors) ? m.actors : [])
+    .filter(n => typeof n === 'string' && n.trim())
+    .slice(0, CAST_LIMIT)
+    .map(name => ({ id: null, name, photo: null }));
+}
+
 function refreshModalDetails(m) {
   refreshDescTranslation(m);
   const starringEl = document.getElementById('mStarring');
-  if (m.castPhotos?.length) {
-    const initials = n => n.split(' ').map(w => w[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
-    const chips = m.castPhotos.map((a, i) => {
+  const cast = _modalCastList(m);
+  if (cast.length) {
+    const initials = n => String(n || '').trim().split(/\s+/)
+      .map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+    const chips = cast.map(a => {
       const avatar = a.photo
-        ? `<img class="m-starring-avatar" src="${a.photo}" alt="" loading="lazy">`
+        ? `<img class="m-starring-avatar" src="${esc(a.photo)}" alt="" loading="lazy">`
         : `<div class="m-starring-avatar m-starring-initials">${esc(initials(a.name))}</div>`;
-      const sep = i > 0 ? `<span class="m-starring-sep">,</span>` : '';
       const inner = `${avatar}<span class="m-starring-name">${esc(a.name)}</span>`;
-      return a.id
-        ? `${sep}<button class="m-starring-actor" onclick="event.stopPropagation();openActorProfile(${a.id})">${inner}</button>`
-        : `${sep}<span class="m-starring-actor m-starring-static">${inner}</span>`;
+      // Coerce rather than test a.id directly: it must end up as a bare number in
+      // the inline handler. Accepts a numeric string, rejects null/garbage, and
+      // falls back to a non-clickable chip so a bad id degrades instead of
+      // emitting a broken openActorProfile() call.
+      const actorId = Number(a.id);
+      return Number.isFinite(actorId) && actorId > 0
+        ? `<button class="m-starring-actor" onclick="event.stopPropagation();openActorProfile(${actorId})">${inner}</button>`
+        : `<span class="m-starring-actor m-starring-static">${inner}</span>`;
     }).join('');
     starringEl.innerHTML = `<span class="m-starring-label">${t('modal.starring')}</span>${chips}`;
     starringEl.style.display = '';
@@ -13359,21 +13703,30 @@ function submitMobSearch() {
   const mood  = _activeMoodEl ? _activeMoodEl.dataset.modifier : null;
   const finalQ = rawQ && mood ? `${rawQ} — ${mood}` : rawQ || mood || '';
   document.getElementById('searchInput').value = finalQ;
+
+  // Linearized submit: overlay OFF in one frame, modal fade-in starts in the
+  // same tick. Previously this closed the overlay (0.25s fade) and then waited
+  // 260ms before opening the modal — which removed the double-blur overlap but
+  // left a quarter-second where the user had tapped Send and nothing at all was
+  // on screen responding. Now the overlay is cut instantly (.instant-close) so
+  // there is nothing left to overlap with, and the AI modal's own fade to the
+  // loading skeletons is the single, continuous transition the user perceives.
+  const ov = document.getElementById('mobSearchOverlay');
+  if (ov) ov.classList.add('instant-close');
   closeMobSearch();
+  // Restore the normal fade for the next cancel/back close, after this frame's
+  // instant hide has been committed.
+  if (ov) requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.remove('instant-close')));
+
   if (!finalQ) return;
   // Route mobile search (voice, Enter, or mood chip) through the semantic AI path so
   // every query passes the backend English intent-translation step and opens the
   // AI Results bottom sheet. TV falls back to the classic title search.
-  // Deferred to match #mobSearchOverlay's own 0.25s fade-out — opening the AI modal's
-  // blurred backdrop in the same tick as the overlay close made two backdrop-filter
-  // layers cross-fade over the search input row at once (the mobile submit flicker).
-  setTimeout(() => {
-    if (CONTENT_TYPE === 'movie') {
-      aiSearch(finalQ);
-    } else {
-      applyFilters();
-    }
-  }, 260);
+  if (CONTENT_TYPE === 'movie') {
+    aiSearch(finalQ);
+  } else {
+    applyFilters();
+  }
 }
 
 function clearMobSearch() {
@@ -14225,6 +14578,38 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
   </div>
   <div class="airx-summary" id="aiResultsSummary"></div>
   <div class="airx-body" id="aiResultsBody">
+    <!-- Thematic AI loader — visible only while /api/ai-search is in flight,
+         sitting directly above the skeleton cards. See .ai-loader CSS. -->
+    <div class="ai-loader" id="aiLoader" role="status" aria-live="polite">
+      <div class="ail-stage">
+        <span class="ail-glow" aria-hidden="true"></span>
+        <!-- Film reel: rim, 6 sprocket windows, hub ring -->
+        <span class="ail-reel" aria-hidden="true">
+          <svg viewBox="0 0 64 64" fill="none" stroke="#a78bfa" stroke-width="2.2">
+            <circle cx="32" cy="32" r="28.5" opacity="0.9"/>
+            <circle cx="32" cy="32" r="8.5" opacity="0.55"/>
+            <g fill="rgba(167,139,250,0.20)" stroke="#c4b5fd" stroke-width="1.8">
+              <circle cx="49"   cy="32"    r="5.6"/>
+              <circle cx="40.5" cy="46.72" r="5.6"/>
+              <circle cx="23.5" cy="46.72" r="5.6"/>
+              <circle cx="15"   cy="32"    r="5.6"/>
+              <circle cx="23.5" cy="17.28" r="5.6"/>
+              <circle cx="40.5" cy="17.28" r="5.6"/>
+            </g>
+          </svg>
+        </span>
+        <span class="ail-orbit" aria-hidden="true"></span>
+        <!-- AI core: a play triangle inside a spark, held upright over the hub -->
+        <span class="ail-core" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 1.6l1.85 5.7 5.7 1.85-5.7 1.85L12 16.65l-1.85-5.65-5.7-1.85 5.7-1.85z" opacity="0.95"/>
+            <path d="M10 18.4l5.6 2.6-5.6 2.6z" opacity="0.8"/>
+          </svg>
+        </span>
+      </div>
+      <span class="ail-strip" aria-hidden="true"></span>
+      <div class="ail-phrase" id="aiLoaderPhrase"></div>
+    </div>
     <div class="movie-grid airx-grid" id="aiResultsGrid"></div>
     <div class="airx-empty" id="aiResultsEmpty">
       <div class="airx-empty-icon">🍿</div>
