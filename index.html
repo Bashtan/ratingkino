@@ -2128,9 +2128,16 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .m-orig { font-size: 12px; color: var(--text-sub); font-style: italic; margin-bottom: 14px; }
 .m-starring {
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; flex-wrap: wrap;
+  /* row-gap 8px / column-gap 14px. The column gap replaces the old "," separator
+     as the only thing dividing actors, so it has to read as a deliberate break;
+     the row gap is tighter because wrapped lines already read as separate.
+     `overflow: hidden` was removed with the same change — it existed to clip a
+     single non-wrapping line, and with flex-wrap it can only clip hover/focus
+     rings on the wrapped rows. */
+  gap: 8px 14px;
   margin-bottom: 14px; font-size: 12px; color: var(--text-sub);
-  line-height: 1; overflow: hidden;
+  line-height: 1;
 }
 .m-starring-label { flex-shrink: 0; }
 .m-starring-avatar {
@@ -2146,7 +2153,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .m-starring-static { cursor: default; }
 .m-starring-actor:hover .m-starring-name { color: var(--text-main); text-decoration: underline; }
-.m-starring-sep { margin-right: 4px; flex-shrink: 0; }
 .m-starring-name { white-space: nowrap; }
 .m-ratings-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 
@@ -3383,7 +3389,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .m-info-strip { flex-direction: row; }
   /* Ratings card: single-line inline pill for mobile hero */
   .m-orig        { margin-bottom: 3px; font-size: 11px; }
-  .m-starring    { gap: 5px; margin-bottom: 8px; font-size: 10.5px; }
+  .m-starring    { gap: 7px 11px; margin-bottom: 8px; font-size: 10.5px; }
   .m-starring-avatar { width: 18px; height: 18px; font-size: 7px; }
   .m-ratings-row { margin-bottom: 5px; }
   .mr-score-card { flex-direction: row; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; }
@@ -5592,6 +5598,9 @@ const TMDB_LANG  = { en:'en-US', es:'es-ES', fr:'fr-FR', zh:'zh-CN', ar:'ar-SA',
 const TIMG_W500  = 'https://image.tmdb.org/t/p/w500';
 const TIMG_W780  = 'https://image.tmdb.org/t/p/w780';
 const TIMG_W1280 = 'https://image.tmdb.org/t/p/w1280';
+// How many actors the modal's "Starring:" row shows. Referenced by both
+// castPhotos build sites and the backfill guard so the three can't drift apart.
+const CAST_LIMIT = 5;
 const TIMG_W45   = 'https://image.tmdb.org/t/p/w45';
 const TIMG_W185  = 'https://image.tmdb.org/t/p/w185';
 const OMDB_BASE  = PROXY_BASE + '/omdb';
@@ -9737,7 +9746,7 @@ function mergeMovieData(movie, det, od, country = DETECTED_COUNTRY) {
     ? ((det.created_by || []).map(p => p.name).join(', ') || null)
     : (crew.find(p => p.job === 'Director')?.name || null);
   movie.actors = cast.slice(0, 6).map(a => a.name);
-  movie.castPhotos = cast.slice(0, 2).map(a => ({
+  movie.castPhotos = cast.slice(0, CAST_LIMIT).map(a => ({
     id:    a.id,
     name:  a.name,
     photo: a.profile_path ? TIMG_W45 + a.profile_path : null,
@@ -11357,14 +11366,23 @@ async function openMovie(tmdbId, listName = '') {
   // KV data predates the Starring-row feature. Without this the clickable-actor
   // Starring row never renders for the homepage feed — those movies are enriched:true
   // and skip enrichNow, so mergeMovieData never populates castPhotos.
-  if (m.enriched && !m.castPhotos?.length) {
+  //
+  // The guard is `< CAST_LIMIT`, not `!length`: castPhotos is persisted into the
+  // cached movie object (see normalizer, ~L10136), so every movie already in KV
+  // was stored back when the row capped at 2. A bare `!length` check would skip
+  // all of them and they'd keep showing 2 actors forever. `_castBackfilled` stops
+  // the refetch looping for films that genuinely have fewer than CAST_LIMIT cast
+  // members — without it, those never reach the limit and would refetch on every
+  // modal open.
+  if (m.enriched && (m.castPhotos?.length || 0) < CAST_LIMIT && !m._castBackfilled) {
+    m._castBackfilled = true;
     const lang = TMDB_LANG[CURRENT_LANG] || 'en-US';
     tmdbGet(`/movie/${tmdbId}`, { append_to_response: 'credits', language: lang })
       .then(det => {
         if (ACTIVE_MOVIE?.id !== tmdbId) return;
         const cast = det.credits?.cast || [];
         if (!cast.length) return;
-        m.castPhotos = cast.slice(0, 2).map(a => ({
+        m.castPhotos = cast.slice(0, CAST_LIMIT).map(a => ({
           id:    a.id,
           name:  a.name,
           photo: a.profile_path ? TIMG_W45 + a.profile_path : null,
@@ -11892,15 +11910,14 @@ function refreshModalDetails(m) {
   const starringEl = document.getElementById('mStarring');
   if (m.castPhotos?.length) {
     const initials = n => n.split(' ').map(w => w[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
-    const chips = m.castPhotos.map((a, i) => {
+    const chips = m.castPhotos.map(a => {
       const avatar = a.photo
         ? `<img class="m-starring-avatar" src="${a.photo}" alt="" loading="lazy">`
         : `<div class="m-starring-avatar m-starring-initials">${esc(initials(a.name))}</div>`;
-      const sep = i > 0 ? `<span class="m-starring-sep">,</span>` : '';
       const inner = `${avatar}<span class="m-starring-name">${esc(a.name)}</span>`;
       return a.id
-        ? `${sep}<button class="m-starring-actor" onclick="event.stopPropagation();openActorProfile(${a.id})">${inner}</button>`
-        : `${sep}<span class="m-starring-actor m-starring-static">${inner}</span>`;
+        ? `<button class="m-starring-actor" onclick="event.stopPropagation();openActorProfile(${a.id})">${inner}</button>`
+        : `<span class="m-starring-actor m-starring-static">${inner}</span>`;
     }).join('');
     starringEl.innerHTML = `<span class="m-starring-label">${t('modal.starring')}</span>${chips}`;
     starringEl.style.display = '';
