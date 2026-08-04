@@ -11925,15 +11925,36 @@ function refreshModalRatings(m) {
   </div>${localBadge}`;
 }
 
-function refreshModalDetails(m) {
-  refreshDescTranslation(m);
-  const starringEl = document.getElementById('mStarring');
+/* Cast entries for the modal's Starring row, in priority order.
+   1. `castPhotos` — rich: headshot + TMDB person_id (clickable → actor profile).
+   2. `actors`     — plain name strings. EVERY KV cache record has these (the
+      sync-worker writes cast.slice(0,5).map(name)); almost none have castPhotos.
+   The fallback is what makes the row render at all on the homepage feed. Those
+   movies are `enriched: true`, so they skip enrichNow() and their castPhotos can
+   only ever be filled by the async /movie/{id}?append_to_response=credits
+   backfill in openMovie(). Any reason that one call doesn't come back — TMDB
+   proxy 401/429, offline, an environment without the API key bound — used to
+   leave castPhotos [] and hide the entire row, label included. Names alone are
+   already in memory, so render them immediately (initials avatar, not
+   clickable) and let the backfill upgrade the row in place when it lands. */
+function _modalCastList(m) {
   // Drop anything unusable before deciding whether to show the row at all. KV
   // records predate several shape changes, so an entry can be null or missing a
   // name; `initials()` runs before esc() and would throw on a non-string name,
-  // which used to take out the whole function (and with it #mMeta below).
-  const cast = (Array.isArray(m.castPhotos) ? m.castPhotos : [])
+  // which would take out the whole function (and with it #mMeta below).
+  const photos = (Array.isArray(m.castPhotos) ? m.castPhotos : [])
     .filter(a => a && typeof a.name === 'string' && a.name.trim());
+  if (photos.length) return photos.slice(0, CAST_LIMIT);
+  return (Array.isArray(m.actors) ? m.actors : [])
+    .filter(n => typeof n === 'string' && n.trim())
+    .slice(0, CAST_LIMIT)
+    .map(name => ({ id: null, name, photo: null }));
+}
+
+function refreshModalDetails(m) {
+  refreshDescTranslation(m);
+  const starringEl = document.getElementById('mStarring');
+  const cast = _modalCastList(m);
   if (cast.length) {
     const initials = n => String(n || '').trim().split(/\s+/)
       .map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
