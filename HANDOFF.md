@@ -2,7 +2,41 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-03) — Search UI Linearization + Hero Z-Index Fix + AI Movie Loader + 5-Actor Starring Row
+## ⚡ Most Recent Session (2026-08-04) — Mobile Viewport Stability (bottom-sheet shattering + search-bar jitter)
+
+Branch `fix/mobile-viewport-stability` — **NOT merged.** Preview build for on-device testing: `https://023178ff.ratingkino.pages.dev` (alias `https://fix-mobile-viewport-stabilit.ratingkino.pages.dev`). Production still at `420d406`.
+
+Context correction from the user: every flicker symptom chased in the two previous sessions is **mobile-only**. Desktop has no layout thrashing at all. That reframing pointed at viewport/keyboard/touch causes rather than the JS sequencing that had been the focus, and three independent mobile-only causes were found by reading CSS + the submit path (no browser eval).
+
+| Commit | Feature |
+|--------|---------|
+| `6e0e729` | **Mobile viewport stability.** ① Sheet height lock: `.modal` / `.actor-modal` / `.wiz-modal` / `.airx-modal` mobile `max-height` → `min(Xsvh, X%)` with a `vh` fallback. ② `IS_TOUCH` global + touch branch in the `#searchInput` `keydown` handler. ③ `interactive-widget=resizes-visual` on the viewport `<meta>`; `body { min-height: 100svh }`. ④ `@media (hover: none)` extended: `transform: none` on 13 geometry-shifting `:hover` rules, `.search-wrap--hero { transition: none }`, cheap `:focus-within` ring, `.search-wrap--hero::before { animation: none }`. ⑤ `will-change: transform` + `backface-visibility: hidden` on `.modal` and `.airx-modal`. |
+
+### The three mobile-only root causes
+
+**1. The sheet was allowed to be taller than its own container ("shattered modal").**
+`.overlay` is `position: fixed; inset: 0`, so its box tracks the **currently visible** viewport. `.modal { max-height: 90vh }` resolves against the **large** viewport (URL bar retracted) — a bigger, frozen number. While the URL bar is showing, the sheet could exceed the flex container it is bottom-anchored into (`align-items: flex-end`): the pinned hero (`.m-backdrop`, `.m-close`) overflowed off-screen and `.m-body { flex: 1; min-height: 0 }` sized itself from a height that did not exist. Every URL-bar show/hide frame re-ran that bad layout.
+Fix: `max-height: min(90svh, 90%)`. `svh` is the **small** (chrome-visible) viewport and never changes; the `90%` clamps against the overlay's real current box so no resize event of any kind can overflow it.
+
+> **`svh`, not `dvh` — deliberate.** `dvh` tracks the browser UI *continuously*, so it resizes the sheet on every URL-bar animation frame and on every keyboard transition. For a bottom sheet that is the failure mode, not the fix. `svh` is the stable floor.
+
+**2. The virtual keyboard was retracting *inside* the sheet's slide-up.**
+The AI submit path deferred `blur()` by 300ms — correct on desktop, where it hides the focus-glow collapse behind the modal's own fade. On touch, holding focus for 300ms puts the entire ~250-300ms keyboard retraction inside the sheet animation, so `.airx-modal` lays out against a keyboard-shrunk viewport and re-lays-out when the keyboard finishes leaving. Now `if (IS_TOUCH) e.target.blur(); else setTimeout(…, 300)`. Backed up by `interactive-widget=resizes-visual`, which pins the keyboard to resizing only the visual viewport, never the layout viewport / ICB. (No-op on current Chrome/Safari, where that is already the spec default — it matters in older Android WebViews, i.e. the "mobile app environment".)
+
+**3. A permanent, non-compositable repaint sat directly under the search bar.**
+`.search-wrap--hero::before` runs `animation: searchRingShift 5s infinite` on **`background-position`** — not a compositable property, so it fully repaints a full-width 200%-sized gradient every frame, for the entire session. Invisible on desktop, a constant shimmer on a phone, and it steals the GPU budget the sheet animations need. Frozen on touch (gradient + opacity states kept). Separately, `:focus-within` swapped in a four-layer box-shadow with 40px and 80px blur radii transitioned over 0.25s — a large repaint on *every* keyboard open and close. On touch that now snaps to a 1px ring instead.
+
+### ⚠️ Do NOT add `transform` / `will-change` to `.search-wrap--hero`
+
+Recorded as a CSS comment at the rule as well. Either property makes the wrap a stacking context, which traps its two absolutely-positioned children — `#searchSuggestions` (z-index 200) and `.sw-mode-menu` (z-index 250) — inside the wrap's own `auto` z-index. Both overflow the wrap's box and currently paint above the sticky `.filters-bar` (z-index 99); trapped, they would paint underneath it. The bar never animates `transform`, so promotion buys nothing. Only `.modal` and `.airx-modal` were promoted — they genuinely animate `translateY(100%) → 0`.
+
+### Dead code noted, not touched
+
+`.mob-search-overlay` is `display: none` in **both** the base rule and the `@media (max-width: 768px)` block, so the full-screen mobile search overlay never renders. `toggleSearch()` still adds `.open` to it and focuses `#mobSearchInput` on `innerWidth <= 768`, and `submitMobSearch()` / `closeMobSearch()` are unreachable in practice. Mobile users type in the hero bar (`.search-wrap--hero`, `height: 54px`) instead. Worth deleting or reviving in its own session.
+
+---
+
+## Session (2026-08-03) — Search UI Linearization + Hero Z-Index Fix + AI Movie Loader + 5-Actor Starring Row
 
 Branch `fix/search-transition-linearize` — **merged to `main` via `8e78ae5` and deployed to production** (live on https://findfilm.ai, pinned deploy `https://c7fd049f.ratingkino.pages.dev`).
 
