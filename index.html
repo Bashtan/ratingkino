@@ -10,7 +10,13 @@
   gtag('config', 'G-XF0GTFNRHX');
 </script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- interactive-widget=resizes-visual: when the virtual keyboard opens, resize ONLY the
+     visual viewport, never the layout viewport / initial containing block. Without it,
+     Android Chrome (and iOS 17+) shrink the layout viewport, which re-resolves every
+     `position: fixed; inset: 0` overlay and every vh unit mid-keystroke — the bottom-sheet
+     modal re-lays-out against a viewport that is 300px shorter, then snaps back when the
+     keyboard closes. That reflow storm is the mobile "shattered layout". -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-visual">
 <title>FindFilm.ai — Find your movie using AI</title>
 <meta name="description" content="Find your movie using AI. 240,000 films with aggregated scores from IMDb, Rotten Tomatoes &amp; Metacritic into one weighted rating.">
 <link rel="canonical" href="https://findfilm.ai/">
@@ -115,7 +121,10 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: 'Inter', sans-serif;
-  min-height: 100vh;
+  min-height: 100vh;    /* fallback */
+  min-height: 100svh;   /* small viewport = browser chrome VISIBLE. Stable: unlike vh
+                           (large viewport) it never leaves the page taller than what
+                           is actually on screen while the URL bar is showing. */
   overflow-x: hidden;
 }
 
@@ -1139,9 +1148,15 @@ body.airx-open { overflow: hidden; }
 @media (max-width: 768px) {
   .airx-modal {
     top: auto; bottom: 0; left: 0;
-    transform: translateY(100%); width: 100%; max-height: 90vh;
+    transform: translateY(100%); width: 100%;
+    /* svh, not vh — this sheet opens straight off a search submit, i.e. exactly when
+       the keyboard is dismissing and the URL bar is re-appearing. vh would let it
+       exceed the visible area during that window. */
+    max-height: 90vh; max-height: min(90svh, 90%);
     border-radius: 22px 22px 0 0;
     border: none; border-top: 1px solid rgba(129,140,248,0.28);
+    will-change: transform;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
   }
   .airx-modal.open { transform: translateY(0); }
   .airx-head { padding: 18px 18px 8px; }
@@ -3255,6 +3270,51 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .settings-save:hover { transform: none; box-shadow: none; }
   .review-submit:hover { transform: none; }
   .shr-btn:hover { background: rgba(255,255,255,0.04); border-color: var(--border); }
+  /* Touch devices have no real hover, but they DO leave a phantom :hover latched on the
+     last-tapped element until you tap elsewhere. Every rule below shifts geometry
+     (translateY / scale / rotate), so a latched hover means the element sits visibly
+     offset — and un-latches with a 1-frame jump when focus moves. Kill the transforms;
+     the colour/background half of each rule still reads fine as a tap state. */
+  .fd-apply:hover,
+  .airx-close:hover,
+  .how-ratings-link:hover,
+  .wiz-opt:hover,
+  .group-find:hover,
+  .onboard-finish:hover,
+  .btn-trailer:hover,
+  .btn-stream:hover,
+  .provider-chip[href]:hover,
+  .rev-star:hover,
+  .review-submit:not(:disabled):hover,
+  .share-native:hover,
+  .fv-cta:hover { transform: none; }
+
+  /* Hero search bar: the :focus-within state swaps in a four-layer box-shadow with 40px
+     and 80px blur radii across the full bar width, transitioned over 0.25s. On a phone
+     that is a large, un-compositable repaint that runs on EVERY focus and EVERY blur —
+     i.e. every time the keyboard opens or closes. That is the search-bar "jitter".
+     On touch: snap the state instead of animating it, and drop the two wide glow layers
+     so the remaining repaint is a 1px ring. */
+  .search-wrap--hero { transition: none; }
+  .search-wrap--hero:focus-within {
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08),
+                0 0 0 1px rgba(99,102,241,0.55);
+  }
+  /* The gradient ring runs `animation: searchRingShift 5s infinite` on background-position.
+     background-position is NOT a compositable property — it forces a full repaint of a
+     full-width 200%-sized gradient every single frame, permanently, for the entire session.
+     On desktop that is invisible; on a phone it is a constant low-level shimmer sitting
+     directly behind the search input, and it steals the GPU budget the sheet animations
+     need. Freeze it on touch: the ring keeps its gradient and its opacity states, it just
+     stops re-rendering. Only opacity animates now, which the compositor handles for free. */
+  .search-wrap--hero::before { animation: none; will-change: opacity; }
+  /* NOTE — deliberately NOT adding `transform: translateZ(0)` / `will-change: transform`
+     to .search-wrap--hero itself. Either one makes it a stacking context, which traps its
+     two absolutely-positioned children — #searchSuggestions (z-index 200) and .sw-mode-menu
+     (z-index 250) — inside the wrap's own auto z-index. Both overflow the wrap's box and
+     currently paint above the sticky .filters-bar (z-index 99); trapped, they would paint
+     underneath it. The bar never animates transform anyway, so promotion buys nothing;
+     removing the repaints above is the actual win. */
 }
 
 /* ─── RESPONSIVE — 768px (tablets / large phones) */
@@ -3327,13 +3387,19 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 
   /* Actor Profile modal: sheet sliding up from bottom */
   .actor-overlay { padding: 0; align-items: flex-end; }
-  .actor-modal { border-radius: 16px 16px 0 0; max-height: 92vh; overflow-y: auto; }
+  .actor-modal {
+    border-radius: 16px 16px 0 0; overflow-y: auto;
+    max-height: 92vh; max-height: min(92svh, 92%);
+  }
   .actor-hero { gap: 14px; }
   .actor-photo { width: 72px; height: 72px; }
 
   /* Tonight wizard: bottom sheet + single-column results */
   .wiz-overlay { padding: 0; align-items: flex-end; }
-  .wiz-modal { border-radius: 16px 16px 0 0; max-height: 92vh; overflow-y: auto; padding: 26px 18px 30px; }
+  .wiz-modal {
+    border-radius: 16px 16px 0 0; overflow-y: auto; padding: 26px 18px 30px;
+    max-height: 92vh; max-height: min(92svh, 92%);
+  }
   .wiz-q { font-size: 19px; }
   .wiz-opt { width: calc(50% - 6px); }
   .wiz-results { grid-template-columns: 1fr; }
@@ -3343,9 +3409,27 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .overlay { padding: 0; align-items: flex-end; }
   .modal {
     border-radius: 20px 20px 0 0; max-width: 100%;
-    max-height: 90vh; overflow: hidden;
+    /* Height lock — root cause of the mobile "shattered modal".
+       `.overlay` is `position: fixed; inset: 0`, so its box tracks the CURRENT visible
+       viewport. `90vh` however resolves against the LARGE viewport (URL bar retracted),
+       a bigger, frozen number. So while the URL bar is showing, .modal was allowed to be
+       taller than the flex container it lives in: `align-items: flex-end` bottom-anchors
+       it, the top (backdrop image + close button) overflows off-screen, and `.m-body
+       { flex: 1; min-height: 0 }` sizes itself from a height that does not exist. Every
+       URL-bar show/hide frame re-ran that bad layout.
+       min(90svh, 90%) fixes both halves: svh is the SMALL (chrome-visible) viewport and
+       never changes, and the 90% clamp resolves against the overlay's real, current box,
+       so no resize event of any kind can leave the sheet larger than its own container. */
+    max-height: 90vh;
+    max-height: min(90svh, 90%);
+    overflow: hidden;
     display: flex; flex-direction: column;
     transform: translateY(100%) scale(1); opacity: 1;
+    /* GPU: the sheet slides 100% of its height on open. Pre-promoting it keeps the
+       slide on the compositor instead of repainting the whole flex column per frame
+       (the visual tearing on mid/low-end phones). */
+    will-change: transform;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
   }
   .overlay.open .modal { transform: translateY(0) scale(1); opacity: 1; }
   .m-backdrop  { height: 90px; }
@@ -5601,6 +5685,11 @@ const TIMG_W1280 = 'https://image.tmdb.org/t/p/w1280';
 // How many actors the modal's "Starring:" row shows. Referenced by both
 // castPhotos build sites and the backfill guard so the three can't drift apart.
 const CAST_LIMIT = 5;
+/* True on phones/tablets — the JS twin of the `@media (hover: none)` CSS block, so the
+   two can't disagree about which device we're on. Used to pick the mobile branch of any
+   focus/blur sequencing where the virtual keyboard is a factor. Evaluated once: a device
+   does not gain a mouse mid-session, and re-querying per keystroke is a forced style calc. */
+const IS_TOUCH = window.matchMedia('(hover: none)').matches;
 const TIMG_W45   = 'https://image.tmdb.org/t/p/w45';
 const TIMG_W185  = 'https://image.tmdb.org/t/p/w185';
 const OMDB_BASE  = PROXY_BASE + '/omdb';
@@ -11186,14 +11275,24 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
   if (!q) { clearAISearch(); return; }
   if (SEARCH_MODE === 'ai' && CACHE_MOVIES.length && CONTENT_TYPE === 'movie') {
     aiSearch(q);
-    // Defer blur until the AI Results modal's own opacity fade-in (.airx-backdrop/
-    // .airx-modal, both `transition: opacity .3s`) has visually gone opaque. Blurring
-    // immediately (even one rAF later) collapses .search-wrap--hero's big :focus-within
-    // glow (0 0 40px/80px → resting 0.18-opacity ring) while that same screen region is
-    // still see-through — the collapse reads as a flash/jump right under the appearing
-    // modal. Waiting out the modal's own fade means the glow collapses invisibly, behind
-    // an already-opaque backdrop.
-    setTimeout(() => e.target.blur(), 300);
+    // Desktop: defer blur until the AI Results modal's own opacity fade-in
+    // (.airx-backdrop/.airx-modal, both `transition: opacity .3s`) has visually gone
+    // opaque. Blurring immediately (even one rAF later) collapses .search-wrap--hero's
+    // big :focus-within glow (0 0 40px/80px → resting 0.18-opacity ring) while that same
+    // screen region is still see-through — the collapse reads as a flash/jump right under
+    // the appearing modal. Waiting out the modal's own fade hides the collapse behind an
+    // already-opaque backdrop.
+    //
+    // Touch: the exact opposite is required. The input still being focused means the
+    // virtual keyboard is still up, and the keyboard takes ~250-300ms to retract. Holding
+    // focus for 300ms puts the whole retraction INSIDE the sheet's slide-up, so
+    // .airx-modal lays out against a keyboard-shrunk viewport and then re-lays-out when
+    // the keyboard finishes leaving. Blur synchronously so the keyboard starts retracting
+    // before the sheet animates. (The glow-collapse this was avoiding is already a
+    // non-issue on touch — the mobile override above removes the wide glow and its
+    // transition entirely.)
+    if (IS_TOUCH) e.target.blur();
+    else          setTimeout(() => e.target.blur(), 300);
   } else {
     loadMovies(1, false);
     // No modal opens for a plain title search, so there's nothing to hide the
