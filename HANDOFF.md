@@ -4,9 +4,11 @@
 
 ## ⚡ Most Recent Session (2026-08-04) — Mobile Viewport Stability (bottom-sheet shattering + search-bar jitter)
 
-Branch `fix/mobile-viewport-stability` — **NOT merged.** Preview build for on-device testing: `https://023178ff.ratingkino.pages.dev` (alias `https://fix-mobile-viewport-stabilit.ratingkino.pages.dev`). Production still at `420d406`.
+Branch `fix/mobile-viewport-stability` — **verified on a physical phone, merged to `main` via `541e835`, and deployed to production** (live on https://findfilm.ai, pinned deploy `https://3e89adcf.ratingkino.pages.dev`). Branch deleted locally and on origin.
 
-Context correction from the user: every flicker symptom chased in the two previous sessions is **mobile-only**. Desktop has no layout thrashing at all. That reframing pointed at viewport/keyboard/touch causes rather than the JS sequencing that had been the focus, and three independent mobile-only causes were found by reading CSS + the submit path (no browser eval).
+User confirmation after on-device testing: layout completely stable, the virtual keyboard no longer shatters the movie modal, and the search bar has zero flicker on touch.
+
+Context correction from the user that unlocked this: every flicker symptom chased in the two previous sessions is **mobile-only**. Desktop has no layout thrashing at all. That reframing pointed at viewport/keyboard/touch causes rather than the JS sequencing that had been the focus, and three independent mobile-only causes were found by reading CSS + the submit path (no browser eval).
 
 | Commit | Feature |
 |--------|---------|
