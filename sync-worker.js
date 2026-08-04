@@ -274,11 +274,18 @@ async function enrichOne(raw, env) {
     const imdbId      = detail.external_ids?.imdb_id || null;
     const director    = (detail.credits?.crew || []).find(c => c.job === 'Director')?.name || null;
     const actors      = (detail.credits?.cast || []).slice(0, 5).map(c => c.name);
-    const castPhotos  = (detail.credits?.cast || []).slice(0, 2).map(c => ({
-      id:    c.id,
-      name:  c.name,
-      photo: c.profile_path ? `https://image.tmdb.org/t/p/w45${c.profile_path}` : null,
-    }));
+    // Keep in sync with CAST_LIMIT in index.html — the modal's Starring row shows
+    // this many. When this cap is lower, the client has to re-fetch credits for
+    // every cached movie just to fill the row out, so widening it here removes
+    // that whole round trip as KV re-syncs.
+    const castPhotos  = (detail.credits?.cast || [])
+      .filter(c => c && c.name)
+      .slice(0, 5)
+      .map(c => ({
+        id:    c.id ?? null,
+        name:  c.name,
+        photo: c.profile_path ? `https://image.tmdb.org/t/p/w45${c.profile_path}` : null,
+      }));
     const trailerKey  = (detail.videos?.results || [])
                           .find(v => v.type === 'Trailer' && v.site === 'YouTube')?.key || null;
     const trailer     = trailerKey ? `https://www.youtube.com/embed/${trailerKey}` : null;

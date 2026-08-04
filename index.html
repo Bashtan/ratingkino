@@ -9746,11 +9746,14 @@ function mergeMovieData(movie, det, od, country = DETECTED_COUNTRY) {
     ? ((det.created_by || []).map(p => p.name).join(', ') || null)
     : (crew.find(p => p.job === 'Director')?.name || null);
   movie.actors = cast.slice(0, 6).map(a => a.name);
-  movie.castPhotos = cast.slice(0, CAST_LIMIT).map(a => ({
-    id:    a.id,
-    name:  a.name,
-    photo: a.profile_path ? TIMG_W45 + a.profile_path : null,
-  }));
+  movie.castPhotos = cast
+    .filter(a => a && a.name)
+    .slice(0, CAST_LIMIT)
+    .map(a => ({
+      id:    a.id ?? null,
+      name:  a.name,
+      photo: a.profile_path ? TIMG_W45 + a.profile_path : null,
+    }));
 
   // Trailer — prefer official Trailer, fallback to any YouTube video
   const vids = det.videos?.results || [];
@@ -11368,29 +11371,46 @@ async function openMovie(tmdbId, listName = '') {
   // and skip enrichNow, so mergeMovieData never populates castPhotos.
   //
   // The guard is `< CAST_LIMIT`, not `!length`: castPhotos is persisted into the
-  // cached movie object (see normalizer, ~L10136), so every movie already in KV
-  // was stored back when the row capped at 2. A bare `!length` check would skip
-  // all of them and they'd keep showing 2 actors forever. `_castBackfilled` stops
-  // the refetch looping for films that genuinely have fewer than CAST_LIMIT cast
-  // members — without it, those never reach the limit and would refetch on every
-  // modal open.
+  // cached movie object (see normalizer, ~L10136) and sync-worker still writes
+  // whatever its own cap was, so movies already in KV arrive with fewer than
+  // CAST_LIMIT entries. A bare `!length` check would skip all of them and they'd
+  // keep showing the old count forever.
+  //
+  // `_castBackfilled` is a claim-then-release latch, NOT a fire-once flag:
+  //   • set before the request so a close/reopen mid-flight can't fire a duplicate
+  //   • left set when the request SUCCEEDS, even if TMDB returned fewer than
+  //     CAST_LIMIT actors — that's the real cast size, so re-asking is pointless
+  //     and would refetch on every single modal open
+  //   • CLEARED when the request fails, so a transient error (proxy 429, offline)
+  //     is retried next time instead of permanently locking this movie out.
+  // That last case is what made the row vanish entirely: widening the guard made
+  // this fire for every enriched movie rather than only cast-less ones, the extra
+  // load produced failures, and a latch that was set before the fetch and never
+  // released meant castPhotos stayed [] — which sends refreshModalDetails down
+  // its `display: none` branch and hides the label along with the actors.
   if (m.enriched && (m.castPhotos?.length || 0) < CAST_LIMIT && !m._castBackfilled) {
     m._castBackfilled = true;
     const lang = TMDB_LANG[CURRENT_LANG] || 'en-US';
     tmdbGet(`/movie/${tmdbId}`, { append_to_response: 'credits', language: lang })
       .then(det => {
-        if (ACTIVE_MOVIE?.id !== tmdbId) return;
-        const cast = det.credits?.cast || [];
+        const cast = det?.credits?.cast || [];
         if (!cast.length) return;
-        m.castPhotos = cast.slice(0, CAST_LIMIT).map(a => ({
-          id:    a.id,
-          name:  a.name,
-          photo: a.profile_path ? TIMG_W45 + a.profile_path : null,
-        }));
-        if (!m.actors?.length) m.actors = cast.slice(0, 6).map(a => a.name);
-        refreshModalDetails(m);
+        const photos = cast
+          .filter(a => a && a.name)
+          .slice(0, CAST_LIMIT)
+          .map(a => ({
+            id:    a.id ?? null,
+            name:  a.name,
+            photo: a.profile_path ? TIMG_W45 + a.profile_path : null,
+          }));
+        if (!photos.length) return;
+        // Cache onto the movie even if the user already navigated away, so the
+        // work isn't wasted; only touch the DOM if this movie is still open.
+        m.castPhotos = photos;
+        if (!m.actors?.length) m.actors = photos.map(a => a.name);
+        if (ACTIVE_MOVIE?.id === tmdbId) refreshModalDetails(m);
       })
-      .catch(() => {});
+      .catch(() => { m._castBackfilled = false; });
   }
 }
 
@@ -11908,15 +11928,27 @@ function refreshModalRatings(m) {
 function refreshModalDetails(m) {
   refreshDescTranslation(m);
   const starringEl = document.getElementById('mStarring');
-  if (m.castPhotos?.length) {
-    const initials = n => n.split(' ').map(w => w[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
-    const chips = m.castPhotos.map(a => {
+  // Drop anything unusable before deciding whether to show the row at all. KV
+  // records predate several shape changes, so an entry can be null or missing a
+  // name; `initials()` runs before esc() and would throw on a non-string name,
+  // which used to take out the whole function (and with it #mMeta below).
+  const cast = (Array.isArray(m.castPhotos) ? m.castPhotos : [])
+    .filter(a => a && typeof a.name === 'string' && a.name.trim());
+  if (cast.length) {
+    const initials = n => String(n || '').trim().split(/\s+/)
+      .map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+    const chips = cast.map(a => {
       const avatar = a.photo
-        ? `<img class="m-starring-avatar" src="${a.photo}" alt="" loading="lazy">`
+        ? `<img class="m-starring-avatar" src="${esc(a.photo)}" alt="" loading="lazy">`
         : `<div class="m-starring-avatar m-starring-initials">${esc(initials(a.name))}</div>`;
       const inner = `${avatar}<span class="m-starring-name">${esc(a.name)}</span>`;
-      return a.id
-        ? `<button class="m-starring-actor" onclick="event.stopPropagation();openActorProfile(${a.id})">${inner}</button>`
+      // Coerce rather than test a.id directly: it must end up as a bare number in
+      // the inline handler. Accepts a numeric string, rejects null/garbage, and
+      // falls back to a non-clickable chip so a bad id degrades instead of
+      // emitting a broken openActorProfile() call.
+      const actorId = Number(a.id);
+      return Number.isFinite(actorId) && actorId > 0
+        ? `<button class="m-starring-actor" onclick="event.stopPropagation();openActorProfile(${actorId})">${inner}</button>`
         : `<span class="m-starring-actor m-starring-static">${inner}</span>`;
     }).join('');
     starringEl.innerHTML = `<span class="m-starring-label">${t('modal.starring')}</span>${chips}`;
