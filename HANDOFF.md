@@ -2,10 +2,49 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-05) — "Tonight" Wizard Fixed (backend response-shape drift) + UX Redesign
+## ⚡ Most Recent Session (2026-08-05) — Header Discovery Icons Redesigned
 
-Branch `fix/tonight-wizard` — **preview only, awaiting approval before merge**.
-Preview: https://fix-tonight-wizard.ratingkino.pages.dev · pinned deploy https://435653f1.ratingkino.pages.dev
+Branch `feat/feature-icons` — **preview only, awaiting approval before merge**.
+Preview: https://feat-feature-icons.ratingkino.pages.dev · pinned deploy https://98f45ff9.ratingkino.pages.dev
+
+| Commit | Feature |
+|--------|---------|
+| `2b85cc6` | **Expressive `.hdr-feat` icons** — the three header discovery glyphs (`index.html` ~L5007-5022) swapped for recognisable shapes. Tonight: monitor-with-play → **popcorn bucket** (Lucide). Together: users → **two figures under a shared heart** (custom). Surprise: shuffle arrows → **die with filled pips**, still carrying the `.rnd-spark` class so `@keyframes randomSpin` now reads as a dice roll. |
+
+### Why
+
+The old glyphs were generic/technical — the monitor read as "screen", the users
+glyph read as "account", the shuffle arrows read as "reorder". None hinted at
+what the button actually opened.
+
+### Constraints kept
+
+- `viewBox="0 0 24 24"`, `stroke-width="1.7"`, `stroke-linecap/linejoin="round"`,
+  `fill="none"` on the root — identical to the old icons, so the 18px
+  `.hdr-feat svg` sizing and the `.hdr-feat--rnd` gradient/glow states are untouched.
+- The die's pips are **filled `<circle>`s** (`fill="currentColor" stroke="none"`),
+  not Lucide's zero-length stroked `<path d="M8 8h.01"/>` trick — at 18px that
+  renders a ~1.3px dot which is nearly invisible. Filled circles still inherit
+  `currentColor`, so the hover/accent colour transitions apply unchanged.
+- No `title` attributes added: the styled CSS tooltips (`.hdr-feat[data-tip]::after`,
+  added in the session below) already cover desktop hover and are faster and
+  stylable. Accessible names still come from `aria-label`.
+
+### Verified (preview server + deployed build)
+
+JS 8/8 blocks parse, CSS 1458/1458 braces balanced · all three render 18×18 at
+`stroke-width` 1.7 with bboxes inside the 24-box · `.rnd-spark` spin hook intact
+(`animationName: randomSpin`) · tooltips wired on all three, opacity 0 at rest ·
+buttons still open the wizard / group picker · desktop 800px + mobile 375px
+screenshots · deployed HTML byte-identical to the branch.
+
+---
+
+## Session (2026-08-05) — "Tonight" Wizard Fixed (backend response-shape drift) + UX Redesign
+
+Merged to `main` in `77c4256` and **live on https://findfilm.ai** (deploy `fc64d681`).
+Verified live: `findfilm.ai` byte-identical to `main`; `/api/ai-search` returns
+`{aiCurated, movies: 6}`. Branch `fix/tonight-wizard` deleted.
 
 | Commit | Feature |
 |--------|---------|
