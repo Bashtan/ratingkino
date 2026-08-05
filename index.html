@@ -5005,13 +5005,21 @@ if ('serviceWorker' in navigator) {
            (≤768px). On desktop they live as text-link tabs in the sub-nav (.nav-feats). -->
       <div class="hdr-feats" role="group" aria-label="Quick discovery actions">
         <button class="hdr-feat" onclick="openWizard()" aria-label="Find something great for tonight" data-tip="Find something great for tonight" data-i18n-aria="tonight.launch" data-i18n-tip="tonight.launch">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 7.75a.75.75 0 0 1 1.142-.638l3.664 2.249a.75.75 0 0 1 0 1.278l-3.664 2.25a.75.75 0 0 1-1.142-.639z"/><path d="M12 17v4"/><path d="M8 21h8"/><rect x="2" y="3" width="20" height="14" rx="2"/></svg>
+          <!-- Popcorn (Lucide) — "movie night", far warmer + more distinctive at
+               18px than the old monitor-with-play glyph, which read as "screen". -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a2 2 0 0 0 0-4 2 2 0 0 0-4 0 2 2 0 0 0-4 0 2 2 0 0 0-4 0 2 2 0 0 0 0 4"/><path d="M10 22 9 8"/><path d="m14 22 1-14"/><path d="M20 8c.5 0 .9.4.8 1l-2.6 12c-.1.5-.7 1-1.2 1H7c-.6 0-1.1-.4-1.2-1L3.2 9c-.1-.6.3-1 .8-1Z"/></svg>
         </button>
         <button class="hdr-feat" onclick="openGroupPicker()" aria-label="Pick a movie together" data-tip="Pick a movie together" data-i18n-aria="group.launch" data-i18n-tip="group.launch">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <!-- Two people side by side under a shared heart — reads as "watching
+               together" rather than the old users glyph, which read as "account". -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9.6 8.7 6.3a2.1 2.1 0 0 1 3.3-2.6 2.1 2.1 0 0 1 3.3 2.6Z"/><circle cx="6.3" cy="13.2" r="2.5"/><path d="M1.8 21a4.5 4.5 0 0 1 9 0"/><circle cx="17.7" cy="13.2" r="2.5"/><path d="M13.2 21a4.5 4.5 0 0 1 9 0"/></svg>
         </button>
         <button class="hdr-feat hdr-feat--rnd" onclick="randomMovie()" aria-label="Surprise Me" data-tip="Surprise Me" data-i18n-aria="btn.random" data-i18n-tip="btn.random">
-          <svg class="rnd-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/></svg>
+          <!-- A die, not shuffle arrows. Keeps the .rnd-spark hook so the existing
+               randomSpin animation now reads literally as a dice roll. Pips are
+               filled circles rather than Lucide's zero-length stroked paths,
+               which render too faint at this 18px size. -->
+          <svg class="rnd-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/></svg>
         </button>
       </div>
       <button class="btn-install" id="btnInstall" aria-label="Install App">
