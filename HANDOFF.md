@@ -4,8 +4,9 @@
 
 ## ⚡ Most Recent Session (2026-08-05) — Header Discovery Icons Redesigned
 
-Branch `feat/feature-icons` — **preview only, awaiting approval before merge**.
-Preview: https://feat-feature-icons.ratingkino.pages.dev · pinned deploy https://98f45ff9.ratingkino.pages.dev
+Merged to `main` in `2a56494` and **live on https://findfilm.ai** (deploy `a838fcac`).
+Verified live: `findfilm.ai` byte-identical to `main`, all three new icon paths
+present, both old glyphs (monitor, shuffle) gone. Branch `feat/feature-icons` deleted.
 
 | Commit | Feature |
 |--------|---------|
