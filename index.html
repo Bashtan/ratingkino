@@ -31,6 +31,31 @@
 <meta name="theme-color" content="#7C3AED">
 <meta name="msapplication-TileColor" content="#7C3AED">
 
+<!-- ── PWA install-prompt capture — MUST stay here, in <head> ──────────────────
+     `beforeinstallprompt` fires exactly once and is not replayed. Chrome can
+     dispatch it as soon as the manifest above is fetched + parsed and the
+     service worker is active — which, on a slow connection, easily happens
+     while the remaining ~14 000 lines of this document are still streaming.
+     The install UI is wired up at the very bottom of <body>, so a listener
+     registered there can miss the event entirely and the prompt then never
+     appears for the whole page lifetime.
+     Capturing it here — before any other markup parses — makes that race
+     impossible. The real UI (header button + mobile banner) reads
+     window.__ffInstallPrompt on init and also listens for the `ff:installable`
+     re-broadcast below, so it works whether the event lands early or late. -->
+<script>
+  window.__ffInstallPrompt = null;
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();              // suppress Chrome's own mini-infobar
+    window.__ffInstallPrompt = e;    // keep it so our UI can call .prompt()
+    window.dispatchEvent(new Event('ff:installable'));
+  });
+  window.addEventListener('appinstalled', function () {
+    window.__ffInstallPrompt = null;
+    window.dispatchEvent(new Event('ff:installed'));
+  });
+</script>
+
 <!-- Impact.com affiliate network site verification -->
 <meta name="impact-site-verification" content="67175b69-42b4-4f68-8c81-033a26c36880" value="67175b69-42b4-4f68-8c81-033a26c36880">
 
@@ -4832,7 +4857,11 @@ main.browse-collapsed > .load-wrap { display: none !important; }
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js', { scope: '/' })
-      .catch(() => {}); // silent fail — SW is an enhancement, not a requirement
+      // Do NOT swallow this. An unregistered/never-activated worker also means
+      // Chrome will never fire `beforeinstallprompt`, so a silent catch here
+      // hides the PWA install prompt disappearing entirely.
+      .catch((err) => console.error('[sw] registration failed —',
+                                    'PWA install prompt will not appear:', err));
   });
 }
 </script>
@@ -14364,12 +14393,15 @@ function initInstallButton() {
     btn.classList.add('available');
     btn.addEventListener('click', showIosPwaPrompt);
   } else {
-    // Android / Desktop: capture the browser's native install prompt
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      _deferredInstallPrompt = e;
-      btn.classList.add('available');
-    });
+    // Android / Desktop: the native prompt is captured in <head> (see the
+    // __ffInstallPrompt block) because it can fire long before this runs.
+    // Read whatever was already captured, then stay subscribed for a late one.
+    const reveal = () => {
+      _deferredInstallPrompt = window.__ffInstallPrompt;
+      if (_deferredInstallPrompt) btn.classList.add('available');
+    };
+    reveal();
+    window.addEventListener('ff:installable', reveal);
 
     btn.addEventListener('click', async () => {
       if (!_deferredInstallPrompt) return;
@@ -14382,7 +14414,7 @@ function initInstallButton() {
     });
 
     // Hide once installed
-    window.addEventListener('appinstalled', () => {
+    window.addEventListener('ff:installed', () => {
       btn.classList.remove('available');
       _deferredInstallPrompt = null;
     });
@@ -14443,9 +14475,10 @@ function initMobileInstallBanner() {
       });
     } else {
       installBtn.addEventListener('click', async () => {
-        if (!_deferredInstallPrompt) return;
-        _deferredInstallPrompt.prompt();
-        const { outcome } = await _deferredInstallPrompt.userChoice;
+        const p = _deferredInstallPrompt || window.__ffInstallPrompt;
+        if (!p) return;
+        p.prompt();
+        const { outcome } = await p.userChoice;
         if (outcome === 'accepted') {
           _deferredInstallPrompt = null;
           dismissBanner();
@@ -14459,16 +14492,19 @@ function initMobileInstallBanner() {
     // iOS has no beforeinstallprompt; show after a short page-settle delay
     setTimeout(() => banner.classList.add('visible'), 1200);
   } else {
-    // Android/Desktop: show only once the browser confirms installability
-    if (_deferredInstallPrompt) {
+    // Android/Desktop: show only once the browser confirms installability.
+    // The event itself is captured in <head>; check the captured value first
+    // (it usually fires before this code runs) and subscribe for a late one.
+    const showIfInstallable = () => {
+      if (!(_deferredInstallPrompt || window.__ffInstallPrompt)) return;
+      _deferredInstallPrompt = window.__ffInstallPrompt || _deferredInstallPrompt;
       banner.classList.add('visible');
-    } else {
-      window.addEventListener('beforeinstallprompt', () => {
-        banner.classList.add('visible');
-      });
-    }
+    };
+    showIfInstallable();
+    window.addEventListener('ff:installable', showIfInstallable);
+
     // Hide if installed during this session
-    window.addEventListener('appinstalled', dismissBanner);
+    window.addEventListener('ff:installed', dismissBanner);
   }
 }
 
