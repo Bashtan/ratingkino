@@ -2,7 +2,61 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-04) — Mobile Viewport Stability (bottom-sheet shattering + search-bar jitter)
+## ⚡ Most Recent Session (2026-08-04) — PWA "Install App" Prompt Restored (service worker never activated)
+
+Branch `fix/pwa-install-prompt` — **awaiting on-device approval, NOT merged, NOT in production.**
+Preview: https://fix-pwa-install-prompt.ratingkino.pages.dev (pinned deploy `https://eba49179.ratingkino.pages.dev`)
+
+| Commit | Feature |
+|--------|---------|
+| `9b79db2` | **PWA install prompt fix** — `sw.js` SHELL/install rewrite + `window.__ffInstallPrompt` early capture in `<head>`; `initInstallButton()` / `initMobileInstallBanner()` rewired to `ff:installable` / `ff:installed`. |
+
+### Root cause
+
+`sw.js` precached **`/assets/favicon.ico` — a file that has never existed in this repo** (confirmed with `git log --all -- 'assets/favicon.ico'` → no commits; only `favicon.png`, `favicon-16x16.png`, `favicon-32x32.png` exist). `Cache.addAll()` is **atomic**: one non-2xx rejects the whole promise → rejects the `install` event's `waitUntil` → the worker never reaches `activated`. **Chrome will not fire `beforeinstallprompt` without an active service worker**, so the install button and mobile banner could never unhide. `.catch(() => {})` on the registration hid the failure entirely.
+
+Measured before the fix on a plain static host: `getRegistrations().length === 0`, `serviceWorker.controller === false`, and `cache.addAll(SHELL)` → `TypeError: Failed to execute 'addAll' on 'Cache': Request failed`.
+
+**Cloudflare Pages masked this in production.** The project uses SPA `not_found_handling`, so *any* missing path returns **200 `text/html`** (verified by probing a nonsense path). `addAll` therefore succeeded on production but stored an **HTML document under the `.ico` URL**, which the cache-first handler then served forever. So production and local failed differently from the same defect.
+
+### What was ruled out first (do not re-investigate)
+
+- **Install JS was never touched by the recent UI work** — `git log -S 'beforeinstallprompt' -- index.html` → only `9190fa0`, `0a81cc9`; `git log -S 'mobileInstallBanner'` → only `9190fa0`.
+- **Install CSS/DOM intact** — `.btn-install.available { display: flex }`, `#mobileInstallBanner.visible { display: block }`, markup all present and unchanged by the zero-flicker/mobile-viewport work.
+- **Manifest is valid and byte-identical on production**; all icons (incl. 192 + 512 `any maskable`) are real PNGs with `image/png`, not HTML fallbacks.
+- **Redirected responses do NOT break `addAll`** — tested directly; `/index.html`'s 308 was not the cause.
+
+### Changes
+
+**`sw.js`**
+- `CACHE` `ff-v1` → **`ff-v2`** (evicts the poisoned `.ico` entry from existing clients).
+- `SHELL`: dropped `/assets/favicon.ico` (nonexistent) and `/index.html` (Pages 308s it to `/`; duplicate of the `/` entry).
+- `install` no longer uses `addAll`. Each URL is fetched and `cache.put` independently inside `try/catch`, so **one bad asset can never abort installation again**. Also rejects any response whose `content-type` is `text/html` for a non-`/` URL, so Pages' SPA fallback can't poison the cache.
+- Added the **missing same-origin `/api/*` network-only guard**. The file's own header comment promised "API → never cache", but there was no same-origin exclusion, so every `/api/` GET fell into the cache-first branch and was pinned in cache permanently (stale ratings/movie data forever). Only latent locally because API calls 404 without keys.
+- Offline nav fallback fixed: `caches.match(a) || caches.match(b)` never falls through (a Promise is always truthy) — now awaits properly.
+
+**`index.html`**
+- New inline `<script>` in `<head>` immediately after `<link rel="manifest">`: captures `beforeinstallprompt` into **`window.__ffInstallPrompt`**, calls `preventDefault()`, and re-broadcasts as **`ff:installable`**; `appinstalled` clears it and broadcasts **`ff:installed`**. The event fires **once and is never replayed**, but the install UI is wired up ~14 500 lines later at the bottom of `<body>` — on a slow connection the manifest resolves while the rest of the document is still streaming, so the event could land before any listener existed and the prompt was lost for the entire page lifetime. Capturing in `<head>` makes that race impossible.
+- `initInstallButton()` and `initMobileInstallBanner()` no longer listen for `beforeinstallprompt` themselves; they read `window.__ffInstallPrompt` on init and subscribe to `ff:installable` / `ff:installed`.
+- SW registration `.catch(() => {})` → `console.error` explaining the install prompt will not appear. **Do not re-silence this** — it is what hid this bug.
+
+### Verification
+
+Production behaviour was reproduced locally with a throwaway Node server (`/tmp/pages-mimic.mjs`) mimicking Pages exactly: 308 on `/index.html`, 200 `text/html` SPA fallback for missing paths. Confirmed parity by curl before testing.
+
+- Production-mimic: SW reaches `activated`, controls the page, caches all 6 real shell assets, **no HTML poison** under `.ico`, `ff-v1` purged.
+- Plain static host (the case that used to fail outright): `swRegistrations: 0 / controller: false` → **`activated` + controlling**.
+- Resilience: injecting a deliberately missing asset → skipped with a warning, install still completes and the other assets cache.
+- UI: synthetic `beforeinstallprompt` → header button becomes `btn-install available` / `display: flex` at 1280px; mobile banner becomes `.visible` / `display: block` at 375px (375×49px at top, screenshotted, correct stacking).
+- ⚠️ **`beforeinstallprompt` itself could not be fired for real locally** — Claude's automation Chrome build does not implement install prompts. The event *plumbing* is proven end-to-end with synthetic events; the browser-side criteria must be confirmed on a real device via the preview link.
+
+### Note for the next session
+
+`.claude/launch.json` is a **tracked** file and was temporarily repointed at the Pages mimic during this session, then restored to `python3 -m http.server 8282`. Verify it is unmodified before committing.
+
+---
+
+## Session (2026-08-04) — Mobile Viewport Stability (bottom-sheet shattering + search-bar jitter)
 
 Branch `fix/mobile-viewport-stability` — **verified on a physical phone, merged to `main` via `541e835`, and deployed to production** (live on https://findfilm.ai, pinned deploy `https://3e89adcf.ratingkino.pages.dev`). Branch deleted locally and on origin.
 
