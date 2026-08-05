@@ -2,7 +2,55 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-04) — PWA "Install App" Prompt Restored (service worker never activated)
+## ⚡ Most Recent Session (2026-08-05) — "Tonight" Wizard Fixed (backend response-shape drift) + UX Redesign
+
+Branch `fix/tonight-wizard` — **preview only, awaiting approval before merge**.
+Preview: https://fix-tonight-wizard.ratingkino.pages.dev · pinned deploy https://435653f1.ratingkino.pages.dev
+
+| Commit | Feature |
+|--------|---------|
+| `77be443` | **Tonight wizard: matching fix + UX redesign + header tooltips** — new `_wizPicksFrom()` / `_wizFetchPicks()`; `runWizard(broadened)` rewritten; `renderWizard()` header + option descriptions; `.wiz-title` `.wiz-intro` `.wiz-opt-desc` `.wiz-recap` `.wiz-note` `.wiz-empty*` `.wiz-broaden` `.wiz-restart--inline`; `.hdr-feat[data-tip]::after`; new `data-i18n-tip` applier; 20 i18n keys × 9 languages. |
+
+### Root cause — the feature was 100% broken, not "too restrictive"
+
+`/api/ai-search` has **three** response shapes. `95f9738` ("LLM-First open-world By Plot search") added an open-world curation branch that answers vibe queries with `{ aiCurated: true, movies: [...] }`. `aiSearch()` was updated at the time (index.html `data.actorQuery || data.aiCurated`), **`runWizard()` was not** — it only tested `data.actorQuery` and the closed-world `data.ids`, matched neither, produced zero picks, threw `'no picks'` and rendered the empty state on *every* run regardless of answers.
+
+Proven against the live endpoint: the `aiCurated` payload has **no `ids` key at all**. Replaying the old branch logic against the real payload → **0 picks**; new logic → **3 picks**.
+
+**Important gotcha for future work:** the backend switches shape *per query*. Same wizard, different answers:
+- `"A cozy feel-good movie…"` → `{ aiCurated: true, movies: [...] }` (open world, raw TMDb rows)
+- `"A thrilling suspenseful movie…"` → `{ ids: [...] }` (closed world, KV catalog ids)
+
+Any caller must handle **both**. `_wizPicksFrom()` is now the single place that does.
+
+### Changes
+
+**Matching (`runWizard`, `_wizPicksFrom`, `_wizFetchPicks`)**
+- Accepts all three shapes.
+- `ids` branch falls back to `MOVIES` for ids the 119-film `CACHE_MOVIES` snapshot lacks, instead of dropping them.
+- Null-guards the `WIZ_OPTIONS.*.find()` results — previously dereferenced as `mood.q` with no check.
+- Auto-retries once on a mood-only widened query before declaring failure.
+
+**UI/UX**
+- Step-1 welcome header (`.wiz-title` gradient + `.wiz-intro`), suppressed on steps 2-3.
+- Every option carries a plain-language one-liner (`.wiz-opt-desc`) + hover title. Cards 130px → 168px; mobile keeps its 2-up 50% override.
+- Step counter reads "Step 1 of 3 · Pick one to continue".
+- Results echo the answers back (`.wiz-recap`) and flag widening (`.wiz-note`).
+- Empty state is no longer a dead end: `.wiz-empty` + prominent **Broaden search** / **Start over**. Broaden is withheld on an already-broadened run so it can't loop.
+
+**Tooltips** — `.hdr-feat[data-tip]::after` gives the three icon-only header actions an instant styled bubble, replacing the native `title` (needed ~1s hover, unstylable). `aria-label` still supplies the accessible name; suppressed under `(hover: none)` so it can't flash on the tap that opens the feature. New `data-i18n-tip` applier sits beside `data-i18n-title`.
+
+### Verification
+- JS 8/8 blocks parse, CSS 1458/1458 braces balanced.
+- 20 new keys × 9 languages (en/es/fr/zh/ar/uk/de/sv/no) all resolve — no raw-key leakage.
+- **End-to-end against the real deployed backend + real 119-film KV catalog: 6/6 mood·time·company combinations returned 3 picks each, zero empty states.**
+- Empty state, auto-broaden retry (2 queries fired), manual Broaden, no-infinite-loop, Back nav, Start over, desktop 3-col / mobile 1-col grids, ES localisation, tooltip render/position — all confirmed.
+
+**Local-testing gotcha:** `CACHE_MOVIES` is empty on the static `python3 -m http.server` dev server (`/api/cache/new-releases` 404s), so the closed-world `ids` branch yields 0 picks locally and looks like the bug. Load the catalog from a deployed URL before concluding anything. Also: a fresh preview deploy's **alias** URL can 404 on `/api/*` for a minute while the pinned `<hash>.ratingkino.pages.dev` already works — propagation, not a broken deploy.
+
+---
+
+## Session (2026-08-04) — PWA "Install App" Prompt Restored (service worker never activated)
 
 Branch `fix/pwa-install-prompt` — **verified on a physical mobile device, merged to `main` via `ce91cbe`, and deployed to production** (live on https://findfilm.ai, pinned deploy `https://cf6583c3.ratingkino.pages.dev`). Branch deleted locally and on origin.
 

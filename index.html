@@ -495,6 +495,32 @@ header {
 }
 .hdr-feat svg { width: 18px; height: 18px; }
 .hdr-feat:hover { background: rgba(99,102,241,0.16); border-color: rgba(99,102,241,0.5); color: #fff; }
+
+/* Styled hover tooltip for the icon-only header actions. These buttons are
+   pure glyphs with no label, so what they do was previously only discoverable
+   by clicking (the native `title` needs a ~1s hover and can't be styled). The
+   accessible name still comes from aria-label, so no `title` is needed. */
+.hdr-feat[data-tip] { position: relative; }
+.hdr-feat[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute; top: calc(100% + 9px); left: 50%; transform: translateX(-50%) translateY(-4px);
+  background: rgba(17,17,24,0.97); color: #e7e9ee;
+  border: 1px solid rgba(124,58,237,0.4); border-radius: 8px;
+  padding: 7px 11px; font-size: 11.5px; font-weight: 600; line-height: 1.3;
+  white-space: nowrap; pointer-events: none; z-index: 400;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.6);
+  opacity: 0; transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.hdr-feat[data-tip]:hover::after,
+.hdr-feat[data-tip]:focus-visible::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* The first icon sits near the right edge on narrow desktops — nudge its
+   bubble inward so it can't be clipped by the viewport. */
+.hdr-feats > .hdr-feat[data-tip]:last-child::after { left: auto; right: 0; transform: translateX(0) translateY(-4px); }
+.hdr-feats > .hdr-feat[data-tip]:last-child:hover::after,
+.hdr-feats > .hdr-feat[data-tip]:last-child:focus-visible::after { transform: translateX(0) translateY(0); }
+/* Touch devices have no hover state — the bubble would only ever fire on the
+   tap that already opens the feature, so suppress it entirely. */
+@media (hover: none) { .hdr-feat[data-tip]::after { display: none; } }
 /* Accent variant for "Surprise Me" — subtle neon tint */
 .hdr-feat--rnd {
   background: linear-gradient(135deg, rgba(124,58,237,0.22), rgba(34,211,238,0.14));
@@ -1719,21 +1745,38 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .wiz-progress { display: flex; gap: 6px; justify-content: center; margin-bottom: 22px; }
 .wiz-dot { width: 34px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.14); transition: background 0.25s; }
 .wiz-dot.done { background: var(--purple); }
+/* Step-1 welcome header — says what the feature actually does before asking
+   the first question. Suppressed from step 2 on, where the question is the
+   heading and repeating the pitch is just noise. */
+.wiz-title {
+  font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 8px;
+  font-family: 'Montserrat', sans-serif; line-height: 1.25;
+  background: linear-gradient(100deg, #fff 20%, #c4b5fd 62%, #67e8f9 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.wiz-intro {
+  font-size: 14px; color: var(--text-sub); text-align: center;
+  margin: 0 auto 26px; max-width: 460px; line-height: 1.5;
+}
 .wiz-q { font-size: 22px; font-weight: 800; text-align: center; margin-bottom: 6px; font-family: 'Montserrat', sans-serif; }
 .wiz-sub { font-size: 13px; color: var(--text-sub); text-align: center; margin-bottom: 24px; }
 .wiz-opts { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 22px; }
 .wiz-opt {
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  width: 130px; padding: 18px 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  width: 168px; padding: 18px 14px; text-align: center;
   background: rgba(255,255,255,0.04);
   border: 1.5px solid rgba(255,255,255,0.1); border-radius: 14px;
   color: var(--text); cursor: pointer;
   transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), border-color 0.2s, background 0.2s;
 }
 .wiz-opt:hover { transform: translateY(-3px); border-color: var(--purple); background: rgba(124,58,237,0.12); }
+.wiz-opt:hover .wiz-opt-desc { color: var(--text-sub); }
 .wiz-opt.selected { border-color: var(--purple); background: rgba(124,58,237,0.18); box-shadow: 0 0 0 1px var(--purple) inset; }
 .wiz-opt-emoji { font-size: 28px; line-height: 1; }
-.wiz-opt-label { font-size: 13px; font-weight: 700; }
+.wiz-opt-label { font-size: 13.5px; font-weight: 700; }
+/* Plain-language one-liner spelling out what the option actually means, so the
+   user isn't guessing what e.g. "Mind-bending" or "All evening" will return. */
+.wiz-opt-desc { font-size: 11.5px; font-weight: 500; line-height: 1.35; color: rgba(255,255,255,0.44); transition: color 0.2s; }
 .wiz-nav { display: flex; justify-content: center; gap: 12px; }
 .wiz-back {
   background: none; border: 1px solid rgba(255,255,255,0.15); border-radius: 9px;
@@ -1749,7 +1792,31 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   padding: 10px 22px; cursor: pointer; transition: background 0.2s;
 }
 .wiz-restart:hover { background: rgba(124,58,237,0.24); }
+.wiz-restart--inline { margin: 0; }
 .wiz-loading { text-align: center; padding: 40px 0; color: var(--text-sub); font-size: 14px; }
+
+/* Echoes the three answers back above the picks, so the results are visibly
+   tied to what the user chose instead of arriving unexplained. */
+.wiz-recap {
+  text-align: center; font-size: 12.5px; font-weight: 600; color: #c4b5fd;
+  margin-bottom: 6px; letter-spacing: 0.2px;
+}
+.wiz-note { text-align: center; font-size: 12.5px; color: var(--text-sub); margin-bottom: 16px; }
+
+/* Empty state — an explanation plus a way forward, not a dead end. */
+.wiz-empty { text-align: center; padding: 26px 12px 4px; }
+.wiz-empty-icon { font-size: 40px; line-height: 1; margin-bottom: 12px; opacity: 0.85; }
+.wiz-empty-title { font-size: 19px; font-weight: 800; font-family: 'Montserrat', sans-serif; margin-bottom: 8px; }
+.wiz-empty-body { font-size: 13.5px; color: var(--text-sub); line-height: 1.55; max-width: 400px; margin: 0 auto; }
+.wiz-empty-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 24px; }
+.wiz-broaden {
+  background: linear-gradient(100deg, var(--purple), #22d3ee);
+  border: none; border-radius: 9px; color: #fff;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  padding: 11px 24px; cursor: pointer;
+  transition: filter 0.2s, transform 0.2s;
+}
+.wiz-broaden:hover { filter: brightness(1.12); transform: translateY(-1px); }
 
 /* ─── VIBE CHECK modal (photo / music search — frontend scaffold) ─────
    Mirrors .wiz-overlay stacking/dismiss; two modes toggled by a class on
@@ -3426,8 +3493,14 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
     max-height: 92vh; max-height: min(92svh, 92%);
   }
   .wiz-q { font-size: 19px; }
+  .wiz-title { font-size: 20px; }
+  .wiz-intro { font-size: 13px; margin-bottom: 20px; }
   .wiz-opt { width: calc(50% - 6px); }
+  .wiz-opt-desc { font-size: 11px; }
   .wiz-results { grid-template-columns: 1fr; }
+  /* Stack the recovery actions full-width so neither is a hard-to-hit target. */
+  .wiz-empty-actions { flex-direction: column; }
+  .wiz-empty-actions > button { width: 100%; }
   .group-results { grid-template-columns: 1fr; }
 
   /* Modal: sheet sliding up from bottom */
@@ -4931,13 +5004,13 @@ if ('serviceWorker' in navigator) {
       <!-- Mobile-only: the 3 discovery actions live here as dense icon buttons
            (≤768px). On desktop they live as text-link tabs in the sub-nav (.nav-feats). -->
       <div class="hdr-feats" role="group" aria-label="Quick discovery actions">
-        <button class="hdr-feat" onclick="openWizard()" aria-label="Find something great for tonight" title="Find something great for tonight" data-i18n-aria="tonight.launch" data-i18n-title="tonight.launch">
+        <button class="hdr-feat" onclick="openWizard()" aria-label="Find something great for tonight" data-tip="Find something great for tonight" data-i18n-aria="tonight.launch" data-i18n-tip="tonight.launch">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 7.75a.75.75 0 0 1 1.142-.638l3.664 2.249a.75.75 0 0 1 0 1.278l-3.664 2.25a.75.75 0 0 1-1.142-.639z"/><path d="M12 17v4"/><path d="M8 21h8"/><rect x="2" y="3" width="20" height="14" rx="2"/></svg>
         </button>
-        <button class="hdr-feat" onclick="openGroupPicker()" aria-label="Pick a movie together" title="Pick a movie together" data-i18n-aria="group.launch" data-i18n-title="group.launch">
+        <button class="hdr-feat" onclick="openGroupPicker()" aria-label="Pick a movie together" data-tip="Pick a movie together" data-i18n-aria="group.launch" data-i18n-tip="group.launch">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </button>
-        <button class="hdr-feat hdr-feat--rnd" onclick="randomMovie()" aria-label="Surprise Me" title="Surprise Me" data-i18n-aria="btn.random" data-i18n-title="btn.random">
+        <button class="hdr-feat hdr-feat--rnd" onclick="randomMovie()" aria-label="Surprise Me" data-tip="Surprise Me" data-i18n-aria="btn.random" data-i18n-tip="btn.random">
           <svg class="rnd-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/></svg>
         </button>
       </div>
@@ -5901,6 +5974,26 @@ const TRANSLATIONS = {
     'wiz.company.partner':  'Date night',
     'wiz.company.friends':  'With friends',
     'wiz.company.family':   'Family',
+    'wiz.title':             'Let’s find your perfect movie for tonight',
+    'wiz.intro':             'Three quick questions — then three films picked just for you.',
+    'wiz.qHint':             'Pick one to continue',
+    'wiz.emptyTitle':        'No exact match this time',
+    'wiz.emptyBody':         'That combination was a little too specific. Widen the search, or go back and change an answer.',
+    'wiz.broaden':           'Broaden search',
+    'wiz.broadened':         'Nothing matched exactly, so we widened the search a little.',
+    'wiz.d.mood.cozy':       'Warm, gentle, feel-good',
+    'wiz.d.mood.thrill':     'Tense, twisty, edge-of-your-seat',
+    'wiz.d.mood.laugh':      'Light and genuinely funny',
+    'wiz.d.mood.mind':       'Clever, strange, stays with you',
+    'wiz.d.mood.cry':        'Moving, heartfelt drama',
+    'wiz.d.mood.epic':       'Big scale, big action',
+    'wiz.d.time.short':      'Under 100 minutes',
+    'wiz.d.time.normal':     'Around two hours',
+    'wiz.d.time.long':       'A long, immersive epic',
+    'wiz.d.company.solo':    'Your taste, no compromises',
+    'wiz.d.company.partner': 'Something you’ll both enjoy',
+    'wiz.d.company.friends': 'Fun to watch as a group',
+    'wiz.d.company.family':  'Safe for all ages',
     'btn.install':          'Install App',
     'banner.install':       'Install the FindFilm app for a better experience',
     'ai.searching':         '✦ Searching for "{q}"…',
@@ -6258,6 +6351,26 @@ const TRANSLATIONS = {
     'wiz.company.partner':  'Cita',
     'wiz.company.friends':  'Con amigos',
     'wiz.company.family':   'Familia',
+    'wiz.title':             'Encontremos tu película perfecta para esta noche',
+    'wiz.intro':             'Tres preguntas rápidas y tres películas elegidas para ti.',
+    'wiz.qHint':             'Elige una para continuar',
+    'wiz.emptyTitle':        'Esta vez no hay coincidencia exacta',
+    'wiz.emptyBody':         'Esa combinación fue demasiado específica. Amplía la búsqueda o cambia una respuesta.',
+    'wiz.broaden':           'Ampliar búsqueda',
+    'wiz.broadened':         'No hubo coincidencia exacta, así que ampliamos un poco la búsqueda.',
+    'wiz.d.mood.cozy':       'Cálido, suave, reconfortante',
+    'wiz.d.mood.thrill':     'Tenso, con giros, de infarto',
+    'wiz.d.mood.laugh':      'Ligero y realmente divertido',
+    'wiz.d.mood.mind':       'Ingenioso, extraño, inolvidable',
+    'wiz.d.mood.cry':        'Drama conmovedor y sentido',
+    'wiz.d.mood.epic':       'Gran escala, gran acción',
+    'wiz.d.time.short':      'Menos de 100 minutos',
+    'wiz.d.time.normal':     'Alrededor de dos horas',
+    'wiz.d.time.long':       'Una epopeya larga e inmersiva',
+    'wiz.d.company.solo':    'Tu gusto, sin concesiones',
+    'wiz.d.company.partner': 'Algo que disfrutéis los dos',
+    'wiz.d.company.friends': 'Divertida para ver en grupo',
+    'wiz.d.company.family':  'Apta para todas las edades',
     'btn.install':          'Instalar',
     'banner.install':       'Instala la app FindFilm para una mejor experiencia',
     'ai.searching':         '✦ Buscando "{q}"…',
@@ -6578,6 +6691,26 @@ const TRANSLATIONS = {
     'wiz.company.partner':  'En amoureux',
     'wiz.company.friends':  'Entre amis',
     'wiz.company.family':   'En famille',
+    'wiz.title':             'Trouvons le film parfait pour ce soir',
+    'wiz.intro':             'Trois questions rapides, puis trois films choisis pour vous.',
+    'wiz.qHint':             'Choisissez-en un pour continuer',
+    'wiz.emptyTitle':        'Pas de correspondance exacte cette fois',
+    'wiz.emptyBody':         'Cette combinaison était un peu trop précise. Élargissez la recherche ou changez une réponse.',
+    'wiz.broaden':           'Élargir la recherche',
+    'wiz.broadened':         'Rien ne correspondait exactement, nous avons donc élargi la recherche.',
+    'wiz.d.mood.cozy':       'Chaleureux, doux, réconfortant',
+    'wiz.d.mood.thrill':     'Tendu, plein de rebondissements',
+    'wiz.d.mood.laugh':      'Léger et vraiment drôle',
+    'wiz.d.mood.mind':       'Malin, étrange, inoubliable',
+    'wiz.d.mood.cry':        'Drame émouvant et sincère',
+    'wiz.d.mood.epic':       'Grande échelle, grande action',
+    'wiz.d.time.short':      'Moins de 100 minutes',
+    'wiz.d.time.normal':     'Environ deux heures',
+    'wiz.d.time.long':       'Une longue épopée immersive',
+    'wiz.d.company.solo':    'Vos goûts, sans compromis',
+    'wiz.d.company.partner': 'Quelque chose à apprécier à deux',
+    'wiz.d.company.friends': 'Sympa à regarder en groupe',
+    'wiz.d.company.family':  'Convient à tous les âges',
     'btn.install':          'Installer',
     'banner.install':       'Installe l\'app FindFilm pour une meilleure expérience',
     'ai.searching':         '✦ Recherche de "{q}"…',
@@ -6898,6 +7031,26 @@ const TRANSLATIONS = {
     'wiz.company.partner':  '约会',
     'wiz.company.friends':  '和朋友',
     'wiz.company.family':   '家庭',
+    'wiz.title':             '来找找今晚最适合你的电影',
+    'wiz.intro':             '三个快速问题，然后为你挑选三部电影。',
+    'wiz.qHint':             '选一项继续',
+    'wiz.emptyTitle':        '这次没有完全匹配的',
+    'wiz.emptyBody':         '这个组合稍微太具体了。可以扩大搜索范围，或者换一个答案。',
+    'wiz.broaden':           '扩大搜索',
+    'wiz.broadened':         '没有完全匹配的，所以我们稍微扩大了范围。',
+    'wiz.d.mood.cozy':       '温暖、柔和、治愈',
+    'wiz.d.mood.thrill':     '紧张、反转、惊心动魄',
+    'wiz.d.mood.laugh':      '轻松而真的好笑',
+    'wiz.d.mood.mind':       '巧妙、奇特、余味无穷',
+    'wiz.d.mood.cry':        '动人而真挚的剧情',
+    'wiz.d.mood.epic':       '大场面、大动作',
+    'wiz.d.time.short':      '100 分钟以内',
+    'wiz.d.time.normal':     '大约两小时',
+    'wiz.d.time.long':       '沉浸式的长篇史诗',
+    'wiz.d.company.solo':    '只顺你的口味',
+    'wiz.d.company.partner': '两个人都会喜欢',
+    'wiz.d.company.friends': '适合一群人一起看',
+    'wiz.d.company.family':  '老少咸宜',
     'btn.install':          '安装应用',
     'banner.install':       '安装 FindFilm 应用，享受更佳体验',
     'ai.searching':         '✦ 正在搜索「{q}」…',
@@ -7218,6 +7371,26 @@ const TRANSLATIONS = {
     'wiz.company.partner':  'موعد',
     'wiz.company.friends':  'مع الأصدقاء',
     'wiz.company.family':   'العائلة',
+    'wiz.title':             'لنجد فيلمك المثالي لهذه الليلة',
+    'wiz.intro':             'ثلاثة أسئلة سريعة، ثم ثلاثة أفلام مختارة لك.',
+    'wiz.qHint':             'اختر واحدًا للمتابعة',
+    'wiz.emptyTitle':        'لا يوجد تطابق دقيق هذه المرة',
+    'wiz.emptyBody':         'هذا المزيج كان محددًا أكثر من اللازم. وسّع البحث أو غيّر إجابة.',
+    'wiz.broaden':           'توسيع البحث',
+    'wiz.broadened':         'لم يطابق شيء تمامًا، لذلك وسّعنا البحث قليلاً.',
+    'wiz.d.mood.cozy':       'دافئ ولطيف ومريح',
+    'wiz.d.mood.thrill':     'مشوّق ومليء بالمفاجآت',
+    'wiz.d.mood.laugh':      'خفيف ومضحك حقًّا',
+    'wiz.d.mood.mind':       'ذكي وغريب ويبقى في ذاكرتك',
+    'wiz.d.mood.cry':        'دراما مؤثرة وصادقة',
+    'wiz.d.mood.epic':       'إنتاج ضخم وأكشن كبير',
+    'wiz.d.time.short':      'أقل من 100 دقيقة',
+    'wiz.d.time.normal':     'نحو ساعتين',
+    'wiz.d.time.long':       'ملحمة طويلة وغامرة',
+    'wiz.d.company.solo':    'ذوقك أنت بلا تنازلات',
+    'wiz.d.company.partner': 'شيء يعجبكما معًا',
+    'wiz.d.company.friends': 'ممتع للمشاهدة في مجموعة',
+    'wiz.d.company.family':  'مناسب لكل الأعمار',
     'btn.install':          'تثبيت',
     'banner.install':       'ثبّت تطبيق FindFilm لتجربة أفضل',
     'ai.searching':         '✦ جاري البحث عن "{q}"…',
@@ -7539,6 +7712,26 @@ const TRANSLATIONS = {
     'wiz.company.partner':  'Побачення',
     'wiz.company.friends':  'З друзями',
     'wiz.company.family':   'Родина',
+    'wiz.title':             'Знайдемо ідеальний фільм на цей вечір',
+    'wiz.intro':             'Три швидкі питання — і три фільми саме для вас.',
+    'wiz.qHint':             'Оберіть одне, щоб продовжити',
+    'wiz.emptyTitle':        'Цього разу точного збігу немає',
+    'wiz.emptyBody':         'Це поєднання виявилося занадто вузьким. Розширте пошук або змініть відповідь.',
+    'wiz.broaden':           'Розширити пошук',
+    'wiz.broadened':         'Точного збігу не було, тому ми трохи розширили пошук.',
+    'wiz.d.mood.cozy':       'Теплий, м’який, затишний',
+    'wiz.d.mood.thrill':     'Напружений, із поворотами',
+    'wiz.d.mood.laugh':      'Легкий і справді смішний',
+    'wiz.d.mood.mind':       'Розумний, дивний, запам’ятовується',
+    'wiz.d.mood.cry':        'Зворушлива щира драма',
+    'wiz.d.mood.epic':       'Великий масштаб і екшн',
+    'wiz.d.time.short':      'Менше за 100 хвилин',
+    'wiz.d.time.normal':     'Приблизно дві години',
+    'wiz.d.time.long':       'Довга занурлива епопея',
+    'wiz.d.company.solo':    'Ваш смак без компромісів',
+    'wiz.d.company.partner': 'Щось для вас обох',
+    'wiz.d.company.friends': 'Цікаво дивитися компанією',
+    'wiz.d.company.family':  'Підійде для будь-якого віку',
     'btn.install':          'Встановити',
     'banner.install':       'Встановіть додаток FindFilm для кращого досвіду',
     'ai.searching':         '✦ Пошук "{q}"…',
@@ -7877,6 +8070,26 @@ const TRANSLATIONS = {
     'wiz.company.partner':  'Date-Abend',
     'wiz.company.friends':  'Mit Freunden',
     'wiz.company.family':   'Familie',
+    'wiz.title':             'Finden wir deinen perfekten Film für heute Abend',
+    'wiz.intro':             'Drei kurze Fragen — dann drei Filme, ausgesucht für dich.',
+    'wiz.qHint':             'Wähle eine Option, um fortzufahren',
+    'wiz.emptyTitle':        'Diesmal kein exakter Treffer',
+    'wiz.emptyBody':         'Diese Kombination war etwas zu speziell. Erweitere die Suche oder ändere eine Antwort.',
+    'wiz.broaden':           'Suche erweitern',
+    'wiz.broadened':         'Nichts passte exakt, also haben wir die Suche etwas erweitert.',
+    'wiz.d.mood.cozy':       'Warm, sanft, wohltuend',
+    'wiz.d.mood.thrill':     'Spannend, voller Wendungen',
+    'wiz.d.mood.laugh':      'Leicht und wirklich lustig',
+    'wiz.d.mood.mind':       'Klug, seltsam, bleibt hängen',
+    'wiz.d.mood.cry':        'Bewegendes, ehrliches Drama',
+    'wiz.d.mood.epic':       'Großes Kino, große Action',
+    'wiz.d.time.short':      'Unter 100 Minuten',
+    'wiz.d.time.normal':     'Etwa zwei Stunden',
+    'wiz.d.time.long':       'Ein langes, packendes Epos',
+    'wiz.d.company.solo':    'Dein Geschmack, keine Kompromisse',
+    'wiz.d.company.partner': 'Etwas, das euch beiden gefällt',
+    'wiz.d.company.friends': 'Macht in der Gruppe Spaß',
+    'wiz.d.company.family':  'Für jedes Alter geeignet',
     'btn.install':          'App installieren',
     'banner.install':       'Installiere die FindFilm-App für ein besseres Erlebnis',
     'ai.searching':         '✦ Suche nach „{q}“ …',
@@ -8221,6 +8434,26 @@ const TRANSLATIONS = {
     'wiz.company.partner':  'Dejtkväll',
     'wiz.company.friends':  'Med vänner',
     'wiz.company.family':   'Familj',
+    'wiz.title':             'Låt oss hitta din perfekta film ikväll',
+    'wiz.intro':             'Tre snabba frågor — sedan tre filmer valda åt dig.',
+    'wiz.qHint':             'Välj ett alternativ för att fortsätta',
+    'wiz.emptyTitle':        'Ingen exakt träff den här gången',
+    'wiz.emptyBody':         'Den kombinationen blev lite för specifik. Bredda sökningen eller ändra ett svar.',
+    'wiz.broaden':           'Bredda sökningen',
+    'wiz.broadened':         'Inget matchade exakt, så vi breddade sökningen lite.',
+    'wiz.d.mood.cozy':       'Varm, mjuk och tröstande',
+    'wiz.d.mood.thrill':     'Spännande med oväntade vändningar',
+    'wiz.d.mood.laugh':      'Lätt och verkligen rolig',
+    'wiz.d.mood.mind':       'Smart, udda och svår att glömma',
+    'wiz.d.mood.cry':        'Gripande och ärligt drama',
+    'wiz.d.mood.epic':       'Stor skala, stor action',
+    'wiz.d.time.short':      'Under 100 minuter',
+    'wiz.d.time.normal':     'Ungefär två timmar',
+    'wiz.d.time.long':       'Ett långt, uppslukande epos',
+    'wiz.d.company.solo':    'Din smak, inga kompromisser',
+    'wiz.d.company.partner': 'Något ni båda gillar',
+    'wiz.d.company.friends': 'Kul att se tillsammans',
+    'wiz.d.company.family':  'Passar alla åldrar',
     'btn.install':          'Installera appen',
     'banner.install':       'Installera FindFilm-appen för en bättre upplevelse',
     'ai.searching':         '✦ Söker efter ”{q}” …',
@@ -8565,6 +8798,26 @@ const TRANSLATIONS = {
     'wiz.company.partner':  'Date-kveld',
     'wiz.company.friends':  'Med venner',
     'wiz.company.family':   'Familie',
+    'wiz.title':             'La oss finne den perfekte filmen for i kveld',
+    'wiz.intro':             'Tre raske spørsmål — så tre filmer valgt for deg.',
+    'wiz.qHint':             'Velg ett for å fortsette',
+    'wiz.emptyTitle':        'Ingen nøyaktig treff denne gangen',
+    'wiz.emptyBody':         'Den kombinasjonen ble litt for spesifikk. Utvid søket, eller endre et svar.',
+    'wiz.broaden':           'Utvid søket',
+    'wiz.broadened':         'Ingenting matchet helt, så vi utvidet søket litt.',
+    'wiz.d.mood.cozy':       'Varm, mild og god',
+    'wiz.d.mood.thrill':     'Spennende og full av vendinger',
+    'wiz.d.mood.laugh':      'Lett og virkelig morsom',
+    'wiz.d.mood.mind':       'Smart, rar og vanskelig å glemme',
+    'wiz.d.mood.cry':        'Gripende og ærlig drama',
+    'wiz.d.mood.epic':       'Stor skala, stor action',
+    'wiz.d.time.short':      'Under 100 minutter',
+    'wiz.d.time.normal':     'Rundt to timer',
+    'wiz.d.time.long':       'Et langt, oppslukende epos',
+    'wiz.d.company.solo':    'Din smak, ingen kompromisser',
+    'wiz.d.company.partner': 'Noe dere begge liker',
+    'wiz.d.company.friends': 'Gøy å se sammen',
+    'wiz.d.company.family':  'Passer for alle aldre',
     'btn.install':          'Installer appen',
     'banner.install':       'Installer FindFilm-appen for en bedre opplevelse',
     'ai.searching':         '✦ Søker etter «{q}» …',
@@ -8781,6 +9034,12 @@ function applyTranslations() {
   });
   document.querySelectorAll('[data-i18n-aria]').forEach(el => {
     el.setAttribute('aria-label', t(el.dataset.i18nAria));
+  });
+  // Styled CSS tooltips (.hdr-feat[data-tip]) — separate from `title` so the
+  // bubble renders instantly and in the app's own styling. These elements carry
+  // aria-label too, so the accessible name is unaffected.
+  document.querySelectorAll('[data-i18n-tip]').forEach(el => {
+    el.setAttribute('data-tip', t(el.dataset.i18nTip));
   });
   // Feed row titles (static HTML)
   const forYouTitle = document.querySelector('#rowForYou .feed-row-title');
@@ -12974,48 +13233,100 @@ function renderWizard() {
   const stepKey = WIZ_STEPS[WIZARD_STEP];
   const opts    = WIZ_OPTIONS[stepKey];
   document.getElementById('wizProgress').innerHTML = _wizProgressHTML(WIZARD_STEP);
-  const optsHTML = opts.map(o =>
-    `<button class="wiz-opt" onclick="wizardSelect('${stepKey}','${o.key}')">
+  const optsHTML = opts.map(o => {
+    const label = t('wiz.' + stepKey + '.' + o.key);
+    const desc  = t('wiz.d.' + stepKey + '.' + o.key);
+    return `<button class="wiz-opt" onclick="wizardSelect('${stepKey}','${o.key}')" title="${esc(label + ' — ' + desc)}">
        <span class="wiz-opt-emoji">${o.emoji}</span>
-       <span class="wiz-opt-label">${esc(t('wiz.' + stepKey + '.' + o.key))}</span>
-     </button>`).join('');
+       <span class="wiz-opt-label">${esc(label)}</span>
+       <span class="wiz-opt-desc">${esc(desc)}</span>
+     </button>`;
+  }).join('');
   const back = WIZARD_STEP > 0
     ? `<div class="wiz-nav"><button class="wiz-back" onclick="wizGoStep(${WIZARD_STEP - 1})">${esc(t('wiz.back'))}</button></div>`
     : '';
   const qKey = 'wiz.q' + stepKey.charAt(0).toUpperCase() + stepKey.slice(1);
+  // The welcoming header only appears on step 1 — once the user is mid-flow the
+  // question itself is the heading and repeating the pitch just adds noise.
+  const intro = WIZARD_STEP === 0
+    ? `<div class="wiz-title">${esc(t('wiz.title'))}</div>` +
+      `<div class="wiz-intro">${esc(t('wiz.intro'))}</div>`
+    : '';
   document.getElementById('wizBody').innerHTML =
+    intro +
     `<div class="wiz-q">${esc(t(qKey))}</div>` +
-    `<div class="wiz-sub">${esc(t('wiz.step', { n: WIZARD_STEP + 1, total: WIZ_STEPS.length }))}</div>` +
+    `<div class="wiz-sub">${esc(t('wiz.step', { n: WIZARD_STEP + 1, total: WIZ_STEPS.length }))} · ${esc(t('wiz.qHint'))}</div>` +
     `<div class="wiz-opts">${optsHTML}</div>` +
     back;
 }
 
-async function runWizard() {
+/* Resolves one /api/ai-search response into renderable movie objects.
+   The backend has THREE response shapes and the wizard has to accept all of
+   them — this was the bug: runWizard() only handled `actorQuery` and the
+   closed-world `ids`, so when the LLM-first open-world curation landed
+   (95f9738) and started answering vibe queries with { aiCurated:true, movies }
+   the wizard matched neither branch, produced zero picks and fell straight
+   into the "Couldn't find a match" state on EVERY run. aiSearch() was updated
+   for the new shape at the time; runWizard() was missed. */
+function _wizPicksFrom(data, limit = 3) {
+  // Open world: actor filmography or LLM-curated real films → raw TMDb rows.
+  if ((data.actorQuery || data.aiCurated) && data.movies?.length) {
+    data.movies.forEach(raw => { if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromTMDb(raw)); });
+    return data.movies.slice(0, limit).map(raw => MOVIES.find(x => x.id === raw.id)).filter(Boolean);
+  }
+  // Closed world: ids into the KV catalog snapshot. Fall back to MOVIES for
+  // ids the snapshot doesn't carry rather than silently dropping them.
+  if (data.ids?.length) {
+    return data.ids.slice(0, limit)
+      .map(id => CACHE_MOVIES.find(m => m.id === id) || MOVIES.find(m => m.id === id))
+      .filter(Boolean);
+  }
+  return [];
+}
+
+async function _wizFetchPicks(query) {
+  const { cleanQuery, exclude } = parseVibeQuery(query);
+  const r = await fetch('/api/ai-search', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ query: cleanQuery, exclude }),
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const data = await r.json();
+  return { data, picks: _wizPicksFrom(data) };
+}
+
+async function runWizard(broadened = false) {
   document.getElementById('wizProgress').innerHTML = _wizProgressHTML(WIZ_STEPS.length);
   document.getElementById('wizBody').innerHTML = aiPremiumLoaderHTML('wizStatus', 3);
   startAiStatus('wizStatus');
 
+  // A step can be unanswered if runWizard() is reached from "Broaden" after a
+  // restart, so don't dereference the .find() results blindly.
   const mood    = WIZ_OPTIONS.mood.find(o => o.key === WIZARD_STATE.mood);
   const time    = WIZ_OPTIONS.time.find(o => o.key === WIZARD_STATE.time);
   const company = WIZ_OPTIONS.company.find(o => o.key === WIZARD_STATE.company);
-  const query   = `A ${mood.q} movie, ${time.q}, good for ${company.q}`;
 
-  const { cleanQuery, exclude } = parseVibeQuery(query);
+  // "Broaden" keeps the mood (the part the user cares about) and drops the
+  // runtime/company constraints that narrow the candidate pool the most.
+  const parts = broadened
+    ? [`A ${mood?.q || 'great'} movie worth watching tonight`]
+    : [
+        `A ${mood?.q || 'great'} movie`,
+        time?.q,
+        company?.q && `good for ${company.q}`,
+      ];
+  const query = parts.filter(Boolean).join(', ');
+
   try {
-    const r = await fetch('/api/ai-search', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ query: cleanQuery, exclude }),
-    });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const data = await r.json();
+    let { data, picks } = await _wizFetchPicks(query);
 
-    let picks = [];
-    if (data.actorQuery && data.movies?.length) {
-      data.movies.forEach(raw => { if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromTMDb(raw)); });
-      picks = data.movies.slice(0, 3).map(raw => MOVIES.find(x => x.id === raw.id)).filter(Boolean);
-    } else if (data.ids?.length) {
-      picks = data.ids.slice(0, 3).map(id => CACHE_MOVIES.find(m => m.id === id)).filter(Boolean);
+    // One automatic retry on a widened query before admitting defeat, so a
+    // narrow combination degrades to a decent answer instead of a dead end.
+    let autoBroadened = false;
+    if (!picks.length && !broadened) {
+      autoBroadened = true;
+      ({ data, picks } = await _wizFetchPicks(`A ${mood?.q || 'great'} movie worth watching tonight`));
     }
     if (!picks.length) throw new Error('no picks');
 
@@ -13029,18 +13340,34 @@ async function runWizard() {
     Object.entries(data.reasons || {}).forEach(([id, reason]) => _aiMatchReasons.set(Number(id), reason));
     Object.entries(data.tags    || {}).forEach(([id, arr])    => _aiMatchTags.set(Number(id), arr));
 
+    const recap = [
+      mood    && t('wiz.mood.'    + mood.key),
+      time    && t('wiz.time.'    + time.key),
+      company && t('wiz.company.' + company.key),
+    ].filter(Boolean).join('  ·  ');
+
     stopAiStatus();
     document.getElementById('wizProgress').innerHTML = '';
     document.getElementById('wizBody').innerHTML =
       `<div class="wiz-q">${esc(t('wiz.results'))}</div>` +
+      (recap ? `<div class="wiz-recap">${esc(recap)}</div>` : '') +
+      ((broadened || autoBroadened) ? `<div class="wiz-note">${esc(t('wiz.broadened'))}</div>` : '') +
       `<div class="wiz-results">${picks.map(m => renderCardHTML(m)).join('')}</div>` +
       `<button class="wiz-restart" onclick="wizardRestart()">${esc(t('wiz.restart'))}</button>`;
   } catch (e) {
     stopAiStatus();
     console.warn('[wizard] failed:', e.message);
+    document.getElementById('wizProgress').innerHTML = '';
     document.getElementById('wizBody').innerHTML =
-      `<div class="wiz-loading">${esc(t('wiz.empty'))}</div>` +
-      `<button class="wiz-restart" onclick="wizardRestart()">${esc(t('wiz.restart'))}</button>`;
+      `<div class="wiz-empty">` +
+        `<div class="wiz-empty-icon" aria-hidden="true">🍿</div>` +
+        `<div class="wiz-empty-title">${esc(t('wiz.emptyTitle'))}</div>` +
+        `<div class="wiz-empty-body">${esc(t('wiz.emptyBody'))}</div>` +
+      `</div>` +
+      `<div class="wiz-empty-actions">` +
+        (broadened ? '' : `<button class="wiz-broaden" onclick="runWizard(true)">${esc(t('wiz.broaden'))}</button>`) +
+        `<button class="wiz-restart wiz-restart--inline" onclick="wizardRestart()">${esc(t('wiz.restart'))}</button>` +
+      `</div>`;
   }
 }
 
