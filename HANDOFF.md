@@ -4,8 +4,11 @@
 
 ## ⚡ Most Recent Session (2026-08-04) — PWA "Install App" Prompt Restored (service worker never activated)
 
-Branch `fix/pwa-install-prompt` — **awaiting on-device approval, NOT merged, NOT in production.**
-Preview: https://fix-pwa-install-prompt.ratingkino.pages.dev (pinned deploy `https://eba49179.ratingkino.pages.dev`)
+Branch `fix/pwa-install-prompt` — **verified on a physical mobile device, merged to `main` via `ce91cbe`, and deployed to production** (live on https://findfilm.ai, pinned deploy `https://cf6583c3.ratingkino.pages.dev`). Branch deleted locally and on origin.
+
+User confirmation after on-device testing: the "Install App" banner appeared on mobile after clearing site data.
+
+Post-deploy verification: `index.html` and `sw.js` on findfilm.ai are byte-identical to `main`; live `sw.js` shows `CACHE = 'ff-v2'`, a 6-entry `SHELL` with no `favicon.ico`, no real `.addAll(` call site, and the `/api/` network-only guard present. All six SHELL assets return real 200s with correct content-types (no SPA-fallback HTML). ratingkino.com mirror 200. Note: `findfilm.ai` briefly served the previous `index.html` for a few seconds after `wrangler pages deploy` returned — propagation lag, not a failed deploy. Re-check before concluding anything is wrong.
 
 | Commit | Feature |
 |--------|---------|
