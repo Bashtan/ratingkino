@@ -2,7 +2,50 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-06) — First-Visit Onboarding Lightened
+## ⚡ Most Recent Session (2026-08-06) — All Open Preview Branches Merged & Shipped
+
+**Production deploy `fd475636` — live on https://findfilm.ai. `main` is at `ac64837`.**
+
+Four approved branches merged and the repository cleaned up. **No open preview
+branches remain**; the only unmerged branch is the parked `feat/mobile-ai-hub`.
+
+| Merge | Branch | What shipped |
+|---|---|---|
+| fast-forward | `feat/lighter-onboarding` | first-visit splash: transparency, AI aesthetic, skip button |
+| `ee362a9` | `fix/voice-transcript-duplication` | voice dictation dedup + 2s silence timeout |
+| `9293a96` | `feat/logo-global-reset` | logo is a true global reset (`resetToHome()`) |
+| `ac64837` | `fix/group-picker-catalog` | "Pick a movie together" empty results (`ensureCatalog()`, `_wizPicksFrom()`) |
+
+`index.html` **auto-merged with zero conflicts** on all three merges — the four
+features touch disjoint regions. Every conflict was in `HANDOFF.md` alone, where each
+branch had prepended its own session block to the top; resolved by keeping both sides
+and demoting the incoming heading to a plain `## Session`.
+
+### Verified before and after deploy
+
+Auto-merge succeeding does not prove semantic correctness, so both were checked:
+
+- **Ancestry** — `git branch --merged main` lists all four; only `feat/mobile-ai-hub`
+  is unmerged. Nothing was dropped by a resolution.
+- **Symbols present** — `resetToHome`, `_wizPicksFrom`, `ensureCatalog`, `_voiceRead`,
+  `_voiceMerge`, `_voiceCommit` all defined at runtime; `VOICE_SILENCE_MS === 2000`.
+- **Behaviour spot-check** on the merged build — `_voiceMerge()` still collapses a
+  replay (`'film about'` + `'film about a heist'` → `'film about a heist'`), joins
+  disjoint segments, and does **not** eat genuine repeats (`'very very good movie'`,
+  `'the the matrix'` both survive).
+- JS 8/8 blocks parse · CSS 1471/1471 braces balanced · no new console errors.
+- All three domains serve **778463 bytes, byte-identical to `main`** ·
+  `/api/cache/new-releases` 200, `/api/search` 200 (`/api/cache/trending` 404 —
+  pre-existing, not an endpoint).
+
+### Branches pruned (local + origin)
+
+`feat/lighter-onboarding`, `fix/voice-transcript-duplication`, `feat/logo-global-reset`,
+`fix/group-picker-catalog` — all fully contained in `main` before deletion.
+
+---
+
+## Session (2026-08-06) — First-Visit Onboarding Lightened
 
 **Merged to `main` and live on https://findfilm.ai** (production deploy `fd0a9a9f`).
 Fast-forward merge from `feat/lighter-onboarding` — no merge commit, no conflicts.
@@ -125,20 +168,14 @@ The direct `<id>.ratingkino.pages.dev` URL was correct immediately. **Verify aga
 the deployment URL first, then re-check the custom domain a minute later**, otherwise
 a good deploy looks like a failed one.
 
-### Open preview branches (none merged, all awaiting approval)
+*(The preview branches listed here have since been merged and pruned — see the top block.)*
 
-| Branch | Preview | What |
-|---|---|---|
-| `fix/voice-transcript-duplication` | `fix-voice-transcript-duplica.ratingkino.pages.dev` | voice dictation dedup + 2s silence timeout |
-| `feat/logo-global-reset` | `feat-logo-global-reset.ratingkino.pages.dev` | logo = global reset button |
-| `fix/group-picker-catalog` | `fix-group-picker-catalog.ratingkino.pages.dev` | "Pick a movie together" empty results |
-| `feat/mobile-ai-hub` | — | parked, 2 unmerged commits |
 ---
 
 ## Session (2026-08-06) — Voice Dictation Duplication + 2s Silence Timeout
 
-Preview: https://fix-voice-transcript-duplica.ratingkino.pages.dev (pinned `https://7579c479.ratingkino.pages.dev`).
-Branched off `main`, so it is independent of the two other open preview branches.
+**Merged to `main` via `ee362a9`, live on https://findfilm.ai (deploy `fd475636`).**
+Branch `fix/voice-transcript-duplication` deleted locally and on origin.
 
 | Commit | Feature |
 |--------|---------|
@@ -198,9 +235,8 @@ modal opened with the clean query and returned 6 matches.
 
 ## Session (2026-08-06) — Logo = Global Reset
 
-**PREVIEW ONLY — not merged, awaiting approval.**
-Branch `feat/logo-global-reset` · preview https://feat-logo-global-reset.ratingkino.pages.dev
-(pinned https://591f36e8.ratingkino.pages.dev)
+**Merged to `main` via `9293a96`, live on https://findfilm.ai (deploy `fd475636`).**
+Branch `feat/logo-global-reset` deleted locally and on origin.
 
 > Branched off `main` (`8ab7bae`). The parallel `fix/group-picker-catalog` branch
 > is still open and un-merged; these two do not overlap.
@@ -276,9 +312,8 @@ group picker all reopen normally afterwards.
 
 ## Session (2026-08-06) — Group Picker "no match" Fix
 
-**PREVIEW ONLY — not merged, awaiting approval.**
-Branch `fix/group-picker-catalog` · preview https://fix-group-picker-catalog.ratingkino.pages.dev
-(pinned https://8ebe1f91.ratingkino.pages.dev)
+**Merged to `main` via `ac64837`, live on https://findfilm.ai (deploy `fd475636`).**
+Branch `fix/group-picker-catalog` deleted locally and on origin.
 
 | Commit | Feature |
 |--------|---------|
