@@ -2,7 +2,60 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-05) — Header Discovery Icons Redesigned
+## ⚡ Most Recent Session (2026-08-06) — Group Picker "no match" Fix
+
+**PREVIEW ONLY — not merged, awaiting approval.**
+Branch `fix/group-picker-catalog` · preview https://fix-group-picker-catalog.ratingkino.pages.dev
+(pinned https://8ebe1f91.ratingkino.pages.dev)
+
+| Commit | Feature |
+|--------|---------|
+| `a74a6f7` | **`ensureCatalog()` — on-demand KV catalog for AI id resolution.** New memoised helper + `_CATALOG_FALLBACK` in `index.html` right after `tryCache()` (~L10568). `runGroupPicker()` (~L13513) and `_wizPicksFrom(data, catalog, limit)` / `_wizFetchPicks()` (~L13308-13336) now resolve backend ids against `await ensureCatalog()` with a `MOVIES` fallback instead of `CACHE_MOVIES` alone. |
+
+### Root cause (NOT the same bug as the wizard)
+
+`/api/group-picker` was healthy the whole time — live curl returned 6 ids, all 6 present
+in the 119-row `new-releases` KV snapshot, and its response shape matches the client
+exactly. The feature also works fine on a pristine homepage.
+
+The client resolved those ids through `CACHE_MOVIES`, which is a **by-product of
+browsing, not a catalog**:
+
+- `tryCache()` (`index.html:10557`) returns `null` — so `CACHE_MOVIES` is never filled —
+  whenever `CONTENT_TYPE !== 'movie'` or a search term / genre / country / rating filter is set.
+- `setContentType()` (`index.html:9986`) clears `CACHE_MOVIES = []` outright.
+- `init()` (`index.html:14887`) calls `restoreSession()` **before** the first
+  `await loadMovies(1, false)`, so a filter persisted from a previous visit leaves
+  `CACHE_MOVIES` empty for the entire session.
+
+Every id then resolved to `undefined` → `picks.length === 0` → the `group.empty`
+state. Reproduced in-browser in all three states (TV Shows, active genre filter,
+restored session). The wizard's closed-world `ids` branch had the identical latent
+failure and got the same fix.
+
+### Deliberate design note
+
+`ensureCatalog()` **does not write to `CACHE_MOVIES`.** `clearAISearch()`
+(`index.html:11137`) re-renders the grid from `CACHE_MOVIES` with no content-type
+guard, so populating it from this helper would leak movie rows into the TV grid.
+The fallback list is kept in its own session-scoped `_CATALOG_FALLBACK`, and the
+promise is nulled on failure so a later attempt can retry.
+
+### Verification
+
+- Regression proof on one live payload with `CACHE_MOVIES` empty: `backend_ids: 6`,
+  `OLD_logic_picks: 0`, `NEW_logic_picks: 6`.
+- Memoisation: `catalogFetches: 1` across 5 concurrent calls, `sameInstance: true`.
+- Safety: `CACHE_MOVIES_untouched: true`, `usesCacheMoviesWhenPresent: true` (zero
+  fetches when already populated).
+- Scenarios: TV Shows → 6 cards; genre filter → 6 cards; pristine homepage → 6 cards
+  (no regression); wizard `ids` branch → 3 cards.
+- Clean run: `groupPickerWarnings: []`, restart returns to the form,
+  `bodyOverflowRestored: true`, 2-person guard still shows "Add at least 2 people."
+
+---
+
+## Session (2026-08-05) — Header Discovery Icons Redesigned
 
 Merged to `main` in `2a56494` and **live on https://findfilm.ai** (deploy `a838fcac`).
 Verified live: `findfilm.ai` byte-identical to `main`, all three new icon paths
