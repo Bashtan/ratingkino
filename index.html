@@ -14251,10 +14251,17 @@ function stopMobPlaceholder() {
 }
 
 // ─── VOICE SEARCH ──────────────────────────────────
-let _recognition = null, _isListening = false, _finalTranscript = '';
+let _recognition = null, _isListening = false;
+// _finalTranscript = speech CARRIED OVER from earlier recognition sessions (see the
+// auto-restart in onend). _voiceSessionFinal = finalised speech of the session that is
+// running right now, rebuilt from scratch on every onresult. Keeping the two apart is
+// what makes onresult idempotent — see _voiceRead() / _voiceMerge() below.
+let _finalTranscript = '', _voiceSessionFinal = '';
 let _voiceSilenceTimer = null;   // debounce: auto-stop only after N ms of silence (continuous mode)
-const VOICE_SILENCE_MS = 8000;   // wait this long after the user stops talking before auto-submitting —
-                                  // generous ceiling so long thinking pauses mid-plot don't cut dictation short
+const VOICE_SILENCE_MS = 2000;   // wait this long after the user stops talking before auto-submitting.
+                                  // Was 8000 — a deliberately generous ceiling for long thinking pauses,
+                                  // but it made the mic feel broken: you finish your sentence and then
+                                  // watch a still-pulsing button for eight seconds. 2s reads as "it heard me".
 let _voiceStopRequested = false; // true once the user manually clicks stop, or a fatal mic error occurs —
                                   // suppresses auto-restart so we don't fight the user's own stop action
 let _voiceDebounceFired  = false; // true once the silence debounce itself calls .stop() — this is the
@@ -14378,6 +14385,60 @@ document.addEventListener('click', e => {
   }
 })();
 
+/* ── Transcript assembly ────────────────────────────────────────────────────
+   The old handler appended into a persistent accumulator:
+
+     for (let i = e.resultIndex; i < e.results.length; i++)
+       if (res.isFinal) _finalTranscript += ' ' + res[0].transcript;
+
+   That is only correct if every result is delivered exactly once, which is not
+   how the engine behaves. `e.results` is the CUMULATIVE list for the session,
+   and Chrome re-delivers entries from it freely — a result arrives interim,
+   then final, sometimes final twice with a corrected alternative, and after the
+   internal restarts below Android replays earlier finals with resultIndex back
+   at 0. Every redelivery appended the same words again, which is where
+   "film about" turned into "film film film about film about film about".
+
+   Rebuilding the whole string from index 0 on every event is idempotent: a
+   redelivered result recomputes the identical string instead of growing it. */
+function _voiceRead(e) {
+  let final = '', interim = '';
+  for (let i = 0; i < e.results.length; i++) {
+    const res = e.results[i];
+    if (res.isFinal) final   += res[0].transcript + ' ';
+    else             interim += res[0].transcript + ' ';
+  }
+  return {
+    final:   final.replace(/\s+/g, ' ').trim(),
+    interim: interim.replace(/\s+/g, ' ').trim()
+  };
+}
+
+/* Join carried-over speech to the current session's, dropping any word-level
+   overlap. Needed because the two browser behaviours at a restart boundary are
+   mutually exclusive and we cannot tell them apart: `results` either resets
+   (so the sessions are disjoint and nothing is dropped) or replays the tail of
+   the previous session (so that tail is spoken once and would be stored twice).
+   Longest overlap wins, so a full replay collapses completely. */
+function _voiceMerge(base, seg) {
+  base = (base || '').trim();
+  seg  = (seg  || '').trim();
+  if (!base || !seg) return base || seg;
+  const b = base.toLowerCase().split(' ');
+  const a = seg.toLowerCase().split(' ');
+  let k = Math.min(b.length, a.length);
+  while (k > 0 && b.slice(-k).join(' ') !== a.slice(0, k).join(' ')) k--;
+  const rest = seg.split(' ').slice(k).join(' ');
+  return rest ? base + ' ' + rest : base;
+}
+
+// Fold the finished session into the carry-over base. Called at the restart
+// boundary in onend, before `results` is allowed to reset under us.
+function _voiceCommit() {
+  _finalTranscript   = _voiceMerge(_finalTranscript, _voiceSessionFinal);
+  _voiceSessionFinal = '';
+}
+
 function _stopListening() {
   _isListening = false;
   document.getElementById('mobAiInputWrap').classList.remove('listening');
@@ -14395,7 +14456,7 @@ function toggleVoiceSearch() {
   _recognition.interimResults = true;     // live-update the field as the user speaks
   _recognition.maxAlternatives = 1;
   _recognition.continuous = true;         // stay open through natural pauses while dictating a plot
-  _finalTranscript = '';
+  _finalTranscript = _voiceSessionFinal = '';
   _voiceStopRequested = false;
   _voiceDebounceFired = false;
   clearTimeout(_voiceSilenceTimer);
@@ -14408,15 +14469,11 @@ function toggleVoiceSearch() {
     stopMobPlaceholder();
   };
   _recognition.onresult = e => {
-    // Accumulate the confident FINAL transcript separately from live interim text.
-    let interim = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const res = e.results[i];
-      if (res.isFinal) _finalTranscript = (_finalTranscript + ' ' + res[0].transcript).trim();
-      else             interim += res[0].transcript;
-    }
+    // Rebuild rather than append — _voiceRead()'s comment explains why.
+    const { final, interim } = _voiceRead(e);
+    _voiceSessionFinal = final;
     const inp = document.getElementById('mobSearchInput');
-    const display = (_finalTranscript + ' ' + interim).trim();
+    const display = [_voiceMerge(_finalTranscript, final), interim].filter(Boolean).join(' ');
     inp.value = display;
     document.getElementById('mobAiInputWrap').classList.toggle('has-value', !!display);
     // Re-arm the silence debounce on every new word — only auto-stop once the
@@ -14436,9 +14493,11 @@ function toggleVoiceSearch() {
     // stays in its "listening" state throughout, and _finalTranscript is left untouched
     // so accumulated speech carries over across the restart.
     if (!_voiceStopRequested && !_voiceDebounceFired) {
+      _voiceCommit();   // bank this session's words before `results` resets under us
       try { _recognition.start(); return; } catch(e) { /* fall through to finalize below */ }
     }
     clearTimeout(_voiceSilenceTimer);
+    _voiceCommit();
     _stopListening();
     const inp = document.getElementById('mobSearchInput');
     const spoken = (_finalTranscript || inp.value).trim();
@@ -14486,7 +14545,7 @@ function toggleDesktopVoice() {
   _recognition.interimResults = true;     // live-update the field as the user speaks
   _recognition.maxAlternatives = 1;
   _recognition.continuous = true;         // stay open through natural pauses while dictating a plot
-  _finalTranscript = '';
+  _finalTranscript = _voiceSessionFinal = '';
   _voiceStopRequested = false;
   _voiceDebounceFired = false;
   clearTimeout(_voiceSilenceTimer);
@@ -14500,16 +14559,11 @@ function toggleDesktopVoice() {
     if (inp)    inp.placeholder = t('search.listening');
   };
   _recognition.onresult = e => {
-    // Accumulate the confident FINAL transcript separately from live interim text,
-    // so we search on the most-confident result while still showing live feedback.
-    let interim = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const res = e.results[i];
-      if (res.isFinal) _finalTranscript = (_finalTranscript + ' ' + res[0].transcript).trim();
-      else             interim += res[0].transcript;
-    }
+    // Rebuild rather than append — _voiceRead()'s comment explains why.
+    const { final, interim } = _voiceRead(e);
+    _voiceSessionFinal = final;
     if (inp) {
-      inp.value = (_finalTranscript + ' ' + interim).trim();
+      inp.value = [_voiceMerge(_finalTranscript, final), interim].filter(Boolean).join(' ');
       inp.dispatchEvent(new Event('input', { bubbles: true }));
     }
     // Re-arm the silence debounce on every new word — only auto-stop once the
@@ -14529,9 +14583,11 @@ function toggleDesktopVoice() {
     // stays in its "listening" state throughout, and _finalTranscript is left untouched
     // so accumulated speech carries over across the restart.
     if (!_voiceStopRequested && !_voiceDebounceFired) {
+      _voiceCommit();   // bank this session's words before `results` resets under us
       try { _recognition.start(); return; } catch(e) { /* fall through to finalize below */ }
     }
     clearTimeout(_voiceSilenceTimer);
+    _voiceCommit();
     _isListening = false;
     if (micBtn) micBtn.classList.remove('listening');
     const spoken = (_finalTranscript || (inp ? inp.value : '')).trim();
