@@ -5,11 +5,12 @@
 ## ⚡ Most Recent Session (2026-08-06) — First-Visit Onboarding Lightened
 
 On branch **`feat/lighter-onboarding`** (off `main`). **Not merged, not on production.**
-Preview: **https://feat-lighter-onboarding.ratingkino.pages.dev** (deploy `876ac531`).
+Preview: **https://feat-lighter-onboarding.ratingkino.pages.dev** (deploy `977f001c`).
 
 | Commit | Feature |
 |--------|---------|
 | `b85accc` | **Lighter first-visit splash** — `.fv-overlay` scrim + `backdrop-filter`, `.fv-props` (3 bullets) → single `.fv-sub`, entrance choreography 4.2s → 0.62s, `prefers-reduced-motion` support. `index.html` CSS ~L4676-4780, markup ~L5218, `initFirstVisit()` ~L14849, `dismissFirstVisit()` ~L14875, `startOnboardFromIntro()` ~L13550. |
+| `1aefd6d` | **Transparency + AI aesthetic + skip button** — scrim dropped again, `.fv-overlay::before` aurora (`@keyframes fvField`), `.fv-text` `drop-shadow` glow, `.fv-sub::before` status LED (`@keyframes fvStatusPulse`), **`.fv-skip-link` → `.fv-skip-btn`** (outlined glass button sharing `.fv-cta`'s footprint), `onboard.sub` condensed across all 9 locales. |
 
 ### Why
 
@@ -39,6 +40,50 @@ never seen. Three separate problems, all measured on the live baseline:
 The blur — not the darkness — is what buys legibility, so the scrim can stay light
 enough to keep whole posters recognisable at the edges. `.fv-content` carries its
 own feathered radial scrim so the copy never depends on which poster lands behind it.
+
+### Second pass (`1aefd6d`)
+
+The first pass was still read as "closed off", and the skip option was easy to miss.
+
+| | After `b85accc` | After `1aefd6d` |
+|---|---|---|
+| Scrim (centre → edge) | `0.62 → 0.24` | **`0.56 → 0.18`** (started at `0.86 → 0.55`) |
+| Accent washes | none | violet + cyan radial washes layered over the scrim |
+| Blur | `9px saturate(1.15)` | **`10px saturate(1.35)`** |
+| Ambient light | none | `.fv-overlay::before` aurora, `fvField 5.5s` |
+| Title | gradient sweep only | + `filter: drop-shadow()` violet/cyan glow |
+| Sub line | plain text | `.fv-sub::before` cyan LED, `fvStatusPulse 1.8s` |
+| Skip control | 12.5px underlined text link | **260×49 outlined glass button, 14.5px** |
+| Sub copy | "One score from … and exactly where to stream it." | "**IMDb + RT + Metacritic** in one score — plus where to stream." |
+
+Notes worth keeping:
+
+- **Blur was tried at 15px and rolled back to 10px.** Past roughly a dozen pixels a
+  poster stops being a poster and becomes a colour field, which defeats the point of
+  showing it. Legibility was bought back by nudging `.fv-content`'s *local* scrim
+  `0.60 → 0.66` instead — multiplied against the global plane the copy still sits on
+  ~0.87 effective alpha, while the screen edges are >2× clearer than before.
+- **`text-shadow` cannot glow `.fv-text`.** `-webkit-text-fill-color` is transparent
+  (gradient is painted via `background-clip: text`), so a text-shadow traces the glyph
+  boxes, not the gradient. `filter: drop-shadow()` filters the painted result. Static,
+  so the only moving part of the headline stays the gradient sweep.
+- **The aurora animates `opacity`/`transform` only**, so its `blur(26px)` rasterises
+  once and is then composited — no per-frame filter cost. It is an absolutely
+  positioned pseudo-element, so it does *not* become a flex item of `.fv-overlay`;
+  `.fv-content` gets `position: relative; z-index: 1` so it paints above it.
+- **Button hierarchy is carried by weight, not size.** `.fv-cta` and `.fv-skip-btn`
+  share one footprint rule; primary = solid accent + drop shadow, alternative =
+  outlined glass with `backdrop-filter: blur(6px)`. A solid fill on the skip button
+  would have made it compete rather than complement.
+- **`.fv-sub::before` uses `margin-inline-end`**, verified to resolve to
+  `margin-left: 8px / margin-right: 0px` under `dir="rtl"` (Arabic build).
+- Reduced-motion block extended to `.fv-skip-btn`, `.fv-overlay::before` (held at
+  `opacity: 0.8` rather than removed, so the composition is unchanged) and `.fv-sub::before`.
+
+Verified on the deployed build: JS 8/8 blocks parse · CSS 1471/1471 braces balanced ·
+`fv-skip-link` refs **0**, `fv-skip-btn` **5** · deployed HTML byte-identical to the
+branch · all 9 locales render one real `<strong>`, none escaped · both exits still work ·
+console shows only the pre-existing static-server 404s.
 
 ### i18n
 
