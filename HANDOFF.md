@@ -194,6 +194,84 @@ Mobile end-to-end: live field went `a film` → `a film about` → `a film about
 (restart replay, **unchanged**) → `a film about a heist in space`, overlay closed, AI
 modal opened with the clean query and returned 6 matches.
 
+---
+
+## Session (2026-08-06) — Logo = Global Reset
+
+**PREVIEW ONLY — not merged, awaiting approval.**
+Branch `feat/logo-global-reset` · preview https://feat-logo-global-reset.ratingkino.pages.dev
+(pinned https://591f36e8.ratingkino.pages.dev)
+
+> Branched off `main` (`8ab7bae`). The parallel `fix/group-picker-catalog` branch
+> is still open and un-merged; these two do not overlap.
+
+| Commit | Feature |
+|--------|---------|
+| `acb8029` | **`resetToHome(e)`** — new global reset in `index.html` immediately after `restoreSession()` (~L9522). Wired via `onclick="resetToHome(event)"` on `a.logo` (~L4981); `href="/"` is retained so the logo stays a real, crawlable link. |
+
+### Why the logo never actually reset anything
+
+It was already `<a href="/">`, so it *did* navigate. But `restoreSession()`
+(`index.html:9486`) re-hydrates query / genre / country / rating / sort from
+`sessionStorage['ff_session']` on the very next load, and `init()` calls it
+**before** the first `loadMovies()`. Every filter came straight back, so the
+click looked ignored.
+
+### Why in-place teardown instead of a reload
+
+`sw.js` serves the shell **network-first** for navigations, so a reload
+re-downloads `index.html` and then `init()` re-runs `detectLang()` +
+`loadGenres()` before a single poster paints. The in-place reset reaches the
+same end state with no white flash and no re-download.
+
+### What `resetToHome()` clears
+
+- `sessionStorage['ff_session']` (`FF_SESSION_KEY`)
+- Search inputs (`#searchInput`, `#mobSearchInput`) — cleared **first**, because
+  `closeSearch()` re-runs `applyFilters()` if the field still holds a query
+- Every overlay via its own closer (`closeModal`, `closeAiResults`, `closeWizard`,
+  `closeGroupPicker`, `closeVibeCheck`, `closeTasteDna`, `closeOnboardQuiz`,
+  `closeCastQr`, `closeRatingsInfo`, `closeFilters`, `closeWatchlist`,
+  `closeMobSearch`, `closeSearch`) — **not** a blanket class sweep, because those
+  closers own side effects a bare `classList.remove` would strand: the playing
+  trailer iframe, the Cast `PresentationConnection`, the live mic, and the
+  placeholder / "thinking" intervals. A `[id$="Overlay"].open, …` sweep follows as
+  a net for overlays with no dedicated closer (`#fvOverlay` etc.)
+- AI state: `AI_SEARCH_TIMER`, `filterTimer`, `_aiSearchAbort.abort()`,
+  `_aiSearchSeq++` (in-flight responses self-discard), `AI_SEARCH_ACTIVE`,
+  `_lastQuery`, `_aiMatchScores` / `_aiMatchReasons` / `_aiMatchTags` /
+  `_aiVibeTags`, `hideAIBanner()`, `clearFollowUps()`, `setSearchMode('title')`,
+  `_activeMoodEl`
+- Filters/sort: `ACTIVE_GENRE`, `.gpill.active` → `#pill-all`, `#fCountry`,
+  `#fMinRating`, `SORT_SRC`, `#btnIMD/RT/MC/AVG.on`, `updateFilterCount()`
+- Flow answers: `WIZARD_STATE`, `WIZARD_STEP`, `GROUP_PEOPLE`
+- Layout: `BROWSE_EXPANDED = false`, `?movie=` stripped via `history.replaceState`,
+  `window.scrollTo(0, 0)`, then `setContentType('movie')` (from TV) or
+  `loadMovies(1, false)`
+
+### Gotchas found while building it
+
+- **Smooth scroll gets cancelled.** `scrollTo({behavior:'smooth'})` was killed
+  mid-animation by scroll anchoring when `showSkeletons(20)` swapped the grid,
+  parking the page partway down (`scrollY: 167`). Instant `scrollTo(0, 0)` before
+  the rebuild fixes it — a cold load starts at the top anyway.
+- **Modifier clicks must pass through.** `resetToHome` returns early on
+  `metaKey/ctrlKey/shiftKey/altKey` so ⌘-click still opens home in a new tab.
+
+### Verification (preview server, live API)
+
+Dirty fixture: TV Shows + genre 28 + country US + rating 7.0 + IMDb sort +
+`SEARCH_MODE='ai'` + populated AI maps + `BROWSE_EXPANDED` + 3 group people +
+`WIZARD_STEP 2` + 6 overlays open + `?movie=` + scrolled to 18250.
+After one logo click: every field above back to default, `openOverlays: []`,
+`session: null`, `url: "/"`, `scrollY: 0`, `browseCollapsed: true`,
+`feedVisible: true`, `MOVIES: 119`, `noNavigation: true`.
+Also verified: real AI-results modal with a stacked movie modal (both closed,
+`ACTIVE_MOVIE: null`, trailer src cleared); TV → movie restores `#heroTitle`,
+`ctMovies.active` and 3 feed rails; mobile 375px search overlay + mood chip;
+⌘-click leaves state untouched and `defaultPrevented: false`; wizard / filters /
+group picker all reopen normally afterwards.
+
 
 ---
 
