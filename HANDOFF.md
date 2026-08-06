@@ -4,8 +4,9 @@
 
 ## ⚡ Most Recent Session (2026-08-06) — First-Visit Onboarding Lightened
 
-On branch **`feat/lighter-onboarding`** (off `main`). **Not merged, not on production.**
-Preview: **https://feat-lighter-onboarding.ratingkino.pages.dev** (deploy `977f001c`).
+**Merged to `main` and live on https://findfilm.ai** (production deploy `fd0a9a9f`).
+Fast-forward merge from `feat/lighter-onboarding` — no merge commit, no conflicts.
+Prior previews: `876ac531` (first pass), `977f001c` (second pass).
 
 | Commit | Feature |
 |--------|---------|
@@ -108,11 +109,26 @@ production exactly (`/api/movies`, `/api/cache/trending` 404 on prod too — not
 **Note:** `.fv-content { max-width: 380px }` and `.fv-text`'s font-size are untouched,
 so the desktop headline wrapping onto two lines is pre-existing, not a regression here.
 
+### Verified on production (`fd0a9a9f`)
+
+`findfilm.ai`, `ratingkino.com` and `ratingkino.pages.dev` all serve **768389 bytes,
+byte-identical to `main`** · `fv-skip-btn` **5**, `fv-skip-link` **0**,
+`blur(10px) saturate(1.35)` **2**, `fvField 5.5s` **1**, `fvStatusPulse 1.8s` **1**,
+`onboard.sub` **10**, `onboard.prop` **0**, old `rgba(5,0,20,0.97)` **0** ·
+`/api/cache/new-releases` 200, `/api/search` 200 (`/api/genres` 404 — not an endpoint,
+same as before).
+
+**Deploy gotcha:** the custom domain served the *previous* build for ~1 minute after
+`wrangler pages deploy` reported success, with `cf-cache-status: DYNAMIC` and
+`cache-control: max-age=0` — i.e. not an edge-cache issue, just alias propagation.
+The direct `<id>.ratingkino.pages.dev` URL was correct immediately. **Verify against
+the deployment URL first, then re-check the custom domain a minute later**, otherwise
+a good deploy looks like a failed one.
+
 ### Open preview branches (none merged, all awaiting approval)
 
 | Branch | Preview | What |
 |---|---|---|
-| `feat/lighter-onboarding` | `feat-lighter-onboarding.ratingkino.pages.dev` | this session |
 | `fix/voice-transcript-duplication` | `fix-voice-transcript-duplica.ratingkino.pages.dev` | voice dictation dedup + 2s silence timeout |
 | `feat/logo-global-reset` | `feat-logo-global-reset.ratingkino.pages.dev` | logo = global reset button |
 | `fix/group-picker-catalog` | `fix-group-picker-catalog.ratingkino.pages.dev` | "Pick a movie together" empty results |
