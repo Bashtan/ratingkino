@@ -4676,27 +4676,55 @@ main.browse-collapsed > .load-wrap { display: none !important; }
 /* ─── First-visit onboarding overlay ──────────────────── */
 .fv-overlay {
   position: fixed; inset: 0; z-index: 10000;
-  /* Tease the catalog instead of hiding it. The old flat rgba(5,0,20,0.97) was
-     effectively opaque, so a first-time visitor was asked to commit to a product
-     whose content they had never actually seen. A soft radial scrim sits darkest
-     under the copy and thins toward the edges, where whole posters stay
-     recognisable; the blur is what buys legibility, killing the poster detail
-     that would otherwise compete with the text. */
-  background: radial-gradient(ellipse 80% 62% at 50% 46%,
-    rgba(5,0,20,0.86) 0%, rgba(5,0,20,0.78) 42%, rgba(5,0,20,0.55) 100%);
-  -webkit-backdrop-filter: blur(9px) saturate(1.15);
-  backdrop-filter: blur(9px) saturate(1.15);
+  /* Tease the catalog instead of hiding it. Legibility here is bought by BLUR,
+     not by darkness — which is why the scrim can keep dropping (0.86 -> 0.62 at
+     centre, 0.55 -> 0.24 at the edges) as long as the blur goes up to match.
+     Two faint accent washes sit on top of the scrim so the whole plane reads as
+     a lit field rather than a sheet of black. */
+  background:
+    radial-gradient(ellipse 62% 46% at 50% 42%, rgba(124,58,237,0.17) 0%, rgba(124,58,237,0) 70%),
+    radial-gradient(ellipse 72% 52% at 50% 62%, rgba(34,211,238,0.11) 0%, rgba(34,211,238,0) 72%),
+    radial-gradient(ellipse 80% 62% at 50% 46%,
+      rgba(5,0,20,0.56) 0%, rgba(5,0,20,0.42) 42%, rgba(5,0,20,0.18) 100%);
+  /* 10px, not 15px: past roughly a dozen pixels a poster stops being a poster and
+     becomes a colour field, which defeats the point of showing it at all. The
+     copy is protected by .fv-content's local scrim instead, so the global plane
+     is free to stay sharp enough to still read as artwork. */
+  -webkit-backdrop-filter: blur(10px) saturate(1.35);
+  backdrop-filter: blur(10px) saturate(1.35);
   display: flex; align-items: center; justify-content: center;
   opacity: 1; transition: opacity 0.28s ease;
+}
+/* The "energy field": a slow violet/cyan aurora behind the copy. Only opacity and
+   transform animate, so the expensive blur() rasterises once and is then composited
+   — no per-frame filter cost. */
+.fv-overlay::before {
+  content: ''; position: absolute; inset: 0; margin: auto;
+  width: min(560px, 96vw); height: min(560px, 78vh);
+  background:
+    radial-gradient(ellipse at 38% 34%, rgba(124,58,237,0.30) 0%, rgba(124,58,237,0) 62%),
+    radial-gradient(ellipse at 66% 66%, rgba(34,211,238,0.22) 0%, rgba(34,211,238,0) 60%);
+  filter: blur(26px); pointer-events: none;
+  animation: fvField 5.5s ease-in-out infinite;
+}
+@keyframes fvField {
+  0%, 100% { opacity: 0.6; transform: scale(1)    rotate(0deg); }
+  50%      { opacity: 1;   transform: scale(1.06) rotate(4deg); }
 }
 .fv-overlay.hidden { opacity: 0; pointer-events: none; }
 .fv-content {
   display: flex; flex-direction: column; align-items: center; gap: 18px;
   text-align: center; padding: 32px 24px; max-width: 380px;
+  /* z-index needed because the aurora above is positioned and would otherwise
+     paint over this static in-flow content. */
+  position: relative; z-index: 1;
   /* Local scrim, so the copy never depends on whatever poster happens to land
-     behind it. Feathered to fully transparent so it reads as depth, not a card. */
+     behind it. Feathered to fully transparent so it reads as depth, not a card.
+     Nudged up (0.60 -> 0.66) to buy back what the lighter global scrim gave away:
+     multiplied together the text still sits on ~0.87 effective, while the edges
+     of the screen are now more than twice as clear as before. */
   background: radial-gradient(ellipse 76% 60% at 50% 50%,
-    rgba(5,0,20,0.60) 0%, rgba(5,0,20,0.32) 55%, rgba(5,0,20,0) 78%);
+    rgba(5,0,20,0.66) 0%, rgba(5,0,20,0.38) 55%, rgba(5,0,20,0) 78%);
 }
 /* Entrance choreography. Every delay below used to be multiples longer — the
    skip link did not exist until 3.7s + 0.5s, so for the first four seconds the
@@ -4726,6 +4754,12 @@ main.browse-collapsed > .load-wrap { display: none !important; }
   background-clip: text;
   animation: fvGradShift 3s linear infinite;
   min-height: 1.3em; min-width: 2ch;
+  /* text-shadow cannot work here: -webkit-text-fill-color is transparent, so the
+     shadow would trace the glyph boxes, not the gradient. drop-shadow() filters
+     the painted result instead, which is the gradient itself. Static, so the only
+     moving part of the headline stays the gradient sweep. */
+  filter: drop-shadow(0 0 14px rgba(124,58,237,0.55))
+          drop-shadow(0 0 32px rgba(34,211,238,0.28));
 }
 @keyframes fvGradShift { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
 .fv-cursor {
@@ -4747,36 +4781,67 @@ main.browse-collapsed > .load-wrap { display: none !important; }
   max-width: 30ch; margin: -4px auto 2px;
   animation: fvDismissIn 0.28s ease 0.2s both;
 }
+/* Live-status LED, so the line reads as a system readout rather than marketing
+   copy. margin-inline-end (not margin-right) so it sits on the correct side in
+   the Arabic RTL build. */
+.fv-sub::before {
+  content: ''; display: inline-block;
+  width: 5px; height: 5px; border-radius: 50%;
+  margin-inline-end: 8px; vertical-align: 2px;
+  background: #22D3EE; box-shadow: 0 0 8px rgba(34,211,238,0.9);
+  animation: fvStatusPulse 1.8s ease-in-out infinite;
+}
+@keyframes fvStatusPulse {
+  0%, 100% { opacity: 1;    box-shadow: 0 0 8px  rgba(34,211,238,0.9); }
+  50%      { opacity: 0.45; box-shadow: 0 0 3px  rgba(34,211,238,0.4); }
+}
 .fv-sub strong { color: #fff; font-weight: 800; }
-/* "Let's go!" CTA */
+/* Both actions share a footprint so "just browse" reads as a real alternative
+   rather than an afterthought. Weight, not size, is what still makes Personalize
+   the primary: solid accent fill + drop shadow vs. outlined glass. */
+.fv-cta, .fv-skip-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  width: 100%; max-width: 260px; box-sizing: border-box;
+  font-family: 'Montserrat', sans-serif; font-size: 14.5px; font-weight: 800;
+  letter-spacing: 0.3px; padding: 14px 28px; border-radius: 11px; cursor: pointer;
+}
 .fv-cta {
-  display: inline-flex; align-items: center; gap: 7px;
-  background: var(--accent); color: #fff; border: none; border-radius: 9px;
-  font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 800;
-  letter-spacing: 0.3px; padding: 13px 32px; cursor: pointer;
+  background: var(--accent); color: #fff; border: 1.5px solid transparent;
   box-shadow: 0 6px 24px rgba(229,9,20,0.45);
   transition: background 0.18s, transform 0.15s, box-shadow 0.18s;
   animation: fvDismissIn 0.28s ease 0.28s both;
 }
 .fv-cta:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(229,9,20,0.55); }
 @keyframes fvDismissIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-.fv-skip-link {
-  display: block; margin: 14px auto 0; background: none; border: none;
-  color: var(--text-sub); font-size: 12.5px; font-weight: 600; cursor: pointer;
-  letter-spacing: 0.3px; text-decoration: underline; text-underline-offset: 3px;
-  animation: fvDismissIn 0.28s ease 0.34s both; transition: color 0.18s;
+/* Was a 12.5px underlined text link that people missed. Now a glass button: the
+   backdrop-filter keeps it legible over posters without needing a solid fill,
+   which would have made it compete with the primary. */
+.fv-skip-btn {
+  margin-top: -4px;
+  background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.9);
+  border: 1.5px solid rgba(255,255,255,0.28);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   text-shadow: 0 1px 10px rgba(5,0,20,0.9);
+  animation: fvDismissIn 0.28s ease 0.34s both;
+  transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.15s;
 }
-.fv-skip-link:hover { color: var(--text); }
+.fv-skip-btn:hover {
+  background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.5);
+  color: #fff; transform: translateY(-2px);
+}
 /* A full-screen animated takeover is exactly the case this media query exists
    for: land the whole thing already assembled, and let the JS skip the
    typewriter (it reads the same flag). */
 @media (prefers-reduced-motion: reduce) {
-  .fv-logo-mark, .fv-wordmark, .fv-sub, .fv-cta, .fv-skip-link {
+  .fv-logo-mark, .fv-wordmark, .fv-sub, .fv-cta, .fv-skip-btn {
     animation: none !important;
   }
   .fv-text   { animation: none !important; background-position: 0 50%; }
   .fv-cursor { display: none; }
+  /* The ambient loops are decorative; hold them at their resting frame rather
+     than removing the elements, so the composition is unchanged. */
+  .fv-overlay::before { animation: none !important; opacity: 0.8; }
+  .fv-sub::before     { animation: none !important; }
 }
 
 /* ─── iOS PWA Install Prompt ─────────────────────── */
@@ -5217,10 +5282,10 @@ if ('serviceWorker' in navigator) {
     <div class="fv-text">
       <span id="fvTyped"></span><span class="fv-cursor">|</span>
     </div>
-    <!-- Value proposition bullets -->
-    <p class="fv-sub" data-i18n-html="onboard.sub">One score from <strong>IMDb + RT + Metacritic</strong> — and exactly where to stream it.</p>
+    <!-- Single status-readout value proposition -->
+    <p class="fv-sub" data-i18n-html="onboard.sub"><strong>IMDb + RT + Metacritic</strong> in one score — plus where to stream.</p>
     <button class="fv-cta" onclick="startOnboardFromIntro()" data-i18n="onboard.personalize">Personalize in 30s →</button>
-    <button class="fv-skip-link" onclick="dismissFirstVisit()" data-i18n="onboard.browseNow">Skip — just browse</button>
+    <button class="fv-skip-btn" onclick="dismissFirstVisit()" data-i18n="onboard.browseNow">Skip — just browse</button>
   </div>
 </div>
 
@@ -6118,7 +6183,7 @@ const TRANSLATIONS = {
     'pwa.addBtn':          'Add',
     'pwa.notNow':          'Not now',
     // First-visit onboarding
-    'onboard.sub':         'One score from <strong>IMDb + RT + Metacritic</strong> — and exactly where to stream it.',
+    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> in one score — plus where to stream.',
     'onboard.cta':         'Let\'s go! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'Spoiler-Free Fit',
@@ -6461,7 +6526,7 @@ const TRANSLATIONS = {
     'pwa.addToHome':       'Añadir <span>FindFilm.ai</span> a la pantalla de inicio',
     'pwa.addBtn':          'Añadir',
     'pwa.notNow':          'Ahora no',
-    'onboard.sub':         'Una sola nota de <strong>IMDb + RT + Metacritic</strong> — y dónde verla exactamente.',
+    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> en una nota — y dónde verla.',
     'onboard.cta':         '¡Vamos! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'Sin spoilers',
@@ -6799,7 +6864,7 @@ const TRANSLATIONS = {
     'pwa.addToHome':       'Ajouter <span>FindFilm.ai</span> à l\'écran d\'accueil',
     'pwa.addBtn':          'Ajouter',
     'pwa.notNow':          'Pas maintenant',
-    'onboard.sub':         'Une seule note pour <strong>IMDb + RT + Metacritic</strong> — et où le regarder exactement.',
+    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> en une note — et où la voir.',
     'onboard.cta':         'C\'est parti ! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'Sans spoilers',
@@ -7137,7 +7202,7 @@ const TRANSLATIONS = {
     'pwa.addToHome':       '将 <span>FindFilm.ai</span> 添加到主屏幕',
     'pwa.addBtn':          '添加',
     'pwa.notNow':          '暂不安装',
-    'onboard.sub':         '汇聚 <strong>IMDb + RT + Metacritic</strong> 的单一评分 — 以及在哪里观看。',
+    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> 合成一个评分 — 附播放平台。',
     'onboard.cta':         '开始探索！→',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    '无剧透匹配',
@@ -7475,7 +7540,7 @@ const TRANSLATIONS = {
     'pwa.addToHome':       'أضف <span>FindFilm.ai</span> إلى الشاشة الرئيسية',
     'pwa.addBtn':          'إضافة',
     'pwa.notNow':          'ليس الآن',
-    'onboard.sub':         'تقييم واحد من <strong>IMDb + RT + Metacritic</strong> — وأين تشاهده بالضبط.',
+    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> في تقييم واحد — وأين تشاهده.',
     'onboard.cta':         'هيا بنا! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'بلا حرق للأحداث',
@@ -7819,7 +7884,7 @@ const TRANSLATIONS = {
     'pwa.addToHome':       'Додати <span>FindFilm.ai</span> на головний екран',
     'pwa.addBtn':          'Додати',
     'pwa.notNow':          'Не зараз',
-    'onboard.sub':         'Єдиний рейтинг від <strong>IMDb + RT + Metacritic</strong> — і де саме дивитися.',
+    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> в одному рейтингу — і де дивитися.',
     'onboard.cta':         'Поїхали! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'Без спойлерів',
@@ -8185,7 +8250,7 @@ const TRANSLATIONS = {
     'pwa.addToHome':       '<span>FindFilm.ai</span> zum Startbildschirm hinzufügen',
     'pwa.addBtn':          'Hinzufügen',
     'pwa.notNow':          'Nicht jetzt',
-    'onboard.sub':         'Eine Wertung aus <strong>IMDb + RT + Metacritic</strong> — und wo du ihn streamen kannst.',
+    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> in einer Wertung — plus wo du ihn siehst.',
     'onboard.cta':         'Los geht’s! →',
     'modal.fitSummary':    'Spoilerfreie Einschätzung',
     'modal.aiInsights':    'Warum er zu dir passt',
@@ -8547,7 +8612,7 @@ const TRANSLATIONS = {
     'pwa.addToHome':       'Lägg till <span>FindFilm.ai</span> på hemskärmen',
     'pwa.addBtn':          'Lägg till',
     'pwa.notNow':          'Inte nu',
-    'onboard.sub':         'Ett samlat betyg från <strong>IMDb + RT + Metacritic</strong> — och var du kan streama det.',
+    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> i ett betyg — plus var du ser den.',
     'onboard.cta':         'Nu kör vi! →',
     'modal.fitSummary':    'Spoilerfri bedömning',
     'modal.aiInsights':    'Varför den passar dig',
@@ -8909,7 +8974,7 @@ const TRANSLATIONS = {
     'pwa.addToHome':       'Legg <span>FindFilm.ai</span> til på hjemskjermen',
     'pwa.addBtn':          'Legg til',
     'pwa.notNow':          'Ikke nå',
-    'onboard.sub':         'Én samlet vurdering fra <strong>IMDb + RT + Metacritic</strong> — og hvor du kan strømme den.',
+    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> i én vurdering — pluss hvor du ser den.',
     'onboard.cta':         'Nå kjører vi! →',
     'modal.fitSummary':    'Spoilerfri vurdering',
     'modal.aiInsights':    'Hvorfor den passer deg',
