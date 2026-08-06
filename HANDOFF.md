@@ -2,7 +2,80 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-05) — Header Discovery Icons Redesigned
+## ⚡ Most Recent Session (2026-08-06) — First-Visit Onboarding Lightened
+
+On branch **`feat/lighter-onboarding`** (off `main`). **Not merged, not on production.**
+Preview: **https://feat-lighter-onboarding.ratingkino.pages.dev** (deploy `876ac531`).
+
+| Commit | Feature |
+|--------|---------|
+| `b85accc` | **Lighter first-visit splash** — `.fv-overlay` scrim + `backdrop-filter`, `.fv-props` (3 bullets) → single `.fv-sub`, entrance choreography 4.2s → 0.62s, `prefers-reduced-motion` support. `index.html` CSS ~L4676-4780, markup ~L5218, `initFirstVisit()` ~L14849, `dismissFirstVisit()` ~L14875, `startOnboardFromIntro()` ~L13550. |
+
+### Why
+
+The splash asked first-time visitors to commit to a product whose content they had
+never seen. Three separate problems, all measured on the live baseline:
+
+1. **`background: rgba(5,0,20,0.97)`** — effectively opaque. 20 poster images sat
+   behind it, none visible.
+2. **Three icon+text bullet rows** (`.fv-props`). The "AI search" bullet restated
+   the headline (`find your movie using AI`) verbatim.
+3. **Entrance queue**: `.fv-cta` was `animation: … 0.5s ease 3.5s`, `.fv-skip-link`
+   `… 3.7s`. Measured on the live page: `ctaOpacity: "0"`, `skipOpacity: "0"` still
+   at 4.5s. **Nothing was clickable for the first ~4.2 seconds.**
+
+### What changed
+
+| | Before | After |
+|---|---|---|
+| Overlay | `rgba(5,0,20,0.97)` flat, `backdrop-filter: none` | radial scrim `0.86` centre → `0.55` edge + `blur(9px) saturate(1.15)` |
+| Body copy | `.fv-props` — 3 rows, icons `★ ▶ ✦` | one `.fv-sub` line |
+| `.fv-cta` visible | 4000 ms | **560 ms** |
+| `.fv-skip-link` visible | 4200 ms | **620 ms** |
+| Typewriter | `900ms` delay + `62ms`/char (≈2.4s) | `120ms` + `26ms`/char (≈0.74s) |
+| Fade-out / removal | 700 ms / 400 ms | 320 ms (matches the 0.28s fade) |
+| Reduced motion | not handled | CSS `@media` block + JS early-return |
+
+The blur — not the darkness — is what buys legibility, so the scrim can stay light
+enough to keep whole posters recognisable at the edges. `.fv-content` carries its
+own feathered radial scrim so the copy never depends on which poster lands behind it.
+
+### i18n
+
+`onboard.prop1/2/3` **deleted** from all 9 locale tables (27 lines) and replaced by
+`onboard.sub`, with a real translation written for **every** locale — `t()`
+(`index.html:9014`) resolves `map[key] ?? TRANSLATIONS.en[key] ?? key`, so a missing
+key would have silently shipped English to 8 of the 9 languages instead of failing loudly.
+
+### Verified (preview server + deployed build)
+
+JS 8/8 blocks parse · CSS 1460/1460 braces balanced · `onboard.prop` refs **0**,
+`onboard.sub` **10** (9 tables + 1 markup) · resolved animation timeline via
+`document.getAnimations()` → last entrance `endTime` **620ms** · all 9 locales render
+real `<strong>` elements, none escaped · both exits work (`dismissFirstVisit()` →
+overlay removed, flag persisted; `startOnboardFromIntro()` → `onboardQuizOverlay.open`,
+quiz renders "Step 1 of 5") · reduced-motion fills the tagline synchronously ·
+92 console errors all pre-existing static-server 404s, zero onboarding errors ·
+desktop 1280 + mobile 375 screenshots with 20 real posters behind the scrim ·
+deployed HTML **byte-identical** to the branch · every `/api/*` status matches
+production exactly (`/api/movies`, `/api/cache/trending` 404 on prod too — not endpoints).
+
+**Note:** `.fv-content { max-width: 380px }` and `.fv-text`'s font-size are untouched,
+so the desktop headline wrapping onto two lines is pre-existing, not a regression here.
+
+### Open preview branches (none merged, all awaiting approval)
+
+| Branch | Preview | What |
+|---|---|---|
+| `feat/lighter-onboarding` | `feat-lighter-onboarding.ratingkino.pages.dev` | this session |
+| `fix/voice-transcript-duplication` | `fix-voice-transcript-duplica.ratingkino.pages.dev` | voice dictation dedup + 2s silence timeout |
+| `feat/logo-global-reset` | `feat-logo-global-reset.ratingkino.pages.dev` | logo = global reset button |
+| `fix/group-picker-catalog` | `fix-group-picker-catalog.ratingkino.pages.dev` | "Pick a movie together" empty results |
+| `feat/mobile-ai-hub` | — | parked, 2 unmerged commits |
+
+---
+
+## Session (2026-08-05) — Header Discovery Icons Redesigned
 
 Merged to `main` in `2a56494` and **live on https://findfilm.ai** (deploy `a838fcac`).
 Verified live: `findfilm.ai` byte-identical to `main`, all three new icon paths
