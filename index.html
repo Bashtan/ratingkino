@@ -4978,7 +4978,10 @@ if ('serviceWorker' in navigator) {
     <!-- Mobile: back arrow shown when search is expanded -->
     <button class="btn-search-back" onclick="closeSearch()" aria-label="Close search">←</button>
 
-    <a class="logo" href="/" aria-label="FindFilm.ai — Find your movie using AI">
+    <!-- href="/" is kept so the logo stays a real link (middle-click, ⌘-click and
+         crawlers all still get a navigable home URL); resetToHome() intercepts the
+         plain left-click and rebuilds the clean state in place instead. -->
+    <a class="logo" href="/" onclick="resetToHome(event)" aria-label="FindFilm.ai — Find your movie using AI">
       <svg class="logo-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <defs>
           <linearGradient id="ffG" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
@@ -9517,6 +9520,108 @@ function restoreSession() {
     });
   }
   return true;
+}
+
+/* ── Global reset — the logo is the "take me back to a fresh page" button ─────
+   The logo has always been <a href="/">, but plain navigation was never actually
+   clean: restoreSession() above re-hydrates query / genre / country / rating /
+   sort from sessionStorage on the very next load, so every filter came straight
+   back and the site looked like it had ignored the click.
+   Wiping the session and reloading would work, but it is the slow option — the
+   service worker serves the shell network-first, so a reload re-downloads
+   index.html and then init() re-runs detectLang() + loadGenres() before a single
+   poster appears. Tear the session down in place instead: same end state as a
+   cold load, no white flash, no re-download.
+   Every overlay is closed through its own closer rather than a blanket class
+   sweep, because they own side effects a bare classList.remove would strand — a
+   playing trailer iframe, the Cast connection, the live mic, the placeholder and
+   "thinking" intervals. The sweep afterwards is only a net for the few overlays
+   with no dedicated closer (first-visit, etc.). */
+function resetToHome(e) {
+  if (e) {
+    // ⌘/Ctrl/Shift-click means "open home somewhere else" — let the browser have it.
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+  }
+  try { sessionStorage.removeItem(FF_SESSION_KEY); } catch {}
+
+  // Search inputs first: closeSearch() re-runs applyFilters() if the field still
+  // holds a query, which would immediately re-narrow the grid we are resetting.
+  const inp    = document.getElementById('searchInput');
+  const mobInp = document.getElementById('mobSearchInput');
+  if (inp)    inp.value    = '';
+  if (mobInp) mobInp.value = '';
+
+  // ── Close everything that can be on screen ──
+  closeModal();          // movie + actor detail, trailer iframe, share, view stack, ?movie=
+  closeAiResults();
+  closeWizard();
+  closeGroupPicker();
+  closeVibeCheck();
+  closeTasteDna();
+  closeOnboardQuiz();
+  closeCastQr();
+  closeRatingsInfo();
+  closeFilters();
+  closeWatchlist();
+  closeMobSearch();      // also stops live dictation
+  closeSearch();
+  document.querySelectorAll('[id$="Overlay"].open, [id$="Backdrop"].open, [id$="Modal"].open, [id$="Drawer"].open, [id$="Panel"].open')
+    .forEach(el => el.classList.remove('open'));
+  document.body.classList.remove('airx-open');
+  document.body.style.overflow = '';
+
+  // ── AI search state ──
+  clearTimeout(AI_SEARCH_TIMER);
+  clearTimeout(filterTimer);
+  if (_aiSearchAbort) _aiSearchAbort.abort();
+  _aiSearchAbort   = null;
+  _aiSearchSeq++;        // any in-flight response is now stale and self-discards
+  AI_SEARCH_ACTIVE = false;
+  _lastQuery       = '';
+  _aiMatchScores.clear();
+  _aiMatchReasons.clear();
+  _aiMatchTags.clear();
+  _aiVibeTags.clear();
+  hideAIBanner();
+  clearFollowUps();
+  setSearchMode('title');
+  document.getElementById('searchWrap')?.classList.remove('ai-active', 'typing');
+  document.getElementById('searchModeLabel')?.classList.remove('show');
+  document.getElementById('countRow')?.classList.remove('searching');
+  if (_activeMoodEl) { _activeMoodEl.classList.remove('active'); _activeMoodEl = null; }
+
+  // ── Filters + sort back to their defaults ──
+  ACTIVE_GENRE = '';
+  document.querySelectorAll('.gpill').forEach(p => p.classList.remove('active'));
+  document.getElementById('pill-all')?.classList.add('active');
+  const fCountry = document.getElementById('fCountry');
+  const fRating  = document.getElementById('fMinRating');
+  if (fCountry) fCountry.value = '';
+  if (fRating)  fRating.value  = '';
+  SORT_SRC = null;
+  ['IMD', 'RT', 'MC', 'AVG'].forEach(s => document.getElementById('btn' + s)?.classList.remove('on'));
+  updateFilterCount();
+
+  // ── Discovery-flow answers ──
+  WIZARD_STATE = { mood: null, time: null, company: null };
+  WIZARD_STEP  = 0;
+  GROUP_PEOPLE = ['', ''];
+
+  // ── Layout: Explore grid re-collapsed behind its CTA, top of page, clean URL ──
+  BROWSE_EXPANDED = false;
+  if (location.search || location.hash) history.replaceState(null, '', location.pathname);
+  // Instant, not smooth: the grid rebuild below swaps in 20 skeletons and then
+  // the real cards, and the browser's scroll anchoring cancels an in-flight
+  // smooth scroll mid-animation — which left the page parked partway down.
+  // A fresh load starts pinned at the top anyway, so just jump there first, so
+  // the rebuild has nothing to anchor against.
+  window.scrollTo(0, 0);
+
+  // setContentType() flushes the caches and reloads genres, feed rails and grid
+  // itself; on movies we only need the grid + rails restored.
+  if (CONTENT_TYPE !== 'movie') setContentType('movie');
+  else                          loadMovies(1, false);
 }
 
 const ENRICH_QUEUE    = [];
