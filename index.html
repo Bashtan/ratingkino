@@ -10730,6 +10730,35 @@ async function tryCache() {
   } catch { return null; }
 }
 
+/* The KV catalog that the AI features resolve backend IDs against.
+   /api/group-picker and the closed-world branch of /api/ai-search both answer
+   with bare `ids` validated against the 119-row `new-releases` KV snapshot.
+   The client used to look those IDs up in CACHE_MOVIES only — but CACHE_MOVIES
+   is a by-product of browsing, not a reliable catalog: tryCache() above bails
+   out (returning null, so CACHE_MOVIES is never filled) whenever the user is on
+   TV Shows or has a search term / genre / country / rating filter set, and
+   setContentType() clears it outright. init() also calls restoreSession()
+   BEFORE the first loadMovies(), so a filter persisted from a previous visit
+   leaves CACHE_MOVIES empty for the entire session. Every ID then resolved to
+   undefined and the feature fell into its "no match" empty state.
+   Fetch the catalog on demand instead, memoised for the session, and keep it
+   OUT of CACHE_MOVIES — writing to that would leak movie rows into the TV grid
+   via clearAISearch(). */
+let _CATALOG_FALLBACK = null;
+function ensureCatalog() {
+  if (CACHE_MOVIES.length) return Promise.resolve(CACHE_MOVIES);
+  if (_CATALOG_FALLBACK)   return _CATALOG_FALLBACK;
+  _CATALOG_FALLBACK = fetch('/api/cache/new-releases')
+    .then(r => (r.ok ? r.json() : null))
+    .then(rows => (Array.isArray(rows) && rows.length ? rows.map(fromCache) : []))
+    .catch(() => [])
+    .then(list => {
+      if (!list.length) _CATALOG_FALLBACK = null;  // let a later attempt retry
+      return list;
+    });
+  return _CATALOG_FALLBACK;
+}
+
 async function loadMovies(page = 1, append = false) {
   if (IS_LOADING) return;
   // Hard backstop for the background-feed lockdown (see applyFilters). A full
@@ -13441,17 +13470,18 @@ function renderWizard() {
    the wizard matched neither branch, produced zero picks and fell straight
    into the "Couldn't find a match" state on EVERY run. aiSearch() was updated
    for the new shape at the time; runWizard() was missed. */
-function _wizPicksFrom(data, limit = 3) {
+function _wizPicksFrom(data, catalog, limit = 3) {
   // Open world: actor filmography or LLM-curated real films → raw TMDb rows.
   if ((data.actorQuery || data.aiCurated) && data.movies?.length) {
     data.movies.forEach(raw => { if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromTMDb(raw)); });
     return data.movies.slice(0, limit).map(raw => MOVIES.find(x => x.id === raw.id)).filter(Boolean);
   }
-  // Closed world: ids into the KV catalog snapshot. Fall back to MOVIES for
-  // ids the snapshot doesn't carry rather than silently dropping them.
+  // Closed world: ids into the KV catalog snapshot. `catalog` comes from
+  // ensureCatalog() so this branch keeps working when browse state has left
+  // CACHE_MOVIES empty; MOVIES covers ids the snapshot doesn't carry.
   if (data.ids?.length) {
     return data.ids.slice(0, limit)
-      .map(id => CACHE_MOVIES.find(m => m.id === id) || MOVIES.find(m => m.id === id))
+      .map(id => catalog.find(m => m.id === id) || MOVIES.find(m => m.id === id))
       .filter(Boolean);
   }
   return [];
@@ -13466,7 +13496,8 @@ async function _wizFetchPicks(query) {
   });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const data = await r.json();
-  return { data, picks: _wizPicksFrom(data) };
+  const catalog = await ensureCatalog();
+  return { data, picks: _wizPicksFrom(data, catalog) };
 }
 
 async function runWizard(broadened = false) {
@@ -13644,10 +13675,13 @@ async function runGroupPicker() {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
 
+    // Resolve against the KV catalog, fetching it if browse state left
+    // CACHE_MOVIES empty (TV Shows, any active filter, restored session).
+    const catalog = await ensureCatalog();
     const picks = (data.ids || [])
-      .map(id => CACHE_MOVIES.find(m => m.id === id))
+      .map(id => catalog.find(m => m.id === id) || MOVIES.find(m => m.id === id))
       .filter(Boolean);
-    if (!picks.length) throw new Error('no picks');
+    if (!picks.length) throw new Error(`no picks (ids: ${(data.ids || []).length}, catalog: ${catalog.length})`);
 
     // Register picks in MOVIES so a result-card click resolves in openMovie().
     picks.forEach(m => { if (!MOVIES.find(x => x.id === m.id)) MOVIES.push(m); });
