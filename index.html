@@ -4676,17 +4676,34 @@ main.browse-collapsed > .load-wrap { display: none !important; }
 /* ─── First-visit onboarding overlay ──────────────────── */
 .fv-overlay {
   position: fixed; inset: 0; z-index: 10000;
-  background: rgba(5,0,20,0.97);
+  /* Tease the catalog instead of hiding it. The old flat rgba(5,0,20,0.97) was
+     effectively opaque, so a first-time visitor was asked to commit to a product
+     whose content they had never actually seen. A soft radial scrim sits darkest
+     under the copy and thins toward the edges, where whole posters stay
+     recognisable; the blur is what buys legibility, killing the poster detail
+     that would otherwise compete with the text. */
+  background: radial-gradient(ellipse 80% 62% at 50% 46%,
+    rgba(5,0,20,0.86) 0%, rgba(5,0,20,0.78) 42%, rgba(5,0,20,0.55) 100%);
+  -webkit-backdrop-filter: blur(9px) saturate(1.15);
+  backdrop-filter: blur(9px) saturate(1.15);
   display: flex; align-items: center; justify-content: center;
-  opacity: 1; transition: opacity 0.6s ease;
+  opacity: 1; transition: opacity 0.28s ease;
 }
 .fv-overlay.hidden { opacity: 0; pointer-events: none; }
 .fv-content {
-  display: flex; flex-direction: column; align-items: center; gap: 26px;
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
   text-align: center; padding: 32px 24px; max-width: 380px;
+  /* Local scrim, so the copy never depends on whatever poster happens to land
+     behind it. Feathered to fully transparent so it reads as depth, not a card. */
+  background: radial-gradient(ellipse 76% 60% at 50% 50%,
+    rgba(5,0,20,0.60) 0%, rgba(5,0,20,0.32) 55%, rgba(5,0,20,0) 78%);
 }
+/* Entrance choreography. Every delay below used to be multiples longer — the
+   skip link did not exist until 3.7s + 0.5s, so for the first four seconds the
+   screen was a wall of text with nothing clickable on it. The whole sequence now
+   finishes inside ~0.6s: still staged, no longer a queue. */
 .fv-logo-mark {
-  animation: fvLogoIn 0.8s cubic-bezier(0.34,1.56,0.64,1) both;
+  animation: fvLogoIn 0.42s cubic-bezier(0.34,1.56,0.64,1) both;
   filter: drop-shadow(0 0 28px rgba(124,58,237,0.75));
 }
 @keyframes fvLogoIn {
@@ -4696,7 +4713,7 @@ main.browse-collapsed > .load-wrap { display: none !important; }
 .fv-wordmark {
   font-family: 'Montserrat', sans-serif; font-size: 26px; font-weight: 900;
   letter-spacing: -0.5px; color: #fff; margin-top: -10px;
-  animation: fvDismissIn 0.5s ease 0.6s both;
+  animation: fvDismissIn 0.28s ease 0.12s both;
 }
 .fv-wordmark span { color: var(--accent); }
 .fv-text {
@@ -4717,22 +4734,20 @@ main.browse-collapsed > .load-wrap { display: none !important; }
   animation: fvBlink 0.75s step-end infinite;
 }
 @keyframes fvBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-/* Value-proposition bullets */
-.fv-props {
-  display: flex; flex-direction: column; gap: 11px;
-  text-align: left; width: 100%;
-  animation: fvDismissIn 0.5s ease 3s both;
+/* Single value-proposition line. This replaced three icon+text bullet rows: the
+   headline already says "find your movie using AI", so the AI bullet was
+   restating it, and the remaining two compress into one sentence. Slightly
+   brighter than the old bullets (0.72 vs 0.6) because it now sits over posters
+   rather than near-black, with a text-shadow for the same reason. */
+.fv-sub {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13.5px; line-height: 1.5; font-weight: 600;
+  color: rgba(255,255,255,0.72);
+  text-shadow: 0 1px 12px rgba(5,0,20,0.9);
+  max-width: 30ch; margin: -4px auto 2px;
+  animation: fvDismissIn 0.28s ease 0.2s both;
 }
-.fv-prop {
-  display: flex; align-items: center; gap: 12px;
-  font-size: 13px; color: rgba(255,255,255,0.6);
-  font-family: 'Montserrat', sans-serif; line-height: 1.4;
-}
-.fv-prop-icon {
-  font-size: 14px; color: var(--accent); flex-shrink: 0;
-  width: 18px; text-align: center;
-}
-.fv-prop strong { color: rgba(255,255,255,0.9); font-weight: 700; }
+.fv-sub strong { color: #fff; font-weight: 800; }
 /* "Let's go!" CTA */
 .fv-cta {
   display: inline-flex; align-items: center; gap: 7px;
@@ -4741,7 +4756,7 @@ main.browse-collapsed > .load-wrap { display: none !important; }
   letter-spacing: 0.3px; padding: 13px 32px; cursor: pointer;
   box-shadow: 0 6px 24px rgba(229,9,20,0.45);
   transition: background 0.18s, transform 0.15s, box-shadow 0.18s;
-  animation: fvDismissIn 0.5s ease 3.5s both;
+  animation: fvDismissIn 0.28s ease 0.28s both;
 }
 .fv-cta:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(229,9,20,0.55); }
 @keyframes fvDismissIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -4749,9 +4764,20 @@ main.browse-collapsed > .load-wrap { display: none !important; }
   display: block; margin: 14px auto 0; background: none; border: none;
   color: var(--text-sub); font-size: 12.5px; font-weight: 600; cursor: pointer;
   letter-spacing: 0.3px; text-decoration: underline; text-underline-offset: 3px;
-  animation: fvDismissIn 0.5s ease 3.7s both; transition: color 0.18s;
+  animation: fvDismissIn 0.28s ease 0.34s both; transition: color 0.18s;
+  text-shadow: 0 1px 10px rgba(5,0,20,0.9);
 }
 .fv-skip-link:hover { color: var(--text); }
+/* A full-screen animated takeover is exactly the case this media query exists
+   for: land the whole thing already assembled, and let the JS skip the
+   typewriter (it reads the same flag). */
+@media (prefers-reduced-motion: reduce) {
+  .fv-logo-mark, .fv-wordmark, .fv-sub, .fv-cta, .fv-skip-link {
+    animation: none !important;
+  }
+  .fv-text   { animation: none !important; background-position: 0 50%; }
+  .fv-cursor { display: none; }
+}
 
 /* ─── iOS PWA Install Prompt ─────────────────────── */
 /* ═══ iOS PWA — Stage 1: native-look centered "OS alert" ═══ */
@@ -5192,20 +5218,7 @@ if ('serviceWorker' in navigator) {
       <span id="fvTyped"></span><span class="fv-cursor">|</span>
     </div>
     <!-- Value proposition bullets -->
-    <div class="fv-props">
-      <div class="fv-prop">
-        <span class="fv-prop-icon">★</span>
-        <span data-i18n-html="onboard.prop1">Unified scores from <strong>IMDb + RT + Metacritic</strong></span>
-      </div>
-      <div class="fv-prop">
-        <span class="fv-prop-icon">▶</span>
-        <span data-i18n-html="onboard.prop2">Instantly see where to stream <strong>in your region</strong></span>
-      </div>
-      <div class="fv-prop">
-        <span class="fv-prop-icon">✦</span>
-        <span data-i18n-html="onboard.prop3">AI search that understands <strong>moods &amp; vibes</strong></span>
-      </div>
-    </div>
+    <p class="fv-sub" data-i18n-html="onboard.sub">One score from <strong>IMDb + RT + Metacritic</strong> — and exactly where to stream it.</p>
     <button class="fv-cta" onclick="startOnboardFromIntro()" data-i18n="onboard.personalize">Personalize in 30s →</button>
     <button class="fv-skip-link" onclick="dismissFirstVisit()" data-i18n="onboard.browseNow">Skip — just browse</button>
   </div>
@@ -6105,9 +6118,7 @@ const TRANSLATIONS = {
     'pwa.addBtn':          'Add',
     'pwa.notNow':          'Not now',
     // First-visit onboarding
-    'onboard.prop1':       'Unified scores from <strong>IMDb + RT + Metacritic</strong>',
-    'onboard.prop2':       'Instantly see where to stream <strong>in your region</strong>',
-    'onboard.prop3':       'AI search that understands <strong>moods &amp; vibes</strong>',
+    'onboard.sub':         'One score from <strong>IMDb + RT + Metacritic</strong> — and exactly where to stream it.',
     'onboard.cta':         'Let\'s go! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'Spoiler-Free Fit',
@@ -6450,9 +6461,7 @@ const TRANSLATIONS = {
     'pwa.addToHome':       'Añadir <span>FindFilm.ai</span> a la pantalla de inicio',
     'pwa.addBtn':          'Añadir',
     'pwa.notNow':          'Ahora no',
-    'onboard.prop1':       'Puntuaciones unificadas de <strong>IMDb + RT + Metacritic</strong>',
-    'onboard.prop2':       'Ve al instante dónde transmitir <strong>en tu región</strong>',
-    'onboard.prop3':       'Búsqueda IA que entiende <strong>estados de ánimo</strong>',
+    'onboard.sub':         'Una sola nota de <strong>IMDb + RT + Metacritic</strong> — y dónde verla exactamente.',
     'onboard.cta':         '¡Vamos! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'Sin spoilers',
@@ -6790,9 +6799,7 @@ const TRANSLATIONS = {
     'pwa.addToHome':       'Ajouter <span>FindFilm.ai</span> à l\'écran d\'accueil',
     'pwa.addBtn':          'Ajouter',
     'pwa.notNow':          'Pas maintenant',
-    'onboard.prop1':       'Scores unifiés de <strong>IMDb + RT + Metacritic</strong>',
-    'onboard.prop2':       'Voyez instantanément où regarder <strong>dans votre région</strong>',
-    'onboard.prop3':       'Recherche IA qui comprend <strong>les ambiances &amp; les vibes</strong>',
+    'onboard.sub':         'Une seule note pour <strong>IMDb + RT + Metacritic</strong> — et où le regarder exactement.',
     'onboard.cta':         'C\'est parti ! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'Sans spoilers',
@@ -7130,9 +7137,7 @@ const TRANSLATIONS = {
     'pwa.addToHome':       '将 <span>FindFilm.ai</span> 添加到主屏幕',
     'pwa.addBtn':          '添加',
     'pwa.notNow':          '暂不安装',
-    'onboard.prop1':       '汇聚 <strong>IMDb + RT + Metacritic</strong> 的综合评分',
-    'onboard.prop2':       '即时查看<strong>在你所在地区</strong>的播放平台',
-    'onboard.prop3':       '懂得<strong>情绪与氛围</strong>的 AI 搜索',
+    'onboard.sub':         '汇聚 <strong>IMDb + RT + Metacritic</strong> 的单一评分 — 以及在哪里观看。',
     'onboard.cta':         '开始探索！→',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    '无剧透匹配',
@@ -7470,9 +7475,7 @@ const TRANSLATIONS = {
     'pwa.addToHome':       'أضف <span>FindFilm.ai</span> إلى الشاشة الرئيسية',
     'pwa.addBtn':          'إضافة',
     'pwa.notNow':          'ليس الآن',
-    'onboard.prop1':       'تقييمات موحدة من <strong>IMDb + RT + Metacritic</strong>',
-    'onboard.prop2':       'اعرف فوراً أين تشاهد <strong>في منطقتك</strong>',
-    'onboard.prop3':       'بحث بالذكاء الاصطناعي يفهم <strong>المزاج والأجواء</strong>',
+    'onboard.sub':         'تقييم واحد من <strong>IMDb + RT + Metacritic</strong> — وأين تشاهده بالضبط.',
     'onboard.cta':         'هيا بنا! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'بلا حرق للأحداث',
@@ -7816,9 +7819,7 @@ const TRANSLATIONS = {
     'pwa.addToHome':       'Додати <span>FindFilm.ai</span> на головний екран',
     'pwa.addBtn':          'Додати',
     'pwa.notNow':          'Не зараз',
-    'onboard.prop1':       'Єдиний рейтинг від <strong>IMDb + RT + Metacritic</strong>',
-    'onboard.prop2':       'Миттєво бачте, де дивитися <strong>у вашому регіоні</strong>',
-    'onboard.prop3':       'ШІ-пошук, що розуміє <strong>настрої та атмосферу</strong>',
+    'onboard.sub':         'Єдиний рейтинг від <strong>IMDb + RT + Metacritic</strong> — і де саме дивитися.',
     'onboard.cta':         'Поїхали! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'Без спойлерів',
@@ -8184,9 +8185,7 @@ const TRANSLATIONS = {
     'pwa.addToHome':       '<span>FindFilm.ai</span> zum Startbildschirm hinzufügen',
     'pwa.addBtn':          'Hinzufügen',
     'pwa.notNow':          'Nicht jetzt',
-    'onboard.prop1':       'Vereinte Wertungen aus <strong>IMDb + RT + Metacritic</strong>',
-    'onboard.prop2':       'Sofort sehen, wo du <strong>in deiner Region</strong> streamen kannst',
-    'onboard.prop3':       'KI-Suche, die <strong>Stimmungen &amp; Vibes</strong> versteht',
+    'onboard.sub':         'Eine Wertung aus <strong>IMDb + RT + Metacritic</strong> — und wo du ihn streamen kannst.',
     'onboard.cta':         'Los geht’s! →',
     'modal.fitSummary':    'Spoilerfreie Einschätzung',
     'modal.aiInsights':    'Warum er zu dir passt',
@@ -8548,9 +8547,7 @@ const TRANSLATIONS = {
     'pwa.addToHome':       'Lägg till <span>FindFilm.ai</span> på hemskärmen',
     'pwa.addBtn':          'Lägg till',
     'pwa.notNow':          'Inte nu',
-    'onboard.prop1':       'Samlade betyg från <strong>IMDb + RT + Metacritic</strong>',
-    'onboard.prop2':       'Se direkt var du kan streama <strong>i din region</strong>',
-    'onboard.prop3':       'AI-sökning som förstår <strong>känslor &amp; stämningar</strong>',
+    'onboard.sub':         'Ett samlat betyg från <strong>IMDb + RT + Metacritic</strong> — och var du kan streama det.',
     'onboard.cta':         'Nu kör vi! →',
     'modal.fitSummary':    'Spoilerfri bedömning',
     'modal.aiInsights':    'Varför den passar dig',
@@ -8912,9 +8909,7 @@ const TRANSLATIONS = {
     'pwa.addToHome':       'Legg <span>FindFilm.ai</span> til på hjemskjermen',
     'pwa.addBtn':          'Legg til',
     'pwa.notNow':          'Ikke nå',
-    'onboard.prop1':       'Samlede vurderinger fra <strong>IMDb + RT + Metacritic</strong>',
-    'onboard.prop2':       'Se umiddelbart hvor du kan strømme <strong>i din region</strong>',
-    'onboard.prop3':       'AI-søk som forstår <strong>stemninger &amp; vibber</strong>',
+    'onboard.sub':         'Én samlet vurdering fra <strong>IMDb + RT + Metacritic</strong> — og hvor du kan strømme den.',
     'onboard.cta':         'Nå kjører vi! →',
     'modal.fitSummary':    'Spoilerfri vurdering',
     'modal.aiInsights':    'Hvorfor den passer deg',
@@ -13555,7 +13550,7 @@ function startOnboardFromIntro() {
   localStorage.setItem('hasSeenOnboarding', 'true');
   localStorage.setItem('rk_visited', '1');
   const overlay = document.getElementById('fvOverlay');
-  if (overlay) { overlay.classList.add('hidden'); setTimeout(() => overlay.remove(), 400); }
+  if (overlay) { overlay.classList.add('hidden'); setTimeout(() => overlay.remove(), 320); }
   document.dispatchEvent(new CustomEvent('ff:fv-dismissed'));
   openOnboardQuiz();
 }
@@ -14854,17 +14849,23 @@ function initFirstVisit() {
     overlay.remove();
     return;
   }
-  // Typewriter animation for the tagline
+  // Typewriter animation for the tagline. Was 900ms of dead air followed by 62ms
+  // per character — 2.4s before the headline even finished, on a screen whose
+  // buttons did not appear until 3.5s. Now ~0.75s end to end.
   const text  = 'find your movie using AI';
   const typed = document.getElementById('fvTyped');
+  if (!typed) return;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    typed.textContent = text;   // CSS drops the cursor and the entrances to match
+    return;
+  }
   let i = 0;
   const type = () => {
-    if (!typed) return;
     typed.textContent = text.slice(0, i);
     i++;
-    if (i <= text.length) setTimeout(type, 62);
+    if (i <= text.length) setTimeout(type, 26);
   };
-  setTimeout(type, 900); // slight delay after logo + wordmark animate in
+  setTimeout(type, 120);
 }
 
 function dismissFirstVisit() {
@@ -14874,7 +14875,7 @@ function dismissFirstVisit() {
   const overlay = document.getElementById('fvOverlay');
   if (!overlay) return;
   overlay.classList.add('hidden');
-  setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 700);
+  setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 320); // matches the 0.28s fade
   document.dispatchEvent(new CustomEvent('ff:fv-dismissed'));
 }
 
