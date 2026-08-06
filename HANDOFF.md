@@ -133,6 +133,67 @@ a good deploy looks like a failed one.
 | `feat/logo-global-reset` | `feat-logo-global-reset.ratingkino.pages.dev` | logo = global reset button |
 | `fix/group-picker-catalog` | `fix-group-picker-catalog.ratingkino.pages.dev` | "Pick a movie together" empty results |
 | `feat/mobile-ai-hub` | — | parked, 2 unmerged commits |
+---
+
+## Session (2026-08-06) — Voice Dictation Duplication + 2s Silence Timeout
+
+Preview: https://fix-voice-transcript-duplica.ratingkino.pages.dev (pinned `https://7579c479.ratingkino.pages.dev`).
+Branched off `main`, so it is independent of the two other open preview branches.
+
+| Commit | Feature |
+|--------|---------|
+| `8aca4e0` | **Voice transcript rebuilt instead of appended + silence timeout 8000 → 2000ms** — new helpers `_voiceRead(e)`, `_voiceMerge(base, seg)`, `_voiceCommit()`; new state `_voiceSessionFinal` alongside `_finalTranscript`; `VOICE_SILENCE_MS` 8000 → 2000. Rewrote `onresult` + `onend` in both `toggleVoiceSearch()` (mobile) and `toggleDesktopVoice()` (desktop). |
+
+### Root cause of the duplication
+
+`onresult` appended into the persistent `_finalTranscript` while looping from
+`e.resultIndex`. That is only correct if every result is delivered exactly once, which
+the speech engine does not guarantee — `e.results` is the **cumulative** list for the
+session and Chrome re-delivers from it freely (interim → final, sometimes final twice
+with a corrected alternative). On top of that, `onend` transparently restarts
+recognition when the browser force-stops it, and Android then **replays the previous
+session's finals with `resultIndex` back at 0**. Every redelivery appended the same
+words again: one restart doubled the query, two tripled it.
+
+Reproduced exactly against the old logic — spoken `"film about a heist"` produced
+`"film film about film about a heist"`, matching the bug report screenshot.
+
+### Fix shape
+
+- `_voiceRead(e)` rebuilds final + interim from index 0 on **every** event, so a
+  redelivered result recomputes the identical string instead of growing it (idempotent).
+- `_voiceSessionFinal` holds the current session's finalised text; `_finalTranscript`
+  holds only speech carried over from **earlier** sessions.
+- `_voiceCommit()` folds session → base at the restart boundary in `onend` (called both
+  before `_recognition.start()` and on the finalise path).
+- `_voiceMerge()` drops word-level overlap when joining. Necessary because the two
+  browser behaviours at a restart are indistinguishable from our side: `results` either
+  resets (sessions disjoint) or replays the previous tail (would be stored twice).
+  Longest overlap wins, so a full replay collapses completely.
+- Helpers extracted because mobile and desktop need the identical algorithm and their
+  two copies were already drifting.
+
+### Verification (fake `SpeechRecognition` driven through the real handlers)
+
+| Scenario | OLD | NEW |
+|---|---|---|
+| Redelivered final | `film about a heist film about a heist` | `film about a heist` |
+| Restart replay | `film about film about a heist` | `film about a heist` |
+| Double restart replay | `film film about film about a heist` | `film about a heist` |
+| Clean restart (results reset) | `film about a heist` | `film about a heist` |
+| Well-behaved single session | `space heist  with a heart` | `space heist with a heart` |
+
+Timer instrumented: debounce arms at 0ms, fires at **2236ms** (2000 + ~200ms `setTimeout`
+drift, matching a control `setTimeout(2000)` measured at 2163ms in the same context).
+
+Edge cases confirmed unchanged: manual stop (second mic tap) does not auto-restart;
+silent session submits nothing and opens no modal; mid-listen language switch
+(`_ffSwitch`) still swallowed; `_voiceMerge` does not eat genuine repeats
+(`"very very good movie"` + `"about robots"` and `"the the matrix"` both survive).
+Mobile end-to-end: live field went `a film` → `a film about` → `a film about a heist` →
+(restart replay, **unchanged**) → `a film about a heist in space`, overlay closed, AI
+modal opened with the clean query and returned 6 matches.
+
 
 ---
 
