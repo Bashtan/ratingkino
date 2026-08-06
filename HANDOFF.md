@@ -13,7 +13,7 @@ Branch `feat/logo-global-reset` · preview https://feat-logo-global-reset.rating
 
 | Commit | Feature |
 |--------|---------|
-| `50cbfe0` | **`resetToHome(e)`** — new global reset in `index.html` immediately after `restoreSession()` (~L9522). Wired via `onclick="resetToHome(event)"` on `a.logo` (~L4981); `href="/"` is retained so the logo stays a real, crawlable link. |
+| `acb8029` | **`resetToHome(e)`** — new global reset in `index.html` immediately after `restoreSession()` (~L9522). Wired via `onclick="resetToHome(event)"` on `a.logo` (~L4981); `href="/"` is retained so the logo stays a real, crawlable link. |
 
 ### Why the logo never actually reset anything
 
