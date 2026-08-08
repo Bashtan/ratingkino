@@ -14457,10 +14457,16 @@ let _recognition = null, _isListening = false;
 // what makes onresult idempotent — see _voiceRead() / _voiceMerge() below.
 let _finalTranscript = '', _voiceSessionFinal = '';
 let _voiceSilenceTimer = null;   // debounce: auto-stop only after N ms of silence (continuous mode)
-const VOICE_SILENCE_MS = 2000;   // wait this long after the user stops talking before auto-submitting.
-                                  // Was 8000 — a deliberately generous ceiling for long thinking pauses,
-                                  // but it made the mic feel broken: you finish your sentence and then
-                                  // watch a still-pulsing button for eight seconds. 2s reads as "it heard me".
+const VOICE_SILENCE_MS = 1200;   // wait this long after the user stops talking before auto-submitting.
+                                  // History: 8000 → 2000 → 1200. 8000 was a generous ceiling for long
+                                  // thinking pauses but made the mic feel broken; 2000 read as "it heard
+                                  // me" yet still left an audible beat of dead air before results moved.
+                                  // 1200 is roughly the floor that still tolerates the mid-sentence pause
+                                  // people take while describing a plot ("a film about… uh… time loops").
+                                  // Don't drop much below ~1000: the debounce firing is treated as the
+                                  // INTENDED end of dictation, so cutting someone off mid-thought submits
+                                  // the half-formed query — a premature submit costs far more than a
+                                  // slightly late one. Tune here, not at the call sites.
 let _voiceStopRequested = false; // true once the user manually clicks stop, or a fatal mic error occurs —
                                   // suppresses auto-restart so we don't fight the user's own stop action
 let _voiceDebounceFired  = false; // true once the silence debounce itself calls .stop() — this is the
@@ -14702,7 +14708,13 @@ function toggleVoiceSearch() {
     const spoken = (_finalTranscript || inp.value).trim();
     if (spoken) {
       inp.value = spoken;
-      setTimeout(submitMobSearch, 300);
+      /* One frame, not 300ms. This delay predates submitMobSearch()'s
+         .instant-close rewrite: back then the overlay took 0.25s to fade and the
+         pause stopped the AI modal cross-fading underneath it. The overlay is now
+         cut in a single frame, so the only thing left to wait for is the mic's
+         .listening class coming off — one rAF covers that, and it stacked a
+         needless 300ms onto every mobile voice search. */
+      requestAnimationFrame(submitMobSearch);
     } else {
       startMobPlaceholder();
     }
