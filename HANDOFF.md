@@ -2,31 +2,55 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-08) — Voice Latency Cut + Public Secret Leak Closed
+## ⚡ Most Recent Session (2026-08-08) — Voice Latency Cut + Deploy Allowlist (secret leak closed)
 
-All commits on `main`, live on https://findfilm.ai.
+All commits on `main`. Voice fix live on https://findfilm.ai (deploy `c34ceaf5`).
 
 | Commit | Feature |
 |--------|---------|
 | `fdc0a6e` | **Voice search latency halved** — `VOICE_SILENCE_MS` 2000 → 1200 (`index.html:14460`); mobile `setTimeout(submitMobSearch, 300)` → `requestAnimationFrame(submitMobSearch)` in `toggleVoiceSearch().onend`. Measured last-word-to-submit: mobile 2300 ms → **1204 ms**, desktop 2000 ms → **1201 ms**. |
-| `73c1e07` | **`.assetsignore` added** — stops `wrangler pages deploy .` publishing repo internals as static assets. |
+| `73c1e07` | ~~`.assetsignore` added~~ — **DID NOT WORK, reverted below.** |
+| _(this commit)_ | **`deploy.sh` + `pages_build_output_dir = "dist"`** — allowlist staging, pre-ship guards, post-deploy live verification, `.githooks/pre-commit`. Reverts `73c1e07`. |
 
 ### 🔴 Secret exposure — READ THIS
 
-`wrangler.toml` sets `pages_build_output_dir = "."`, so `wrangler pages deploy .`
-uploads the **entire repo root**. `.gitignore` does **not** apply to Pages uploads.
+`wrangler.toml` used to set `pages_build_output_dir = "."`, so `wrangler pages deploy .`
+uploaded the **entire repo root**. `https://findfilm.ai/.dev.vars` was serving the real
+**`TMDB_KEY` and `OMDB_KEY`** publicly — verified byte-identical to the local file by
+sha256. `/sync-worker.js`, `/wrangler.toml` and `/schema.sql` were also public.
 
-`https://findfilm.ai/.dev.vars` was serving the real **`TMDB_KEY` and `OMDB_KEY`**
-publicly — verified byte-identical to the local file by sha256. `/sync-worker.js`,
-`/wrangler.toml` and `/schema.sql` were also publicly readable.
+**`.assetsignore` does not work for Pages.** It is a *Workers static-assets* feature;
+`wrangler pages deploy` ignores it entirely. `73c1e07` was committed believing otherwise
+and protected nothing — the deployment that followed still served all eight listed paths,
+including `.assetsignore` itself. **Pages has no exclusion mechanism at all**: not
+`.gitignore`, not `.assetsignore`, not `_routes.json` (that only gates Functions).
 
-- Fixed going forward by `.assetsignore` (gitignore syntax; a bare name matches at
-  any depth, so `.dev.vars` also covers `spotify-worker/.dev.vars`).
+The actual fix is to stop deploying from the repo root:
+
+- **`./deploy.sh` is now the only deploy command.** It copies an explicit `PUBLIC`
+  allowlist into `dist/` and deploys that. Nothing is published unless someone named
+  it. `pages_build_output_dir = "dist"`; `dist/` is gitignored generated output.
+- **Pre-ship guards** (all three verified to fire): a missing allowlist entry aborts;
+  any staged `.dev.vars`/`.env`/`*.toml`/`*.sql`/`*.md`/`.git*` aborts; any
+  `TMDB_KEY|OMDB_KEY|SPOTIFY_CLIENT_*=` assignment in a staged file aborts.
+- **Post-deploy verification** — after shipping, `deploy.sh` fetches the new
+  deployment URL and asserts 16 sensitive paths return the SPA fallback, plus a
+  positive control (`/` is HTML, `/assets/icon-192.png` is an image) so a broken
+  deploy cannot pass as "nothing leaked". Note **status code proves nothing** here:
+  Pages answers absent paths with `200 text/html`, so the test is on `Content-Type`.
+- **`.githooks/pre-commit`** blocks secret filenames and secret *values* from entering
+  git (`git config core.hooksPath .githooks`, already set). Content rule requires a
+  16+ char value after `=`, so docs and `deploy.sh` stay committable.
+- **Local dev must be `./deploy.sh --stage-only && npx wrangler pages dev`** with **no
+  directory argument** — passing `.` still serves `.dev.vars` and `wrangler.toml` on
+  localhost. Verified: with no arg, those return the SPA fallback and secrets still load.
 - **Old deployments still serve the old files at their immutable
-  `<hash>.ratingkino.pages.dev` URLs.** `.assetsignore` cannot retract them.
-  **TMDB_KEY and OMDB_KEY must be rotated** — treat them as compromised.
-- Deploy hygiene: both `.dev.vars` files are moved out of the repo before any
-  `pages deploy`, then restored, so a config mistake cannot leak them.
+  `<hash>.ratingkino.pages.dev` URLs.** Nothing retracts them, and `findfilm.ai/.dev.vars`
+  was edge-cached with `s-maxage=604800`. **TMDB_KEY and OMDB_KEY must be rotated** —
+  treat them as compromised. (User handled rotation + cache purge.)
+- The Spotify client secret was **never published** — the only thing that prevented it
+  was physically moving both `.dev.vars` out of the repo before that deploy, since
+  `.assetsignore` was doing nothing. Both files are now restored to the repo.
 
 ### Voice duplication (Issue reported this session) — not reproducible
 
@@ -1682,6 +1706,11 @@ Users browse movies fetched from KV (pre-enriched nightly) or live TMDB/OMDb, fi
 
 ```
 ratingkino/
+├── deploy.sh             ← THE deploy command. PUBLIC allowlist → dist/ → Pages,
+│                           with pre-ship guards + post-deploy live verification.
+│                           Never run `wrangler pages deploy .` — see the 🔴 section.
+├── dist/                 ← generated by deploy.sh, gitignored. Never edit or commit.
+├── .githooks/pre-commit  ← blocks secret filenames + values from entering git
 ├── index.html            ← entire site: CSS + JS + HTML (~7500 lines)
 ├── sw.js                 ← Service Worker (PWA offline cache + install prompt trigger)
 ├── functions/
@@ -1689,6 +1718,8 @@ ratingkino/
 ├── sync-worker.js        ← Cloudflare Worker — nightly data sync (deployed separately)
 ├── sync-worker.toml      ← wrangler config for sync Worker
 ├── wrangler.toml         ← wrangler config for Pages (KV + AI bindings)
+├── .dev.vars             ← TMDB_KEY / OMDB_KEY. Gitignored, hook-blocked, not in PUBLIC.
+├── spotify-worker/       ← Spotify Client-Credentials Worker (+ its own .dev.vars)
 ├── assets/               ← static assets (icons, webmanifest, og-image)
 │   ├── site.webmanifest  ← PWA manifest (display: standalone, start_url: /)
 │   ├── icon-192.png      ← PWA icon 192×192
@@ -1708,8 +1739,11 @@ ratingkino/
 python3 -m http.server 8282 --directory /Users/bashtan/Projects/ratingkino
 # open http://localhost:8282
 
-# Full local dev with Pages Functions + KV + AI:
-npx wrangler pages dev . --port 8282   # reads wrangler.toml bindings
+# Full local dev with Pages Functions + KV + AI.
+# NO directory argument — it picks up pages_build_output_dir = "dist" so localhost
+# serves exactly what production serves. Passing `.` instead re-exposes .dev.vars
+# and wrangler.toml on localhost (verified). Re-run --stage-only after editing.
+./deploy.sh --stage-only && npx wrangler pages dev --port 8282
 ```
 
 The `workerd` process (Cloudflare's local runtime) runs at port 8282 — if it's already running, the Pages Function routes (`/api/*`) will work locally.
@@ -1727,9 +1761,16 @@ sessions of commits stale until a manual deploy was run. **Every session that ch
 `index.html` or `functions/` must end with a manual deploy, not just a git push.**
 
 ```bash
-git push origin main                                          # updates GitHub only, does NOT deploy
-npx wrangler pages deploy . --project-name ratingkino --branch main   # actually deploys to findfilm.ai
+git push origin main   # updates GitHub only, does NOT deploy
+./deploy.sh            # actually deploys to findfilm.ai — allowlist → dist/ → Pages
+./deploy.sh --branch fix-something   # extra args are forwarded to wrangler (preview branch)
 ```
+
+**Never `wrangler pages deploy .`.** That published `/.dev.vars` with the live TMDB and
+OMDB keys. `deploy.sh` refuses to ship if anything sensitive is staged and, after
+deploying, fetches the live URL to prove the sensitive paths are unpublished. If it
+prints `deploy: FAILED`, the deployment is already live — fix and redeploy immediately,
+do not assume it rolled back.
 
 **Deploy / update sync Worker:**
 ```bash

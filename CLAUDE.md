@@ -54,10 +54,15 @@ All commits on `main`, all live on https://findfilm.ai.
 
 - **Production:** https://findfilm.ai — also https://ratingkino.com
 - **Stack:** Single `index.html` (~7 500 lines) + `functions/api/[[path]].js` (Cloudflare Pages Function) + `sync-worker.js` (nightly cron)
-- **Deploy:** No Cloudflare Pages git integration. `git push origin main` alone does **not** deploy. After pushing, run `npx wrangler pages deploy . --project-name=ratingkino` to push changes live.
-- **No build step.** Edit index.html directly. No framework, no bundler.
+- **Deploy:** No Cloudflare Pages git integration. `git push origin main` alone does **not** deploy. After pushing, run **`./deploy.sh`**.
+  - **Never run `wrangler pages deploy .` again.** Deploying the repo root published `/.dev.vars` with the live TMDB and OMDB keys, plus `/sync-worker.js`, `/wrangler.toml` and `/schema.sql`. Pages has no exclusion mechanism — `.gitignore` does not apply to uploads and `.assetsignore` is a Workers-only feature that `pages deploy` silently ignores.
+  - `deploy.sh` stages an explicit allowlist into `dist/`, refuses to ship if anything sensitive is staged, and after deploying **fetches the live URL** to confirm the sensitive paths really are unpublished. To add a public file, add it to `PUBLIC` in `deploy.sh` — nothing is published by default.
+  - `./deploy.sh --stage-only` builds `dist/` without deploying.
+- **No build step.** Edit `index.html` directly. No framework, no bundler. `dist/` is generated output — never edit or commit it.
+- **Secrets:** `.dev.vars` (root: TMDB/OMDB) and `spotify-worker/.dev.vars`. Gitignored *and* blocked by the `.githooks/pre-commit` hook (`git config core.hooksPath .githooks`, already set).
 - **Local dev (static):** `python3 -m http.server 8282` — API calls won't work
-- **Local dev (full):** `npx wrangler pages dev . --port 8282`
+- **Local dev (full):** `./deploy.sh --stage-only && npx wrangler pages dev --port 8282`
+  - No directory argument — it picks up `pages_build_output_dir = "dist"`, so local matches production exactly. Passing `.` re-exposes `.dev.vars` and `wrangler.toml` on localhost.
 
 ## Stop Hook Behaviour
 
