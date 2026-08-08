@@ -2,7 +2,57 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-06) — All Open Preview Branches Merged & Shipped
+## ⚡ Most Recent Session (2026-08-08) — Voice Latency Cut + Public Secret Leak Closed
+
+All commits on `main`, live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `fdc0a6e` | **Voice search latency halved** — `VOICE_SILENCE_MS` 2000 → 1200 (`index.html:14460`); mobile `setTimeout(submitMobSearch, 300)` → `requestAnimationFrame(submitMobSearch)` in `toggleVoiceSearch().onend`. Measured last-word-to-submit: mobile 2300 ms → **1204 ms**, desktop 2000 ms → **1201 ms**. |
+| `73c1e07` | **`.assetsignore` added** — stops `wrangler pages deploy .` publishing repo internals as static assets. |
+
+### 🔴 Secret exposure — READ THIS
+
+`wrangler.toml` sets `pages_build_output_dir = "."`, so `wrangler pages deploy .`
+uploads the **entire repo root**. `.gitignore` does **not** apply to Pages uploads.
+
+`https://findfilm.ai/.dev.vars` was serving the real **`TMDB_KEY` and `OMDB_KEY`**
+publicly — verified byte-identical to the local file by sha256. `/sync-worker.js`,
+`/wrangler.toml` and `/schema.sql` were also publicly readable.
+
+- Fixed going forward by `.assetsignore` (gitignore syntax; a bare name matches at
+  any depth, so `.dev.vars` also covers `spotify-worker/.dev.vars`).
+- **Old deployments still serve the old files at their immutable
+  `<hash>.ratingkino.pages.dev` URLs.** `.assetsignore` cannot retract them.
+  **TMDB_KEY and OMDB_KEY must be rotated** — treat them as compromised.
+- Deploy hygiene: both `.dev.vars` files are moved out of the repo before any
+  `pages deploy`, then restored, so a config mistake cannot leak them.
+
+### Voice duplication (Issue reported this session) — not reproducible
+
+Reported symptom "film film film about film about". Root cause was fixed earlier in
+`8aca4e0` and **is live in production** (`_voiceRead` present in the served HTML;
+`sw.js` is network-first, `cache-control: max-age=0, must-revalidate`, so a stale
+build is not possible). Chrome's redelivery pattern was replayed against both
+implementations: the old append logic reproduces the symptom exactly, the current
+`_voiceRead()`/`_voiceMerge()` pair does not. Restart-boundary merge cases all pass.
+If it recurs, get the exact URL/device/browser — suspect a stale *preview*
+deployment before touching this code.
+
+### Spotify Worker (`spotify-worker/`) — built, not deployed
+
+Client-Credentials Worker with KV token cache (`_spotify:cc-token`, deliberately not
+in the `CACHE_KEYS` allowlist), CORS, and structured errors. Auth verified end-to-end
+against live Spotify; **KV cache verified: 1 `spotify.token_minted` across 17 requests.**
+Blocked: every search returns `403 Active premium subscription required for the owner
+of the app` — Spotify's 2026 policy now requires the app owner to hold Premium. Not a
+code bug. Worker `findfilm-spotify` is **not deployed**. Note `wrangler` resolves
+`main` and `.dev.vars` relative to the **config file's own directory** —
+`redirect-worker/wrangler.toml` still has the latent `main` path bug.
+
+---
+
+## Session (2026-08-06) — All Open Preview Branches Merged & Shipped
 
 **Production deploy `fd475636` — live on https://findfilm.ai. `main` is at `ac64837`.**
 
