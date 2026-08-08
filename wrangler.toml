@@ -4,7 +4,13 @@
 # and read by the Pages Function at /api/cache/*.
 
 name                   = "ratingkino"
-pages_build_output_dir = "."
+# Was ".", i.e. "publish the entire repository". Pages offers no way to exclude
+# files from an output directory — .gitignore does not apply to uploads, and
+# .assetsignore is a Workers-static-assets feature that `pages deploy` ignores —
+# so "." published sync-worker.js, schema.sql, this file, and /.dev.vars with the
+# live TMDB_KEY and OMDB_KEY in it. dist/ is built by ./deploy.sh from an explicit
+# allowlist and is gitignored. Never edit dist/ by hand; edit the source and restage.
+pages_build_output_dir = "dist"
 compatibility_date     = "2024-11-01"
 
 [[kv_namespaces]]

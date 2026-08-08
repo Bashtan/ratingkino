@@ -1,2 +1,14 @@
+# Secrets. A bare name matches at any depth, so this also covers
+# spotify-worker/.dev.vars. NOTE: being gitignored is NOT what keeps a file off
+# findfilm.ai — Pages uploads ignore .gitignore entirely. Publication is
+# controlled solely by the PUBLIC allowlist in deploy.sh.
 .dev.vars
+.dev.vars.*
+.env
+.env.*
+
+# Build output of ./deploy.sh. Generated, never edited, never committed.
+dist/
+
 .wrangler/
+.DS_Store

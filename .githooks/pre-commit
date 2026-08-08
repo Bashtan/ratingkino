@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+#
+# Blocks secrets from entering the repository at all.
+#
+# This is the outermost layer. deploy.sh's PUBLIC allowlist already decides what
+# reaches findfilm.ai, so a secret sitting in the repo is no longer published by
+# itself — but a committed key is still a leak (the GitHub repo is public) and
+# git history is far harder to clean than a working tree. Stop it at the door.
+#
+# Enabled by:  git config core.hooksPath .githooks
+#
+set -euo pipefail
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+[[ -z "$staged" ]] && exit 0
+
+fail=0
+
+# ── Filename rule ──────────────────────────────────────────────────────────
+while IFS= read -r f; do
+  case "$(basename "$f")" in
+    .dev.vars|.dev.vars.*|.env|.env.*)
+      echo "pre-commit: refusing to commit secret file: $f" >&2
+      fail=1
+      ;;
+  esac
+done <<< "$staged"
+
+# ── Content rule ───────────────────────────────────────────────────────────
+# Requires an actual value after the '=', not just a mention of the name, so
+# that deploy.sh (which greps for these names) and the docs stay committable.
+pattern='(TMDB_KEY|OMDB_KEY|SPOTIFY_CLIENT_SECRET|SPOTIFY_CLIENT_ID|CLOUDFLARE_API_TOKEN)[[:space:]]*[=:][[:space:]]*["'"'"']?[A-Za-z0-9_-]{16,}'
+
+while IFS= read -r f; do
+  [[ -f "$f" ]] || continue
+  if git show ":$f" 2>/dev/null | grep -nEq "$pattern"; then
+    echo "pre-commit: refusing — secret value found in $f:" >&2
+    git show ":$f" | grep -nE "$pattern" | sed 's/^/    /' >&2
+    fail=1
+  fi
+done <<< "$staged"
+
+if (( fail )); then
+  echo >&2
+  echo 'pre-commit: nothing committed. Move the secret out of the repo, or use' >&2
+  echo '            `git commit --no-verify` only if you are certain it is a' >&2
+  echo '            false positive.' >&2
+  exit 1
+fi
