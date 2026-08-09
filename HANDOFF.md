@@ -4,13 +4,21 @@
 
 ## ⚡ Most Recent Session (2026-08-08) — Voice Latency Cut + Deploy Allowlist (secret leak closed)
 
-All commits on `main`. Voice fix live on https://findfilm.ai (deploy `c34ceaf5`).
+All commits on `main`.
 
 | Commit | Feature |
 |--------|---------|
 | `fdc0a6e` | **Voice search latency halved** — `VOICE_SILENCE_MS` 2000 → 1200 (`index.html:14460`); mobile `setTimeout(submitMobSearch, 300)` → `requestAnimationFrame(submitMobSearch)` in `toggleVoiceSearch().onend`. Measured last-word-to-submit: mobile 2300 ms → **1204 ms**, desktop 2000 ms → **1201 ms**. |
-| `73c1e07` | ~~`.assetsignore` added~~ — **DID NOT WORK, reverted below.** |
-| _(this commit)_ | **`deploy.sh` + `pages_build_output_dir = "dist"`** — allowlist staging, pre-ship guards, post-deploy live verification, `.githooks/pre-commit`. Reverts `73c1e07`. |
+| `73c1e07` | ~~`.assetsignore` added~~ — **DID NOT WORK, reverted.** |
+| `6114bfd` | **`deploy.sh` + `pages_build_output_dir = "dist"`** — allowlist staging, pre-ship guards, post-deploy verification, `.githooks/pre-commit`. Reverts `73c1e07`. |
+| `e503f5a` | **Docs corrected** — `./deploy.sh` is now the deploy command in CLAUDE.md + HANDOFF.md. |
+| `d14628c` | **Verify the custom domains, not just the deployment URL** — `probe()` with retry; separates stale-cache leaks from origin leaks. |
+
+**Production deploy `b3ab3cf8` (branch `main`) — live on https://findfilm.ai.**
+Origin verified clean: 16/16 sensitive paths return the SPA fallback on the
+deployment URL, on `ratingkino.pages.dev`, and on `findfilm.ai` with a cache-buster.
+Site healthy (`/`, `/api/cache/popular`, `/sw.js`, icons, `/tv/:id` and `/pitch/:id`
+rewrites all 200); voice fix confirmed still live.
 
 ### 🔴 Secret exposure — READ THIS
 
@@ -44,10 +52,21 @@ The actual fix is to stop deploying from the repo root:
 - **Local dev must be `./deploy.sh --stage-only && npx wrangler pages dev`** with **no
   directory argument** — passing `.` still serves `.dev.vars` and `wrangler.toml` on
   localhost. Verified: with no arg, those return the SPA fallback and secrets still load.
+- **⚠️ Removing a file from the origin does not stop it being served.** After deploy
+  `b3ab3cf8` the origin was clean, yet `https://findfilm.ai/.dev.vars` still returned
+  the real 60-byte key file. Those responses carry `cache-control: public,
+  s-maxage=604800` — Cloudflare's edge keeps serving them for up to a week. Proof:
+  the plain URL returned `application/octet-stream, 60b` while `?cb=<random>` returned
+  the 779 KB SPA fallback. **9 paths on findfilm.ai were stale cache entries** after
+  the deploy: `/.dev.vars`, `/.gitignore`, `/.assetsignore`, `/wrangler.toml`,
+  `/sync-worker.js`, `/schema.sql`, `/CLAUDE.md`, `/HANDOFF.md`,
+  `/redirect-worker/worker.js`. **Purge AFTER deploying, never before** — purging
+  first just refills the cache from the old origin.
 - **Old deployments still serve the old files at their immutable
-  `<hash>.ratingkino.pages.dev` URLs.** Nothing retracts them, and `findfilm.ai/.dev.vars`
-  was edge-cached with `s-maxage=604800`. **TMDB_KEY and OMDB_KEY must be rotated** —
-  treat them as compromised. (User handled rotation + cache purge.)
+  `<hash>.ratingkino.pages.dev` URLs.** Nothing retracts them. **TMDB_KEY and
+  OMDB_KEY must be rotated** — treat them as compromised. (User handled rotation +
+  cache purge.) After rotating, update the local `.dev.vars` and the Pages/Worker
+  secrets — the local file still holds the old values until then.
 - The Spotify client secret was **never published** — the only thing that prevented it
   was physically moving both `.dev.vars` out of the repo before that deploy, since
   `.assetsignore` was doing nothing. Both files are now restored to the repo.
