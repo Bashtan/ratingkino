@@ -146,6 +146,53 @@ for p in "${MUST_NOT_PUBLISH[@]}"; do
   esac
 done
 
+# ── The custom domains, which are what actually matter ─────────────────────
+# Checking only the deployment URL is not enough, and this was a real miss: the
+# first run of this script reported a clean 16/16 on b3ab3cf8.ratingkino.pages.dev
+# while https://findfilm.ai/.dev.vars was still handing out the live TMDB and OMDB
+# keys. The deployment URL is freshly minted and never edge-cached, so it only ever
+# reflects the origin. The custom domains sit behind Cloudflare's cache, and the
+# old responses carried `cache-control: public, s-maxage=604800` — a week.
+#
+# Removing a file from the origin therefore does NOT stop it being served. The
+# cached copy has to be purged, and nothing in a deploy does that for you. So probe
+# the domains too, and tell the two failure modes apart: a path that leaks WITHOUT
+# a cache-buster but is clean WITH one is a stale cache entry (purge it), whereas a
+# path that leaks both ways is a genuine origin leak (the allowlist is wrong).
+DOMAINS=(https://findfilm.ai https://ratingkino.com)
+cache_leaks=()
+origin_leaks=()
+bust="cb=$(date +%s)$RANDOM"
+
+# probe <url> — echoes the Content-Type, or 'unreachable' if curl could not answer.
+# Retries once: a transient DNS timeout against findfilm.ai was initially misread
+# as an origin leak, and a check that cries wolf is a check people start ignoring.
+probe() {
+  local ct
+  ct=$(curl -sS -m 15 -o /dev/null -w '%{content_type}' "$1" 2>/dev/null) && [[ -n "$ct" ]] && { echo "$ct"; return; }
+  sleep 2
+  ct=$(curl -sS -m 15 -o /dev/null -w '%{content_type}' "$1" 2>/dev/null) && [[ -n "$ct" ]] && { echo "$ct"; return; }
+  echo unreachable
+}
+
+unreachable=()
+for d in "${DOMAINS[@]}"; do
+  for p in "${MUST_NOT_PUBLISH[@]}"; do
+    plain=$(probe "$d/$p")
+    case "$plain" in
+      text/html*)  continue ;;                        # absent, SPA fallback
+      unreachable) unreachable+=("$d/$p"); continue ;;
+    esac
+    # Something real came back. Cache or origin?
+    fresh=$(probe "$d/$p?$bust")
+    case "$fresh" in
+      text/html*)  cache_leaks+=("$d/$p -> $plain (origin clean; stale cache)") ;;
+      unreachable) unreachable+=("$d/$p?$bust") ;;
+      *)           origin_leaks+=("$d/$p -> $plain") ;;
+    esac
+  done
+done
+
 # Positive control: if the site itself is broken, "nothing is served" would read
 # as a clean pass above, so confirm the shell actually loads before trusting it.
 home_ct=$(curl -sS -m 15 -o /dev/null -w '%{content_type}' "$url/" || echo 'curl-failed')
@@ -159,11 +206,32 @@ if [[ "$home_ct" != text/html* || "$icon_ct" != image/* ]]; then
   exit 1
 fi
 
-if (( ${#leaked[@]} )); then
-  echo 'deploy: FAILED — these paths are publicly readable on the new deployment:' >&2
-  printf '  %s\n' "${leaked[@]}" >&2
+if (( ${#leaked[@]} + ${#origin_leaks[@]} )); then
+  echo 'deploy: FAILED — these paths are publicly readable from the origin:' >&2
+  printf '  %s\n' "${leaked[@]}" "${origin_leaks[@]}" >&2
+  echo 'The PUBLIC allowlist is wrong. Fix it and redeploy — this deployment is live.' >&2
   exit 1
 fi
 
-echo "  ${#MUST_NOT_PUBLISH[@]}/${#MUST_NOT_PUBLISH[@]} sensitive paths confirmed unpublished."
+echo "  ${#MUST_NOT_PUBLISH[@]}/${#MUST_NOT_PUBLISH[@]} sensitive paths unpublished at the origin."
+
+if (( ${#cache_leaks[@]} )); then
+  echo >&2
+  echo 'deploy: FAILED — origin is clean but the CDN is still serving old copies:' >&2
+  printf '  %s\n' "${cache_leaks[@]}" >&2
+  echo >&2
+  echo 'Purge the Cloudflare cache for these paths, then re-run ./deploy.sh to confirm.' >&2
+  echo 'Purging BEFORE the deploy does not help — the cache just refills from the old' >&2
+  echo 'origin. Purge after. Any secret listed above is compromised regardless.' >&2
+  exit 1
+fi
+
+# Not a failure — but an unverified path is not a passed path, so never let it
+# hide inside an "OK".
+if (( ${#unreachable[@]} )); then
+  echo "  WARNING: ${#unreachable[@]} path(s) could not be checked; re-run to confirm:"
+  printf '    %s\n' "${unreachable[@]}"
+fi
+
+echo "  custom domains clean (${DOMAINS[*]})."
 echo "deploy: OK — $url"
