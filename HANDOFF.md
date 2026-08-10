@@ -14,11 +14,20 @@ All commits on `main`.
 | `e503f5a` | **Docs corrected** — `./deploy.sh` is now the deploy command in CLAUDE.md + HANDOFF.md. |
 | `d14628c` | **Verify the custom domains, not just the deployment URL** — `probe()` with retry; separates stale-cache leaks from origin leaks. |
 
-**Production deploy `b3ab3cf8` (branch `main`) — live on https://findfilm.ai.**
+**Production deploy `5fe4e7d9` (branch `main`) — live on https://findfilm.ai.**
 Origin verified clean: 16/16 sensitive paths return the SPA fallback on the
 deployment URL, on `ratingkino.pages.dev`, and on `findfilm.ai` with a cache-buster.
 Site healthy (`/`, `/api/cache/popular`, `/sw.js`, icons, `/tv/:id` and `/pitch/:id`
 rewrites all 200); voice fix confirmed still live.
+
+> **⚠️ `findfilm.ai` and `ratingkino.com` are SEPARATE Cloudflare zones.** Purging one
+> does not touch the other. After a "purge everything",
+> `ratingkino.com/.dev.vars` and `www.ratingkino.com/.dev.vars` both returned the
+> 779 KB SPA fallback while `findfilm.ai/.dev.vars` still served the real 60-byte
+> file with `age: 155100` (43 h — the entry was never invalidated). The purge landed
+> on the wrong zone. **Purge the `findfilm.ai` zone specifically**; it is the primary
+> domain and the only one leaking. `deploy.sh` checks both domains, which is how the
+> asymmetry surfaced.
 
 ### 🔴 Secret exposure — READ THIS
 
