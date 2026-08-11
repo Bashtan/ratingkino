@@ -3616,6 +3616,13 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   }
   .m-actions .btn-wl-modal #btnWatchlistText { display: none; }
   .m-actions .btn-wl-modal svg { width: 16px; height: 16px; }
+  /* Icon-only button has no text label to carry the saved state, so give the
+     background a stronger, unmistakable fill here (vs. the subtler tint used
+     on desktop where "✓ Saved" text is also visible). */
+  .m-actions .btn-wl-modal.saved {
+    background: linear-gradient(135deg, #7C3AED, #22D3EE);
+    border-color: transparent; color: #fff;
+  }
 
   .stream-on-lbl { order: 4; flex: 0 0 100%; font-size: 10px; color: var(--muted); margin: 2px 0 -2px; }
   .stream-row {
@@ -4535,7 +4542,28 @@ main.browse-collapsed > .load-wrap { display: none !important; }
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 .btn-wl-modal:hover { background: rgba(124,58,237,0.22); color: #c4b5fd; border-color: rgba(124,58,237,0.55); }
+/* Saved state: fill the outline bookmark solid (stroke=currentColor already
+   matches this) so the state reads at a glance even on the icon-only mobile
+   button, where the background-tint change alone is too subtle. */
 .btn-wl-modal.saved { background: rgba(124,58,237,0.22); color: #a78bfa; border-color: rgba(124,58,237,0.55); }
+.btn-wl-modal.saved svg { fill: currentColor; }
+.btn-wl-modal.pulse { animation: wlPulse 0.38s cubic-bezier(0.34,1.56,0.64,1); }
+
+/* ─── Watchlist toast (add/remove confirmation) ─────── */
+.wl-toast {
+  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom));
+  z-index: 9900;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(20,10,40,0.96); border: 1px solid rgba(124,58,237,0.45);
+  color: #fff; font-family: 'Montserrat',sans-serif; font-weight: 600; font-size: 13px;
+  padding: 10px 18px; border-radius: 999px; white-space: nowrap;
+  max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 0 0 1px rgba(124,58,237,0.15);
+  opacity: 0; pointer-events: none;
+  transform: translateX(-50%) translateY(10px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.wl-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ─── Watchlist Backdrop ────────────────────────────── */
 .wl-backdrop {
@@ -6171,6 +6199,8 @@ const TRANSLATIONS = {
     'wl.empty':            'Your watchlist is empty',
     'wl.emptyHint':        'Tap the bookmark on any movie to save it here',
     'wl.saved':            '✓ Saved',
+    'wl.toastAdded':       'Added to Watchlist',
+    'wl.toastRemoved':     'Removed from Watchlist',
     'wl.title':            'AI Watchlist',
     // Search / voice
     'search.noMatchFor':   'No exact match found for',
@@ -6526,6 +6556,8 @@ const TRANSLATIONS = {
     'wl.empty':            'Tu lista está vacía',
     'wl.emptyHint':        'Toca el marcador en cualquier película para guardarla aquí',
     'wl.saved':            '✓ Guardado',
+    'wl.toastAdded':       'Añadido a la lista',
+    'wl.toastRemoved':     'Eliminado de la lista',
     'wl.title':            'Lista IA',
     'search.noMatchFor':   'No se encontró coincidencia exacta para',
     'search.noMatchHint':  'Mira estos títulos en su lugar.',
@@ -6864,6 +6896,8 @@ const TRANSLATIONS = {
     'wl.empty':            'Votre liste est vide',
     'wl.emptyHint':        'Appuyez sur le signet de n\'importe quel film pour l\'enregistrer ici',
     'wl.saved':            '✓ Enregistré',
+    'wl.toastAdded':       'Ajouté à la liste',
+    'wl.toastRemoved':     'Retiré de la liste',
     'wl.title':            'Liste IA',
     'search.noMatchFor':   'Aucune correspondance exacte pour',
     'search.noMatchHint':  'Découvrez ces titres à la place.',
@@ -7202,6 +7236,8 @@ const TRANSLATIONS = {
     'wl.empty':            '你的观看列表是空的',
     'wl.emptyHint':        '点击任意电影上的书签图标即可保存',
     'wl.saved':            '✓ 已保存',
+    'wl.toastAdded':       '已加入观看列表',
+    'wl.toastRemoved':     '已从观看列表移除',
     'wl.title':            'AI 观看列表',
     'search.noMatchFor':   '未找到精确匹配：',
     'search.noMatchHint':  '看看这些推荐标题。',
@@ -7540,6 +7576,8 @@ const TRANSLATIONS = {
     'wl.empty':            'قائمة المشاهدة فارغة',
     'wl.emptyHint':        'انقر على الإشارة المرجعية في أي فيلم لحفظه هنا',
     'wl.saved':            '✓ محفوظ',
+    'wl.toastAdded':       'أُضيف إلى قائمة المشاهدة',
+    'wl.toastRemoved':     'أُزيل من قائمة المشاهدة',
     'wl.title':            'قائمة مشاهدة ذكية',
     'search.noMatchFor':   'لم يتم العثور على تطابق دقيق لـ',
     'search.noMatchHint':  'اطّلع على هذه العناوين بدلاً من ذلك.',
@@ -7879,6 +7917,8 @@ const TRANSLATIONS = {
     'wl.empty':            'Список перегляду порожній',
     'wl.emptyHint':        'Натисніть на закладку будь-якого фільму, щоб зберегти його тут',
     'wl.saved':            '✓ Збережено',
+    'wl.toastAdded':       'Додано до списку',
+    'wl.toastRemoved':     'Видалено зі списку',
     'wl.title':            'Список ШІ',
     'search.noMatchFor':   'Точних збігів не знайдено для',
     'search.noMatchHint':  'Перегляньте ці назви натомість.',
@@ -8246,6 +8286,8 @@ const TRANSLATIONS = {
     'wl.empty':            'Deine Merkliste ist leer',
     'wl.emptyHint':        'Tippe bei einem Film auf das Lesezeichen, um ihn hier zu speichern',
     'wl.saved':            '✓ Gespeichert',
+    'wl.toastAdded':       'Zur Merkliste hinzugefügt',
+    'wl.toastRemoved':     'Von der Merkliste entfernt',
     'wl.title':            'KI-Merkliste',
     'search.noMatchFor':   'Kein exakter Treffer für',
     'search.noMatchHint':  'Schau dir stattdessen diese Titel an.',
@@ -8608,6 +8650,8 @@ const TRANSLATIONS = {
     'wl.empty':            'Din bevakningslista är tom',
     'wl.emptyHint':        'Tryck på bokmärket på en film för att spara den här',
     'wl.saved':            '✓ Sparad',
+    'wl.toastAdded':       'Tillagd i bevakningslistan',
+    'wl.toastRemoved':     'Borttagen från bevakningslistan',
     'wl.title':            'AI-bevakningslista',
     'search.noMatchFor':   'Ingen exakt träff för',
     'search.noMatchHint':  'Kolla in de här titlarna istället.',
@@ -8970,6 +9014,8 @@ const TRANSLATIONS = {
     'wl.empty':            'Ønskelisten din er tom',
     'wl.emptyHint':        'Trykk på bokmerket på en film for å lagre den her',
     'wl.saved':            '✓ Lagret',
+    'wl.toastAdded':       'Lagt til i ønskelisten',
+    'wl.toastRemoved':     'Fjernet fra ønskelisten',
     'wl.title':            'AI-ønskeliste',
     'search.noMatchFor':   'Ingen eksakt treff for',
     'search.noMatchHint':  'Sjekk ut disse titlene i stedet.',
@@ -12217,7 +12263,8 @@ function isWatchlisted(id) { return WATCHLIST.includes(id); }
 
 function toggleWatchlist(id, btnEl) {
   const idx = WATCHLIST.indexOf(id);
-  if (idx === -1) {
+  const added = idx === -1;
+  if (added) {
     WATCHLIST.push(id);
     if (btnEl) { btnEl.classList.add('saved', 'pulse'); setTimeout(() => btnEl && btnEl.classList.remove('pulse'), 500); }
   } else {
@@ -12226,9 +12273,26 @@ function toggleWatchlist(id, btnEl) {
   }
   try { localStorage.setItem('rk_watchlist', JSON.stringify(WATCHLIST)); } catch {}
   _updateWLBadge();
-  _updateCardWLBtn(id, idx === -1);
+  _updateCardWLBtn(id, added);
   _updateModalWLBtn();
+  // The modal button doesn't always receive btnEl (see toggleWatchlistModal),
+  // so pulse it directly here when it's showing the movie that just changed.
+  if (added && ACTIVE_MOVIE?.id === id) {
+    const modalBtn = document.getElementById('btnWatchlist');
+    if (modalBtn) { modalBtn.classList.add('pulse'); setTimeout(() => modalBtn.classList.remove('pulse'), 500); }
+  }
   if (document.getElementById('wlDrawer')?.classList.contains('open')) renderWatchlistDrawer();
+  showWLToast(added);
+}
+
+let _wlToastTimer = null;
+function showWLToast(added) {
+  const el = document.getElementById('wlToast');
+  if (!el) return;
+  el.textContent = added ? t('wl.toastAdded') : t('wl.toastRemoved');
+  el.classList.add('show');
+  clearTimeout(_wlToastTimer);
+  _wlToastTimer = setTimeout(() => el.classList.remove('show'), 1800);
 }
 
 function toggleWatchlistModal() {
@@ -15467,5 +15531,7 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
 </div>
 <!-- Unified rating breakdown tooltip — fixed overlay, escapes overflow:hidden cards -->
 <div id="rtip" class="rtip" role="tooltip" aria-hidden="true"></div>
+<!-- Watchlist add/remove confirmation toast -->
+<div id="wlToast" class="wl-toast" role="status" aria-live="polite"></div>
 </body>
 </html>
