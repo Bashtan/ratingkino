@@ -2,7 +2,29 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-11) — Mobile Modal Action Row
+## ⚡ Most Recent Session (2026-08-11) — Watchlist Tap Target + Header Badge Fix
+
+All commits on `main`, deployed live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| *(pending)* | **Mobile Watchlist button hit-area fix** — `.m-actions .btn-wl-modal` (`index.html:3605-3616`) stays visually 34×34px but gains `position: relative`, `touch-action: manipulation`, and a `::before { position:absolute; inset:-6px }` that expands the real hit area to ~46×46px, matching the 44px min-touch-target convention already used by `.card-wl-btn`. Scoped to `.m-actions` so desktop (`1280px`, base `.btn-wl-modal` 38px) is untouched — verified via `getComputedStyle` at both viewport widths. |
+| *(pending)* | **Header watchlist badge fixed** — `_updateWLBadge()` (`index.html:12240-12246`) was toggling `has-items` on `badge.closest('.btn-watchlist')` (the parent button) while the CSS rule `.wl-badge.has-items { display:flex }` (`index.html:4369-4378`) requires the class on `#wlBadge` itself, so the badge never rendered for any count. Now toggles `has-items` directly on `badge`. Feature (HTML span `#wlBadge` in `.btn-watchlist`, CSS, and the `initWatchlist()`/`toggleWatchlist()` call sites) was already fully wired — this was a one-line class-target bug, not a missing feature. |
+
+**Root-cause note on the reported "unresponsive button."** The onclick wiring for
+`#btnWatchlist` (`toggleWatchlistModal()` → `toggleWatchlist()`) was confirmed
+functional via a direct simulated click (state updated correctly). The real
+issue was the 34×34px visual button being too small a target next to two
+other buttons in an 8px-gap row — not a missing/detached event listener.
+
+Verified in preview: badge shows/hides/updates count across add → add → remove → remove
+(text `"1"` → `"2"` → `""`, `display: flex` → `flex` → `none`); tap-target `::before`
+confirmed present with `inset: -6px` on mobile (375–458px) and absent on desktop (1280px,
+button reports base 38px height, `touch-action: auto`).
+
+---
+
+## Session (2026-08-11) — Mobile Modal Action Row
 
 All commits on `main`.
 

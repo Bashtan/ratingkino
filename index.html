@@ -3603,9 +3603,16 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   /* Scoped to .m-actions for specificity — the base .btn-wl-modal rule (38px)
      is defined later in the source and would otherwise win. */
   .m-actions .btn-wl-modal {
-    order: 3; flex: 0 0 auto;
+    position: relative; order: 3; flex: 0 0 auto;
     width: 34px; height: 34px; padding: 0;
     justify-content: center; gap: 0;
+    touch-action: manipulation;
+  }
+  /* 34px visual box is below the 44px min touch target (see .card-wl-btn) —
+     expand the actual hit area with an invisible ::before instead of resizing
+     the button itself, so the design stays unchanged. */
+  .m-actions .btn-wl-modal::before {
+    content: ''; position: absolute; inset: -6px;
   }
   .m-actions .btn-wl-modal #btnWatchlistText { display: none; }
   .m-actions .btn-wl-modal svg { width: 16px; height: 16px; }
@@ -12235,7 +12242,7 @@ function _updateWLBadge() {
   if (!badge) return;
   const n = WATCHLIST.length;
   badge.textContent = n > 0 ? n : '';
-  badge.closest('.btn-watchlist')?.classList.toggle('has-items', n > 0);
+  badge.classList.toggle('has-items', n > 0);
 }
 
 function _updateCardWLBtn(id, saved) {
