@@ -3591,12 +3591,24 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   .mr-breakdown  { margin-top: 0; gap: 5px; padding-left: 6px; border-left: 1px solid rgba(255,255,255,0.12); }
   .mrb-lbl       { font-size: 8.5px; }
   .mrb-num       { font-size: 11px; }
-  /* Action row: Trailer / Share / Watchlist as small auto-width pills, then a
-     horizontally-scrollable "Stream on:" icon row on its own line below. */
-  .m-actions    { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  /* Action row: Trailer / Share / Watchlist on one line, then a
+     horizontally-scrollable "Stream on:" icon row on its own line below.
+     "+ Watchlist" was wide enough to push itself onto a second line, so on
+     mobile it collapses to a square icon-only button — same 34px height as the
+     other two. The label span stays in the DOM (JS keeps writing to it); the
+     accessible name comes from the aria-label set in _updateModalWLBtn(). */
+  .m-actions    { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .btn-trailer  { order: 1; flex: 0 0 auto; height: 34px; padding: 0 12px; font-size: 11px; }
   .btn-shr      { order: 2; flex: 0 0 auto; height: 34px; padding: 0 12px; font-size: 11px; }
-  .btn-wl-modal { order: 3; flex: 0 0 auto; height: 34px; padding: 0 12px; font-size: 11px; }
+  /* Scoped to .m-actions for specificity — the base .btn-wl-modal rule (38px)
+     is defined later in the source and would otherwise win. */
+  .m-actions .btn-wl-modal {
+    order: 3; flex: 0 0 auto;
+    width: 34px; height: 34px; padding: 0;
+    justify-content: center; gap: 0;
+  }
+  .m-actions .btn-wl-modal #btnWatchlistText { display: none; }
+  .m-actions .btn-wl-modal svg { width: 16px; height: 16px; }
 
   .stream-on-lbl { order: 4; flex: 0 0 100%; font-size: 10px; color: var(--muted); margin: 2px 0 -2px; }
   .stream-row {
@@ -12236,7 +12248,11 @@ function _updateModalWLBtn() {
   if (!btn || !ACTIVE_MOVIE) return;
   const saved = isWatchlisted(ACTIVE_MOVIE.id);
   btn.classList.toggle('saved', saved);
-  if (txt) txt.textContent = saved ? t('wl.saved') : t('modal.watchlist');
+  const label = saved ? t('wl.saved') : t('modal.watchlist');
+  if (txt) txt.textContent = label;
+  // On mobile the label span is hidden and only the bookmark icon shows, so the
+  // button would otherwise have no accessible name.
+  btn.setAttribute('aria-label', label);
 }
 
 function openWatchlist() {
