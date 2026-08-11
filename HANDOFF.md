@@ -2,7 +2,35 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-08) — Voice Latency Cut + Deploy Allowlist (secret leak closed)
+## ⚡ Most Recent Session (2026-08-11) — Mobile Modal Action Row
+
+All commits on `main`.
+
+| Commit | Feature |
+|--------|---------|
+| `1a7ce02` | **Mobile watchlist button → square icon** — inside `@media (max-width: 768px)` (`index.html:3594-3611`): `.m-actions .btn-wl-modal` becomes `34×34px`, `padding: 0`, `justify-content: center`; `.m-actions .btn-wl-modal #btnWatchlistText { display: none }`; icon SVG 13px → 16px; row `gap` 6px → 8px. `_updateModalWLBtn()` (`index.html:12251`) now also sets `aria-label`. |
+
+`+ Watchlist` was wide enough to wrap onto its own line below Trailer and Share.
+Now all three sit on one row — `[TRAILER] [SHARE] [🔖]` — above the `Stream on:`
+block. Verified 375px and 320px: identical `top` (937), identical height (34px),
+watchlist square. **Desktop unchanged** — 1280px still reports `140.18 × 38px`
+with the full `+ WATCHLIST` label (`display: block`).
+
+> **Why the selector is scoped to `.m-actions`.** The base `.btn-wl-modal { height: 38px }`
+> is declared at `index.html:4519`, *after* the media query. A bare `.btn-wl-modal`
+> override has equal specificity and loses on source order — it silently rendered
+> 38px tall next to two 34px buttons. Same trap already documented for
+> `.header-btns .btn-watchlist` at `index.html:3425`.
+
+> **The label span must stay in the DOM.** `_updateModalWLBtn()` writes the
+> translated `+ Watchlist` / `✓ Saved` string into `#btnWatchlistText`. Hiding it
+> with CSS (not removing it) keeps that JS and the i18n path untouched, but it also
+> strips the button's accessible name on mobile — hence the `aria-label`, which
+> tracks the same state (`+ Watchlist` ↔ `✓ Saved`, both verified).
+
+---
+
+## Session (2026-08-08) — Voice Latency Cut + Deploy Allowlist (secret leak closed)
 
 All commits on `main`.
 
