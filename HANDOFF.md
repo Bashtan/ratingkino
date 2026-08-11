@@ -28,6 +28,30 @@ with the full `+ WATCHLIST` label (`display: block`).
 > strips the button's accessible name on mobile — hence the `aria-label`, which
 > tracks the same state (`+ Watchlist` ↔ `✓ Saved`, both verified).
 
+**Production deploy `8b0d3ad2` (branch `main`) — live on https://findfilm.ai.**
+New CSS/JS confirmed on the deployment URL and on findfilm.ai. Site healthy
+(`/`, `/api/cache/popular`, `/sw.js`, `/tv/:id` all 200).
+
+> **🔴 `./deploy.sh` cache gate deliberately overridden — deployed with a known,
+> unresolved leak.** Three purge attempts (dashboard confirmed "success" each
+> time) did not reset the cache entry serving `/.dev.vars` et al. — its `age`
+> header kept incrementing across all three, proving it's the same ~66h-old
+> entry, never invalidated. `cf-cache-status: DYNAMIC` + `s-maxage=604800` on
+> that response, vs. `MISS` + `max-age=0, must-revalidate` on every normal
+> Pages asset checked (including 4 separate deployment URLs) — something other
+> than standard zone cache is holding it. Root cause not found this session.
+> Key rotation was also reported done but not verified: the *exact* TMDB/OMDB
+> key values being served publicly still authenticated live against both
+> providers at time of deploy. The user explicitly instructed to stop gating
+> on this and accepted the risk. **10 paths remain publicly served with
+> `age`-verified stale (never purged) content**: `.dev.vars`, `.gitignore`,
+> `.assetsignore`, `wrangler.toml`, `sync-worker.js`, `schema.sql`,
+> `CLAUDE.md`, `HANDOFF.md`, `spotify-worker/index.js`,
+> `redirect-worker/worker.js`. **This is still live and still unresolved.**
+> Next session: re-run `./deploy.sh`, and if the cache gate is still red,
+> escalate to a Cloudflare support ticket rather than repeating dashboard
+> purges — three identical attempts have already failed silently.
+
 ---
 
 ## Session (2026-08-08) — Voice Latency Cut + Deploy Allowlist (secret leak closed)
