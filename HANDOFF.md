@@ -2,7 +2,33 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-11) — Watchlist Toggle Visual Feedback (toast + active state)
+## ⚡ Most Recent Session (2026-08-14) — Search-bar Auto-scroll Fix + Logo Reset Audit
+
+All commits on `main`, deployed live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `3a9a5df` | **Fixed auto-scroll-while-typing bug** — `loadMovies()` (`index.html:10827`) gained a third param `scrollToGrid = true`; the `scrollIntoView({behavior:'smooth',block:'start'})` call (`index.html:10973`) that snaps the grid into view on any active browse filter is now gated on it. The debounced live-typing path in `applyFilters()` (`index.html:11818`, the `filterTimer = setTimeout(() => loadMovies(1, false, false), 300)` call fired from the `#searchInput` `input` listener) now passes `false`, so the page no longer jumps mid-keystroke. Explicit-action call sites (Enter-key submit `index.html:11857`, search-suggestion click `index.html:11209`) were left at the default `true` and still scroll-into-view as before. |
+
+**Logo reset/home button — audited, no bug found.** The user also reported the header
+`FindFilm.ai` logo (`<a class="logo" onclick="resetToHome(event)">`, `index.html:5122`) not
+fully resetting state. `resetToHome()` (`index.html:9665-9750`) already comprehensively clears
+the search inputs, active genre pill, mood chip (`_activeMoodEl`), country/rating filters, sort
+state, AI-search state, closes every modal/drawer/overlay, and scrolls to top — confirmed
+identical on both local `index.html` and the live production bundle (byte-for-byte diff of the
+function body). Live-simulated click testing (dirty state → dispatch real `click` event →
+assert all fields cleared) confirmed it works correctly end-to-end; `e.preventDefault()` fires
+so the anchor's `href="/"` never causes a hard navigation. No code change made for this part —
+likely what the user saw was the auto-scroll bug above (now fixed) rather than a logo defect.
+
+Verified in preview: mocked `fetchPage()` to isolate `loadMovies()`'s scroll logic —
+`scrollToGrid=false` never calls `scrollIntoView`, `scrollToGrid=true` always does. Simulated a
+real `input` event dispatch on `#searchInput` (debounced path) and confirmed `scrollIntoView`
+is never invoked after the 300ms debounce settles.
+
+---
+
+## Session (2026-08-11) — Watchlist Toggle Visual Feedback (toast + active state)
 
 All commits on `main`, deployed live on https://findfilm.ai.
 
