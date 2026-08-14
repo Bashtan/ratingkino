@@ -10824,7 +10824,7 @@ function ensureCatalog() {
   return _CATALOG_FALLBACK;
 }
 
-async function loadMovies(page = 1, append = false) {
+async function loadMovies(page = 1, append = false, scrollToGrid = true) {
   if (IS_LOADING) return;
   // Hard backstop for the background-feed lockdown (see applyFilters). A full
   // grid rebuild (append === false) tears down #feedSections and repaints the
@@ -10967,7 +10967,10 @@ async function loadMovies(page = 1, append = false) {
     // Scroll the results grid into view on the first page of any browse filter
     // (search / genre / country / rating) so the user doesn't have to scroll
     // past the filter bar manually to see the freshly filtered results.
-    if (!append && _browseFilter) {
+    // scrollToGrid=false is passed from the debounced live-typing path (see
+    // applyFilters()) — without it, every keystroke re-scrolled the page out
+    // from under the user before they'd finished typing.
+    if (!append && _browseFilter && scrollToGrid) {
       document.getElementById('movieGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     for (const m of newMovies) queueEnrich(m);
@@ -11812,7 +11815,7 @@ function applyFilters() {
   //      synthetic 'input' event on every interim transcript, so this debounce
   //      would otherwise re-run a full feed rebuild several times per sentence.
   if (document.body.classList.contains('airx-open') || _isListening) return;
-  filterTimer = setTimeout(() => loadMovies(1, false), 300);
+  filterTimer = setTimeout(() => loadMovies(1, false, false), 300);
 }
 
 document.getElementById('searchInput').addEventListener('input', function() {
