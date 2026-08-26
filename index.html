@@ -2381,11 +2381,17 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   color: #111;
 }
 .btn-amazon img { border-radius: 3px; }
-.btn-amazon-badge {
+/* Tier badge (Sub / Rent / Buy / combined) shown on every CTA button, not
+   just Amazon — default styling reads on the dark .btn-stream-secondary
+   background; .btn-amazon overrides for contrast against its orange fill. */
+.btn-stream-badge {
   display: inline-block; font-size: 9px; font-weight: 800;
-  letter-spacing: 0.8px; text-transform: uppercase;
+  letter-spacing: 0.6px; text-transform: uppercase;
+  background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.75);
+  padding: 2px 5px; border-radius: 4px; margin-left: 2px; white-space: nowrap;
+}
+.btn-amazon .btn-stream-badge {
   background: rgba(0,0,0,0.18); color: #111;
-  padding: 2px 5px; border-radius: 4px; margin-left: 2px;
 }
 /* ── Secondary (non-Amazon) providers ─────────────────────────────── */
 .btn-stream-secondary {
@@ -2644,24 +2650,29 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .trailer-wrap.active { display: block; }
 
 /* ─── WHERE TO WATCH ──────────────────────────── */
+/* Compact, dense grid — one chip per platform (consolidated across pricing
+   tiers, see _consolidateProviders), so this stays tidy even for titles with
+   a dozen+ raw provider listings. */
 .providers-row {
-  display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 6px;
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;
 }
 .provider-chip {
-  display: flex; align-items: center; gap: 6px;
-  padding: 5px 10px; border-radius: 8px;
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 9px; border-radius: 8px;
   background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-  font-size: 11px; color: var(--text); font-weight: 600;
+  font-size: 11px; color: var(--text); font-weight: 600; line-height: 1.15;
 }
 .provider-chip img {
-  width: 20px; height: 20px; border-radius: 4px; object-fit: cover;
+  width: 18px; height: 18px; border-radius: 4px; object-fit: cover; flex-shrink: 0;
 }
+.provider-chip-name { white-space: nowrap; }
 .provider-tag {
-  font-size: 9px; padding: 1px 5px; border-radius: 10px; font-weight: 700;
-  letter-spacing: 0.5px; text-transform: uppercase; flex-shrink: 0;
+  font-size: 8.5px; padding: 1.5px 5px; border-radius: 10px; font-weight: 700;
+  letter-spacing: 0.4px; text-transform: uppercase; flex-shrink: 0; white-space: nowrap;
 }
 .provider-tag.free { background: rgba(34,197,94,0.2); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
 .provider-tag.sub  { background: rgba(124,58,237,0.2); color: var(--muted); border: 1px solid var(--border); }
+.provider-tag.paid { background: rgba(249,115,22,0.15); color: var(--orange); border: 1px solid rgba(249,115,22,0.3); }
 .provider-chip[href] { text-decoration: none; cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.12s; }
 .provider-chip[href]:hover { background: rgba(255,255,255,0.11); border-color: rgba(255,255,255,0.22); transform: translateY(-1px); }
 /* ── Amazon-priority chip — affiliate link, needs to visibly outrank the
@@ -3651,7 +3662,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
     justify-content: center; border-radius: 11px;
   }
   .stream-row .btn-stream-label { display: none; }
-  .stream-row .btn-amazon-badge { display: none; }
+  .stream-row .btn-stream-badge { display: none; }
   .stream-row .btn-stream img   { width: 22px; height: 22px; border-radius: 5px; }
   /* Fallback single CTA (loading / no providers in region) stays full-width & readable */
   .btn-stream, .btn-stream-disabled { flex: 0 0 100%; order: 5; height: 40px; }
@@ -10465,6 +10476,100 @@ function _mergeWatchmodeSources(watchProviders, sources) {
   return watchProviders;
 }
 
+// ── Provider consolidation for display ──────────────────────────────────
+// Merging TMDB + Watchmode (see above) genuinely improves coverage, but
+// rendered naively it also means the SAME provider can show up as several
+// near-identical buttons — once for Rent, again for Buy, again under a
+// slightly different name Watchmode used, and Amazon specifically can appear
+// under half a dozen names (Amazon Video, Prime Video, "Paramount+ Amazon
+// Channel", ...). _consolidateProviders() collapses all of that into one
+// clean entry per real-world platform before anything gets rendered:
+//  - Every Amazon-branded source, regardless of name, collapses into ONE
+//    group — multiple glowing Amazon buttons defeats the point of having a
+//    highlighted one.
+//  - Everything else groups by normalized name, so a provider offering both
+//    Rent and Buy becomes one chip with a combined "Rent / Buy" badge
+//    instead of two.
+// Strips verbose suffixes TMDB/Watchmode attach ("Google Play Movies" ->
+// "Google Play", "Apple TV Store" -> "Apple TV") so buttons read as clean
+// platform names.
+function _cleanProviderName(name) {
+  const raw = (name || '').trim();
+  const cleaned = raw
+    .replace(/\s*\(via amazon prime\)\s*/i, '')
+    .replace(/\s*amazon channel\s*$/i, '')
+    .replace(/\s*apple tv channel\s*$/i, '')
+    .replace(/\s+(store|movies)\s*$/i, '')
+    .trim();
+  return cleaned || raw;
+}
+
+const TIER_ORDER  = ['free', 'sub', 'rent', 'buy'];
+const TIER_LABELS = { free: 'Free', sub: 'Sub', rent: 'Rent', buy: 'Buy' };
+
+// Combined badge text for a provider available under multiple tiers at
+// once — "Rent / Buy" for exactly two, "Available" if three or more (rare;
+// avoids a bloated badge).
+function _tierBadge(tierList) {
+  if (!tierList.length)   return '';
+  if (tierList.length === 1) return TIER_LABELS[tierList[0]];
+  if (tierList.length === 2) return `${TIER_LABELS[tierList[0]]} / ${TIER_LABELS[tierList[1]]}`;
+  return 'Available';
+}
+
+// Which color treatment a combined badge gets, when it spans tiers that
+// would normally be styled differently: free beats sub beats paid
+// (rent/buy) — the least-friction way to get the title wins the color.
+function _tierColorClass(tierList) {
+  if (tierList.includes('free')) return 'free';
+  if (tierList.includes('sub'))  return 'sub';
+  return 'paid';
+}
+
+function _consolidateProviders(wp) {
+  if (!wp) return [];
+  const AMAZON_KEY    = '__amazon__';
+  const TIER_SOURCES  = [['free', 'free'], ['flatrate', 'sub'], ['rent', 'rent'], ['buy', 'buy']];
+  const groups        = new Map();
+  for (const [srcKey, tierLabel] of TIER_SOURCES) {
+    for (const p of (wp[srcKey] || [])) {
+      const isAmazon = _isAmazonProvider(p);
+      const key = isAmazon ? AMAZON_KEY : (p.provider_id ?? _normProviderName(p.provider_name));
+      let g = groups.get(key);
+      if (!g) {
+        g = { provider_id: p.provider_id ?? null, provider_name: p.provider_name, logo_path: p.logo_path || null, deep_link: p.deep_link || null, isAmazon, tiers: new Set() };
+        groups.set(key, g);
+      }
+      g.tiers.add(tierLabel);
+      if (!g.provider_id && p.provider_id) g.provider_id = p.provider_id;
+      if (!g.logo_path   && p.logo_path)   g.logo_path   = p.logo_path;
+      if (!g.deep_link   && p.deep_link)   g.deep_link   = p.deep_link;
+    }
+  }
+  return Array.from(groups.values()).map(g => ({
+    provider_id:   g.provider_id,
+    provider_name: g.isAmazon ? 'Amazon' : _cleanProviderName(g.provider_name),
+    logo_path:     g.logo_path,
+    deep_link:     g.deep_link,
+    isAmazon:      g.isAmazon,
+    tierList:      TIER_ORDER.filter(tKey => g.tiers.has(tKey)),
+  }));
+}
+
+// Shared ordering for both the action-bar CTA row and the full Where-to-
+// Watch list: Amazon always first (affiliate priority), then providers
+// offering Free/Sub ahead of Rent/Buy-only ones (less friction to actually
+// watch), otherwise stable (keeps TMDB/Watchmode's own relevance order).
+function _sortProviders(list) {
+  return list.sort((a, b) => {
+    const amz = (a.isAmazon ? 0 : 1) - (b.isAmazon ? 0 : 1);
+    if (amz) return amz;
+    const aEasy = (a.tierList.includes('free') || a.tierList.includes('sub')) ? 0 : 1;
+    const bEasy = (b.tierList.includes('free') || b.tierList.includes('sub')) ? 0 : 1;
+    return aEasy - bEasy;
+  });
+}
+
 // Session-cached Watchmode fetch — one call per (movie, region) per session,
 // not per modal open. Purely additive (see _mergeWatchmodeSources above) and
 // never required for the page to work: the backend always returns 200 with
@@ -13006,26 +13111,12 @@ function _refreshStreamingCtAs(m) {
     }
   }
 
-  // Collect up to 3 unique providers, preferring subscription/free first —
-  // but still falling through to rent/buy so an Amazon-only rent-or-buy
-  // listing still lands in this featured CTA row instead of being silently
-  // dropped just because it isn't a subscription. Dedup key falls back to
-  // normalized name for Watchmode-only entries, which all share
-  // provider_id: null (see _mergeWatchmodeSources).
-  const providers = [];
-  if (wp) {
-    const seen = new Set();
-    for (const p of [...(wp.flatrate || []), ...(wp.free || []), ...(wp.rent || []), ...(wp.buy || [])]) {
-      const key = p.provider_id ?? _normProviderName(p.provider_name);
-      if (!seen.has(key) && providers.length < 3) {
-        seen.add(key);
-        providers.push(p);
-      }
-    }
-  }
-
-  // Sort: Amazon always first (affiliate priority)
-  providers.sort((a, b) => (_isAmazonProvider(a) ? 0 : 1) - (_isAmazonProvider(b) ? 0 : 1));
+  // Consolidate (Amazon collapsed to one entry, Rent+Buy of the same
+  // provider merged) before picking the top 3 — see _consolidateProviders().
+  // Without this, 2 of the 3 featured slots could easily go to near-
+  // duplicate entries (e.g. "Amazon Video" + "Paramount+ Amazon Channel")
+  // instead of 3 genuinely different platforms.
+  const providers = _sortProviders(_consolidateProviders(wp)).slice(0, 3);
 
   if (!providers.length) {
     setRegionLbl(false);
@@ -13037,12 +13128,12 @@ function _refreshStreamingCtAs(m) {
           t('stream.disabled') +
         `</button>`);
     } else {
-      // Still loading — show Amazon Prime Video as featured affiliate fallback
+      // Still loading — show Amazon as featured affiliate fallback
       const url = `https://www.amazon.com/gp/video/search?phrase=${encodeURIComponent(title)}&tag=findfilm-20`;
       setInfo(
-        `<a class="btn-stream btn-amazon" href="${url}" target="_blank" rel="noopener noreferrer sponsored">` +
+        `<a class="btn-stream btn-amazon" href="${url}" target="_blank" rel="noopener noreferrer sponsored" aria-label="${t('stream.amazon')}">` +
           `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>` +
-          t('stream.amazon') +
+          `<span class="btn-stream-label">Amazon</span>` +
         `</a>`);
     }
     return;
@@ -13052,15 +13143,14 @@ function _refreshStreamingCtAs(m) {
   const streamLbl = `<span class="stream-on-lbl">${t('stream.streamOn')}</span>`;
   const providerBtns = providers.map(p => {
     const url      = p.deep_link || providerUrl(p, title, wpLink);
-    const isAmazon = _isAmazonProvider(p);
-    const cls      = isAmazon ? 'btn-stream btn-amazon' : 'btn-stream btn-stream-secondary';
-    const label    = t('stream.watchOn', { name: esc(p.provider_name) });
+    const cls      = p.isAmazon ? 'btn-stream btn-amazon' : 'btn-stream btn-stream-secondary';
+    const ariaLbl  = t('stream.watchOn', { name: esc(p.provider_name) });
     const logo     = p.logo_path
-      ? `<img src="${TIMG_W45}${p.logo_path}" alt="${esc(p.provider_name)}">`
+      ? `<img src="${TIMG_W45}${p.logo_path}" alt="">`
       : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
-    const badge    = isAmazon ? `<span class="btn-amazon-badge">Prime</span>` : '';
-    return `<a class="${cls}" href="${url}" target="_blank" rel="noopener noreferrer${isAmazon ? ' sponsored' : ''}" aria-label="${label}">` +
-             `${logo}<span class="btn-stream-label">${label}</span>${badge}` +
+    const badge    = `<span class="btn-stream-badge">${esc(_tierBadge(p.tierList))}</span>`;
+    return `<a class="${cls}" href="${url}" target="_blank" rel="noopener noreferrer${p.isAmazon ? ' sponsored' : ''}" aria-label="${ariaLbl}">` +
+             `${logo}<span class="btn-stream-label">${esc(p.provider_name)}</span>${badge}` +
            `</a>`;
   }).join('');
   setInfo(streamLbl + `<div class="stream-row">${providerBtns}</div>`);
@@ -13095,37 +13185,32 @@ function refreshWatchProviders(m) {
   const title  = m.title || '';
   const wpLink = m.wpLink || null;
 
-  // Shared "costs money" tag style for both Rent and Buy — same visual
-  // treatment, distinct label text.
-  const PAID_STYLE = 'background:rgba(249,115,22,0.15);color:var(--orange);border:1px solid rgba(249,115,22,0.3)';
-
   const AMAZON_BAG = `<svg class="provider-chip-bag" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`;
 
-  function chip(p, tagClass, tagLabel, tagStyle) {
-    const url      = p.deep_link || providerUrl(p, title, wpLink);
-    const styleAttr = tagStyle ? ` style="${tagStyle}"` : '';
-    const isAmazon = _isAmazonProvider(p);
-    const cls      = isAmazon ? 'provider-chip amazon' : 'provider-chip';
-    return `<a class="${cls}" href="${url}" target="_blank" rel="noopener noreferrer${isAmazon ? ' sponsored' : ''}" title="Watch on ${esc(p.provider_name)}">
-      ${isAmazon ? AMAZON_BAG : ''}${p.logo_path ? `<img src="${TIMG_W45}${p.logo_path}" alt="${esc(p.provider_name)}">` : ''}
-      <span>Watch on ${esc(p.provider_name)} ↗</span>
-      <span class="provider-tag ${tagClass}"${styleAttr}>${tagLabel}</span>
+  // One chip per real-world platform (see _consolidateProviders — a provider
+  // offering both Rent and Buy is already ONE entry here with a combined
+  // "Rent / Buy" badge, and every Amazon-branded source is already merged
+  // into a single entry named "Amazon").
+  function chip(p) {
+    const url   = p.deep_link || providerUrl(p, title, wpLink);
+    const cls   = p.isAmazon ? 'provider-chip amazon' : 'provider-chip';
+    const badge = _tierBadge(p.tierList);
+    // Show the real logo when we have one; the bag icon is only a fallback
+    // for Amazon entries that came in Watchmode-only (no TMDB logo_path) —
+    // never both at once, that just doubles up the icon for no reason.
+    const icon  = p.logo_path
+      ? `<img src="${TIMG_W45}${p.logo_path}" alt="">`
+      : (p.isAmazon ? AMAZON_BAG : '');
+    return `<a class="${cls}" href="${url}" target="_blank" rel="noopener noreferrer${p.isAmazon ? ' sponsored' : ''}" title="${esc(p.provider_name)}${badge ? ' — ' + esc(badge) : ''}">
+      ${icon}<span class="provider-chip-name">${esc(p.provider_name)}</span>
+      ${badge ? `<span class="provider-tag ${_tierColorClass(p.tierList)}">${esc(badge)}</span>` : ''}
     </a>`;
   }
 
-  // Combine all tiers into one list, then sort Amazon first — it's our
-  // affiliate link and should be the first thing the eye lands on regardless
-  // of which pricing tier (free/sub/rent) it happens to fall under.
-  const entries = [
-    ...free.map(p     => ({ p, tagClass: 'free', tagLabel: 'Free' })),
-    ...flatrate.map(p => ({ p, tagClass: 'sub',  tagLabel: 'Sub'  })),
-    ...rent.map(p      => ({ p, tagClass: 'rent', tagLabel: 'Rent', tagStyle: PAID_STYLE })),
-    ...buy.map(p       => ({ p, tagClass: 'buy',  tagLabel: 'Buy',  tagStyle: PAID_STYLE })),
-  ];
-  entries.sort((a, b) => (_isAmazonProvider(a.p) ? 0 : 1) - (_isAmazonProvider(b.p) ? 0 : 1));
+  const providers = _sortProviders(_consolidateProviders(wp));
 
   container.innerHTML = `<div class="providers-row">
-    ${entries.map(e => chip(e.p, e.tagClass, e.tagLabel, e.tagStyle)).join('')}
+    ${providers.map(chip).join('')}
   </div>`;
 
   // VPN geo-mismatch banner: show if Netflix is available elsewhere but not here
