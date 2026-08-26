@@ -810,7 +810,16 @@ async function handleWatchmodeSources(request, url, env, cors) {
 
   const tmdbId = url.searchParams.get('tmdb_id');
   const type   = url.searchParams.get('type') === 'tv' ? 'tv' : 'movie';
-  const region = _resolveRegion(request, url);
+  // debug_region: manual-testing-only override (real user traffic never sends
+  // this — the frontend only ever sends client_region). Needed because
+  // request.cf.country reflects the real caller's location and can't be
+  // spoofed from outside, which otherwise makes it impossible to verify a
+  // specific market's data without physically being there. 2-letter format
+  // validated here; Watchmode itself rejects anything it doesn't recognize.
+  const debugRegion = url.searchParams.get('debug_region');
+  const region = (debugRegion && /^[A-Za-z]{2}$/.test(debugRegion))
+    ? debugRegion.toUpperCase()
+    : _resolveRegion(request, url);
 
   if (!tmdbId || !/^\d+$/.test(tmdbId)) {
     return json({ configured: !!env.WATCHMODE_API_KEY, region, sources: [], error: 'tmdb_id required' });
@@ -832,8 +841,12 @@ async function handleWatchmodeSources(request, url, env, cors) {
     });
     if (!r.ok) {
       // Bad key, rate-limited, or `region` not enabled on the current plan —
-      // all non-fatal from the page's perspective.
-      return json({ configured: true, region, sources: [], error: `Watchmode ${r.status}` });
+      // all non-fatal from the page's perspective. Surface Watchmode's own
+      // error message (truncated) rather than just the status code — a bare
+      // "Watchmode 400" doesn't say WHY, and the two most likely causes
+      // (bad key vs. region not on the plan) need different fixes.
+      const body = await r.text().catch(() => '');
+      return json({ configured: true, region, sources: [], error: `Watchmode ${r.status}: ${body.slice(0, 200)}` });
     }
     const raw = await r.json();
     if (!Array.isArray(raw)) return json({ configured: true, region, sources: [] });
