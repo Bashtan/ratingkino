@@ -2,7 +2,35 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-26) — Amazon Affiliate Priority in Where-to-Watch List
+## ⚡ Most Recent Session (2026-08-26b) — Dynamic watch_region + Amazon Priority (all tiers)
+
+All commits on `main`, deployed live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `9d30995` | **Dynamic per-visitor watch_region** — `functions/api/[[path]].js`'s `/tmdb/*` proxy now sets `watch_region` on upstream TMDB calls: `request.cf.country` (Cloudflare edge geo) → client `client_region` hint → `'US'`. `tmdbGet()` (`index.html`) sends `client_region: DETECTED_COUNTRY` as that hint on every call. Documented in-code that TMDB's `watch/providers` sub-resource itself ignores `watch_region` and always returns every country in one response — the real per-visitor selection is client-side (see next row). |
+| `9d30995` | **Fixed `detectLang()` early-return bug** (`index.html:9302`) — any returning visitor with a saved `rk_lang` skipped country detection entirely, so `DETECTED_COUNTRY` never advanced past its hardcoded `'US'` default for them. Now uses separate `langDetected`/`countryDetected` gates so country detection (Cloudflare geo → ipapi.co → browser locale → new `LANG_COUNTRY_FALLBACK` map → `'US'`) runs on every visit independent of the language shortcut. This was the actual mechanism needed for "dynamic region detection" — item 1 of the request. |
+| `9d30995` | **Regional backfill for KV-cached movies** (`openMovieModal()`, `index.html`, same claim/release latch idiom as the existing castPhotos backfill) — `sync-worker.js`'s nightly cron only ever bakes **US** watch-provider data into KV and marks movies `enriched:true`, so the cache-first homepage feed (majority of traffic) never re-fetched regional data for non-US visitors, regardless of any client-side region fix. Now re-fetches the lightweight `/movie\|tv/{id}/watch/providers` sub-resource whenever `m.wpCountry !== DETECTED_COUNTRY`. Self-healing against old KV entries missing the new `wpCountry` field (`undefined !== 'DE'` still triggers correctly); takes full effect for freshly-synced entries once the nightly cron next runs. |
+| `9d30995` | **`buy` tier support end-to-end** — previously dropped entirely (only `free`/`flatrate`/`rent` were read). Added to `sync-worker.js`'s `enrichOne()`, `mergeMovieData()`, the new shared `_pickWatchProviders(wpResults, country)` helper (`index.html`, used by both `mergeMovieData()` and the regional backfill above), and `refreshWatchProviders()`'s "Where to Watch" chip list (new `Buy` tag, shared `PAID_STYLE`). |
+| `9d30995` | **Amazon priority extended to rent/buy** — `_refreshStreamingCtAs()` (action-bar CTA, top-3) and `refreshWatchProviders()` ("Where to Watch" full list) already sorted Amazon first among flatrate/free providers (previous session); both now also collect from `rent`/`buy` so an Amazon rent-or-buy-only listing still surfaces and gets the branded `.btn-amazon` / `.provider-chip.amazon` treatment instead of being silently dropped. |
+
+Verified against real TMDB data (Fight Club, id 550) via `wrangler pages dev` (the static
+python server can't exercise the Pages Function): confirmed DE region data differs from US
+(Magenta TV+, German-specific catalog), Amazon Video sorted first in both `rent` and `buy` tiers
+with `.provider-chip.amazon` styling and the bag icon, `detectLang()` correctly resolves
+`DETECTED_COUNTRY` even with a saved `rk_lang` (simulated returning-visitor test), and the
+regional backfill correctly upgrades a stub `wpCountry:'US'` movie to real German data end-to-end
+through the actual `openMovie()` → modal flow. Screenshot confirmed both Amazon chips (Rent +
+Buy) visually outrank the neutral gray chips around them.
+
+**Note for next session:** `sync-worker.js`'s shape change (added `buy` + `wpCountry:'US'`) only
+applies to KV entries written by its *next* scheduled run — existing cached movies lack those
+fields until then. This is harmless (see self-healing note above) but worth knowing if debugging
+provider data on an old cache entry.
+
+---
+
+## Session (2026-08-26) — Amazon Affiliate Priority in Where-to-Watch List
 
 All commits on `main`, deployed live on https://findfilm.ai.
 
