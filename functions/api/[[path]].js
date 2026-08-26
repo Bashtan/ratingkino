@@ -10,10 +10,21 @@
  *   /api/cache/status       → KV: last sync timestamp + stats
  *   /api/search        → two-step: TMDB /search/movie (title-first) + AI semantic fallback
  *   /api/ai-search     → Cloudflare AI semantic search over KV catalog (Enter-key mode)
+ *   /api/watchmode/sources → api.watchmode.com/v1/title/{type}-{tmdb_id}/sources/
+ *                            (injects WATCHMODE_API_KEY secret; region-resolved server-side)
  *
  * API keys and KV are stored as Cloudflare Pages secrets/bindings —
  * never exposed in HTML source.
  */
+
+// Shared by the /tmdb/* proxy and /watchmode/sources — resolves the visitor's
+// region with the same priority everywhere: Cloudflare's edge geo-IP
+// (request.cf.country — authoritative, can't be spoofed by client JS) → the
+// client's own best-guess hint (`client_region`, derived client-side from UI
+// language / browser locale — see tmdbGet() in index.html) → US.
+function _resolveRegion(request, url) {
+  return request.cf?.country || url.searchParams.get('client_region') || 'US';
+}
 export async function onRequest({ request, env, params, waitUntil }) {
   const url  = new URL(request.url);
   const path = '/' + (params.path || []).join('/');
@@ -31,6 +42,12 @@ export async function onRequest({ request, env, params, waitUntil }) {
   /* ── /api/cache/* ── serve pre-fetched data from KV ── */
   if (path.startsWith('/cache/')) {
     return handleCache(path.slice('/cache/'.length), env, cors);
+  }
+
+  /* ── /api/watchmode/sources ── Watchmode streaming sources, merged with
+     TMDB client-side (see index.html) for max provider coverage ── */
+  if (path === '/watchmode/sources') {
+    return handleWatchmodeSources(request, url, env, cors);
   }
 
   /* ── /api/search ── two-step: TMDB title search + AI semantic fallback ── */
@@ -147,10 +164,6 @@ export async function onRequest({ request, env, params, waitUntil }) {
     url.searchParams.forEach((v, k) => upstream.searchParams.set(k, v));
 
     // ── Dynamic watch_region ──────────────────────────────────────────
-    // Priority: Cloudflare's edge geo-IP (request.cf.country — authoritative,
-    // set on every request, can't be spoofed by client JS) → the client's own
-    // best-guess region hint (derived client-side from UI language / browser
-    // locale — see tmdbGet()'s `client_region` param in index.html) → US.
     // An explicit `watch_region` already set by the caller always wins (none
     // of our own client code sets one directly — it only ever sends the
     // `client_region` hint below — so this only matters for direct/manual
@@ -163,8 +176,7 @@ export async function onRequest({ request, env, params, waitUntil }) {
     // mergeMovieData() / _pickWatchProviders() in index.html), which is what
     // this value is really for on endpoints that DO honor it, e.g. /discover.
     if (!upstream.searchParams.has('watch_region')) {
-      const region = request.cf?.country || upstream.searchParams.get('client_region') || 'US';
-      upstream.searchParams.set('watch_region', region);
+      upstream.searchParams.set('watch_region', _resolveRegion(request, url));
     }
     upstream.searchParams.delete('client_region'); // internal hint, not a real TMDB param
 
@@ -775,6 +787,72 @@ async function runKVSemanticSearch(query, env, excludeIds) {
 }
 
 /* ─── KV cache handler ─────────────────────────────────────── */
+
+/* ── /api/watchmode/sources ─────────────────────────────────────────
+   Thin, region-resolved proxy to Watchmode's per-title sources endpoint.
+   Kept deliberately minimal — it does NOT also re-fetch or merge TMDB data
+   (the client already has that from the movie-detail call); merging,
+   deduping, Amazon-first sort, and affiliate-link preservation all happen
+   client-side in index.html (see _mergeWatchmodeSources()), where the TMDB
+   tier data is already in memory. This just keeps WATCHMODE_API_KEY off
+   the client.
+
+   Graceful by design: no key configured, a bad key, a rate limit, or the
+   requested region not being enabled on the plan should never break the
+   page — every failure path below still returns 200 with `sources: []`
+   rather than an error, so the frontend just falls back to TMDB-only data.
+─────────────────────────────────────────────────────────────────── */
+async function handleWatchmodeSources(request, url, env, cors) {
+  const json = body =>
+    new Response(JSON.stringify(body), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600', ...cors },
+    });
+
+  const tmdbId = url.searchParams.get('tmdb_id');
+  const type   = url.searchParams.get('type') === 'tv' ? 'tv' : 'movie';
+  const region = _resolveRegion(request, url);
+
+  if (!tmdbId || !/^\d+$/.test(tmdbId)) {
+    return json({ configured: !!env.WATCHMODE_API_KEY, region, sources: [], error: 'tmdb_id required' });
+  }
+  if (!env.WATCHMODE_API_KEY) {
+    // Not set up yet — expected state until a key is added. Not an error.
+    return json({ configured: false, region, sources: [] });
+  }
+
+  try {
+    // Watchmode accepts TMDB-format IDs directly in the title_id path param
+    // (`movie-550`, `tv-1396`) — no separate ID-lookup call needed. Costs 2
+    // credits instead of 1 for a native Watchmode ID, but avoids an extra
+    // round trip and a whole failure mode (lookup miss).
+    const wmUrl = new URL(`https://api.watchmode.com/v1/title/${type}-${tmdbId}/sources/`);
+    wmUrl.searchParams.set('regions', region);
+    const r = await fetch(wmUrl.toString(), {
+      headers: { 'X-API-Key': env.WATCHMODE_API_KEY, 'User-Agent': 'FindFilm.ai/1.0' },
+    });
+    if (!r.ok) {
+      // Bad key, rate-limited, or `region` not enabled on the current plan —
+      // all non-fatal from the page's perspective.
+      return json({ configured: true, region, sources: [], error: `Watchmode ${r.status}` });
+    }
+    const raw = await r.json();
+    if (!Array.isArray(raw)) return json({ configured: true, region, sources: [] });
+
+    const AMAZON_RE = /\bamazon\b|\bprime\s*video\b/i;
+    const sources = raw
+      .filter(s => s && s.region === region && ['sub', 'rent', 'buy', 'free'].includes(s.type))
+      .map(s => ({
+        name:     s.name || '',
+        type:     s.type,                       // 'sub' | 'rent' | 'buy' | 'free'
+        webUrl:   s.web_url || null,
+        isAmazon: AMAZON_RE.test(s.name || ''),
+      }));
+
+    return json({ configured: true, region, sources });
+  } catch (e) {
+    return json({ configured: true, region, sources: [], error: e.message });
+  }
+}
 
 const CACHE_KEYS = {
   popular:       'popular',

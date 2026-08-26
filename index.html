@@ -10405,6 +10405,90 @@ function _pickWatchProviders(wpResults, country) {
   };
 }
 
+// ── Amazon identification ───────────────────────────────────────────────
+// Two signals, since providers can come from either TMDB (has a provider_id)
+// or Watchmode (name only — a different ID namespace, no shared numeric ID).
+// Shared by _refreshStreamingCtAs(), refreshWatchProviders(), and the
+// Watchmode merge below.
+const AMAZON_IDS     = new Set([9, 10, 119]); // TMDB provider_id: Prime Video, Amazon Video, Prime (alt)
+const AMAZON_NAME_RE = /\bamazon\b|\bprime\s*video\b/i;
+function _isAmazonProvider(p) {
+  return AMAZON_IDS.has(p.provider_id) || !!p.isAmazon || AMAZON_NAME_RE.test(p.provider_name || '');
+}
+
+// ── Watchmode merge ──────────────────────────────────────────────────────
+// Combines Watchmode's per-title sources onto TMDB-derived watchProviders
+// tiers, in place, for maximum coverage:
+//  - A provider present in BOTH (matched by normalized name) keeps its TMDB
+//    identity (provider_id/logo_path — Watchmode's source objects carry no
+//    logo) but gains Watchmode's exact-title deep link, which converts
+//    better than our generic title-search URL. Amazon's own affiliate tag is
+//    re-appended to that deep link (see _withAffiliateTag) — a more precise
+//    link is not worth losing attribution over.
+//  - A Watchmode-only provider (not in TMDB's list for this region) is added
+//    as a new entry, genuinely extending coverage.
+// 'tve' (cable-login/TV-Everywhere) sources are filtered out server-side —
+// they don't map to any of our four tiers.
+const WM_TIER_MAP = { sub: 'flatrate', free: 'free', rent: 'rent', buy: 'buy' };
+
+function _normProviderName(name) {
+  return (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function _withAffiliateTag(url, isAmazon) {
+  if (!isAmazon || !url) return url;
+  try {
+    const u = new URL(url);
+    if (/(^|\.)amazon\.[a-z.]+$/i.test(u.hostname) && !u.searchParams.has('tag')) {
+      u.searchParams.set('tag', 'findfilm-20');
+    }
+    return u.toString();
+  } catch { return url; }
+}
+
+function _mergeWatchmodeSources(watchProviders, sources) {
+  if (!watchProviders || !sources || !sources.length) return watchProviders;
+  for (const s of sources) {
+    const tierKey = WM_TIER_MAP[s.type];
+    if (!tierKey) continue;
+    const tier = watchProviders[tierKey] || (watchProviders[tierKey] = []);
+    const norm     = _normProviderName(s.name);
+    const deepLink = _withAffiliateTag(s.webUrl, s.isAmazon);
+    const existing = tier.find(p => _normProviderName(p.provider_name) === norm);
+    if (existing) {
+      if (deepLink) existing.deep_link = deepLink;
+      if (s.isAmazon) existing.isAmazon = true;
+    } else {
+      tier.push({ provider_id: null, provider_name: s.name, logo_path: null, deep_link: deepLink, isAmazon: s.isAmazon });
+    }
+  }
+  return watchProviders;
+}
+
+// Session-cached Watchmode fetch — one call per (movie, region) per session,
+// not per modal open. Purely additive (see _mergeWatchmodeSources above) and
+// never required for the page to work: the backend always returns 200 with
+// an empty `sources` array if WATCHMODE_API_KEY isn't configured, the key is
+// bad, the region isn't enabled on the plan, or the request otherwise fails
+// (see handleWatchmodeSources() in functions/api/[[path]].js) — and this
+// function itself never throws, so callers don't need a try/catch.
+async function fetchWatchmodeSources(tmdbId, type) {
+  const cacheKey = `wm_${type}_${tmdbId}_${DETECTED_COUNTRY}`;
+  try {
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) return JSON.parse(cached);
+  } catch {}
+  try {
+    const r = await fetch(`/api/watchmode/sources?tmdb_id=${tmdbId}&type=${type}&client_region=${encodeURIComponent(DETECTED_COUNTRY || '')}`);
+    const data = await r.json();
+    const sources = data?.sources || [];
+    try { sessionStorage.setItem(cacheKey, JSON.stringify(sources)); } catch {}
+    return sources;
+  } catch {
+    return [];
+  }
+}
+
 function mergeMovieData(movie, det, od, country = DETECTED_COUNTRY) {
   // ── TMDB fields ──────────────────────────────────────────────
   movie.imdbId = det.imdb_id || det.external_ids?.imdb_id || movie.imdbId || null;
@@ -10483,16 +10567,22 @@ async function doEnrich(tmdbId) {
   if (!movie) return;
   try {
     const type = movie.isTV ? 'tv' : 'movie';
-    // Step 1: full TMDB details
-    const det = await tmdbGet(`/${type}/${tmdbId}`, {
-      append_to_response: 'credits,videos,external_ids,watch/providers',
-      language: 'en-US',
-    });
+    // Step 1: full TMDB details + Watchmode sources, concurrently. Watchmode
+    // is purely additive (see _mergeWatchmodeSources) and fetchWatchmodeSources()
+    // never throws, so it can't turn a Watchmode hiccup into a broken enrich.
+    const [det, wmSources] = await Promise.all([
+      tmdbGet(`/${type}/${tmdbId}`, {
+        append_to_response: 'credits,videos,external_ids,watch/providers',
+        language: 'en-US',
+      }),
+      fetchWatchmodeSources(tmdbId, type),
+    ]);
     // Step 2: OMDb — IMDb + RT + MC (parallel-safe, null if unavailable)
     const imdbId = det.imdb_id || det.external_ids?.imdb_id || null;
     const od = imdbId ? await omdbGet(imdbId) : null;
 
     mergeMovieData(movie, det, od);
+    if (movie.watchProviders) _mergeWatchmodeSources(movie.watchProviders, wmSources);
     movie.enriched = true;
     updateCardInGrid(tmdbId);
   } catch(e) {
@@ -12134,29 +12224,39 @@ async function openMovie(tmdbId, listName = '') {
       .catch(() => { m._castBackfilled = false; });
   }
 
-  // Backfill accurate regional watch-providers for pre-enriched cache movies.
-  // sync-worker only bakes US watch-provider data into KV (see enrichOne() in
-  // sync-worker.js) — for any visitor outside the US this silently showed
-  // Amazon/streaming availability for the wrong country. Re-fetch just the
-  // lightweight watch/providers sub-resource (not the full detail blob, which
-  // is already cached and fine) whenever the cached region doesn't match the
-  // visitor's detected one. Same claim-then-release latch idiom as the
-  // castPhotos backfill above.
-  if (m.enriched && DETECTED_COUNTRY !== 'US' && m.wpCountry !== DETECTED_COUNTRY && !m._wpRegionBackfilled) {
-    m._wpRegionBackfilled = true;
-    const type = m.isTV ? 'tv' : 'movie';
-    tmdbGet(`/${type}/${tmdbId}/watch/providers`, {})
-      .then(wp => {
-        const wpResults = wp?.results || {};
-        const picked = _pickWatchProviders(wpResults, DETECTED_COUNTRY);
-        if (!picked) return;
-        m.watchProviders = picked.watchProviders;
-        m.wpLink         = picked.wpLink;
-        m.wpCountry      = picked.wpCountry;
-        m.wpAllCountries = wpResults;
+  // Backfill for pre-enriched cache movies: sync-worker's nightly cron only
+  // bakes in US TMDB watch-provider data and never calls Watchmode at all
+  // (see sync-worker.js) — so any cached movie viewed by a non-US visitor is
+  // silently showing US streaming/Amazon data, and EVERY cached movie is
+  // missing Watchmode's extra coverage regardless of region. Runs once per
+  // movie per session (claim-then-release latch, same idiom as the
+  // castPhotos backfill above). The two steps are sequenced, not run in
+  // parallel — the Watchmode merge must land on the FINAL, correctly-regioned
+  // TMDB tier data, not race a stale US snapshot that the region fix below is
+  // about to replace wholesale.
+  if (m.enriched && DETECTED_COUNTRY && !m._wpBackfilled) {
+    m._wpBackfilled = true;
+    (async () => {
+      try {
+        const type = m.isTV ? 'tv' : 'movie';
+        if (DETECTED_COUNTRY !== 'US' && m.wpCountry !== DETECTED_COUNTRY) {
+          const wp = await tmdbGet(`/${type}/${tmdbId}/watch/providers`, {});
+          const wpResults = wp?.results || {};
+          const picked = _pickWatchProviders(wpResults, DETECTED_COUNTRY);
+          if (picked) {
+            m.watchProviders = picked.watchProviders;
+            m.wpLink         = picked.wpLink;
+            m.wpCountry      = picked.wpCountry;
+            m.wpAllCountries = wpResults;
+          }
+        }
+        const sources = await fetchWatchmodeSources(tmdbId, type);
+        if (m.watchProviders && sources.length) _mergeWatchmodeSources(m.watchProviders, sources);
         if (ACTIVE_MOVIE?.id === tmdbId) refreshWatchProviders(m);
-      })
-      .catch(() => { m._wpRegionBackfilled = false; });
+      } catch {
+        m._wpBackfilled = false;
+      }
+    })();
   }
 }
 
@@ -12906,30 +13006,26 @@ function _refreshStreamingCtAs(m) {
     }
   }
 
-  // Amazon provider IDs (Prime Video, Amazon Video, Prime alt)
-  const AMAZON_IDS = new Set([9, 10, 119]);
-
   // Collect up to 3 unique providers, preferring subscription/free first —
   // but still falling through to rent/buy so an Amazon-only rent-or-buy
   // listing still lands in this featured CTA row instead of being silently
-  // dropped just because it isn't a subscription.
+  // dropped just because it isn't a subscription. Dedup key falls back to
+  // normalized name for Watchmode-only entries, which all share
+  // provider_id: null (see _mergeWatchmodeSources).
   const providers = [];
   if (wp) {
     const seen = new Set();
     for (const p of [...(wp.flatrate || []), ...(wp.free || []), ...(wp.rent || []), ...(wp.buy || [])]) {
-      if (!seen.has(p.provider_id) && providers.length < 3) {
-        seen.add(p.provider_id);
+      const key = p.provider_id ?? _normProviderName(p.provider_name);
+      if (!seen.has(key) && providers.length < 3) {
+        seen.add(key);
         providers.push(p);
       }
     }
   }
 
   // Sort: Amazon always first (affiliate priority)
-  providers.sort((a, b) => {
-    const aIsAmazon = AMAZON_IDS.has(a.provider_id) ? 0 : 1;
-    const bIsAmazon = AMAZON_IDS.has(b.provider_id) ? 0 : 1;
-    return aIsAmazon - bIsAmazon;
-  });
+  providers.sort((a, b) => (_isAmazonProvider(a) ? 0 : 1) - (_isAmazonProvider(b) ? 0 : 1));
 
   if (!providers.length) {
     setRegionLbl(false);
@@ -12955,8 +13051,8 @@ function _refreshStreamingCtAs(m) {
   setRegionLbl(true);
   const streamLbl = `<span class="stream-on-lbl">${t('stream.streamOn')}</span>`;
   const providerBtns = providers.map(p => {
-    const url      = providerUrl(p, title, wpLink);
-    const isAmazon = AMAZON_IDS.has(p.provider_id);
+    const url      = p.deep_link || providerUrl(p, title, wpLink);
+    const isAmazon = _isAmazonProvider(p);
     const cls      = isAmazon ? 'btn-stream btn-amazon' : 'btn-stream btn-stream-secondary';
     const label    = t('stream.watchOn', { name: esc(p.provider_name) });
     const logo     = p.logo_path
@@ -13003,16 +13099,12 @@ function refreshWatchProviders(m) {
   // treatment, distinct label text.
   const PAID_STYLE = 'background:rgba(249,115,22,0.15);color:var(--orange);border:1px solid rgba(249,115,22,0.3)';
 
-  // Amazon provider IDs (Prime Video, Amazon Video, Prime alt) — same set the
-  // action-bar CTA uses to prioritize its affiliate link (see AMAZON_IDS in
-  // _refreshStreamingCtAs).
-  const AMAZON_IDS = new Set([9, 10, 119]);
   const AMAZON_BAG = `<svg class="provider-chip-bag" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`;
 
   function chip(p, tagClass, tagLabel, tagStyle) {
-    const url      = providerUrl(p, title, wpLink);
+    const url      = p.deep_link || providerUrl(p, title, wpLink);
     const styleAttr = tagStyle ? ` style="${tagStyle}"` : '';
-    const isAmazon = AMAZON_IDS.has(p.provider_id);
+    const isAmazon = _isAmazonProvider(p);
     const cls      = isAmazon ? 'provider-chip amazon' : 'provider-chip';
     return `<a class="${cls}" href="${url}" target="_blank" rel="noopener noreferrer${isAmazon ? ' sponsored' : ''}" title="Watch on ${esc(p.provider_name)}">
       ${isAmazon ? AMAZON_BAG : ''}${p.logo_path ? `<img src="${TIMG_W45}${p.logo_path}" alt="${esc(p.provider_name)}">` : ''}
@@ -13030,7 +13122,7 @@ function refreshWatchProviders(m) {
     ...rent.map(p      => ({ p, tagClass: 'rent', tagLabel: 'Rent', tagStyle: PAID_STYLE })),
     ...buy.map(p       => ({ p, tagClass: 'buy',  tagLabel: 'Buy',  tagStyle: PAID_STYLE })),
   ];
-  entries.sort((a, b) => (AMAZON_IDS.has(a.p.provider_id) ? 0 : 1) - (AMAZON_IDS.has(b.p.provider_id) ? 0 : 1));
+  entries.sort((a, b) => (_isAmazonProvider(a.p) ? 0 : 1) - (_isAmazonProvider(b.p) ? 0 : 1));
 
   container.innerHTML = `<div class="providers-row">
     ${entries.map(e => chip(e.p, e.tagClass, e.tagLabel, e.tagStyle)).join('')}
