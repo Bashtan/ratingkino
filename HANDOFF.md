@@ -2,7 +2,22 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-14) — Search-bar Auto-scroll Fix + Logo Reset Audit
+## ⚡ Most Recent Session (2026-08-26) — Amazon Affiliate Priority in Where-to-Watch List
+
+All commits on `main`, deployed live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `c954c9c` | **Amazon priority in "Where to Watch" provider list** — `refreshWatchProviders()` (`index.html:12881`) previously rendered `free`/`flatrate`/`rent` as three fixed-order groups with no Amazon distinction. Now combines all three into one `entries` array and sorts any Amazon provider (ids `9`/`10`/`119` — Prime Video / Amazon Video / Prime alt, same `AMAZON_IDS` set convention as the existing action-bar CTA) to the front regardless of pricing tier. New `.provider-chip.amazon` CSS class (`index.html:~2666`, Prime Blue `#00A8E1` gradient background, Amazon Orange `#FF9900` border + glow, white `.provider-tag` override) makes the chip visibly outrank the neutral gray `.provider-chip` siblings; a small shopping-bag SVG icon (`.provider-chip-bag`) is prepended only on Amazon chips as an affordance cue. Note: the separate top-3 action-bar CTA (`_refreshStreamingCtAs()`, `.btn-amazon`) already had Amazon-first sorting + distinct styling before this session — this session's work was scoped to the full provider list, which didn't. |
+
+Verified in preview: injected a synthetic movie with Amazon deliberately placed in the *last*
+category (`rent`, alongside Apple TV) — confirmed via DOM order + `getComputedStyle` that the
+Amazon chip renders first with `background-image: linear-gradient(135deg, rgb(0,168,225)...)`
+and `border-color: rgb(255,153,0)`, and visually via screenshot against the three neutral chips.
+
+---
+
+## Session (2026-08-14) — Search-bar Auto-scroll Fix + Logo Reset Audit
 
 All commits on `main`, deployed live on https://findfilm.ai.
 
