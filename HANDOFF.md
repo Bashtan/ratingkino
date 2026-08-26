@@ -2,7 +2,50 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-26b) — Dynamic watch_region + Amazon Priority (all tiers)
+## ⚡ Most Recent Session (2026-08-26c) — Watchmode Merge (max provider coverage)
+
+All commits on `main`, deployed live on https://findfilm.ai.
+
+**⚠️ Not yet fully active — needs `WATCHMODE_API_KEY`.** Every code path below
+degrades gracefully to TMDB-only with zero functional change until the secret
+is added. See "Next steps" below.
+
+| Commit | Feature |
+|--------|---------|
+| `a27f594` | **`/api/watchmode/sources` route** (`functions/api/[[path]].js`, `handleWatchmodeSources`) — thin, region-resolved proxy to Watchmode's `GET /v1/title/{movie\|tv}-{tmdb_id}/sources/?regions={cc}`. Deliberately does NOT also re-fetch/merge TMDB server-side (the client already has TMDB's tier data from the movie-detail call) — its only job is keeping `WATCHMODE_API_KEY` off the client. Region resolution extracted into shared `_resolveRegion(request, url)`, now used by both this route and the `/tmdb/*` proxy. Graceful by construction: unconfigured key, a bad key, a rate limit, or the region not being enabled on the plan all return `200` with `sources: []` rather than an error. |
+| `a27f594` | **`_mergeWatchmodeSources(watchProviders, sources)`** (`index.html`) — dedupes by normalized provider name (Watchmode's `source_id` is a different ID namespace than TMDB's `provider_id`, so name is the only usable join key). A provider present in both keeps TMDB's identity (`provider_id`/`logo_path` — Watchmode's source objects carry no logo) but gains Watchmode's exact-title deep link (`deep_link`) in place of our generic title-search URL. A Watchmode-only provider is added as a new tier entry, genuinely extending coverage. |
+| `a27f594` | **`_withAffiliateTag()`** (`index.html`) — Watchmode's own deep links carry no affiliate tag; blindly preferring them for Amazon would silently drop `tag=findfilm-20` attribution. Re-appends it onto any `amazon.*` deep link before use. |
+| `a27f594` | **Amazon detection generalized** — `AMAZON_IDS` (TMDB-ID-only) replaced by `_isAmazonProvider(p)` (`index.html`, near `_pickWatchProviders`), which also checks a name regex (`AMAZON_NAME_RE`) and the `isAmazon` flag Watchmode-only entries carry (no TMDB `provider_id` to match against). `_refreshStreamingCtAs()` and `refreshWatchProviders()` both switched over; their dedup keys also fixed to fall back to normalized name instead of `provider_id`, which is `null` for every Watchmode-only entry (was silently collapsing multiple distinct Watchmode-only providers into one — e.g. two different Watchmode-only sources would dedupe against each other incorrectly). |
+| `a27f594` | **`doEnrich()` fetches concurrently** — TMDB details + `fetchWatchmodeSources()` (session-cached per movie+region) now run via `Promise.all`, merged after `mergeMovieData()`. The pre-enriched-cache backfill in `openMovieModal()` (added last session) restructured from two potentially-racing backfills into one sequenced flow: TMDB region-fix first (when needed), Watchmode merge second — so it always lands on final tier data, never a stale snapshot the region-fix is about to overwrite. |
+
+**API contract verified against Watchmode's live OpenAPI spec** (`api.watchmode.com/openapi.json`),
+not assumed from memory — notably that `/v1/title/{title_id}/sources/` accepts TMDB-format IDs
+directly (`movie-550`, `tv-1396`) in the path, so no separate ID-lookup call is needed; auth via
+`X-API-Key` header; response is a flat array of `{source_id, name, type: sub/rent/buy/free/tve,
+region, web_url, ...}` (no logo field — Watchmode-only entries render with the existing fallback
+play-icon SVG, not broken).
+
+Verified in preview (`wrangler pages dev`, `WATCHMODE_API_KEY` unset): `/api/watchmode/sources`
+returns `{configured:false, sources:[]}`; with a deliberately invalid key it returns a real `401`
+from Watchmode, gracefully caught as `{configured:true, sources:[], error:"Watchmode 401"}` — both
+200s, no page breakage. Merge logic verified with mocked Watchmode-shaped data covering all three
+cases: cross-source dedup (Netflix matched, deep_link swapped in), Amazon tag preservation
+(`Prime Video`, Watchmode-only → sorted first, `.provider-chip.amazon` styling, `?tag=findfilm-20`
+correctly appended), and genuine new coverage (`Vudu`, not in TMDB's list at all). Full real-movie
+`openMovie()` flow confirmed non-breaking with Watchmode unconfigured.
+
+**Next steps for this to actually activate:**
+1. Get a Watchmode API key at https://api.watchmode.com/requestApiKey/. Confirm the plan covers
+   the target markets (DE, FR, ES, UA, SE, NO, Arabic region codes, Asian markets) — the sources
+   endpoint's `regions` param is plan-gated ("Requested regions must be enabled for your plan");
+   the free tier may only include a handful of regions.
+2. `npx wrangler pages secret put WATCHMODE_API_KEY` for production, and add
+   `WATCHMODE_API_KEY=...` to `.dev.vars` for local dev.
+3. No code or redeploy needed after that — the very next page load picks it up.
+
+---
+
+## Session (2026-08-26b) — Dynamic watch_region + Amazon Priority (all tiers)
 
 All commits on `main`, deployed live on https://findfilm.ai.
 
