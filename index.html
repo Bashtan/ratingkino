@@ -9292,51 +9292,75 @@ const COUNTRY_LANG = {
   SD:'ar', PS:'ar'
 };
 
+// Representative country per language — last-resort fallback for watch-region
+// detection when neither Cloudflare's edge geo nor the IP/browser-locale
+// checks below yield a country (e.g. all blocked by an adblocker/VPN). Mirrors
+// the request's "fall back to the selected UI language" rule; DETECTED_COUNTRY
+// keeps its 'US' default if even the current language isn't in this map.
+const LANG_COUNTRY_FALLBACK = { de:'DE', fr:'FR', es:'ES', uk:'UA', sv:'SE', no:'NO', zh:'CN', ar:'SA' };
+
 async function detectLang() {
-  // Explicit user choice always wins — only auto-detect on first visit.
+  // Explicit user choice always wins for the UI LANGUAGE — but country
+  // detection (drives watch-provider region selection + Amazon affiliate
+  // priority) is independent of that choice and must still run on every
+  // visit, not just the first, so this no longer returns early once a
+  // language is already saved. `langDetected`/`countryDetected` gate each
+  // concern separately so a saved language can't silently starve country
+  // detection if an earlier step happens to fail.
   const saved = localStorage.getItem('rk_lang');
-  if (saved && TRANSLATIONS[saved]) {
+  const hasSavedLang = !!(saved && TRANSLATIONS[saved]);
+  if (hasSavedLang) {
     CURRENT_LANG = saved;
     applyTranslations();
-    return;
   }
 
-  let detected = null;
+  let langDetected    = hasSavedLang ? saved : null;
+  let countryDetected = false;
 
   // 1) Primary: Cloudflare server-side geo (request.cf.country — no third party).
   try {
     const res  = await fetch('/api/geo-lang');
     const data = await res.json();
-    if (data.country) DETECTED_COUNTRY = data.country;
-    if (data.lang && TRANSLATIONS[data.lang]) detected = data.lang;
+    if (data.country) { DETECTED_COUNTRY = data.country; countryDetected = true; }
+    if (!langDetected && data.lang && TRANSLATIONS[data.lang]) langDetected = data.lang;
   } catch {}
 
   // 2) Fallback: free, no-key IP geolocation over HTTPS (survives static hosting
-  //    / missing worker). Silently ignored if blocked by an adblocker.
-  if (!detected) {
+  //    / missing worker, or step 1 failing). Silently ignored if blocked by
+  //    an adblocker.
+  if (!langDetected || !countryDetected) {
     try {
       const ipRes  = await fetch('https://ipapi.co/json/');
       const ipData = await ipRes.json();
       const cc = (ipData.country_code || '').toUpperCase();
-      if (cc) DETECTED_COUNTRY = cc;
+      if (cc) { DETECTED_COUNTRY = cc; countryDetected = true; }
       const mapped = COUNTRY_LANG[cc];
-      if (mapped && TRANSLATIONS[mapped]) detected = mapped;
+      if (!langDetected && mapped && TRANSLATIONS[mapped]) langDetected = mapped;
     } catch {}
   }
 
-  // 3) Fallback: browser language → first two chars → match supported lang.
-  if (!detected) {
+  // 3) Fallback: browser language → first two chars → match supported lang;
+  //    browser locale region tag → country (e.g. 'en-GB' → 'GB').
+  if (!langDetected) {
     const nav = (navigator.language || 'en').split('-')[0].toLowerCase();
-    if (TRANSLATIONS[nav]) detected = nav;
-    // Infer country from browser locale region tag (e.g. 'en-GB' → 'GB').
+    if (TRANSLATIONS[nav]) langDetected = nav;
+  }
+  if (!countryDetected) {
     const region = (navigator.language || '').split(/[-_]/)[1] || '';
-    if (region.length === 2) DETECTED_COUNTRY = region.toUpperCase();
+    if (region.length === 2) { DETECTED_COUNTRY = region.toUpperCase(); countryDetected = true; }
   }
 
-  if (detected) {
-    CURRENT_LANG = detected;
+  // 4) Final fallback: derive a representative country from whichever UI
+  //    language is actually showing. DETECTED_COUNTRY's 'US' initial value
+  //    already covers "default to US" if even this doesn't match.
+  if (!countryDetected) {
+    DETECTED_COUNTRY = LANG_COUNTRY_FALLBACK[CURRENT_LANG] || 'US';
+  }
+
+  if (!hasSavedLang && langDetected) {
+    CURRENT_LANG = langDetected;
     // Persist so auto-detection only runs on the very first visit.
-    try { localStorage.setItem('rk_lang', detected); } catch {}
+    try { localStorage.setItem('rk_lang', langDetected); } catch {}
   }
   applyTranslations();
 }
@@ -10161,6 +10185,13 @@ async function tmdbGet(path, params = {}) {
   for (const [k, v] of Object.entries(params)) {
     if (v !== '' && v != null) u.searchParams.set(k, v);
   }
+  // Hint our own Worker at the visitor's region so it can set watch_region on
+  // TMDB calls that honor it. The Worker prioritizes its own edge geo-IP
+  // (request.cf.country) over this — it's only the fallback signal for when
+  // that's unavailable (see functions/api/[[path]].js).
+  if (!u.searchParams.has('watch_region') && DETECTED_COUNTRY) {
+    u.searchParams.set('client_region', DETECTED_COUNTRY);
+  }
   const r = await fetch(u.toString());
   if (!r.ok) {
     const err = await r.json().catch(() => ({}));
@@ -10353,6 +10384,27 @@ function pumpEnrich() {
  * @param {object|null} od - raw OMDb response (or null if unavailable)
  * @param {string} country - ISO-3166-1 country code for watch providers (default DETECTED_COUNTRY)
  */
+// Shared by mergeMovieData() and the pre-enriched-cache regional backfill in
+// openMovieModal() — picks the visitor's country out of TMDB's full
+// watch/providers `results` map (falling back to US), and slices each
+// pricing tier (free/flatrate/rent/buy) down to a render-ready size. Returns
+// null if neither the visitor's country nor US has any data.
+function _pickWatchProviders(wpResults, country) {
+  const wpCountry = wpResults[country] ? country : (wpResults['US'] ? 'US' : null);
+  if (!wpCountry) return null;
+  const wp = wpResults[wpCountry];
+  return {
+    wpCountry,
+    wpLink: wp.link || null,
+    watchProviders: {
+      free:     (wp.free     || []).slice(0, 4),
+      flatrate: (wp.flatrate || []).slice(0, 4),
+      rent:     (wp.rent     || []).slice(0, 3),
+      buy:      (wp.buy      || []).slice(0, 3),
+    },
+  };
+}
+
 function mergeMovieData(movie, det, od, country = DETECTED_COUNTRY) {
   // ── TMDB fields ──────────────────────────────────────────────
   movie.imdbId = det.imdb_id || det.external_ids?.imdb_id || movie.imdbId || null;
@@ -10395,16 +10447,11 @@ function mergeMovieData(movie, det, od, country = DETECTED_COUNTRY) {
 
   // Watch providers — use visitor's country, fallback to US
   const wpResults = det['watch/providers']?.results || {};
-  const wpCountry = wpResults[country] ? country : (wpResults['US'] ? 'US' : null);
-  const wp = wpCountry ? wpResults[wpCountry] : null;
-  if (wp) {
-    movie.watchProviders = {
-      free:     (wp.free     || []).slice(0, 4),
-      flatrate: (wp.flatrate || []).slice(0, 4),
-      rent:     (wp.rent     || []).slice(0, 3),
-    };
-    movie.wpLink    = wp.link || null;
-    movie.wpCountry = wpCountry;  // track which region these providers are for
+  const picked = _pickWatchProviders(wpResults, country);
+  if (picked) {
+    movie.watchProviders = picked.watchProviders;
+    movie.wpLink    = picked.wpLink;
+    movie.wpCountry = picked.wpCountry;  // track which region these providers are for
   }
   // Preserve full cross-country map for geo-mismatch VPN banner logic
   movie.wpAllCountries = wpResults;
@@ -10785,7 +10832,7 @@ function fromCache(m) {
     trailer:      m.trailer
                     ? (m.trailer.startsWith('http') ? m.trailer : `https://www.youtube.com/embed/${m.trailer}`)
                     : null,
-    watchProviders: m.watchProviders || { free: [], flatrate: [], rent: [] },
+    watchProviders: m.watchProviders || { free: [], flatrate: [], rent: [], buy: [] },
     wpLink:       m.wpLink     || null,
     enriched:     m.enriched   || false,
     isTV:         false,
@@ -12086,6 +12133,31 @@ async function openMovie(tmdbId, listName = '') {
       })
       .catch(() => { m._castBackfilled = false; });
   }
+
+  // Backfill accurate regional watch-providers for pre-enriched cache movies.
+  // sync-worker only bakes US watch-provider data into KV (see enrichOne() in
+  // sync-worker.js) — for any visitor outside the US this silently showed
+  // Amazon/streaming availability for the wrong country. Re-fetch just the
+  // lightweight watch/providers sub-resource (not the full detail blob, which
+  // is already cached and fine) whenever the cached region doesn't match the
+  // visitor's detected one. Same claim-then-release latch idiom as the
+  // castPhotos backfill above.
+  if (m.enriched && DETECTED_COUNTRY !== 'US' && m.wpCountry !== DETECTED_COUNTRY && !m._wpRegionBackfilled) {
+    m._wpRegionBackfilled = true;
+    const type = m.isTV ? 'tv' : 'movie';
+    tmdbGet(`/${type}/${tmdbId}/watch/providers`, {})
+      .then(wp => {
+        const wpResults = wp?.results || {};
+        const picked = _pickWatchProviders(wpResults, DETECTED_COUNTRY);
+        if (!picked) return;
+        m.watchProviders = picked.watchProviders;
+        m.wpLink         = picked.wpLink;
+        m.wpCountry      = picked.wpCountry;
+        m.wpAllCountries = wpResults;
+        if (ACTIVE_MOVIE?.id === tmdbId) refreshWatchProviders(m);
+      })
+      .catch(() => { m._wpRegionBackfilled = false; });
+  }
 }
 
 /* ── Spoiler-Free Fit summary ── on-demand LLM block (KV-cached server-side,
@@ -12837,11 +12909,14 @@ function _refreshStreamingCtAs(m) {
   // Amazon provider IDs (Prime Video, Amazon Video, Prime alt)
   const AMAZON_IDS = new Set([9, 10, 119]);
 
-  // Collect up to 3 unique subscription/free providers (most useful to user)
+  // Collect up to 3 unique providers, preferring subscription/free first —
+  // but still falling through to rent/buy so an Amazon-only rent-or-buy
+  // listing still lands in this featured CTA row instead of being silently
+  // dropped just because it isn't a subscription.
   const providers = [];
   if (wp) {
     const seen = new Set();
-    for (const p of [...(wp.flatrate || []), ...(wp.free || [])]) {
+    for (const p of [...(wp.flatrate || []), ...(wp.free || []), ...(wp.rent || []), ...(wp.buy || [])]) {
       if (!seen.has(p.provider_id) && providers.length < 3) {
         seen.add(p.provider_id);
         providers.push(p);
@@ -12913,7 +12988,8 @@ function refreshWatchProviders(m) {
   const free     = wp.free     || [];
   const flatrate = wp.flatrate || [];
   const rent     = wp.rent     || [];
-  if (!free.length && !flatrate.length && !rent.length) {
+  const buy      = wp.buy      || [];
+  if (!free.length && !flatrate.length && !rent.length && !buy.length) {
     lbl.style.display = 'none';
     container.innerHTML = '';
     return;
@@ -12923,7 +12999,9 @@ function refreshWatchProviders(m) {
   const title  = m.title || '';
   const wpLink = m.wpLink || null;
 
-  const RENT_STYLE = 'background:rgba(249,115,22,0.15);color:var(--orange);border:1px solid rgba(249,115,22,0.3)';
+  // Shared "costs money" tag style for both Rent and Buy — same visual
+  // treatment, distinct label text.
+  const PAID_STYLE = 'background:rgba(249,115,22,0.15);color:var(--orange);border:1px solid rgba(249,115,22,0.3)';
 
   // Amazon provider IDs (Prime Video, Amazon Video, Prime alt) — same set the
   // action-bar CTA uses to prioritize its affiliate link (see AMAZON_IDS in
@@ -12949,7 +13027,8 @@ function refreshWatchProviders(m) {
   const entries = [
     ...free.map(p     => ({ p, tagClass: 'free', tagLabel: 'Free' })),
     ...flatrate.map(p => ({ p, tagClass: 'sub',  tagLabel: 'Sub'  })),
-    ...rent.map(p      => ({ p, tagClass: 'rent', tagLabel: 'Rent', tagStyle: RENT_STYLE })),
+    ...rent.map(p      => ({ p, tagClass: 'rent', tagLabel: 'Rent', tagStyle: PAID_STYLE })),
+    ...buy.map(p       => ({ p, tagClass: 'buy',  tagLabel: 'Buy',  tagStyle: PAID_STYLE })),
   ];
   entries.sort((a, b) => (AMAZON_IDS.has(a.p.provider_id) ? 0 : 1) - (AMAZON_IDS.has(b.p.provider_id) ? 0 : 1));
 

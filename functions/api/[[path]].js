@@ -145,6 +145,29 @@ export async function onRequest({ request, env, params, waitUntil }) {
     const tmdbPath = path.replace('/tmdb', '');
     const upstream = new URL('https://api.themoviedb.org/3' + tmdbPath);
     url.searchParams.forEach((v, k) => upstream.searchParams.set(k, v));
+
+    // ── Dynamic watch_region ──────────────────────────────────────────
+    // Priority: Cloudflare's edge geo-IP (request.cf.country — authoritative,
+    // set on every request, can't be spoofed by client JS) → the client's own
+    // best-guess region hint (derived client-side from UI language / browser
+    // locale — see tmdbGet()'s `client_region` param in index.html) → US.
+    // An explicit `watch_region` already set by the caller always wins (none
+    // of our own client code sets one directly — it only ever sends the
+    // `client_region` hint below — so this only matters for direct/manual
+    // API callers).
+    //
+    // Note: TMDB's watch/providers sub-resource (via append_to_response or
+    // the dedicated /movie/{id}/watch/providers endpoint) ignores watch_region
+    // and always returns every country's data in one response regardless —
+    // the actual per-visitor region selection happens client-side (see
+    // mergeMovieData() / _pickWatchProviders() in index.html), which is what
+    // this value is really for on endpoints that DO honor it, e.g. /discover.
+    if (!upstream.searchParams.has('watch_region')) {
+      const region = request.cf?.country || upstream.searchParams.get('client_region') || 'US';
+      upstream.searchParams.set('watch_region', region);
+    }
+    upstream.searchParams.delete('client_region'); // internal hint, not a real TMDB param
+
     upstream.searchParams.set('api_key', env.TMDB_KEY);
     upstreamUrl = upstream.toString();
 

@@ -317,15 +317,21 @@ async function enrichOne(raw, env) {
       awards:     [],
       tmdbScore:  detail.vote_average ? +detail.vote_average.toFixed(1) : null,
       tmdbVotes:  detail.vote_count   || 0,
-      // Watch providers (US)
+      // Watch providers — US only, pre-baked at sync time. Non-US visitors get
+      // this backfilled live client-side (see the regional watch-providers
+      // backfill in openMovieModal() in index.html), which is why wpCountry
+      // is set explicitly here rather than left undefined — that backfill
+      // compares against it to know whether a refresh is needed.
       watchProviders: {
         free:     providerObjs(usProviders.free,     4),
         flatrate: providerObjs(usProviders.flatrate, 4),
         rent:     providerObjs(usProviders.rent,     3),
+        buy:      providerObjs(usProviders.buy,      3),
       },
-      wpLink:   usProviders.link || null,
-      enriched: true,
-      isTV:     false,
+      wpLink:    usProviders.link || null,
+      wpCountry: 'US',
+      enriched:  true,
+      isTV:      false,
     };
   } catch (err) {
     console.error(`[enrich] ${raw.id} failed: ${err.message}`);
