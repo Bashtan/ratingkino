@@ -2664,6 +2664,23 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .provider-tag.sub  { background: rgba(124,58,237,0.2); color: var(--muted); border: 1px solid var(--border); }
 .provider-chip[href] { text-decoration: none; cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.12s; }
 .provider-chip[href]:hover { background: rgba(255,255,255,0.11); border-color: rgba(255,255,255,0.22); transform: translateY(-1px); }
+/* ── Amazon-priority chip — affiliate link, needs to visibly outrank the
+   neutral provider chips around it. Prime Blue fill + Amazon Orange glow. ── */
+.provider-chip.amazon {
+  background: linear-gradient(135deg, #00A8E1 0%, #007ea8 100%);
+  border: 1.5px solid #FF9900;
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 2px 14px rgba(255,153,0,0.35), 0 0 0 1px rgba(0,168,225,0.22);
+}
+.provider-chip.amazon .provider-chip-bag { color: #FFC266; flex-shrink: 0; }
+.provider-chip.amazon .provider-tag { background: rgba(0,0,0,0.24); color: #fff; border: none; }
+.provider-chip.amazon[href]:hover {
+  background: linear-gradient(135deg, #14b8f0 0%, #0092c2 100%);
+  border-color: #ffad33;
+  box-shadow: 0 5px 22px rgba(255,153,0,0.5), 0 0 0 1px rgba(0,168,225,0.32);
+  transform: translateY(-2px);
+}
 
 /* ─── VPN Monetization Banner ───────────────────── */
 .vpn-banner {
@@ -12908,20 +12925,36 @@ function refreshWatchProviders(m) {
 
   const RENT_STYLE = 'background:rgba(249,115,22,0.15);color:var(--orange);border:1px solid rgba(249,115,22,0.3)';
 
+  // Amazon provider IDs (Prime Video, Amazon Video, Prime alt) — same set the
+  // action-bar CTA uses to prioritize its affiliate link (see AMAZON_IDS in
+  // _refreshStreamingCtAs).
+  const AMAZON_IDS = new Set([9, 10, 119]);
+  const AMAZON_BAG = `<svg class="provider-chip-bag" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`;
+
   function chip(p, tagClass, tagLabel, tagStyle) {
-    const url = providerUrl(p, title, wpLink);
+    const url      = providerUrl(p, title, wpLink);
     const styleAttr = tagStyle ? ` style="${tagStyle}"` : '';
-    return `<a class="provider-chip" href="${url}" target="_blank" rel="noopener noreferrer" title="Watch on ${esc(p.provider_name)}">
-      ${p.logo_path ? `<img src="${TIMG_W45}${p.logo_path}" alt="${esc(p.provider_name)}">` : ''}
+    const isAmazon = AMAZON_IDS.has(p.provider_id);
+    const cls      = isAmazon ? 'provider-chip amazon' : 'provider-chip';
+    return `<a class="${cls}" href="${url}" target="_blank" rel="noopener noreferrer${isAmazon ? ' sponsored' : ''}" title="Watch on ${esc(p.provider_name)}">
+      ${isAmazon ? AMAZON_BAG : ''}${p.logo_path ? `<img src="${TIMG_W45}${p.logo_path}" alt="${esc(p.provider_name)}">` : ''}
       <span>Watch on ${esc(p.provider_name)} ↗</span>
       <span class="provider-tag ${tagClass}"${styleAttr}>${tagLabel}</span>
     </a>`;
   }
 
+  // Combine all tiers into one list, then sort Amazon first — it's our
+  // affiliate link and should be the first thing the eye lands on regardless
+  // of which pricing tier (free/sub/rent) it happens to fall under.
+  const entries = [
+    ...free.map(p     => ({ p, tagClass: 'free', tagLabel: 'Free' })),
+    ...flatrate.map(p => ({ p, tagClass: 'sub',  tagLabel: 'Sub'  })),
+    ...rent.map(p      => ({ p, tagClass: 'rent', tagLabel: 'Rent', tagStyle: RENT_STYLE })),
+  ];
+  entries.sort((a, b) => (AMAZON_IDS.has(a.p.provider_id) ? 0 : 1) - (AMAZON_IDS.has(b.p.provider_id) ? 0 : 1));
+
   container.innerHTML = `<div class="providers-row">
-    ${free.map(p     => chip(p, 'free', 'Free')).join('')}
-    ${flatrate.map(p => chip(p, 'sub',  'Sub')).join('')}
-    ${rent.map(p     => chip(p, 'rent', 'Rent', RENT_STYLE)).join('')}
+    ${entries.map(e => chip(e.p, e.tagClass, e.tagLabel, e.tagStyle)).join('')}
   </div>`;
 
   // VPN geo-mismatch banner: show if Netflix is available elsewhere but not here
