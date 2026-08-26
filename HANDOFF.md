@@ -2,6 +2,33 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-08-26e) — Provider Chip Consolidation (declutter)
+
+All commits on `main`, deployed live on https://findfilm.ai.
+
+Follow-up to the Watchmode merge: real merged data (TMDB + Watchmode) produced
+14+ chips for a typical title — Amazon as 2 separate Rent/Buy buttons,
+AppleTV/Sky/maxdome each duplicated the same way. Reported as cluttered and
+hard to scan; this consolidates the display layer without touching the merge
+itself.
+
+| Commit | Feature |
+|--------|---------|
+| `dd15cc4` | **`_consolidateProviders(wp)`** (`index.html`, near `_pickWatchProviders`) — groups by normalized provider name **across all four tiers**, so a provider offering both Rent and Buy becomes one chip with a combined badge (`_tierBadge()`: "Rent / Buy" for two tiers, "Available" for 3+) instead of two near-identical buttons. Every Amazon-branded source — Amazon Video, Watchmode's plain "Amazon", "Paramount+ Amazon Channel", etc. — collapses into exactly ONE group regardless of literal name, so there's only ever one glowing Amazon button. `_cleanProviderName()` strips verbose suffixes ("Google Play Movies" → "Google Play", "Apple TV Store" → "Apple TV"). `_sortProviders()`: Amazon first, then Free/Sub providers ahead of Rent/Buy-only ones. |
+| `dd15cc4` | **Both `_refreshStreamingCtAs()` and `refreshWatchProviders()` share this pipeline now** — the top-3 action-bar CTA had the same latent bug (its old dedup only caught exact name/id matches, so 2 of 3 featured slots could go to differently-named Amazon sources). |
+| `dd15cc4` | **Dropped "Watch on X" from visible labels** — chips/buttons show just the platform name; the full translated string is kept as `aria-label`/`title` for accessibility (brand names were never translated across locales anyway, so no i18n changes needed). |
+| `dd15cc4` | **CSS**: `.btn-amazon-badge` → `.btn-stream-badge` (every CTA button gets a tier badge now, not just Amazon — old dark-on-dark styling kept as a `.btn-amazon` override, added sane default contrast for the rest). New `.provider-tag.paid` class replaces what was a duplicated inline style for rent AND buy separately. Tightened chip padding/icon size/gap for a denser grid; removed the double-icon on Amazon chips that do have a TMDB logo (was rendering the bag icon AND the real logo together). |
+
+Verified against real production data (Fight Club/DE, via the `debug_region` test hook from the
+prior session): 24 raw Watchmode sources + TMDB's Netflix entry — which would have rendered as 14
+chips pre-consolidation — collapsed to 9 clean ones. Amazon exactly once ("Rent / Buy"); Rakuten
+TV/AppleTV/Sky/maxdome each went from 2 chips to 1; names cleaned ("Sky Store" → "Sky", "maxdome
+Store" → "maxdome"). Confirmed via screenshot: dense two-row grid, aligned icons, tiny legible
+badges, zero console errors — tested by injecting the new (not-yet-deployed) functions onto the
+live page against a real fetch to `/api/watchmode/sources`, not mocked data.
+
+---
+
 ## ⚡ Most Recent Session (2026-08-26d) — Watchmode Activated + Verified Live
 
 All commits on `main`, deployed live on https://findfilm.ai.
