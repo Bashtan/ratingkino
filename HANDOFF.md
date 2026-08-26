@@ -2,13 +2,44 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-08-26c) — Watchmode Merge (max provider coverage)
+## ⚡ Most Recent Session (2026-08-26d) — Watchmode Activated + Verified Live
 
 All commits on `main`, deployed live on https://findfilm.ai.
 
-**⚠️ Not yet fully active — needs `WATCHMODE_API_KEY`.** Every code path below
-degrades gracefully to TMDB-only with zero functional change until the secret
-is added. See "Next steps" below.
+**✅ `WATCHMODE_API_KEY` is now set in production and confirmed working against
+real data** — the merge feature from the prior session is fully active, not
+just deployed-but-inert.
+
+| Commit | Feature |
+|--------|---------|
+| `c719cab` | **Surfaced Watchmode's real error body** in `handleWatchmodeSources()` (`functions/api/[[path]].js`) instead of just the bare status code — a bare `"Watchmode 400"` gave no way to tell *why*. Needed immediately: the key was added, but the first live check after redeploy still showed `sources: []`; the improved error revealed `"CY is not a valid region"` — this session's own network location isn't one Watchmode supports, not a bug. |
+| `c719cab` | **`debug_region` override** in `handleWatchmodeSources()` — manual-testing-only query param (2-letter format validated), since `request.cf.country` reflects the real caller's location and can't be spoofed from outside, otherwise making it impossible to verify a specific market's data without physically being there. Real user traffic never sends this — the frontend only ever sends `client_region`. |
+
+**Root cause of the initial "still not working" symptom: not a bug, a deploy-timing gap.**
+Cloudflare Pages secrets bind to deployments, not retroactively to an already-running one — the
+secret was added to the `ratingkino` project after the last deploy, so the live deployment
+couldn't see it (`configured:false`) until a fresh `./deploy.sh` picked it up.
+
+**Verified against real production data (Germany, `?debug_region=DE`), not just asserted:**
+24 raw Watchmode sources for *Fight Club* (with real within-source duplicates — different
+price/format tiers Watchmode returns as separate records) → `_mergeWatchmodeSources()` correctly
+deduped to 8 unique providers across `rent`/`buy` (confirmed count, not assumed). Amazon
+(`watch.amazon.de`, name-only match — no TMDB `provider_id` for this entry) correctly identified
+via `_isAmazonProvider()`, `tag=findfilm-20` correctly appended to its deep link, and both its
+`rent` and `buy` chips sorted first with `.provider-chip.amazon` styling — full render-level
+confirmation via `refreshWatchProviders()`, not just the merge function in isolation.
+
+---
+
+## Session (2026-08-26c) — Watchmode Merge (max provider coverage)
+
+All commits on `main`, deployed live on https://findfilm.ai.
+
+**✅ Update: `WATCHMODE_API_KEY` was added and this is now fully active — see
+the newer session block above for the activation + live verification.** At
+the time this block was written, the feature was deployed but inert
+(graceful TMDB-only degradation) since the secret didn't exist yet; the
+description of that inert state below is left as-written for history.
 
 | Commit | Feature |
 |--------|---------|
