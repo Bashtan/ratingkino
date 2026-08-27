@@ -2,6 +2,43 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-08-27c) — Merged TMDB + Reddit Reviews Carousel
+
+All commits on `main`, deployed live on https://findfilm.ai.
+
+**⚠️ Reddit still not live** — `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` are still not in the
+production Pages project (checked via `wrangler pages secret list --project-name ratingkino`
+before starting this session — only `TMDB_KEY`/`OMDB_KEY`/`WATCHMODE_API_KEY`/etc. are set). User
+said "I finally got my Reddit API keys" but the `wrangler pages secret put` commands from the
+prior session apparently haven't been run yet (or didn't take). Everything below is built and
+deployed correctly regardless — the merge gracefully falls back to TMDB-only until the secrets
+land, exactly like the original Reddit feature did.
+
+**What changed:** the two separate carousels from the last two sessions ("Audience Reviews" /
+TMDB-only, and "Reddit Buzz" / Reddit-only) are now ONE merged carousel per user request — data
+fetching for both sources is unchanged, only the render layer consolidates.
+
+| Commit | Feature |
+|--------|---------|
+| `ed5db61` | **`_toUnifiedCard(source, r)` + `_mergeReviewSources()`** (`index.html`, near `_pickReviews`) — normalizes a TMDB review or Reddit post into one card shape (no attempt to force rating-1-10 and upvote-score onto a shared scale — not comparable, so each keeps its own native metadata at render time). Round-robin interleaves both sources so neither dominates the front of the carousel, capped at 8 total. Verified against a 5 TMDB / 2 Reddit mix: produces `TMDB,Reddit,TMDB,Reddit,TMDB,TMDB,TMDB` — the shorter list just stops contributing once exhausted, no gaps. |
+| `ed5db61` | **`refreshReviewsCarousel(m)`** — single function now (replaced the separate TMDB/Reddit renderers). Small circular source-logo badge top-right of every card: reuses this app's own star icon for TMDB (curated critic-score angle) and the upvote-arrow glyph for Reddit (its own community-voting language) rather than hand-drawing either company's actual trademark artwork. Reddit cards keep the subtle orange left-border accent as a secondary cue; TMDB cards show stars, Reddit cards show subreddit + upvote score. |
+| `ed5db61` | **Removed**: standalone `#mRedditSec` section/HTML, old `refreshRedditCarousel()` + its 2 call sites, unused `'modal.redditReviews'` i18n key (all 9 languages), old `.rdt-*` CSS (folded the still-needed parts into unified `.rq-rdt-*`/`.rq-src-logo`/`.rq-card.reddit` classes). |
+
+Verified: real `openMovie()` flow confirms the TMDB-only fallback works correctly (Reddit
+contributes 0 reviews, 5 TMDB cards render, all with the TMDB badge, no crash). Merge/interleave
+and dual-badge logic verified against synthetic Reddit-shaped data injected onto real TMDB
+results — screenshot confirms the interleaved layout, correct badge per source, `u/` prefix only
+on Reddit authors, orange accent only on Reddit cards. **Real live Reddit data end-to-end is
+still unverified** — pending the secrets actually landing in Cloudflare.
+
+**To actually activate Reddit** (same commands as before — apparently not yet run):
+```bash
+npx wrangler pages secret put REDDIT_CLIENT_ID --project-name ratingkino
+npx wrangler pages secret put REDDIT_CLIENT_SECRET --project-name ratingkino
+```
+
+---
+
 ## ⚡ Most Recent Session (2026-08-27b) — Reddit Buzz Carousel (official OAuth2)
 
 All commits on `main`, deployed live on https://findfilm.ai.
