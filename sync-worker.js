@@ -265,7 +265,7 @@ async function enrichOne(raw, env) {
   try {
     const detail = await fetchJSON(
       tmdbUrl(env, `/movie/${raw.id}`, {
-        append_to_response: 'credits,external_ids,videos,watch/providers',
+        append_to_response: 'credits,external_ids,videos,watch/providers,reviews',
         language: 'en-US',
       })
     );
@@ -291,6 +291,7 @@ async function enrichOne(raw, env) {
     const trailer     = trailerKey ? `https://www.youtube.com/embed/${trailerKey}` : null;
     const usProviders = detail['watch/providers']?.results?.US || {};
     const genres      = (detail.genres || []).map(g => g.name);
+    const reviews     = pickReviews(detail.reviews?.results);
 
     return {
       id:        detail.id,
@@ -330,6 +331,7 @@ async function enrichOne(raw, env) {
       },
       wpLink:    usProviders.link || null,
       wpCountry: 'US',
+      reviews,
       enriched:  true,
       isTV:      false,
     };
@@ -364,6 +366,30 @@ function providerObjs(arr, limit = 4) {
     provider_name: p.provider_name,
     logo_path:     p.logo_path || null,
   }));
+}
+
+// TMDB reviews sometimes carry raw HTML (reviewers can use basic markup) and
+// literal \r\n — strip/collapse both. Mirrors _cleanReviewText/_pickReviews
+// in index.html (same shape, same filtering logic) but this is a separate
+// file/runtime so it can't share the function directly.
+function cleanReviewText(text) {
+  return (text || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function pickReviews(rawResults) {
+  return (rawResults || [])
+    .map(r => ({
+      author:  r.author_details?.name || r.author || '',
+      rating:  typeof r.author_details?.rating === 'number' ? r.author_details.rating : null,
+      // Cap stored length well above the ~120 chars ever displayed (the
+      // client truncates at render time) — no reason to bake essay-length
+      // reviews into KV when only a one-line snippet is ever shown.
+      content: cleanReviewText(r.content).slice(0, 300),
+      url:     r.url || null,
+    }))
+    .filter(r => r.author && r.content.length >= 15)
+    .sort((a, b) => (b.rating != null ? 1 : 0) - (a.rating != null ? 1 : 0) || b.content.length - a.content.length)
+    .slice(0, 5);
 }
 
 function tmdbUrl(env, path, params = {}) {

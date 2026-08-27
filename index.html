@@ -2837,6 +2837,38 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .rev-success.show { display: block; }
 
+/* ─── AUDIENCE REVIEWS — TMDB quote-card carousel ─────────────────
+   Distinct from .reviews-list above (this site's own submitted reviews) —
+   compact horizontal scroller, snap-to-card, same visual language as the
+   .feed-scroll rows used elsewhere in the modal. */
+.rq-row {
+  display: flex; gap: 10px; overflow-x: auto;
+  padding: 2px 2px 8px; scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+}
+.rq-card {
+  flex: 0 0 210px; scroll-snap-align: start;
+  display: flex; flex-direction: column; gap: 7px;
+  padding: 13px 15px; border-radius: 12px;
+  background: var(--card-bg); border: 1px solid var(--border);
+  text-decoration: none; color: inherit;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+}
+a.rq-card { cursor: pointer; }
+a.rq-card:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.18); transform: translateY(-1px); }
+.rq-stars { display: flex; gap: 1px; }
+.rq-star svg { width: 12px; height: 12px; fill: rgba(180,130,0,0.25); display: block; }
+.rq-star.lit svg { fill: #FBBF24; }
+.rq-quote {
+  font-size: 12.5px; line-height: 1.55; font-style: italic;
+  color: rgba(240,230,255,0.85); margin: 0;
+}
+.rq-author {
+  font-size: 10.5px; font-weight: 700; color: var(--muted);
+  letter-spacing: 0.2px; margin-top: auto; padding-top: 2px;
+}
+
 .reviews-list {
   display: flex; flex-direction: column; gap: 9px;
   max-height: 400px; overflow-y: auto;
@@ -5713,6 +5745,14 @@ if ('serviceWorker' in navigator) {
         <div class="awards" id="mAwards"></div>
       </section>
 
+      <!-- ═══════════ CARD · AUDIENCE REVIEWS (TMDB quote carousel) ═══════
+           Distinct from "Your Review" below — these are third-party reviews
+           TMDB aggregates, not something posted on this site. -->
+      <section class="m-sec m-sec--rq bento-card" id="mReviewsQSec" style="display:none">
+        <div class="section-lbl" data-i18n="modal.audienceReviews">Audience Reviews</div>
+        <div class="rq-row hide-scrollbar" id="mReviewsQ"></div>
+      </section>
+
       <!-- ═══════════ CARD · COMMUNITY & REVIEWS ═══════════ -->
       <section class="m-sec m-sec--reviews bento-card">
         <div class="section-lbl" data-i18n="modal.yourReview">Your Review</div>
@@ -6025,6 +6065,7 @@ const TRANSLATIONS = {
     'modal.details':        'Details',
     'modal.whereToWatch':   'Where to Watch',
     'modal.awards':         'Awards & Recognition',
+    'modal.audienceReviews':'Audience Reviews',
     'modal.similar':        'You Might Also Like',
     'modal.yourReview':     'Your Review',
     'modal.postReview':     'Post Review',
@@ -6408,6 +6449,7 @@ const TRANSLATIONS = {
     'modal.details':        'Detalles',
     'modal.whereToWatch':   'Dónde ver',
     'modal.awards':         'Premios y reconocimientos',
+    'modal.audienceReviews':'Reseñas del Público',
     'modal.similar':        'También te puede gustar',
     'modal.yourReview':     'Tu reseña',
     'modal.postReview':     'Publicar reseña',
@@ -6748,6 +6790,7 @@ const TRANSLATIONS = {
     'modal.details':        'Détails',
     'modal.whereToWatch':   'Où regarder',
     'modal.awards':         'Prix et distinctions',
+    'modal.audienceReviews':'Avis du Public',
     'modal.similar':        'Vous aimerez peut-être aussi',
     'modal.yourReview':     'Votre avis',
     'modal.postReview':     "Publier l'avis",
@@ -7088,6 +7131,7 @@ const TRANSLATIONS = {
     'modal.details':        '详情',
     'modal.whereToWatch':   '在哪里观看',
     'modal.awards':         '奖项与荣誉',
+    'modal.audienceReviews':'观众评论',
     'modal.similar':        '你可能也喜欢',
     'modal.yourReview':     '您的评价',
     'modal.postReview':     '发布评价',
@@ -7428,6 +7472,7 @@ const TRANSLATIONS = {
     'modal.details':        'تفاصيل',
     'modal.whereToWatch':   'أين تشاهد',
     'modal.awards':         'الجوائز والتقدير',
+    'modal.audienceReviews':'آراء الجمهور',
     'modal.similar':        'قد يعجبك أيضاً',
     'modal.yourReview':     'مراجعتك',
     'modal.postReview':     'نشر المراجعة',
@@ -7766,6 +7811,7 @@ const TRANSLATIONS = {
     'modal.details':        'Деталі',
     'modal.whereToWatch':   'Де дивитися',
     'modal.awards':         'Нагороди та визнання',
+    'modal.audienceReviews':'Відгуки Глядачів',
     'modal.similar':        'Вам також може сподобатись',
     'modal.yourReview':     'Ваш відгук',
     'modal.postReview':     'Опублікувати',
@@ -8121,6 +8167,7 @@ const TRANSLATIONS = {
     'modal.details':        'Details',
     'modal.whereToWatch':   'Wo streamen',
     'modal.awards':         'Auszeichnungen',
+    'modal.audienceReviews':'Zuschauerbewertungen',
     'modal.similar':        'Das könnte dir auch gefallen',
     'modal.yourReview':     'Deine Rezension',
     'modal.postReview':     'Rezension posten',
@@ -8485,6 +8532,7 @@ const TRANSLATIONS = {
     'modal.details':        'Detaljer',
     'modal.whereToWatch':   'Var du kan se den',
     'modal.awards':         'Utmärkelser',
+    'modal.audienceReviews':'Publikrecensioner',
     'modal.similar':        'Du kanske också gillar',
     'modal.yourReview':     'Din recension',
     'modal.postReview':     'Publicera recension',
@@ -8849,6 +8897,7 @@ const TRANSLATIONS = {
     'modal.details':        'Detaljer',
     'modal.whereToWatch':   'Hvor du kan se den',
     'modal.awards':         'Utmerkelser',
+    'modal.audienceReviews':'Publikumsanmeldelser',
     'modal.similar':        'Du liker kanskje også',
     'modal.yourReview':     'Din anmeldelse',
     'modal.postReview':     'Publiser anmeldelse',
@@ -10594,6 +10643,59 @@ async function fetchWatchmodeSources(tmdbId, type) {
   }
 }
 
+// ── TMDB user reviews → compact quote-card carousel ──────────────────────
+// Reviews sometimes carry raw HTML (TMDB lets reviewers use basic markup,
+// e.g. "<em>Fight Club</em>") and literal \r\n — strip/collapse both so a
+// truncated one-line quote never shows a stray tag or mid-sentence newline.
+function _cleanReviewText(text) {
+  return (text || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Truncate to ~120 chars at a word boundary (never mid-word), then ellipsis.
+// Falls back to a hard cut only if there's no reasonable space nearby (e.g.
+// one very long unbroken word).
+function _truncateReview(text, maxLen = 120) {
+  if (text.length <= maxLen) return text;
+  const cut = text.slice(0, maxLen);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > maxLen * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd() + '…';
+}
+
+// Picks up to 5 reviews worth showing as trust-building quote cards: real
+// content only (TMDB has plenty of one-word "Great!" reviews that add
+// nothing as a quote), rated reviews first, then longest/most substantial —
+// TMDB's own ordering has no quality signal (no upvotes), just insertion
+// order, so this is the only way to surface the good ones.
+function _pickReviews(rawResults) {
+  return (rawResults || [])
+    .map(r => ({
+      author:  r.author_details?.name || r.author || '',
+      rating:  typeof r.author_details?.rating === 'number' ? r.author_details.rating : null,
+      content: _cleanReviewText(r.content),
+      url:     r.url || null,
+    }))
+    .filter(r => r.author && r.content.length >= 15)
+    .sort((a, b) => (b.rating != null ? 1 : 0) - (a.rating != null ? 1 : 0) || b.content.length - a.content.length)
+    .slice(0, 5);
+}
+
+// TMDB reviewer ratings are 1-10 (site convention, same scale as vote_average)
+// — not every review has one. Renders a 5-star row rounded to the nearest
+// whole star; reuses the exact star path already used in the "Your Review"
+// star-input for visual consistency. Returns '' when no rating was given, so
+// the card just shows the quote without an empty/misleading star row.
+const _REVIEW_STAR_SVG = '<svg viewBox="0 0 24 24"><path d="M12 2l2.939 6.326L22 9.354l-5.5 5.667 1.299 7.979L12 19.25l-5.799 3.75L7.5 15.021 2 9.354l7.061-1.028Z"/></svg>';
+function _reviewStars(rating10) {
+  if (rating10 == null) return '';
+  const lit = Math.max(0, Math.min(5, Math.round(rating10 / 2)));
+  let html = `<div class="rq-stars" aria-label="${lit} out of 5 stars">`;
+  for (let i = 0; i < 5; i++) html += `<span class="rq-star${i < lit ? ' lit' : ''}">${_REVIEW_STAR_SVG}</span>`;
+  return html + '</div>';
+}
+
 function mergeMovieData(movie, det, od, country = DETECTED_COUNTRY) {
   // ── TMDB fields ──────────────────────────────────────────────
   movie.imdbId = det.imdb_id || det.external_ids?.imdb_id || movie.imdbId || null;
@@ -10645,6 +10747,9 @@ function mergeMovieData(movie, det, od, country = DETECTED_COUNTRY) {
   // Preserve full cross-country map for geo-mismatch VPN banner logic
   movie.wpAllCountries = wpResults;
 
+  // TMDB user reviews — compact quote-card carousel (see _pickReviews)
+  movie.reviews = _pickReviews(det.reviews?.results);
+
   // ── OMDb fields ───────────────────────────────────────────────
   if (od) {
     const imdbVal = parseFloat(od.imdbRating);
@@ -10677,7 +10782,7 @@ async function doEnrich(tmdbId) {
     // never throws, so it can't turn a Watchmode hiccup into a broken enrich.
     const [det, wmSources] = await Promise.all([
       tmdbGet(`/${type}/${tmdbId}`, {
-        append_to_response: 'credits,videos,external_ids,watch/providers',
+        append_to_response: 'credits,videos,external_ids,watch/providers,reviews',
         language: 'en-US',
       }),
       fetchWatchmodeSources(tmdbId, type),
@@ -11029,6 +11134,7 @@ function fromCache(m) {
                     : null,
     watchProviders: m.watchProviders || { free: [], flatrate: [], rent: [], buy: [] },
     wpLink:       m.wpLink     || null,
+    reviews:      m.reviews    || [],
     enriched:     m.enriched   || false,
     isTV:         false,
   };
@@ -12271,6 +12377,7 @@ async function openMovie(tmdbId, listName = '') {
       refreshModalRatings(m);
       refreshModalDetails(m);
       refreshWatchProviders(m);
+      refreshReviewsCarousel(m);
     }
   } else if (m.imdbId && m.rt === null && m.mc === null) {
     // Cached movies are pre-enriched by sync-worker (TMDB only, no OMDb).
@@ -12484,6 +12591,7 @@ function populateModal(m) {
   refreshModalRatings(m);
   refreshModalDetails(m);
   refreshWatchProviders(m);
+  refreshReviewsCarousel(m);
 
   const tBtn = document.getElementById('btnTrailer');
   tBtn.style.display = m.trailer ? '' : 'none';
@@ -13154,6 +13262,32 @@ function _refreshStreamingCtAs(m) {
            `</a>`;
   }).join('');
   setInfo(streamLbl + `<div class="stream-row">${providerBtns}</div>`);
+}
+
+// TMDB audience reviews — compact horizontal quote-card carousel. Hides the
+// whole section when there's nothing worth showing (no reviews at all, or
+// none survived _pickReviews' content-quality filter) rather than rendering
+// an empty/awkward section.
+function refreshReviewsCarousel(m) {
+  const sec = document.getElementById('mReviewsQSec');
+  const row = document.getElementById('mReviewsQ');
+  if (!sec || !row) return;
+  const reviews = m.reviews || [];
+  if (!reviews.length) {
+    sec.style.display = 'none';
+    row.innerHTML = '';
+    return;
+  }
+  sec.style.display = '';
+  row.innerHTML = reviews.map(r => {
+    const tag = r.url ? 'a' : 'div';
+    const linkAttrs = r.url ? ` href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" title="Read the full review on TMDB"` : '';
+    return `<${tag} class="rq-card"${linkAttrs}>
+      ${_reviewStars(r.rating)}
+      <p class="rq-quote">“${esc(_truncateReview(r.content))}”</p>
+      <div class="rq-author">${esc(r.author)}</div>
+    </${tag}>`;
+  }).join('');
 }
 
 function refreshWatchProviders(m) {
