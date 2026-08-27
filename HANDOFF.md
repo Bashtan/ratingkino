@@ -2,6 +2,39 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-08-27) — TMDB Audience Reviews Carousel
+
+All commits on `main`, deployed live on https://findfilm.ai.
+
+**Context:** user initially asked for a Reddit reviews section scraped via public `.json`
+endpoints, routed through the video-gen proxy with a spoofed browser User-Agent specifically to
+bypass Reddit's active IP blocks on Cloudflare Workers. Declined — that's deliberate anti-abuse
+evasion (Reddit already blocks this traffic on purpose) for a commercial product, a clear ToS
+violation with real legal/reputational risk. Offered 3 alternatives (official Reddit API via
+OAuth client-credentials, an honest non-evasive direct-fetch attempt, or a different data
+source); user chose to drop Reddit entirely and use TMDB's own `/movie/{id}/reviews` instead —
+already covered by the existing `TMDB_KEY`, no new credentials or ToS risk.
+
+| Commit | Feature |
+|--------|---------|
+| `734418b` | **`_pickReviews(rawResults)`** (`index.html`, near `mergeMovieData`) — TMDB reviews have no quality signal (no upvotes, just insertion order) and plenty of one-word "Great!" reviews; filters to real content (15+ chars, has an author), prioritizes rated reviews then longest/most substantial, caps at 5. `_cleanReviewText()` strips embedded HTML (TMDB review content can contain raw markup like `<em>`, confirmed against live data) and collapses `\r\n`/whitespace runs. `_truncateReview()` — ~120 chars, cuts at the nearest word boundary. `_reviewStars(rating10)` — TMDB ratings are 1-10; renders a 5-star row rounded to nearest whole star, reusing the exact star SVG from the "Your Review" input; returns `''` when no rating given rather than a misleading empty row. |
+| `734418b` | **`refreshReviewsCarousel(m)`** — renders into new `#mReviewsQSec`/`#mReviewsQ`, wired into `populateModal()` and the post-enrich refresh in `openMovie()`. Cards are `<a>` links to the full TMDB review when a URL is available, else plain `<div>`. Whole section hides (not just empty-state) when zero reviews survive the filter. New modal section placed between Awards and the site's own "Your Review"/"Reviews" (`localStorage`-based, user-submitted) section — clearly labeled "Audience Reviews" and visually distinct so the two aren't confused (TMDB-aggregated third-party reviews vs. something posted on this site). New `.rq-row`/`.rq-card`/`.rq-stars`/`.rq-quote`/`.rq-author` CSS, matching the existing `.feed-scroll` snap-carousel pattern. `'modal.audienceReviews'` i18n key added to all 9 language blocks. |
+| `734418b` | **`doEnrich()`'s `append_to_response`** gains `,reviews` — zero extra round trips, same request that already fetches credits/videos/watch-providers. **`sync-worker.js`** mirrors the same `pickReviews`/`cleanReviewText` logic (separate runtime, can't share the function) added to its own already-existing `append_to_response`, so cache-first homepage views get reviews too, not just live-enriched ones. Stored content capped at 300 chars (buffer over the ~120 ever displayed) to avoid bloating KV with essay-length reviews. |
+
+Verified against real production data (Fight Club, TMDB movie 550): 5 reviews correctly picked
+and prioritized by rating, truncations all land within spec at clean word boundaries, star counts
+match `rating/2` rounded, HTML-tag stripping confirmed clean via live data. Confirmed the
+no-rating case (empty star row, no crash) and the zero-reviews case (whole section hides, found a
+real title — TMDB id `1234567`, "Legend of Mermaid: Human Love" — with 0 reviews to test against)
+via screenshot: clean 5-card horizontal carousel, gold stars, italic truncated quotes, author
+attribution, consistent card sizing, zero console errors.
+
+**Known minor limitation:** TMDB reviewers occasionally use Markdown emphasis (`**bold**`,
+`_italic_`) in review text; not stripped, since a naive strip risks mangling legitimate
+hyphenated/underscored text. Rare in practice, left as a cosmetic edge case.
+
+---
+
 ## ⚡ Most Recent Session (2026-08-26e) — Provider Chip Consolidation (declutter)
 
 All commits on `main`, deployed live on https://findfilm.ai.
