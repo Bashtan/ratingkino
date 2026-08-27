@@ -2,6 +2,60 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-08-27b) — Reddit Buzz Carousel (official OAuth2)
+
+All commits on `main`, deployed live on https://findfilm.ai.
+
+**⚠️ Not yet active — needs `REDDIT_CLIENT_ID` + `REDDIT_CLIENT_SECRET`.** Ships fully wired but
+inert: every path returns 200 with an empty `reviews` array until both secrets are set. See
+"Next steps" below for the exact `wrangler pages secret put` commands.
+
+**Context:** follows directly from the declined Reddit-scraping plan (proxy-routing + spoofed
+browser User-Agent to bypass Reddit's active IP blocks — refused as deliberate anti-abuse
+evasion). User confirmed going with the legitimate official-API path instead, since "the genuine
+Reddit vibe is crucial for our social proof" — asked for the complete feature written ahead of
+getting the credentials, to activate the moment they're added.
+
+| Commit | Feature |
+|--------|---------|
+| `6015f5b` | **`/api/reddit/reviews` route** (`functions/api/[[path]].js`) — `_redditToken()`: app-only OAuth2 `client_credentials` bearer token, KV-cached ~55min (Reddit tokens last 60min). `handleRedditReviews()`: searches `oauth.reddit.com/search` scoped to `subreddit:movies OR subreddit:flicks OR subreddit:MovieReviews OR subreddit:TrueFilm OR subreddit:boxoffice` for `title:"{title}"`, keeps self-posts only (link posts aren't reviews), drops NSFW/deleted-author/stickied, sorts by score, caps at 5. Cached 36h/movie in the existing `MOVIES_CACHE` KV namespace — cached whether results were found or not (so a movie with zero Reddit discussion isn't re-searched every view), but errors are deliberately NOT cached (self-heals on the next view instead of locking the feature off for a day and a half). |
+| `6015f5b` | **`refreshRedditCarousel(m)`** (`index.html`) — deliberately a SEPARATE carousel from the TMDB one (last session), not merged — different character (informal discussion vs. structured reviews) and the brief's whole point was a genuinely Reddit feel. Uses Reddit's own visual language instead of a star rating Reddit doesn't have: subreddit tag + upvote-arrow score badge, `u/username`, subtle reddit-orange left-border accent. New section (`#mRedditSec`/`#mReddit`, "Reddit Buzz") placed directly below "Audience Reviews" (TMDB), above the site's own "Your Review"/"Reviews" — visually/semantically distinct from both. `fetchRedditReviews()` mirrors the existing `fetchWatchmodeSources()` pattern (session-cached, never throws); wired into `doEnrich()` (fetches concurrently with TMDB + Watchmode, purely additive) and the same `populateModal()`/post-enrich call sites as the TMDB carousel. New `.rdt-*` CSS; `'modal.redditReviews'` i18n key added to all 9 language blocks. |
+
+**API details verified against Reddit's current official docs before writing any code** (not
+assumed from memory): token endpoint `https://www.reddit.com/api/v1/access_token`, Basic-Auth
+`client_credentials` grant, API base `https://oauth.reddit.com` (never `www.reddit.com` for
+authenticated calls), required `User-Agent` format `<platform>:<app ID>:<version> (by
+/u/<username>)` — Reddit's own docs explicitly warn against spoofing browsers, confirming the
+earlier declined approach really was against their rules — and the 60 req/min OAuth2 rate limit
+(the 36h review cache keeps real call volume far under this regardless).
+
+Verified in preview (`wrangler pages dev`): unconfigured → `{configured:false, reviews:[]}`;
+deliberately invalid `REDDIT_CLIENT_SECRET` → real Reddit `401`, gracefully caught as
+`{configured:true, reviews:[], error:"Reddit auth 401"}`; the real `openMovie()` flow confirmed
+`redditReviews:[]` and the section correctly hiding itself when unconfigured. Render logic
+verified against synthetic Reddit-shaped data (4 cards, mixed with/without a permalink — confirmed
+`<a>` vs `<div>`) with a screenshot showing subreddit tags, upvote counts, `u/username`, sitting
+cleanly below the TMDB carousel.
+
+**Next steps to activate — exact commands:**
+```bash
+npx wrangler pages secret put REDDIT_CLIENT_ID --project-name ratingkino
+npx wrangler pages secret put REDDIT_CLIENT_SECRET --project-name ratingkino
+```
+Also add both to `.dev.vars` for local dev testing (`REDDIT_CLIENT_ID=...` /
+`REDDIT_CLIENT_SECRET=...`, same convention as `TMDB_KEY`/`OMDB_KEY`/`WATCHMODE_API_KEY`).
+No code change or redeploy needed after — the very next page load picks it up (matches the
+`WATCHMODE_API_KEY` activation pattern from two sessions ago, where a Pages secret needed a fresh
+deploy to bind to the currently-live deployment if it's added mid-session — deploy once more after
+adding the secrets if reviews still show `configured:false` immediately after).
+
+One more thing worth reviewing: `REDDIT_USER_AGENT` in `functions/api/[[path]].js` is currently
+`'web:findfilm.ai-reviews:1.0.0 (by /u/findfilmai)'` — the `/u/findfilmai` part is a placeholder;
+Reddit's own rules ask for this to reference a real account. Swap in the actual Reddit username
+tied to the registered app if there is one.
+
+---
+
 ## ⚡ Most Recent Session (2026-08-27) — TMDB Audience Reviews Carousel
 
 All commits on `main`, deployed live on https://findfilm.ai.
