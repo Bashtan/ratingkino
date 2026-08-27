@@ -2869,6 +2869,49 @@ a.rq-card:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255
   letter-spacing: 0.2px; margin-top: auto; padding-top: 2px;
 }
 
+/* ─── REDDIT BUZZ — Reddit quote-card carousel ────────────────────
+   Same compact snap-scroll shape as .rq-row above, but its own visual
+   identity: subreddit tag + upvote arrow/score instead of a star rating
+   (Reddit has no such rating) — a small, tasteful Reddit-orange accent
+   is the only real brand cue, kept subtle rather than a loud full-orange
+   card that would clash with the rest of the modal. */
+.rdt-row {
+  display: flex; gap: 10px; overflow-x: auto;
+  padding: 2px 2px 8px; scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+}
+.rdt-card {
+  flex: 0 0 210px; scroll-snap-align: start;
+  display: flex; flex-direction: column; gap: 7px;
+  padding: 13px 15px; border-radius: 12px;
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-left: 2px solid rgba(255,69,0,0.5);
+  text-decoration: none; color: inherit;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+}
+a.rdt-card { cursor: pointer; }
+a.rdt-card:hover { background: rgba(255,69,0,0.05); border-color: rgba(255,255,255,0.18); transform: translateY(-1px); }
+.rdt-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rdt-sub {
+  font-size: 10px; font-weight: 800; color: #ff6b35;
+  letter-spacing: 0.2px;
+}
+.rdt-score {
+  display: flex; align-items: center; gap: 2px;
+  font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,0.6);
+  flex-shrink: 0;
+}
+.rdt-score svg { width: 10px; height: 10px; fill: #ff6b35; }
+.rdt-quote {
+  font-size: 12.5px; line-height: 1.55; font-style: italic;
+  color: rgba(240,230,255,0.85); margin: 0;
+}
+.rdt-author {
+  font-size: 10.5px; font-weight: 700; color: var(--muted);
+  letter-spacing: 0.2px; margin-top: auto; padding-top: 2px;
+}
+
 .reviews-list {
   display: flex; flex-direction: column; gap: 9px;
   max-height: 400px; overflow-y: auto;
@@ -5753,6 +5796,17 @@ if ('serviceWorker' in navigator) {
         <div class="rq-row hide-scrollbar" id="mReviewsQ"></div>
       </section>
 
+      <!-- ═══════════ CARD · REDDIT REVIEWS (official OAuth2 API) ═══════
+           Separate from the TMDB carousel above on purpose — informal
+           discussion-thread snippets read differently from structured
+           critic-style reviews, and the whole point is a genuine Reddit
+           feel (subreddit tag + upvote score, not a star rating Reddit
+           doesn't have). -->
+      <section class="m-sec m-sec--rdt bento-card" id="mRedditSec" style="display:none">
+        <div class="section-lbl" data-i18n="modal.redditReviews">Reddit Buzz</div>
+        <div class="rdt-row hide-scrollbar" id="mReddit"></div>
+      </section>
+
       <!-- ═══════════ CARD · COMMUNITY & REVIEWS ═══════════ -->
       <section class="m-sec m-sec--reviews bento-card">
         <div class="section-lbl" data-i18n="modal.yourReview">Your Review</div>
@@ -6066,6 +6120,7 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   'Where to Watch',
     'modal.awards':         'Awards & Recognition',
     'modal.audienceReviews':'Audience Reviews',
+    'modal.redditReviews': 'Reddit Buzz',
     'modal.similar':        'You Might Also Like',
     'modal.yourReview':     'Your Review',
     'modal.postReview':     'Post Review',
@@ -6450,6 +6505,7 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   'Dónde ver',
     'modal.awards':         'Premios y reconocimientos',
     'modal.audienceReviews':'Reseñas del Público',
+    'modal.redditReviews': 'Opiniones de Reddit',
     'modal.similar':        'También te puede gustar',
     'modal.yourReview':     'Tu reseña',
     'modal.postReview':     'Publicar reseña',
@@ -6791,6 +6847,7 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   'Où regarder',
     'modal.awards':         'Prix et distinctions',
     'modal.audienceReviews':'Avis du Public',
+    'modal.redditReviews': 'Avis Reddit',
     'modal.similar':        'Vous aimerez peut-être aussi',
     'modal.yourReview':     'Votre avis',
     'modal.postReview':     "Publier l'avis",
@@ -7132,6 +7189,7 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   '在哪里观看',
     'modal.awards':         '奖项与荣誉',
     'modal.audienceReviews':'观众评论',
+    'modal.redditReviews': 'Reddit 热议',
     'modal.similar':        '你可能也喜欢',
     'modal.yourReview':     '您的评价',
     'modal.postReview':     '发布评价',
@@ -7473,6 +7531,7 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   'أين تشاهد',
     'modal.awards':         'الجوائز والتقدير',
     'modal.audienceReviews':'آراء الجمهور',
+    'modal.redditReviews': 'آراء Reddit',
     'modal.similar':        'قد يعجبك أيضاً',
     'modal.yourReview':     'مراجعتك',
     'modal.postReview':     'نشر المراجعة',
@@ -7812,6 +7871,7 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   'Де дивитися',
     'modal.awards':         'Нагороди та визнання',
     'modal.audienceReviews':'Відгуки Глядачів',
+    'modal.redditReviews': 'Обговорення Reddit',
     'modal.similar':        'Вам також може сподобатись',
     'modal.yourReview':     'Ваш відгук',
     'modal.postReview':     'Опублікувати',
@@ -8168,6 +8228,7 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   'Wo streamen',
     'modal.awards':         'Auszeichnungen',
     'modal.audienceReviews':'Zuschauerbewertungen',
+    'modal.redditReviews': 'Reddit-Stimmen',
     'modal.similar':        'Das könnte dir auch gefallen',
     'modal.yourReview':     'Deine Rezension',
     'modal.postReview':     'Rezension posten',
@@ -8533,6 +8594,7 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   'Var du kan se den',
     'modal.awards':         'Utmärkelser',
     'modal.audienceReviews':'Publikrecensioner',
+    'modal.redditReviews': 'Reddit-röster',
     'modal.similar':        'Du kanske också gillar',
     'modal.yourReview':     'Din recension',
     'modal.postReview':     'Publicera recension',
@@ -8898,6 +8960,7 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   'Hvor du kan se den',
     'modal.awards':         'Utmerkelser',
     'modal.audienceReviews':'Publikumsanmeldelser',
+    'modal.redditReviews': 'Reddit-stemmer',
     'modal.similar':        'Du liker kanskje også',
     'modal.yourReview':     'Din anmeldelse',
     'modal.postReview':     'Publiser anmeldelse',
@@ -10643,6 +10706,31 @@ async function fetchWatchmodeSources(tmdbId, type) {
   }
 }
 
+// Session-cached Reddit reviews fetch — mirrors fetchWatchmodeSources above.
+// Backend does the real 36h caching (handleRedditReviews in
+// functions/api/[[path]].js); this session cache just avoids a redundant
+// network round trip if the same movie's modal is reopened within one
+// visit. Never required for the page to work: the backend always returns
+// 200 with an empty `reviews` array if REDDIT_CLIENT_ID/SECRET aren't
+// configured, Reddit errors, or nothing matched — and this function itself
+// never throws, so callers don't need a try/catch.
+async function fetchRedditReviews(tmdbId, title) {
+  const cacheKey = `rdt_${tmdbId}`;
+  try {
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) return JSON.parse(cached);
+  } catch {}
+  try {
+    const r = await fetch(`/api/reddit/reviews?tmdb_id=${tmdbId}&title=${encodeURIComponent(title || '')}`);
+    const data = await r.json();
+    const reviews = data?.reviews || [];
+    try { sessionStorage.setItem(cacheKey, JSON.stringify(reviews)); } catch {}
+    return reviews;
+  } catch {
+    return [];
+  }
+}
+
 // ── TMDB user reviews → compact quote-card carousel ──────────────────────
 // Reviews sometimes carry raw HTML (TMDB lets reviewers use basic markup,
 // e.g. "<em>Fight Club</em>") and literal \r\n — strip/collapse both so a
@@ -10777,15 +10865,18 @@ async function doEnrich(tmdbId) {
   if (!movie) return;
   try {
     const type = movie.isTV ? 'tv' : 'movie';
-    // Step 1: full TMDB details + Watchmode sources, concurrently. Watchmode
-    // is purely additive (see _mergeWatchmodeSources) and fetchWatchmodeSources()
-    // never throws, so it can't turn a Watchmode hiccup into a broken enrich.
-    const [det, wmSources] = await Promise.all([
+    // Step 1: full TMDB details + Watchmode sources + Reddit reviews,
+    // concurrently. Watchmode and Reddit are both purely additive (see
+    // _mergeWatchmodeSources / refreshRedditCarousel) and their fetch
+    // functions never throw, so neither can turn a hiccup on either side
+    // into a broken enrich.
+    const [det, wmSources, redditReviews] = await Promise.all([
       tmdbGet(`/${type}/${tmdbId}`, {
         append_to_response: 'credits,videos,external_ids,watch/providers,reviews',
         language: 'en-US',
       }),
       fetchWatchmodeSources(tmdbId, type),
+      fetchRedditReviews(tmdbId, movie.title),
     ]);
     // Step 2: OMDb — IMDb + RT + MC (parallel-safe, null if unavailable)
     const imdbId = det.imdb_id || det.external_ids?.imdb_id || null;
@@ -10793,6 +10884,7 @@ async function doEnrich(tmdbId) {
 
     mergeMovieData(movie, det, od);
     if (movie.watchProviders) _mergeWatchmodeSources(movie.watchProviders, wmSources);
+    movie.redditReviews = redditReviews;
     movie.enriched = true;
     updateCardInGrid(tmdbId);
   } catch(e) {
@@ -11134,7 +11226,8 @@ function fromCache(m) {
                     : null,
     watchProviders: m.watchProviders || { free: [], flatrate: [], rent: [], buy: [] },
     wpLink:       m.wpLink     || null,
-    reviews:      m.reviews    || [],
+    reviews:      m.reviews       || [],
+    redditReviews: m.redditReviews || [],
     enriched:     m.enriched   || false,
     isTV:         false,
   };
@@ -12378,6 +12471,7 @@ async function openMovie(tmdbId, listName = '') {
       refreshModalDetails(m);
       refreshWatchProviders(m);
       refreshReviewsCarousel(m);
+      refreshRedditCarousel(m);
     }
   } else if (m.imdbId && m.rt === null && m.mc === null) {
     // Cached movies are pre-enriched by sync-worker (TMDB only, no OMDb).
@@ -12592,6 +12686,7 @@ function populateModal(m) {
   refreshModalDetails(m);
   refreshWatchProviders(m);
   refreshReviewsCarousel(m);
+  refreshRedditCarousel(m);
 
   const tBtn = document.getElementById('btnTrailer');
   tBtn.style.display = m.trailer ? '' : 'none';
@@ -13286,6 +13381,41 @@ function refreshReviewsCarousel(m) {
       ${_reviewStars(r.rating)}
       <p class="rq-quote">“${esc(_truncateReview(r.content))}”</p>
       <div class="rq-author">${esc(r.author)}</div>
+    </${tag}>`;
+  }).join('');
+}
+
+// Reddit reviews — deliberately its own carousel, not merged into the TMDB
+// one above: different character (informal discussion threads vs.
+// structured critic-style reviews) and the whole point per the brief was
+// a genuinely "Reddit" feel — so this uses Reddit's own visual language
+// (subreddit tag, upvote arrow + score) instead of forcing a star rating
+// Reddit doesn't actually have.
+const _REDDIT_UPVOTE_SVG = '<svg viewBox="0 0 24 24"><path d="M12 4l8 10h-5v6H9v-6H4z"/></svg>';
+function refreshRedditCarousel(m) {
+  const sec = document.getElementById('mRedditSec');
+  const row = document.getElementById('mReddit');
+  if (!sec || !row) return;
+  const reviews = m.redditReviews || [];
+  if (!reviews.length) {
+    sec.style.display = 'none';
+    row.innerHTML = '';
+    return;
+  }
+  sec.style.display = '';
+  row.innerHTML = reviews.map(r => {
+    const tag = r.url ? 'a' : 'div';
+    const linkAttrs = r.url ? ` href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" title="Read the full thread on Reddit"` : '';
+    const scoreBadge = r.score != null
+      ? `<span class="rdt-score">${_REDDIT_UPVOTE_SVG}${esc(r.score.toLocaleString())}</span>`
+      : '';
+    return `<${tag} class="rdt-card"${linkAttrs}>
+      <div class="rdt-meta">
+        <span class="rdt-sub">${esc(r.subreddit)}</span>
+        ${scoreBadge}
+      </div>
+      <p class="rdt-quote">“${esc(_truncateReview(_cleanReviewText(r.content)))}”</p>
+      <div class="rdt-author">u/${esc(r.author)}</div>
     </${tag}>`;
   }).join('');
 }

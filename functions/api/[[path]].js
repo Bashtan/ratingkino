@@ -12,6 +12,8 @@
  *   /api/ai-search     → Cloudflare AI semantic search over KV catalog (Enter-key mode)
  *   /api/watchmode/sources → api.watchmode.com/v1/title/{type}-{tmdb_id}/sources/
  *                            (injects WATCHMODE_API_KEY secret; region-resolved server-side)
+ *   /api/reddit/reviews   → oauth.reddit.com/search, official OAuth2 client_credentials
+ *                           (injects REDDIT_CLIENT_ID/REDDIT_CLIENT_SECRET; KV-cached 36h/movie)
  *
  * API keys and KV are stored as Cloudflare Pages secrets/bindings —
  * never exposed in HTML source.
@@ -48,6 +50,11 @@ export async function onRequest({ request, env, params, waitUntil }) {
      TMDB client-side (see index.html) for max provider coverage ── */
   if (path === '/watchmode/sources') {
     return handleWatchmodeSources(request, url, env, cors);
+  }
+
+  /* ── /api/reddit/reviews ── official Reddit API, OAuth2 client_credentials ── */
+  if (path === '/reddit/reviews') {
+    return handleRedditReviews(request, url, env, cors, waitUntil);
   }
 
   /* ── /api/search ── two-step: TMDB title search + AI semantic fallback ── */
@@ -864,6 +871,146 @@ async function handleWatchmodeSources(request, url, env, cors) {
     return json({ configured: true, region, sources });
   } catch (e) {
     return json({ configured: true, region, sources: [], error: e.message });
+  }
+}
+
+/* ── /api/reddit/reviews ──────────────────────────────────────────────
+   Official Reddit API only — OAuth2 client_credentials (app-only token,
+   no user login, no scopes). Genuine public discussion posts, fetched
+   and identified honestly per Reddit's own API rules (see
+   REDDIT_USER_AGENT below) — no IP-block evasion, no spoofed browser
+   User-Agent, no third-party proxy in the loop.
+
+   Two-tier KV cache keeps Reddit call volume low (well under the 60
+   req/min OAuth2 rate limit) and avoids re-authenticating every request:
+     reddit:token              — app-only bearer token, ~55min TTL
+                                  (Reddit tokens last 60min; refreshed
+                                  5min early so a request never lands on
+                                  one that just expired mid-flight)
+     reddit:reviews:v1:{tmdbId} — processed review list per movie, 36h
+                                  TTL (inside the requested 24-48h
+                                  window) — cached whether reviews were
+                                  found or not, so a movie with zero
+                                  Reddit discussion doesn't get re-
+                                  searched on every view either.
+   Graceful by construction, same contract as /watchmode/sources: missing
+   secrets, a Reddit outage, or zero results all return 200 with an empty
+   `reviews` array — never breaks the page. An error response is
+   deliberately NOT cached (unlike a real empty result) — same-movie
+   requests are infrequent enough in practice that this doesn't risk
+   hammering Reddit, and it means a transient outage self-heals on the
+   very next view instead of being locked "off" for a day and a half.
+─────────────────────────────────────────────────────────────────────── */
+const REDDIT_USER_AGENT   = 'web:findfilm.ai-reviews:1.0.0 (by /u/findfilmai)';
+const REDDIT_REVIEW_SUBS  = ['movies', 'flicks', 'MovieReviews', 'TrueFilm', 'boxoffice'];
+const REDDIT_REVIEWS_TTL  = 129600; // 36h
+
+async function _redditToken(env) {
+  if (!env.REDDIT_CLIENT_ID || !env.REDDIT_CLIENT_SECRET) return null;
+
+  if (env.MOVIES_CACHE) {
+    try {
+      const cached = await env.MOVIES_CACHE.get('reddit:token');
+      if (cached) return cached;
+    } catch {}
+  }
+
+  const basic = btoa(`${env.REDDIT_CLIENT_ID}:${env.REDDIT_CLIENT_SECRET}`);
+  const res = await fetch('https://www.reddit.com/api/v1/access_token', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${basic}`,
+      'Content-Type':  'application/x-www-form-urlencoded',
+      'User-Agent':    REDDIT_USER_AGENT,
+    },
+    body: 'grant_type=client_credentials',
+  });
+  if (!res.ok) throw new Error(`Reddit auth ${res.status}`);
+  const data = await res.json();
+  if (!data.access_token) throw new Error('Reddit auth: no access_token in response');
+
+  if (env.MOVIES_CACHE) {
+    const ttl = Math.max(60, (data.expires_in || 3600) - 300);
+    env.MOVIES_CACHE.put('reddit:token', data.access_token, { expirationTtl: ttl }).catch(() => {});
+  }
+  return data.access_token;
+}
+
+async function handleRedditReviews(request, url, env, cors, waitUntil) {
+  const json = body =>
+    new Response(JSON.stringify(body), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600', ...cors },
+    });
+
+  const configured = !!(env.REDDIT_CLIENT_ID && env.REDDIT_CLIENT_SECRET);
+  const tmdbId = url.searchParams.get('tmdb_id');
+  const title  = (url.searchParams.get('title') || '').trim();
+
+  if (!tmdbId || !/^\d+$/.test(tmdbId) || !title) {
+    return json({ configured, reviews: [], error: 'tmdb_id and title required' });
+  }
+  if (!configured) {
+    // Not set up yet — expected state until REDDIT_CLIENT_ID/SECRET are
+    // added. Not an error.
+    return json({ configured: false, reviews: [] });
+  }
+
+  const cacheKey = `reddit:reviews:v1:${tmdbId}`;
+  if (env.MOVIES_CACHE) {
+    try {
+      const hit = await env.MOVIES_CACHE.get(cacheKey);
+      if (hit != null) return json({ configured: true, reviews: JSON.parse(hit), cached: true });
+    } catch {}
+  }
+
+  try {
+    const token = await _redditToken(env);
+    if (!token) return json({ configured: false, reviews: [] });
+
+    // Scope the search to review/discussion-oriented subreddits and the
+    // exact title — a bare keyword search across all of Reddit returns too
+    // much noise (anything that happens to share a word with the title).
+    const subredditClause = REDDIT_REVIEW_SUBS.map(s => `subreddit:${s}`).join(' OR ');
+    const q = `title:"${title}" (${subredditClause})`;
+    const searchUrl = new URL('https://oauth.reddit.com/search');
+    searchUrl.searchParams.set('q', q);
+    searchUrl.searchParams.set('sort', 'relevance');
+    searchUrl.searchParams.set('limit', '25');
+    searchUrl.searchParams.set('type', 'link');
+
+    const r = await fetch(searchUrl.toString(), {
+      headers: { 'Authorization': `Bearer ${token}`, 'User-Agent': REDDIT_USER_AGENT },
+    });
+    if (!r.ok) {
+      const body = await r.text().catch(() => '');
+      return json({ configured: true, reviews: [], error: `Reddit ${r.status}: ${body.slice(0, 200)}` });
+    }
+    const data  = await r.json();
+    const posts = (data?.data?.children || []).map(c => c.data).filter(Boolean);
+
+    // Self-posts only (selftext present) — link posts ("official trailer",
+    // news articles) aren't reviews. Drop NSFW/removed/deleted-author posts.
+    const reviews = posts
+      .filter(p => p && !p.over_18 && !p.stickied && p.selftext && p.selftext.length >= 40)
+      .map(p => ({
+        author:    (p.author && p.author !== '[deleted]') ? p.author : null,
+        subreddit: p.subreddit_name_prefixed || (p.subreddit ? `r/${p.subreddit}` : null),
+        score:     typeof p.score === 'number' ? p.score : null,
+        content:   p.selftext,
+        url:       p.permalink ? `https://www.reddit.com${p.permalink}` : null,
+      }))
+      .filter(rv => rv.author && rv.subreddit)
+      .sort((a, b) => (b.score || 0) - (a.score || 0))
+      .slice(0, 5);
+
+    if (env.MOVIES_CACHE) {
+      const w = env.MOVIES_CACHE.put(cacheKey, JSON.stringify(reviews), { expirationTtl: REDDIT_REVIEWS_TTL }).catch(() => {});
+      if (waitUntil) waitUntil(w);
+    }
+
+    return json({ configured: true, reviews });
+  } catch (e) {
+    return json({ configured: true, reviews: [], error: e.message });
   }
 }
 
