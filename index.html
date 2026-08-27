@@ -2837,10 +2837,15 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .rev-success.show { display: block; }
 
-/* ─── AUDIENCE REVIEWS — TMDB quote-card carousel ─────────────────
+/* ─── AUDIENCE REVIEWS — merged TMDB + Reddit quote-card carousel ──
    Distinct from .reviews-list above (this site's own submitted reviews) —
    compact horizontal scroller, snap-to-card, same visual language as the
-   .feed-scroll rows used elsewhere in the modal. */
+   .feed-scroll rows used elsewhere in the modal. One carousel fed by both
+   sources (see _mergeReviewSources/refreshReviewsCarousel in JS); a small
+   source-logo badge on each card (.rq-src-logo) is what tells them apart,
+   plus a subtle Reddit-orange left-border accent (.rq-card.reddit) as a
+   secondary cue — kept tasteful rather than a loud full-orange card that
+   would clash with the rest of the modal. */
 .rq-row {
   display: flex; gap: 10px; overflow-x: auto;
   padding: 2px 2px 8px; scroll-behavior: smooth;
@@ -2855,59 +2860,40 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   text-decoration: none; color: inherit;
   transition: background 0.15s, border-color 0.15s, transform 0.12s;
 }
+.rq-card.reddit { border-left: 2px solid rgba(255,69,0,0.5); }
 a.rq-card { cursor: pointer; }
 a.rq-card:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.18); transform: translateY(-1px); }
+a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
+.rq-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 14px; }
 .rq-stars { display: flex; gap: 1px; }
 .rq-star svg { width: 12px; height: 12px; fill: rgba(180,130,0,0.25); display: block; }
 .rq-star.lit svg { fill: #FBBF24; }
+/* Reddit's own metadata line: subreddit tag + upvote arrow/score, in place
+   of a star rating Reddit doesn't have. */
+.rq-rdt-meta { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.rq-rdt-sub {
+  font-size: 10px; font-weight: 800; color: #ff6b35;
+  letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rq-rdt-score {
+  display: flex; align-items: center; gap: 2px;
+  font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,0.6);
+  flex-shrink: 0;
+}
+.rq-rdt-score svg { width: 10px; height: 10px; fill: #ff6b35; }
+/* Small circular source-identity badge, top-right of every card. */
+.rq-src-logo {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 16px; height: 16px; border-radius: 50%;
+}
+.rq-src-logo svg { width: 9px; height: 9px; fill: #fff; }
+.rq-src-logo.tmdb   { background: #01b4e4; }
+.rq-src-logo.reddit { background: #FF4500; }
 .rq-quote {
   font-size: 12.5px; line-height: 1.55; font-style: italic;
   color: rgba(240,230,255,0.85); margin: 0;
 }
 .rq-author {
-  font-size: 10.5px; font-weight: 700; color: var(--muted);
-  letter-spacing: 0.2px; margin-top: auto; padding-top: 2px;
-}
-
-/* ─── REDDIT BUZZ — Reddit quote-card carousel ────────────────────
-   Same compact snap-scroll shape as .rq-row above, but its own visual
-   identity: subreddit tag + upvote arrow/score instead of a star rating
-   (Reddit has no such rating) — a small, tasteful Reddit-orange accent
-   is the only real brand cue, kept subtle rather than a loud full-orange
-   card that would clash with the rest of the modal. */
-.rdt-row {
-  display: flex; gap: 10px; overflow-x: auto;
-  padding: 2px 2px 8px; scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x mandatory;
-}
-.rdt-card {
-  flex: 0 0 210px; scroll-snap-align: start;
-  display: flex; flex-direction: column; gap: 7px;
-  padding: 13px 15px; border-radius: 12px;
-  background: var(--card-bg); border: 1px solid var(--border);
-  border-left: 2px solid rgba(255,69,0,0.5);
-  text-decoration: none; color: inherit;
-  transition: background 0.15s, border-color 0.15s, transform 0.12s;
-}
-a.rdt-card { cursor: pointer; }
-a.rdt-card:hover { background: rgba(255,69,0,0.05); border-color: rgba(255,255,255,0.18); transform: translateY(-1px); }
-.rdt-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.rdt-sub {
-  font-size: 10px; font-weight: 800; color: #ff6b35;
-  letter-spacing: 0.2px;
-}
-.rdt-score {
-  display: flex; align-items: center; gap: 2px;
-  font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,0.6);
-  flex-shrink: 0;
-}
-.rdt-score svg { width: 10px; height: 10px; fill: #ff6b35; }
-.rdt-quote {
-  font-size: 12.5px; line-height: 1.55; font-style: italic;
-  color: rgba(240,230,255,0.85); margin: 0;
-}
-.rdt-author {
   font-size: 10.5px; font-weight: 700; color: var(--muted);
   letter-spacing: 0.2px; margin-top: auto; padding-top: 2px;
 }
@@ -5788,23 +5774,15 @@ if ('serviceWorker' in navigator) {
         <div class="awards" id="mAwards"></div>
       </section>
 
-      <!-- ═══════════ CARD · AUDIENCE REVIEWS (TMDB quote carousel) ═══════
-           Distinct from "Your Review" below — these are third-party reviews
-           TMDB aggregates, not something posted on this site. -->
+      <!-- ═══════════ CARD · AUDIENCE REVIEWS (TMDB + Reddit, merged) ═══
+           One quote-card carousel fed by both sources (see
+           refreshReviewsCarousel/_mergeReviewSources) — a small logo badge
+           on each card marks its source. Distinct from "Your Review" below
+           — these are third-party reviews, not something posted on this
+           site. -->
       <section class="m-sec m-sec--rq bento-card" id="mReviewsQSec" style="display:none">
         <div class="section-lbl" data-i18n="modal.audienceReviews">Audience Reviews</div>
         <div class="rq-row hide-scrollbar" id="mReviewsQ"></div>
-      </section>
-
-      <!-- ═══════════ CARD · REDDIT REVIEWS (official OAuth2 API) ═══════
-           Separate from the TMDB carousel above on purpose — informal
-           discussion-thread snippets read differently from structured
-           critic-style reviews, and the whole point is a genuine Reddit
-           feel (subreddit tag + upvote score, not a star rating Reddit
-           doesn't have). -->
-      <section class="m-sec m-sec--rdt bento-card" id="mRedditSec" style="display:none">
-        <div class="section-lbl" data-i18n="modal.redditReviews">Reddit Buzz</div>
-        <div class="rdt-row hide-scrollbar" id="mReddit"></div>
       </section>
 
       <!-- ═══════════ CARD · COMMUNITY & REVIEWS ═══════════ -->
@@ -6120,7 +6098,6 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   'Where to Watch',
     'modal.awards':         'Awards & Recognition',
     'modal.audienceReviews':'Audience Reviews',
-    'modal.redditReviews': 'Reddit Buzz',
     'modal.similar':        'You Might Also Like',
     'modal.yourReview':     'Your Review',
     'modal.postReview':     'Post Review',
@@ -6505,7 +6482,6 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   'Dónde ver',
     'modal.awards':         'Premios y reconocimientos',
     'modal.audienceReviews':'Reseñas del Público',
-    'modal.redditReviews': 'Opiniones de Reddit',
     'modal.similar':        'También te puede gustar',
     'modal.yourReview':     'Tu reseña',
     'modal.postReview':     'Publicar reseña',
@@ -6847,7 +6823,6 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   'Où regarder',
     'modal.awards':         'Prix et distinctions',
     'modal.audienceReviews':'Avis du Public',
-    'modal.redditReviews': 'Avis Reddit',
     'modal.similar':        'Vous aimerez peut-être aussi',
     'modal.yourReview':     'Votre avis',
     'modal.postReview':     "Publier l'avis",
@@ -7189,7 +7164,6 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   '在哪里观看',
     'modal.awards':         '奖项与荣誉',
     'modal.audienceReviews':'观众评论',
-    'modal.redditReviews': 'Reddit 热议',
     'modal.similar':        '你可能也喜欢',
     'modal.yourReview':     '您的评价',
     'modal.postReview':     '发布评价',
@@ -7531,7 +7505,6 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   'أين تشاهد',
     'modal.awards':         'الجوائز والتقدير',
     'modal.audienceReviews':'آراء الجمهور',
-    'modal.redditReviews': 'آراء Reddit',
     'modal.similar':        'قد يعجبك أيضاً',
     'modal.yourReview':     'مراجعتك',
     'modal.postReview':     'نشر المراجعة',
@@ -7871,7 +7844,6 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   'Де дивитися',
     'modal.awards':         'Нагороди та визнання',
     'modal.audienceReviews':'Відгуки Глядачів',
-    'modal.redditReviews': 'Обговорення Reddit',
     'modal.similar':        'Вам також може сподобатись',
     'modal.yourReview':     'Ваш відгук',
     'modal.postReview':     'Опублікувати',
@@ -8228,7 +8200,6 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   'Wo streamen',
     'modal.awards':         'Auszeichnungen',
     'modal.audienceReviews':'Zuschauerbewertungen',
-    'modal.redditReviews': 'Reddit-Stimmen',
     'modal.similar':        'Das könnte dir auch gefallen',
     'modal.yourReview':     'Deine Rezension',
     'modal.postReview':     'Rezension posten',
@@ -8594,7 +8565,6 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   'Var du kan se den',
     'modal.awards':         'Utmärkelser',
     'modal.audienceReviews':'Publikrecensioner',
-    'modal.redditReviews': 'Reddit-röster',
     'modal.similar':        'Du kanske också gillar',
     'modal.yourReview':     'Din recension',
     'modal.postReview':     'Publicera recension',
@@ -8960,7 +8930,6 @@ const TRANSLATIONS = {
     'modal.whereToWatch':   'Hvor du kan se den',
     'modal.awards':         'Utmerkelser',
     'modal.audienceReviews':'Publikumsanmeldelser',
-    'modal.redditReviews': 'Reddit-stemmer',
     'modal.similar':        'Du liker kanskje også',
     'modal.yourReview':     'Din anmeldelse',
     'modal.postReview':     'Publiser anmeldelse',
@@ -10867,7 +10836,7 @@ async function doEnrich(tmdbId) {
     const type = movie.isTV ? 'tv' : 'movie';
     // Step 1: full TMDB details + Watchmode sources + Reddit reviews,
     // concurrently. Watchmode and Reddit are both purely additive (see
-    // _mergeWatchmodeSources / refreshRedditCarousel) and their fetch
+    // _mergeWatchmodeSources / refreshReviewsCarousel) and their fetch
     // functions never throw, so neither can turn a hiccup on either side
     // into a broken enrich.
     const [det, wmSources, redditReviews] = await Promise.all([
@@ -12471,7 +12440,6 @@ async function openMovie(tmdbId, listName = '') {
       refreshModalDetails(m);
       refreshWatchProviders(m);
       refreshReviewsCarousel(m);
-      refreshRedditCarousel(m);
     }
   } else if (m.imdbId && m.rt === null && m.mc === null) {
     // Cached movies are pre-enriched by sync-worker (TMDB only, no OMDb).
@@ -12686,7 +12654,6 @@ function populateModal(m) {
   refreshModalDetails(m);
   refreshWatchProviders(m);
   refreshReviewsCarousel(m);
-  refreshRedditCarousel(m);
 
   const tBtn = document.getElementById('btnTrailer');
   tBtn.style.display = m.trailer ? '' : 'none';
@@ -13363,59 +13330,80 @@ function _refreshStreamingCtAs(m) {
 // whole section when there's nothing worth showing (no reviews at all, or
 // none survived _pickReviews' content-quality filter) rather than rendering
 // an empty/awkward section.
+// ── Merged Audience Reviews carousel (TMDB + Reddit, one array) ──────────
+// Both sources feed the SAME carousel now (previously two separate
+// sections) — _toUnifiedCard() normalizes each into one shape, a small
+// source-logo badge on every card is what tells them apart (per the
+// brief), and each source keeps its own native metadata line rather than
+// forcing a fake shared scale onto it: TMDB's 1-10 rating renders as
+// stars, Reddit's score has no equivalent so it keeps its own subreddit +
+// upvote-arrow badge instead.
+function _toUnifiedCard(source, r) {
+  return {
+    source,                          // 'tmdb' | 'reddit' — drives the logo + meta line
+    author:    r.author,
+    content:   r.content,
+    url:       r.url,
+    rating:    source === 'tmdb'   ? r.rating    : null,
+    subreddit: source === 'reddit' ? r.subreddit : null,
+    score:     source === 'reddit' ? r.score     : null,
+  };
+}
+
+// Round-robin interleave so neither source dominates the front of the
+// carousel, capped at a total that stays scannable (each source already
+// caps at 5 server/client-side, so 8 total still shows nearly everything
+// from a source when the other comes up short).
+function _mergeReviewSources(tmdbReviews, redditReviews, max = 8) {
+  const a = (tmdbReviews   || []).map(r => _toUnifiedCard('tmdb',   r));
+  const b = (redditReviews || []).map(r => _toUnifiedCard('reddit', r));
+  const merged = [];
+  for (let i = 0; i < Math.max(a.length, b.length) && merged.length < max; i++) {
+    if (a[i]) merged.push(a[i]);
+    if (b[i] && merged.length < max) merged.push(b[i]);
+  }
+  return merged;
+}
+
+// Small source-identity badges — a colored circle with a glyph already
+// meaningful in each source's own language rather than a hand-drawn
+// approximation of either company's actual trademark: a star for TMDB
+// (this app's own rating icon, and TMDB's angle is curated critic
+// scores) and an upvote arrow for Reddit (the community-voting glyph
+// Reddit itself uses everywhere, also reused for the score badge below).
+const _REDDIT_UPVOTE_SVG = '<svg viewBox="0 0 24 24"><path d="M12 4l8 10h-5v6H9v-6H4z"/></svg>';
+const _SRC_LOGO_TMDB   = `<span class="rq-src-logo tmdb" aria-label="TMDB" title="TMDB">${_REVIEW_STAR_SVG}</span>`;
+const _SRC_LOGO_REDDIT = `<span class="rq-src-logo reddit" aria-label="Reddit" title="Reddit">${_REDDIT_UPVOTE_SVG}</span>`;
+
 function refreshReviewsCarousel(m) {
   const sec = document.getElementById('mReviewsQSec');
   const row = document.getElementById('mReviewsQ');
   if (!sec || !row) return;
-  const reviews = m.reviews || [];
-  if (!reviews.length) {
+  const cards = _mergeReviewSources(m.reviews, m.redditReviews);
+  if (!cards.length) {
     sec.style.display = 'none';
     row.innerHTML = '';
     return;
   }
   sec.style.display = '';
-  row.innerHTML = reviews.map(r => {
-    const tag = r.url ? 'a' : 'div';
-    const linkAttrs = r.url ? ` href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" title="Read the full review on TMDB"` : '';
-    return `<${tag} class="rq-card"${linkAttrs}>
-      ${_reviewStars(r.rating)}
-      <p class="rq-quote">“${esc(_truncateReview(r.content))}”</p>
-      <div class="rq-author">${esc(r.author)}</div>
-    </${tag}>`;
-  }).join('');
-}
-
-// Reddit reviews — deliberately its own carousel, not merged into the TMDB
-// one above: different character (informal discussion threads vs.
-// structured critic-style reviews) and the whole point per the brief was
-// a genuinely "Reddit" feel — so this uses Reddit's own visual language
-// (subreddit tag, upvote arrow + score) instead of forcing a star rating
-// Reddit doesn't actually have.
-const _REDDIT_UPVOTE_SVG = '<svg viewBox="0 0 24 24"><path d="M12 4l8 10h-5v6H9v-6H4z"/></svg>';
-function refreshRedditCarousel(m) {
-  const sec = document.getElementById('mRedditSec');
-  const row = document.getElementById('mReddit');
-  if (!sec || !row) return;
-  const reviews = m.redditReviews || [];
-  if (!reviews.length) {
-    sec.style.display = 'none';
-    row.innerHTML = '';
-    return;
-  }
-  sec.style.display = '';
-  row.innerHTML = reviews.map(r => {
-    const tag = r.url ? 'a' : 'div';
-    const linkAttrs = r.url ? ` href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" title="Read the full thread on Reddit"` : '';
-    const scoreBadge = r.score != null
-      ? `<span class="rdt-score">${_REDDIT_UPVOTE_SVG}${esc(r.score.toLocaleString())}</span>`
-      : '';
-    return `<${tag} class="rdt-card"${linkAttrs}>
-      <div class="rdt-meta">
-        <span class="rdt-sub">${esc(r.subreddit)}</span>
-        ${scoreBadge}
+  row.innerHTML = cards.map(r => {
+    const isReddit = r.source === 'reddit';
+    const tag       = r.url ? 'a' : 'div';
+    const linkTitle = isReddit ? 'Read the full thread on Reddit' : 'Read the full review on TMDB';
+    const linkAttrs = r.url ? ` href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" title="${linkTitle}"` : '';
+    const meta = isReddit
+      ? `<div class="rq-rdt-meta">
+          <span class="rq-rdt-sub">${esc(r.subreddit || '')}</span>
+          ${r.score != null ? `<span class="rq-rdt-score">${_REDDIT_UPVOTE_SVG}${esc(r.score.toLocaleString())}</span>` : ''}
+        </div>`
+      : (_reviewStars(r.rating) || '<span></span>'); // keeps the top row's space-between layout even with no rating
+    return `<${tag} class="rq-card${isReddit ? ' reddit' : ''}"${linkAttrs}>
+      <div class="rq-card-top">
+        ${meta}
+        ${isReddit ? _SRC_LOGO_REDDIT : _SRC_LOGO_TMDB}
       </div>
-      <p class="rdt-quote">“${esc(_truncateReview(_cleanReviewText(r.content)))}”</p>
-      <div class="rdt-author">u/${esc(r.author)}</div>
+      <p class="rq-quote">“${esc(_truncateReview(_cleanReviewText(r.content)))}”</p>
+      <div class="rq-author">${isReddit ? 'u/' : ''}${esc(r.author)}</div>
     </${tag}>`;
   }).join('');
 }
