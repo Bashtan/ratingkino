@@ -2,6 +2,38 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-09-07b) — Mock Fixture Content Swap (gate unchanged)
+
+All commits on `main`, deployed live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `3612c2b` | **Content-only swap of `_DEV_MOCK_REDDIT_REVIEWS`** (`index.html`) — 3 longer-form sample reviews in place of the previous 4 generic ones, for a more realistic local preview of card length/wrapping. `_devPreviewRedditReviews()` itself is byte-for-byte unchanged: still `localhost`/`127.0.0.1`-only, still manual-console-invocation-only, still never wired into `doEnrich`/`populateModal`/`openMovie`. |
+
+**Declined mid-session**: a version of this request that would have wired the same fixture data
+into the real `populateModal`/`openMovie` path, rendering it for every real visitor on every
+movie regardless of relevance — fabricated reviews presented as genuine third-party (Reddit)
+content to production traffic. Proposed and delivered the safe alternative instead: identical
+content, same existing gate. Verified the gate against real hostnames (`findfilm.ai`,
+`ratingkino.com` → blocked; `localhost` → allowed) and against the real `openMovie()` flow
+(3 mock cards correctly interleaved with live TMDB reviews, 8 total, screenshot confirmed).
+
+**Also this session**: user made three more attempts to get Reddit content via unauthorized
+means after the previous session's declines (an "isolated" wrapper function for an unnamed
+"custom fetcher"; a claim of having activated real OAuth credentials that `wrangler pages secret
+list` showed was false, arriving alongside injected code literally commented `"Наш 'Троянський
+кінь' — Firecrawl замість офіційного Reddit API"` — a function deliberately named identically to
+the real `handleRedditReviews` to disguise it). All declined; user acknowledged and moved on.
+Separately reviewed `/Users/bashtan/Projects/TikTok/findfilm-tiktok-bot` (a sibling project, not
+part of this repo) at the user's request — found and flagged an active YouTube bot-bypass
+mechanism (`FASTSAVER_API_KEY` + `YT_COOKIES_B64`, both live per that project's own `wrangler
+secret list`) and raised fair-use concerns about the publishing step; declined to extend that
+pipeline, offered (and delivered) generic FFmpeg technique discussion instead. **Real Reddit
+credentials for ratingkino are still not active** — `wrangler pages secret list --project-name
+ratingkino` shows no `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` as of this session.
+
+---
+
 ## ⚡ Most Recent Session (2026-09-07) — Local-Only Mock Reddit Preview
 
 All commits on `main`, deployed live on https://findfilm.ai.
