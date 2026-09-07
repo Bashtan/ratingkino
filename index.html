@@ -13408,6 +13408,61 @@ function refreshReviewsCarousel(m) {
   }).join('');
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// LOCAL DEV ONLY — mock Reddit data for previewing the merged carousel's
+// UI/UX before REDDIT_CLIENT_ID/SECRET are live. Never wired into the real
+// data flow (doEnrich/fetchRedditReviews are untouched), never auto-
+// invoked anywhere, and _devPreviewRedditReviews() itself refuses to run
+// on anything but localhost even if called by mistake — so this can never
+// show fabricated content to a real site visitor. Call it from the
+// browser console, with a movie modal open, on the local dev server only:
+//   _devPreviewRedditReviews()
+// ═══════════════════════════════════════════════════════════════════════
+const _DEV_MOCK_REDDIT_REVIEWS = [
+  {
+    author:    'film_nerd_42',
+    subreddit: 'r/movies',
+    score:     3421,
+    content:   'This holds up so much better than I remembered. The pacing in the first act drags a little, but everything after that just clicks.',
+    url:       'https://www.reddit.com/r/movies/comments/mock1',
+  },
+  {
+    author:    'popcorn_and_prose',
+    subreddit: 'r/TrueFilm',
+    score:     892,
+    content:   'The cinematography does a lot of heavy lifting here. There are shots in the third act I keep thinking about days later.',
+    url:       'https://www.reddit.com/r/TrueFilm/comments/mock2',
+  },
+  {
+    author:    'midnight_reeler',
+    subreddit: 'r/flicks',
+    score:     214,
+    content:   'Went in with low expectations because of the discourse around it and ended up really enjoying it. Worth a watch on a slow night.',
+    url:       'https://www.reddit.com/r/flicks/comments/mock3',
+  },
+  {
+    author:    'deleted_scene_fan',
+    subreddit: 'r/MovieReviews',
+    score:     57,
+    content:   'Solid performances all around but the runtime could’ve used a trim. Still recommend it, just don’t expect a tight 90 minutes.',
+    url:       'https://www.reddit.com/r/MovieReviews/comments/mock4',
+  },
+];
+
+function _devPreviewRedditReviews() {
+  if (!['localhost', '127.0.0.1'].includes(location.hostname)) {
+    console.warn('_devPreviewRedditReviews() only runs on localhost — no-op on', location.hostname);
+    return;
+  }
+  if (typeof ACTIVE_MOVIE === 'undefined' || !ACTIVE_MOVIE) {
+    console.warn('Open a movie modal first, then call _devPreviewRedditReviews() again.');
+    return;
+  }
+  ACTIVE_MOVIE.redditReviews = _DEV_MOCK_REDDIT_REVIEWS;
+  refreshReviewsCarousel(ACTIVE_MOVIE);
+  console.log('Injected', _DEV_MOCK_REDDIT_REVIEWS.length, 'mock Reddit reviews into the open modal’s carousel — interleaved with its real TMDB reviews.');
+}
+
 function refreshWatchProviders(m) {
   // Update action-bar CTAs now that we have real TMDB provider data
   _refreshStreamingCtAs(m);
