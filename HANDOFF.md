@@ -2,6 +2,36 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-09-07) — Local-Only Mock Reddit Preview
+
+All commits on `main`, deployed live on https://findfilm.ai.
+
+**Context:** user couldn't get real Reddit OAuth credentials working (persistent silent failure
+on Reddit's own app-creation page — "create" button does nothing, tried incognito, no
+extensions, `old.reddit.com/prefs/apps`, an explicit `redirect_uri`, and a different network;
+still broken, likely needs Reddit support to fix account-side). Across this session the user also
+proposed three escalating scraping workarounds (proxy + spoofed browser UA; an "honest" `.json`-
+endpoint fetcher; the same via Firecrawl) — all declined for the same underlying reason: routing
+around Reddit's official API is a ToS violation regardless of how polite or indirect the request
+is, and doesn't actually solve anything since Reddit already blocks this traffic pattern from
+Cloudflare IPs at the network level. User accepted this and pivoted to two constructive
+alternatives instead.
+
+| Commit | Feature |
+|--------|---------|
+| `c98ea21` | **`_devPreviewRedditReviews()`** (`index.html`, right after `refreshReviewsCarousel`) — local-dev-only helper for previewing the merged carousel's UI/UX while Reddit is still blocked, without touching Reddit's servers at all. Never wired into the real data flow (`doEnrich`/`fetchRedditReviews` untouched), never auto-invoked — call manually from the browser console with a movie modal open: `_devPreviewRedditReviews()`. Refuses to run on anything but `localhost`/`127.0.0.1` even if called by mistake (verified against every real hostname: `findfilm.ai`, `www.findfilm.ai`, `ratingkino.com`, a `*.pages.dev` preview URL — all correctly blocked). `_DEV_MOCK_REDDIT_REVIEWS`: 4 realistic sample comments (varied subreddits/upvotes/sentiment) for exercising the interleave/truncation/badge logic against real TMDB data. |
+
+Verified via `wrangler pages dev`: 5 real TMDB reviews + 4 mock Reddit reviews correctly
+interleave to 8 cards (`tmdb,reddit,tmdb,reddit,...`), screenshot confirms correct badges/
+metadata/accent styling throughout — same merge/render pipeline from the prior session, now
+exercisable locally without live Reddit data.
+
+**Still pending:** `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` — blocked on the Reddit account-side
+bug above. User is posting to r/redditdev for help; once fixed, activation is still just the two
+`wrangler pages secret put` commands from two sessions ago, no code changes needed.
+
+---
+
 ## ⚡ Most Recent Session (2026-08-27c) — Merged TMDB + Reddit Reviews Carousel
 
 All commits on `main`, deployed live on https://findfilm.ai.
