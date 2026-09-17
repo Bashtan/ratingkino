@@ -989,24 +989,113 @@ header {
 .fd-close:hover { background: rgba(99,102,241,0.18); border-color: rgba(99,102,241,0.5); color: #fff; }
 .fd-body {
   flex: 1; overflow-y: auto; padding: 20px 18px;
-  display: flex; flex-direction: column; gap: 24px;
+  display: flex; flex-direction: column; gap: 32px;
   scrollbar-width: thin; scrollbar-color: rgba(99,102,241,0.3) transparent;
 }
 .fd-body::-webkit-scrollbar { width: 4px; }
 .fd-body::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 2px; }
-.fd-group { display: flex; flex-direction: column; gap: 11px; }
+.fd-group { display: flex; flex-direction: column; gap: 12px; }
 .fd-label {
   font-size: 11px; font-weight: 600; letter-spacing: 1.6px;
   text-transform: uppercase; color: #94a3b8;
   font-family: 'Montserrat', sans-serif;
 }
+.fd-label-row { display: flex; align-items: center; justify-content: space-between; }
+.fd-label-row .fd-label { margin: 0; }
 /* Genre pills wrap instead of horizontally scrolling inside the drawer */
 .fd-pills { flex-wrap: wrap; overflow: visible; gap: 8px; }
 .fd-body .fd-sort { flex-wrap: wrap; gap: 8px; margin-left: 0; justify-content: flex-start; }
 .fd-group .filter-sel { width: 100%; height: 40px; }
+
+/* ─── Min Rating — range slider ─────────────────────────────── */
+.rating-slider-val {
+  font-size: 12px; font-weight: 700; color: #fff;
+  background: rgba(99,102,241,0.25); border: 1px solid rgba(129,140,248,0.4);
+  padding: 2px 10px; border-radius: 20px; min-width: 36px; text-align: center;
+  font-family: 'Montserrat', sans-serif;
+}
+.rating-slider {
+  -webkit-appearance: none; -moz-appearance: none; appearance: none;
+  width: 100%; height: 6px; border-radius: 999px; margin: 6px 0;
+  background: linear-gradient(to right,
+    #6366f1 0%, #7c3aed var(--rating-pct, 0%),
+    rgba(255,255,255,0.08) var(--rating-pct, 0%), rgba(255,255,255,0.08) 100%);
+  outline: none; cursor: pointer;
+}
+.rating-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; border: 3px solid #6366f1;
+  box-shadow: 0 2px 10px rgba(99,102,241,0.6), 0 0 0 4px rgba(99,102,241,0.15);
+  cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+}
+.rating-slider::-webkit-slider-thumb:hover,
+.rating-slider:focus::-webkit-slider-thumb { transform: scale(1.15); }
+.rating-slider::-moz-range-track { height: 6px; border-radius: 999px; background: transparent; }
+.rating-slider::-moz-range-thumb {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; border: 3px solid #6366f1;
+  box-shadow: 0 2px 10px rgba(99,102,241,0.6), 0 0 0 4px rgba(99,102,241,0.15);
+  cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+}
+.rating-slider::-moz-range-thumb:hover,
+.rating-slider:focus::-moz-range-thumb { transform: scale(1.15); }
+
+/* ─── Country — custom styled select (replaces native <select> chrome) ─── */
+.cselect { position: relative; width: 100%; }
+.cselect-trigger {
+  width: 100%; height: 44px; padding: 0 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px; color: var(--text);
+  font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 500;
+  cursor: pointer; text-align: left;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+.cselect-trigger:hover { border-color: rgba(129,140,248,0.4); background-color: rgba(255,255,255,0.07); }
+.cselect-trigger.open { border-color: rgba(99,102,241,0.6); box-shadow: 0 0 0 3px rgba(99,102,241,0.18); }
+.cselect-chev { flex-shrink: 0; stroke: #818cf8; transition: transform 0.25s cubic-bezier(0.22,1,0.36,1); }
+.cselect-trigger.open .cselect-chev { transform: rotate(180deg); }
+.cselect-panel {
+  position: fixed; z-index: 9850;
+  background: linear-gradient(180deg, rgba(26,23,46,0.98) 0%, rgba(16,14,30,0.98) 100%);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.03);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  padding: 8px; opacity: 0; visibility: hidden; transform: translateY(-6px);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+  max-height: 280px; display: flex; flex-direction: column;
+}
+.cselect-panel.open { opacity: 1; visibility: visible; transform: translateY(0); }
+.cselect-search-wrap { position: relative; flex-shrink: 0; margin-bottom: 6px; }
+.cselect-search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); stroke: #6b7280; pointer-events: none; }
+.cselect-search {
+  width: 100%; height: 36px; padding: 0 10px 0 32px; box-sizing: border-box;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 9px; color: var(--text); font-size: 12.5px; font-family: 'Inter', sans-serif;
+  outline: none; transition: border-color 0.2s, background-color 0.2s;
+}
+.cselect-search::placeholder { color: #6b7280; }
+.cselect-search:focus { border-color: rgba(99,102,241,0.6); background: rgba(255,255,255,0.08); }
+.cselect-options { overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(99,102,241,0.3) transparent; }
+.cselect-options::-webkit-scrollbar { width: 4px; }
+.cselect-options::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 2px; }
+.cselect-opt {
+  padding: 9px 11px; border-radius: 8px; font-size: 13px; color: #cbd5e1;
+  cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.cselect-opt:hover { background: rgba(99,102,241,0.16); color: #fff; }
+.cselect-opt.selected { background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%); color: #fff; font-weight: 600; }
+
 .fd-footer {
   display: flex; gap: 10px; padding: 16px 18px;
   border-top: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;
+  position: relative; z-index: 2;
+  background: rgba(15,13,28,0.55);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
 }
 .fd-reset, .fd-apply {
   flex: 1; height: 44px; border-radius: 12px;
@@ -1269,19 +1358,21 @@ body.airx-open { overflow: hidden; }
 
 .gpill {
   height: 32px; padding: 0 14px; flex-shrink: 0;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.09);
   border-radius: 20px;
-  background: transparent;
+  background: rgba(255,255,255,0.05);
   color: #cbd5e1; font-size: 12px; font-weight: 600;
   cursor: pointer; white-space: nowrap;
   font-family: 'Inter', sans-serif;
-  transition: background 0.18s, color 0.18s, border-color 0.18s, box-shadow 0.18s;
+  transition: background 0.18s, color 0.18s, border-color 0.18s, box-shadow 0.18s, transform 0.18s;
 }
-.gpill:hover { border-color: rgba(129,140,248,0.6); color: #fff; background: rgba(99,102,241,0.12); }
+.gpill:hover { border-color: rgba(129,140,248,0.6); color: #fff; background: rgba(99,102,241,0.14); transform: translateY(-1px); }
 .gpill.active {
-  background: #6366f1; border-color: #6366f1; color: #fff;
-  box-shadow: 0 0 0 1px rgba(99,102,241,0.5), 0 2px 14px rgba(99,102,241,0.45);
+  background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
+  border-color: rgba(129,140,248,0.6); color: #fff;
+  box-shadow: 0 4px 16px rgba(99,102,241,0.45), 0 0 0 1px rgba(129,140,248,0.35);
 }
+.gpill.active:hover { box-shadow: 0 6px 20px rgba(99,102,241,0.55), 0 0 0 1px rgba(129,140,248,0.4); }
 
 /* Row 2: secondary filters + sort */
 .filter-row-2 {
@@ -1316,17 +1407,20 @@ body.airx-open { overflow: hidden; }
 .sort-wrap { display: flex; align-items: center; gap: 5px; margin-left: auto; }
 .src-btn {
   height: 32px; padding: 0 13px;
-  border-radius: 20px; border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.04);
+  border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
   color: #cbd5e1; font-size: 11px; font-weight: 700;
   cursor: pointer; font-family: 'Montserrat', sans-serif;
-  transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
 }
-.src-btn:hover { border-color: rgba(255,255,255,0.28); color: #fff; }
-.src-btn.imd.on { background: var(--imdb); color: #1a1a1a; border-color: var(--imdb); box-shadow: 0 2px 12px rgba(245,197,24,0.35); }
-.src-btn.rt.on  { background: var(--rt); color: #fff; border-color: var(--rt); box-shadow: 0 2px 12px rgba(250,50,10,0.35); }
-.src-btn.mc.on  { background: var(--mc); color: #1a1a1a; border-color: var(--mc); box-shadow: 0 2px 12px rgba(255,204,52,0.35); }
-.src-btn.avg.on { background: #6366f1; color: #fff; border-color: #6366f1; box-shadow: 0 2px 12px rgba(99,102,241,0.45); }
+.src-btn:hover { border-color: rgba(255,255,255,0.28); color: #fff; transform: translateY(-1px); }
+/* Each source keeps its own brand color (IMDb yellow / RT red / Metacritic
+   yellow-green) for recognizability — only upgraded to a gradient + stronger
+   glow so the "on" state reads as vibrant as the genre pills / Show results. */
+.src-btn.imd.on { background: linear-gradient(135deg, #F5C518 0%, #d9a913 100%); color: #1a1a1a; border-color: var(--imdb); box-shadow: 0 4px 16px rgba(245,197,24,0.45), 0 0 0 1px rgba(245,197,24,0.3); }
+.src-btn.rt.on  { background: linear-gradient(135deg, #FA320A 0%, #c9260a 100%); color: #fff;    border-color: var(--rt);   box-shadow: 0 4px 16px rgba(250,50,10,0.45), 0 0 0 1px rgba(250,50,10,0.3); }
+.src-btn.mc.on  { background: linear-gradient(135deg, #FFCC34 0%, #e0af1f 100%); color: #1a1a1a; border-color: var(--mc);   box-shadow: 0 4px 16px rgba(255,204,52,0.45), 0 0 0 1px rgba(255,204,52,0.3); }
+.src-btn.avg.on { background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%); color: #fff;    border-color: #6366f1;    box-shadow: 0 4px 16px rgba(99,102,241,0.5), 0 0 0 1px rgba(129,140,248,0.35); }
 
 /* ─── HERO BAND (legend + freshness stamp) ─────────────────────────────
    Value-prop now lives in the hero (.hero-vp), so the band is only surfaced
@@ -3444,7 +3538,7 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
   .card-wl-btn { opacity: 1; }
   .movie-card:active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(229,9,20,0.25); }
   .gpill:hover { border-color: rgba(255,255,255,0.2); color: #cbd5e1; background: transparent; }
-  .gpill.active { background: #6366f1; border-color: #6366f1; color: #fff; box-shadow: 0 0 0 1px rgba(99,102,241,0.5), 0 2px 14px rgba(99,102,241,0.45); }
+  .gpill.active { background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%); border-color: rgba(129,140,248,0.6); color: #fff; box-shadow: 0 4px 16px rgba(99,102,241,0.45), 0 0 0 1px rgba(129,140,248,0.35); }
   .btn-trailer:hover { background: var(--orange); }
   .btn-shr:hover { transform: none; filter: none; }  /* keep neon gradient, no scale on touch */
   .btn-more:hover { background: transparent; color: var(--purple); box-shadow: none; }
@@ -6053,7 +6147,9 @@ const TRANSLATIONS = {
     'filter.all':           'All',
     'filter.country':       'Country',
     'filter.allCountries':  'All Countries',
+    'filter.searchCountry': 'Search country…',
     'filter.minRating':     'Min Rating',
+    'filter.detective':     'Detective',
     'filter.any':           'Any',
     'filter.sort':          'Sort',
     'sort.imdb':            'Audience favorite',
@@ -6444,7 +6540,9 @@ const TRANSLATIONS = {
     'filter.all':           'Todo',
     'filter.country':       'País',
     'filter.allCountries':  'Todos los países',
+    'filter.searchCountry': 'Buscar país…',
     'filter.minRating':     'Nota mínima',
+    'filter.detective':     'Detective',
     'filter.any':           'Cualquiera',
     'filter.sort':          'Ordenar',
     'sort.imdb':            'Favorito del público',
@@ -6785,7 +6883,9 @@ const TRANSLATIONS = {
     'filter.all':           'Tous',
     'filter.country':       'Pays',
     'filter.allCountries':  'Tous les pays',
+    'filter.searchCountry': 'Rechercher un pays…',
     'filter.minRating':     'Note min.',
+    'filter.detective':     'Détective',
     'filter.any':           'Peu importe',
     'filter.sort':          'Trier',
     'sort.imdb':            'Coup de cœur du public',
@@ -7126,7 +7226,9 @@ const TRANSLATIONS = {
     'filter.all':           '全部',
     'filter.country':       '国家',
     'filter.allCountries':  '所有国家',
+    'filter.searchCountry': '搜索国家…',
     'filter.minRating':     '最低评分',
+    'filter.detective':     '侦探',
     'filter.any':           '不限',
     'filter.sort':          '排序',
     'sort.imdb':            '观众最爱',
@@ -7467,7 +7569,9 @@ const TRANSLATIONS = {
     'filter.all':           'الكل',
     'filter.country':       'الدولة',
     'filter.allCountries':  'كل الدول',
+    'filter.searchCountry': 'ابحث عن دولة…',
     'filter.minRating':     'أدنى تقييم',
+    'filter.detective':     'محقق',
     'filter.any':           'أي تقييم',
     'filter.sort':          'ترتيب',
     'sort.imdb':            'المفضّل لدى الجمهور',
@@ -7808,7 +7912,9 @@ const TRANSLATIONS = {
     'filter.all':           'Всі',
     'filter.country':       'Країна',
     'filter.allCountries':  'Всі країни',
+    'filter.searchCountry': 'Пошук країни…',
     'filter.minRating':     'Мін. рейтинг',
+    'filter.detective':     'Детектив',
     'filter.any':           'Будь-який',
     'filter.sort':          'Сортування',
     'sort.imdb':            'Улюбленець глядачів',
@@ -8155,7 +8261,9 @@ const TRANSLATIONS = {
     'filter.all':           'Alle',
     'filter.country':       'Land',
     'filter.allCountries':  'Alle Länder',
+    'filter.searchCountry': 'Land suchen…',
     'filter.minRating':     'Mindestbewertung',
+    'filter.detective':     'Detektiv',
     'filter.any':           'Beliebig',
     'filter.sort':          'Sortieren',
     'sort.imdb':            'Publikumsliebling',
@@ -8520,7 +8628,9 @@ const TRANSLATIONS = {
     'filter.all':           'Alla',
     'filter.country':       'Land',
     'filter.allCountries':  'Alla länder',
+    'filter.searchCountry': 'Sök land…',
     'filter.minRating':     'Lägsta betyg',
+    'filter.detective':     'Detektiv',
     'filter.any':           'Valfritt',
     'filter.sort':          'Sortera',
     'sort.imdb':            'Publikens favorit',
@@ -8885,7 +8995,9 @@ const TRANSLATIONS = {
     'filter.all':           'Alle',
     'filter.country':       'Land',
     'filter.allCountries':  'Alle land',
+    'filter.searchCountry': 'Søk land…',
     'filter.minRating':     'Minste vurdering',
+    'filter.detective':     'Detektiv',
     'filter.any':           'Alle',
     'filter.sort':          'Sorter',
     'sort.imdb':            'Publikumsfavoritt',
@@ -9748,7 +9860,10 @@ function restoreSession() {
   let s;
   try { s = JSON.parse(sessionStorage.getItem(FF_SESSION_KEY) || 'null'); } catch {}
   if (!s) return false;
-  const hasState = !!(s.query || s.genre || s.country || s.rating || s.sort);
+  // s.rating is the range slider's raw value — '0' ("Any") is a non-empty,
+  // truthy STRING, so it needs a numeric check here or every fresh session
+  // would be flagged as "has state" the moment the slider first renders.
+  const hasState = !!(s.query || s.genre || s.country || parseFloat(s.rating) > 0 || s.sort);
   if (!hasState) return false;
 
   // Restore search input
@@ -9777,6 +9892,9 @@ function restoreSession() {
       document.getElementById('btn' + id)?.classList.toggle('on', SORT_SRC === val);
     });
   }
+  // Reflect any restored country/rating onto the custom UI layers.
+  syncCountrySelectUI();
+  syncRatingSlider();
   return true;
 }
 
@@ -9856,7 +9974,9 @@ function resetToHome(e) {
   const fCountry = document.getElementById('fCountry');
   const fRating  = document.getElementById('fMinRating');
   if (fCountry) fCountry.value = '';
-  if (fRating)  fRating.value  = '';
+  if (fRating)  fRating.value  = '0'; // slider's "Any" position, not ''
+  syncCountrySelectUI();
+  syncRatingSlider();
   SORT_SRC = null;
   ['IMD', 'RT', 'MC', 'AVG'].forEach(s => document.getElementById('btn' + s)?.classList.remove('on'));
   updateFilterCount();
@@ -9944,6 +10064,7 @@ function feedCtaCard() {
 function exploreTopRated() {
   const mr = document.getElementById('fMinRating');
   if (mr) mr.value = '8';
+  syncRatingSlider();
   if (SORT_SRC !== 'avg') toggleSrc('avg');   // enable Avg★ sort if not already
   applyFilters();
   const grid = document.querySelector('main');
@@ -10305,13 +10426,30 @@ async function omdbGet(imdbId) {
 /* ═══════════════════════════════════
    GENRES
 ═══════════════════════════════════ */
+// UI-only genre buckets that don't exist as a single TMDB genre id — mapped to
+// an OR-set of real TMDB ids under the hood. TMDB's discover endpoint treats
+// comma-separated with_genres values as AND and pipe-separated as OR, so a
+// pipe join broadens the search across every id in the bucket.
+const CUSTOM_GENRES = {
+  detective: { tmdbIds: [9648, 80] }, // Mystery + Crime
+};
+function resolveGenreParam(genreId) {           // → TMDB `with_genres` value
+  const custom = CUSTOM_GENRES[genreId];
+  return custom ? custom.tmdbIds.join('|') : genreId;
+}
+function resolveGenreIds(genreId) {             // → array of ids to match client-side
+  const custom = CUSTOM_GENRES[genreId];
+  return custom ? custom.tmdbIds.map(String) : [String(genreId)];
+}
+
 async function loadGenres() {
   try {
     const endpoint = CONTENT_TYPE === 'tv' ? '/genre/tv/list' : '/genre/movie/list';
     const data = await tmdbGet(endpoint, { language: TMDB_LANG[CURRENT_LANG] || 'en-US' });
     GENRES = {};
     const wrap = document.getElementById('genrePills');
-    wrap.innerHTML = `<button class="gpill active" id="pill-all" onclick="setGenre('')" data-i18n="filter.all">${t('filter.all')}</button>`;
+    wrap.innerHTML = `<button class="gpill active" id="pill-all" onclick="setGenre('')" data-i18n="filter.all">${t('filter.all')}</button>`
+      + `<button class="gpill" id="pill-detective" onclick="setGenre('detective')" data-i18n="filter.detective">${t('filter.detective')}</button>`;
     for (const g of (data.genres || [])) {
       GENRES[g.id] = g.name;
       const btn = document.createElement('button');
@@ -11068,7 +11206,9 @@ function resetAllFilters() {
   document.getElementById('pill-all')?.classList.add('active');
   // Country / rating dropdowns
   const cEl = document.getElementById('fCountry');   if (cEl) cEl.value = '';
-  const rEl = document.getElementById('fMinRating'); if (rEl) rEl.value = '';
+  const rEl = document.getElementById('fMinRating'); if (rEl) rEl.value = '0'; // slider's "Any" position
+  syncCountrySelectUI();
+  syncRatingSlider();
   // Sort
   SORT_SRC = null;
   ['IMD','RT','MC','AVG'].forEach(s => document.getElementById('btn'+s)?.classList.remove('on'));
@@ -11142,9 +11282,12 @@ async function fetchPage(page) {
     include_adult: false,
     'vote_count.gte': 50,
   };
-  if (ACTIVE_GENRE) params.with_genres = ACTIVE_GENRE;
+  if (ACTIVE_GENRE) params.with_genres = resolveGenreParam(ACTIVE_GENRE);
   if (country)      params.with_origin_country = country;
-  if (minRating)    params['vote_average.gte'] = minRating;
+  // minRating comes from a 0–10 range slider now — '0' means "Any" and must
+  // stay falsy here (a bare truthy check on the string would send a no-op
+  // vote_average.gte=0 to TMDB on every single request).
+  if (parseFloat(minRating) > 0) params['vote_average.gte'] = minRating;
 
   return tmdbGet(`/discover/${type}`, params);
 }
@@ -12335,15 +12478,16 @@ async function randomMovie() {
   let pool = source;
   if (activeGenre || minRating || activeCountry) {
     pool = source.filter(m => {
-      // Genre: match genreIds array (lightweight pool) or genres array
+      // Genre: match genreIds array (lightweight pool) or genres array.
+      // wantedIds is >1 entry for a custom bucket like 'detective' (Mystery|Crime).
       if (activeGenre) {
-        const ids = m.genreIds || m.genre_ids || [];
+        const ids = (m.genreIds || m.genre_ids || []).map(String);
         const names = m.genres || [];
-        const genreStr = activeGenre.toString();
-        const matchId   = ids.map(String).includes(genreStr);
+        const wantedIds = resolveGenreIds(activeGenre);
+        const matchId   = wantedIds.some(id => ids.includes(id));
         const matchName = names.some(n => {
           const mapped = Object.entries(GENRES).find(([, v]) => v === n);
-          return mapped && mapped[0] === genreStr;
+          return mapped && wantedIds.includes(mapped[0]);
         });
         if (!matchId && !matchName) return false;
       }
@@ -12821,6 +12965,7 @@ function openFilters() {
 function closeFilters() {
   document.getElementById('filtersDrawer')?.classList.remove('open');
   document.getElementById('filtersBackdrop')?.classList.remove('open');
+  toggleCountrySelect(false);
   if (!document.getElementById('overlay')?.classList.contains('open')) {
     document.body.style.overflow = '';
   }
@@ -12830,14 +12975,101 @@ function closeFilters() {
 function updateFilterCount() {
   let n = 0;
   if (ACTIVE_GENRE) n++;
-  if (document.getElementById('fCountry')?.value)   n++;
-  if (document.getElementById('fMinRating')?.value) n++;
+  if (document.getElementById('fCountry')?.value) n++;
+  // '0' is the slider's "Any" position — a bare truthy check would count it as active.
+  if (parseFloat(document.getElementById('fMinRating')?.value) > 0) n++;
   if (SORT_SRC) n++;
   const el = document.getElementById('filtersCount');
   if (!el) return;
   el.textContent = n ? String(n) : '';
   el.classList.toggle('on', n > 0);
 }
+
+/* ── Min Rating: range slider (0–10) ──────────────────────────────
+   #fMinRating is the slider itself; its numeric string value stays the
+   contract every other call site already reads. Filled-track + live label
+   are pure display and are kept in sync manually since setting .value via
+   JS (reset/restore/exploreTopRated) fires no input/change event. */
+function syncRatingSlider() {
+  const el = document.getElementById('fMinRating');
+  if (!el) return;
+  const v   = parseFloat(el.value) || 0;
+  const pct = Math.max(0, Math.min(100, (v / 10) * 100));
+  el.style.setProperty('--rating-pct', pct + '%');
+  const out = document.getElementById('ratingSliderVal');
+  if (out) out.textContent = v > 0 ? v.toFixed(1).replace(/\.0$/, '') + '+' : t('filter.any');
+}
+
+/* ── Country: custom styled select ────────────────────────────────
+   The real <select id="fCountry"> stays in the DOM (hidden) so every
+   existing document.getElementById('fCountry').value read/write keeps
+   working untouched. This layer is purely a prettier front-end for it.
+   #countryPanel lives outside the drawer (next to #rtip) so it can use
+   position:fixed and escape .fd-body's overflow:auto — same trick this
+   file already uses for the rating-breakdown tooltip. */
+function buildCountryOptionsUI() {
+  const sel  = document.getElementById('fCountry');
+  const wrap = document.getElementById('countryOptions');
+  if (!sel || !wrap) return;
+  wrap.innerHTML = Array.from(sel.options).map(o =>
+    `<div class="cselect-opt" data-value="${esc(o.value)}" role="option">${esc(o.textContent)}</div>`
+  ).join('');
+  wrap.querySelectorAll('.cselect-opt').forEach(opt => {
+    opt.addEventListener('click', () => selectCountryOption(opt.dataset.value));
+  });
+}
+function syncCountrySelectUI() {
+  const sel   = document.getElementById('fCountry');
+  const label = document.getElementById('countryTriggerLabel');
+  if (!sel || !label) return;
+  const opt = sel.options[sel.selectedIndex];
+  label.textContent = opt ? opt.textContent : t('filter.allCountries');
+  document.querySelectorAll('#countryOptions .cselect-opt').forEach(o =>
+    o.classList.toggle('selected', o.dataset.value === sel.value)
+  );
+}
+function toggleCountrySelect(force) {
+  const panel   = document.getElementById('countryPanel');
+  const trigger = document.getElementById('countryTrigger');
+  if (!panel || !trigger) return;
+  const open = typeof force === 'boolean' ? force : !panel.classList.contains('open');
+  if (open) {
+    const r = trigger.getBoundingClientRect();
+    panel.style.left  = r.left + 'px';
+    panel.style.top   = (r.bottom + 8) + 'px';
+    panel.style.width = r.width + 'px';
+  }
+  panel.classList.toggle('open', open);
+  trigger.classList.toggle('open', open);
+  trigger.setAttribute('aria-expanded', String(open));
+  if (open) {
+    const search = document.getElementById('countrySearch');
+    if (search) { search.value = ''; filterCountryOptions(''); setTimeout(() => search.focus(), 30); }
+  }
+}
+function selectCountryOption(value) {
+  const sel = document.getElementById('fCountry');
+  if (!sel) return;
+  sel.value = value;
+  syncCountrySelectUI();
+  toggleCountrySelect(false);
+  applyFilters(); // already calls updateFilterCount()
+}
+function filterCountryOptions(q) {
+  const query = q.trim().toLowerCase();
+  document.querySelectorAll('#countryOptions .cselect-opt').forEach(opt => {
+    opt.style.display = !query || opt.textContent.toLowerCase().includes(query) ? '' : 'none';
+  });
+}
+// Outside click / scroll closes the country popover. Delegated on document so
+// this is safe to register before #countrySelectWrap exists in the DOM.
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#countrySelectWrap') || e.target.closest('#countryPanel')) return;
+  toggleCountrySelect(false);
+});
+document.addEventListener('scroll', (e) => {
+  if (e.target?.classList?.contains('fd-body')) toggleCountrySelect(false);
+}, true);
 
 /* ─── "How ratings work" micro-modal + catalog-freshness stamp ─── */
 function openRatingsInfo() {
@@ -14997,7 +15229,9 @@ document.addEventListener('keydown', e => {
     // AI Results modal closes first (unless the detail modal is stacked on top of it)
     if (document.getElementById('aiResultsModal')?.classList.contains('open')
         && !document.getElementById('overlay')?.classList.contains('open')) closeAiResults();
-    if (document.getElementById('filtersDrawer')?.classList.contains('open')) closeFilters();
+    // Country popover closes first if open, so Escape doesn't skip past it and dismiss the whole drawer.
+    if (document.getElementById('countryPanel')?.classList.contains('open')) toggleCountrySelect(false);
+    else if (document.getElementById('filtersDrawer')?.classList.contains('open')) closeFilters();
     if (document.getElementById('ratingsInfoModal')?.classList.contains('open')) closeRatingsInfo();
     if (document.getElementById('iosPwaSim')?.classList.contains('visible')) closeIosSim();
     else if (document.getElementById('iosPwaPrompt')?.classList.contains('visible')) hideIosPwaPrompt();
@@ -15836,6 +16070,7 @@ function dismissFirstVisit() {
 async function init() {
   await detectLang();
   await loadGenres();
+  buildCountryOptionsUI(); // populate the custom country dropdown from #fCountry's <option>s
   restoreSession(); // re-populate inputs before the first loadMovies call
   loadFeedSections(); // fire and forget — loads KV rows in parallel
   loadCatalogFreshness(); // fire and forget — stamps the hero + ratings modal
@@ -16059,35 +16294,40 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
     </div>
     <div class="fd-group">
       <span class="fd-label" data-i18n="filter.country">Country</span>
-      <select class="filter-sel" id="fCountry" onchange="applyFilters()">
-        <option value="" data-i18n="filter.allCountries">All Countries</option>
-        <option value="US">USA</option>
-        <option value="GB">UK</option>
-        <option value="FR">France</option>
-        <option value="IT">Italy</option>
-        <option value="DE">Germany</option>
-        <option value="JP">Japan</option>
-        <option value="KR">South Korea</option>
-        <option value="CN">China</option>
-        <option value="IN">India</option>
-        <option value="ES">Spain</option>
-        <option value="AU">Australia</option>
-        <option value="CA">Canada</option>
-        <option value="RU">Russia</option>
-        <option value="MX">Mexico</option>
-        <option value="BR">Brazil</option>
-      </select>
+      <div class="cselect" id="countrySelectWrap">
+        <!-- Real control — hidden, kept as the single source of truth so every
+             existing document.getElementById('fCountry').value call still works. -->
+        <select class="filter-sel" id="fCountry" onchange="applyFilters()" hidden tabindex="-1" aria-hidden="true">
+          <option value="" data-i18n="filter.allCountries">All Countries</option>
+          <option value="US">USA</option>
+          <option value="GB">UK</option>
+          <option value="FR">France</option>
+          <option value="IT">Italy</option>
+          <option value="DE">Germany</option>
+          <option value="JP">Japan</option>
+          <option value="KR">South Korea</option>
+          <option value="CN">China</option>
+          <option value="IN">India</option>
+          <option value="ES">Spain</option>
+          <option value="AU">Australia</option>
+          <option value="CA">Canada</option>
+          <option value="RU">Russia</option>
+          <option value="MX">Mexico</option>
+          <option value="BR">Brazil</option>
+        </select>
+        <button type="button" class="cselect-trigger" id="countryTrigger" onclick="toggleCountrySelect()" aria-haspopup="listbox" aria-expanded="false" aria-label="Country" data-i18n-aria="filter.country">
+          <span id="countryTriggerLabel" data-i18n="filter.allCountries">All Countries</span>
+          <svg class="cselect-chev" width="12" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      </div>
     </div>
     <div class="fd-group">
-      <span class="fd-label" data-i18n="filter.minRating">Min Rating</span>
-      <select class="filter-sel" id="fMinRating" onchange="applyFilters()">
-        <option value="" data-i18n="filter.any">Any</option>
-        <option value="6">6.0+</option>
-        <option value="7">7.0+</option>
-        <option value="7.5">7.5+</option>
-        <option value="8">8.0+</option>
-        <option value="8.5">8.5+</option>
-      </select>
+      <div class="fd-label-row">
+        <span class="fd-label" data-i18n="filter.minRating">Min Rating</span>
+        <span class="rating-slider-val" id="ratingSliderVal" data-i18n="filter.any">Any</span>
+      </div>
+      <input type="range" class="rating-slider" id="fMinRating" min="0" max="10" step="0.5" value="0"
+             oninput="syncRatingSlider()" onchange="applyFilters()" aria-label="Minimum rating">
     </div>
     <div class="fd-group">
       <span class="fd-label" data-i18n="filter.sort">Sort</span>
@@ -16120,6 +16360,15 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
   <div class="wl-footer">
     <button class="wl-clear-btn" onclick="clearWatchlist()" data-i18n="wl.clear">Clear all</button>
   </div>
+</div>
+<!-- Country custom-select popover — fixed overlay, escapes .fd-body's overflow:auto
+     (same "live outside the scrolling container" trick as #rtip below) -->
+<div class="cselect-panel" id="countryPanel" role="listbox">
+  <div class="cselect-search-wrap">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <input type="text" class="cselect-search" id="countrySearch" data-i18n-placeholder="filter.searchCountry" placeholder="Search country…" oninput="filterCountryOptions(this.value)">
+  </div>
+  <div class="cselect-options" id="countryOptions"></div>
 </div>
 <!-- Unified rating breakdown tooltip — fixed overlay, escapes overflow:hidden cards -->
 <div id="rtip" class="rtip" role="tooltip" aria-hidden="true"></div>
