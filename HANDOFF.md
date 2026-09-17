@@ -2,6 +2,16 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-09-17) — Filters Drawer Modernization + Detective Genre
+
+All commits on `main`, deployed live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `d264062` | **Modernized the Filters drawer UI (`index.html`).** (1) **Detective genre**: new `pill-detective` maps to TMDB Mystery(9648)+Crime(80) via `CUSTOM_GENRES` / `resolveGenreParam()` (pipe-joins ids so TMDB's `with_genres` is OR, e.g. `9648\|80`) / `resolveGenreIds()`; wired into `loadGenres()`, `fetchPage()`, and the random-pool client-side genre matcher — works for both Movies and TV. (2) **`#fMinRating`** is now a 0–10 (step 0.5) `<input type=range>` (`.rating-slider`) with a live badge (`#ratingSliderVal`) and a `--rating-pct`-driven gradient fill, kept in sync via `syncRatingSlider()`. `'0'` is the new "Any" sentinel — fixed 3 latent truthy-string bugs this exposed: `updateFilterCount()`, `fetchPage()`'s `vote_average.gte` guard, `restoreSession()`'s `hasState`. (3) **`#fCountry`** is now a custom combobox (`.cselect`): the real `<select>` stays in the DOM (`hidden`) as the single source of truth, so every existing `getElementById('fCountry').value` call is untouched. New `#countryTrigger` + `#countryPanel` (search-to-filter list) — `buildCountryOptionsUI()` / `syncCountrySelectUI()` / `toggleCountrySelect()` / `selectCountryOption()` / `filterCountryOptions()`. `#countryPanel` lives outside the drawer next to `#rtip` and uses `position:fixed`, same "escape `.fd-body`'s `overflow:auto`" trick as the rating tooltip; closes on outside click, Escape (checked ahead of the drawer itself in the global keydown handler), and `.fd-body` scroll. (4) `.gpill`/`.src-btn`: softened inactive state, active/`.on` state upgraded to a gradient + glow matching `.fd-apply` (sort pills keep their IMDb/RT/Metacritic brand colors — only the treatment changed). (5) `.fd-body` section gap 24px→32px; `.fd-footer` now has its own frosted `backdrop-filter` blur layer. New i18n keys `filter.detective` / `filter.searchCountry` across all 9 locales. Verified via `wrangler pages dev`: desktop, mobile (375px), and RTL (Arabic) all render/interact correctly, no console errors introduced, `with_genres=9648\|80` confirmed over the wire and composes correctly with country/rating/sort. |
+
+---
+
 ## ⚡ Most Recent Session (2026-09-07b) — Mock Fixture Content Swap (gate unchanged)
 
 All commits on `main`, deployed live on https://findfilm.ai.
@@ -2339,6 +2349,9 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 | `_showErrorState()` | Sets emptyState to ⚠️ + error copy + retry CTA; hides load spinner |
 | `openActorProfile(personId)` / `closeActorProfile()` | Opens/closes the nested Actor Filmography Modal (`#actorOverlay`); fetches `/person/{id}` + `/person/{id}/combined_credits` via `tmdbGet()` |
 | `fromPersonCredit(raw)` | Normalizes a `combined_credits.cast[]` item (mixed movie/TV via `raw.media_type`) into a card-renderable movie object |
+| `resolveGenreParam(id)` / `resolveGenreIds(id)` | Translate `ACTIVE_GENRE` through `CUSTOM_GENRES` (currently just `detective` → Mystery+Crime) — pipe-joined string for TMDB's `with_genres`, array of ids for client-side matching |
+| `syncRatingSlider()` | Reads `#fMinRating`'s range value → updates `#ratingSliderVal` badge + `--rating-pct` fill; call after any programmatic `.value` set |
+| `toggleCountrySelect()` / `selectCountryOption()` / `buildCountryOptionsUI()` / `syncCountrySelectUI()` | Custom `#fCountry` combobox — `#countryTrigger`/`#countryPanel` UI layer over the real (hidden) `<select>` |
 
 Backend (`functions/api/[[path]].js`): `_actorMovies(actorName, env)` resolves an actor name → top 12 movie credits via TMDB `/search/person` + `/person/{id}/movie_credits`; used by `handleAISearch()`'s actor-query branch (triggered by `_parseIntent()`'s `actor_search` intent).
 
@@ -2386,7 +2399,7 @@ Backend (`functions/api/[[path]].js`): `_actorMovies(actorName, env)` resolves a
 
 ## i18n System
 
-6 languages: **English, Español, Français, 中文, العربية, Українська**
+9 languages: **English, Español, Français, 中文, العربية, Українська, Deutsch, Svenska, Norsk**
 
 - Geo-IP auto-detection via `/api/geo-lang` on first load
 - Language stored in `localStorage['rk_lang']`
