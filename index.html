@@ -2243,7 +2243,9 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 /* ─── MOVIE MODAL ─────────────────────────────── */
 .modal {
   width: 100%; max-width: 1020px;
-  background: var(--modal-bg); border-radius: 16px;
+  background: rgba(13,13,20,0.95); border-radius: 16px;
+  -webkit-backdrop-filter: blur(40px) saturate(1.4);
+  backdrop-filter: blur(40px) saturate(1.4);
   overflow: hidden;
   border: 1px solid rgba(255,255,255,0.07);
   box-shadow: 0 32px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04);
@@ -2253,25 +2255,56 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .overlay.open .modal { transform: scale(1); opacity: 1; }
 
-/* Backdrop — image-only top section */
-.m-backdrop {
-  position: relative; height: 260px; overflow: hidden; flex-shrink: 0;
+/* ═══════════ CINEMATIC HERO ═══════════
+   Full-bleed autoplaying trailer (desktop/tablet, see _setupHeroMedia()) or
+   backdrop image, title/meta/genres/actions overlaid at the bottom via
+   .m-hero-grad. Collapses to a short static-image strip + a normal-flow
+   content block on narrow viewports (media query near the mobile modal
+   rules below) — no video autoplay there (data/battery cost) and no
+   overlay math to fight the dynamic-viewport-height quirks that block
+   already had to work around once before. */
+.m-hero {
+  position: relative; height: min(64vh, 560px); min-height: 440px;
+  overflow: hidden; flex-shrink: 0;
 }
-.m-backdrop-img {
-  width: 100%; height: 100%; object-fit: cover;
-  display: block;
+.m-hero-media { position: absolute; inset: 0; background: #0a0a10; }
+.m-hero-media .m-backdrop-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.m-hero-media iframe {
+  position: absolute; top: 50%; left: 50%;
+  width: 177.78vh; height: 56.25vw;   /* 16:9 oversized to "cover" any container size */
+  min-width: 100%; min-height: 100%;
+  transform: translate(-50%, -50%);
+  border: none; pointer-events: none; /* only the mute button is interactive */
 }
 .m-backdrop-fill {
   width: 100%; height: 100%;
   display: flex; align-items: center; justify-content: center;
   font-size: 100px;
 }
-.m-backdrop-grad {
-  position: absolute; inset: 0;
-  background: linear-gradient(to bottom, rgba(26,26,26,0.05) 0%, rgba(26,26,26,0.92) 100%);
+.m-hero-grad {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(to right, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.04) 42%, transparent 68%),
+    linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, transparent 20%, rgba(10,9,16,0.72) 62%, rgba(13,13,20,0.97) 94%);
 }
+.m-hero-mute {
+  position: absolute; right: 20px; bottom: 20px; z-index: 5;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(20,20,28,0.55);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.22);
+  color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.18s, border-color 0.18s, transform 0.18s;
+}
+.m-hero-mute:hover { background: rgba(0,0,0,0.7); border-color: rgba(255,255,255,0.4); transform: scale(1.08); }
+.m-hero-mute .ic-vol-on { display: none; }
+.m-hero-mute.unmuted .ic-vol-off { display: none; }
+.m-hero-mute.unmuted .ic-vol-on { display: block; }
+
 .m-close {
-  position: absolute; top: 14px; right: 14px; z-index: 12;
+  position: absolute; top: 14px; right: 14px; z-index: 20;
   width: 40px; height: 40px;
   background: rgba(20,20,28,0.5);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
@@ -2288,7 +2321,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   transform: scale(1.08);
 }
 .m-back {
-  position: absolute; top: 12px; left: 12px; z-index: 10;
+  position: absolute; top: 12px; left: 12px; z-index: 20;
   width: 36px; height: 36px;
   background: rgba(0,0,0,0.55); backdrop-filter: blur(10px);
   border: 1px solid rgba(255,255,255,0.12);
@@ -2304,12 +2337,8 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 }
 .m-back svg { display: block; margin-right: 1px; }  /* optical-center the left chevron */
 
-/* Info strip — poster + meta, below backdrop */
-.m-info-strip {
-  display: flex; gap: 20px; align-items: flex-start;
-  padding: 0 28px 20px;
-  margin-top: -70px; position: relative; z-index: 2;
-}
+/* Poster thumbnail — kept populated for backward compat, not shown in the
+   cinematic hero layout (hidden inline in the HTML). */
 .m-poster {
   width: 120px; flex-shrink: 0;
   aspect-ratio: 2/3; border-radius: 10px; overflow: hidden;
@@ -2322,40 +2351,61 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   width: 100%; height: 100%;
   display: flex; align-items: center; justify-content: center; font-size: 42px;
 }
-.m-meta-col { flex: 1; padding-top: 72px; min-width: 0; }
+
+/* Title/meta/genres/actions, overlaid at the bottom of the hero */
+.m-hero-content {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
+  padding: 0 32px 24px;
+  display: flex; flex-direction: column; gap: 10px;
+}
 .m-title {
-  font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 26px; line-height: 1.2;
-  margin-bottom: 3px;
+  font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 42px; line-height: 1.06;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.7);
+  margin: 0;
 }
-.m-orig { font-size: 12px; color: var(--text-sub); font-style: italic; margin-bottom: 14px; }
+.m-orig { font-size: 13px; color: var(--text-sub); font-style: italic; margin: 0; text-shadow: 0 1px 8px rgba(0,0,0,0.6); }
+.m-hero-meta-row { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 600; color: #d1d5db; }
+.m-hero-meta-dot { color: rgba(255,255,255,0.35); }
+.m-match-pct { color: #4ade80; font-weight: 800; }
+.m-genre-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.m-genre-chip {
+  padding: 4px 13px; border-radius: 20px; font-size: 11.5px; font-weight: 600;
+  color: #e5e7eb; background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.14);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+
+/* ═══════════ Ratings + Cast — plain flow directly under the hero ═══════════ */
+.m-post-hero { padding: 22px 32px 6px; }
+.m-ratings-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+.m-cast-sec .section-lbl { margin-bottom: 12px; }
 .m-starring {
-  display: flex; align-items: center; flex-wrap: wrap;
-  /* row-gap 8px / column-gap 14px. The column gap replaces the old "," separator
-     as the only thing dividing actors, so it has to read as a deliberate break;
-     the row gap is tighter because wrapped lines already read as separate.
-     `overflow: hidden` was removed with the same change — it existed to clip a
-     single non-wrapping line, and with flex-wrap it can only clip hover/focus
-     rings on the wrapped rows. */
-  gap: 8px 14px;
-  margin-bottom: 14px; font-size: 12px; color: var(--text-sub);
-  line-height: 1;
+  display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 18px;
+  padding-bottom: 4px; font-size: 12px; color: var(--text-sub);
 }
-.m-starring-label { flex-shrink: 0; }
+.m-starring-label { display: none; }  /* superseded by the external "Starring:" heading above the row */
 .m-starring-avatar {
-  width: 22px; height: 22px; border-radius: 50%; object-fit: cover;
-  background: #2a2a3d; border: 1.5px solid var(--modal-bg);
+  width: 64px; height: 64px; border-radius: 50%; object-fit: cover;
+  background: #2a2a3d; border: 2px solid rgba(255,255,255,0.1);
   display: flex; align-items: center; justify-content: center;
-  font-size: 8px; font-weight: 700; color: #fff; flex-shrink: 0;
+  font-size: 18px; font-weight: 700; color: #fff; flex-shrink: 0;
 }
 .m-starring-actor {
-  display: inline-flex; align-items: center; gap: 4px;
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  width: 76px; flex-shrink: 0; text-align: center;
   background: none; border: none; padding: 0; margin: 0;
   color: inherit; font: inherit; cursor: pointer;
 }
 .m-starring-static { cursor: default; }
 .m-starring-actor:hover .m-starring-name { color: var(--text-main); text-decoration: underline; }
-.m-starring-name { white-space: nowrap; }
-.m-ratings-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.m-starring-name {
+  font-weight: 700; font-size: 12px; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.m-starring-character {
+  font-size: 11px; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
 
 /* ── Score transparency: hero avg + source breakdown ──────── */
 .mr-score-card {
@@ -2414,17 +2464,20 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
   font-size: 11px; font-weight: 600; color: #67e8f9; opacity: 0.9;
   font-family: 'Montserrat', sans-serif; line-height: 1;
 }
-.m-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.07); }
+.m-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 2px; }
+/* Primary, high-contrast CTA — the hero's "Play" button. Sized up from its
+   old small-button treatment now that it's the main action in the hero
+   rather than one of several inline links under the poster. */
 .btn-trailer {
-  display: flex; align-items: center; gap: 6px;
-  height: 38px; padding: 0 16px;
+  display: flex; align-items: center; gap: 8px;
+  height: 46px; padding: 0 26px;
   background: var(--accent); border: none; border-radius: 8px;
-  color: #fff; font-weight: 800; font-size: 12px;
-  font-family: 'Montserrat', sans-serif; text-transform: uppercase;
+  color: #fff; font-weight: 800; font-size: 13px;
+  font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 0.3px;
   cursor: pointer; transition: all 0.18s;
-  box-shadow: 0 4px 16px rgba(229,9,20,0.4);
+  box-shadow: 0 6px 22px rgba(229,9,20,0.45);
 }
-.btn-trailer:hover { background: var(--accent-hover); box-shadow: 0 6px 22px rgba(229,9,20,0.55); transform: translateY(-1px); }
+.btn-trailer:hover { background: var(--accent-hover); box-shadow: 0 8px 28px rgba(229,9,20,0.6); transform: translateY(-1px); }
 /* .btn-amazon kept for reference — replaced in HTML by #streamingCtAs */
 #streamingCtAs { display: contents; }
 /* Streaming info row — provider buttons + availability note, below the action row */
@@ -3713,11 +3766,29 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
     backface-visibility: hidden; -webkit-backface-visibility: hidden;
   }
   .overlay.open .modal { transform: translateY(0) scale(1); opacity: 1; }
-  .m-backdrop  { height: 90px; }
-  .m-info-strip { padding: 0 14px 6px; margin-top: -22px; gap: 8px; }
-  .m-poster    { width: 66px; }
-  .m-meta-col  { padding-top: 16px; }
-  .m-title     { font-size: 16px; line-height: 1.18; margin-bottom: 1px; }
+  /* Cinematic hero collapses to a short static image strip on mobile — no
+     video autoplay (data/battery cost; _setupHeroMedia() already skips it
+     below 769px) and the title/meta/genres/actions flow normally underneath
+     it instead of overlaying, rather than fighting to cram a "massive" title
+     + full action row into a sliver of overlaid space. */
+  /* .m-hero drops its fixed desktop height and just wraps its content
+     (the media layer is pinned to its own 130px strip below instead of
+     filling `inset:0` of the hero box) — .m-hero-content sits in normal
+     flow beneath it, so its real height pushes .m-post-hero down properly
+     instead of either clipping (overflow:hidden) or overlapping the next
+     section (overflow:visible with .m-hero still fixed-height). */
+  .m-hero         { height: auto; min-height: 0; overflow: visible; }
+  .m-hero-media, .m-hero-grad { top: 0; right: 0; left: 0; bottom: auto; height: 130px; }
+  /* position:relative (not :static) is load-bearing here: z-index only has an
+     effect on a positioned element, so with :static the inherited z-index:4
+     from the base (desktop) .m-hero-content rule is silently inert and the
+     absolutely-positioned image/gradient (z-index:auto, but positioned) paint
+     ON TOP of the title/meta/genre/action content regardless of DOM order —
+     confirmed via document.elementFromPoint() returning the <img>, not the
+     title, before this fix. :relative with no offset keeps the exact same
+     normal-flow layout position while making z-index:4 take effect again. */
+  .m-hero-content { position: relative; padding: 10px 14px 4px; gap: 5px; }
+  .m-title        { font-size: 19px; line-height: 1.16; }
   .m-close     { width: 44px; height: 44px; top: 10px; right: 10px; font-size: 16px; }
   .m-back      { width: 44px; height: 44px; top: 10px; left: 10px; }
   /* Body is the flex-column scroll region between the pinned hero + sticky footer. */
@@ -3751,12 +3822,15 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
     transition: background 0.18s, color 0.15s;
   }
   .meta-grid   { grid-template-columns: 1fr 1fr; gap: 7px; }
-  .m-info-strip { flex-direction: row; }
-  /* Ratings card: single-line inline pill for mobile hero */
-  .m-orig        { margin-bottom: 3px; font-size: 11px; }
-  .m-starring    { gap: 7px 11px; margin-bottom: 8px; font-size: 10.5px; }
-  .m-starring-avatar { width: 18px; height: 18px; font-size: 7px; }
-  .m-ratings-row { margin-bottom: 5px; }
+  /* Ratings + Cast: tighter than desktop, normal flow below the short hero image */
+  .m-post-hero   { padding: 12px 14px 4px; }
+  .m-orig        { margin: 0; font-size: 11px; }
+  .m-cast-sec .section-lbl { margin-bottom: 8px; }
+  .m-starring    { gap: 12px; }
+  .m-starring-avatar { width: 56px; height: 56px; font-size: 15px; }
+  .m-starring-actor  { width: 68px; gap: 5px; }
+  .m-starring-name, .m-starring-character { font-size: 11px; }
+  .m-ratings-row { margin-bottom: 12px; }
   .mr-score-card { flex-direction: row; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; }
   .mr-hero-avg   { gap: 2px; }
   .mr-star       { font-size: 13px; }
@@ -4511,7 +4585,17 @@ main.browse-collapsed > .load-wrap { display: none !important; }
 [dir="rtl"] .count-row      { flex-direction: row-reverse; }
 [dir="rtl"] .filter-row-2   { flex-direction: row-reverse; }
 [dir="rtl"] .movie-info     { text-align: right; }
-[dir="rtl"] .m-meta-col     { text-align: right; }
+[dir="rtl"] .m-hero-content { text-align: right; }
+[dir="rtl"] .m-post-hero    { text-align: right; }
+/* .m-actions mirrors correctly on its own (flexbox follows `direction`, same
+   as every other button row in this file) — its first child, the primary
+   Trailer button, ends up flush against the hero's right edge in RTL. The
+   floating mute button is a physically-fixed corner control (like .m-close/
+   .m-back, deliberately unmirrored elsewhere in this file) but this is the
+   one case where that fixed corner now collides with in-flow content that
+   DOES mirror, so move it to the opposite corner here rather than fighting
+   the (correct) mirroring of .m-actions. */
+[dir="rtl"] .m-hero-mute { right: auto; left: 20px; }
 
 /* Translating state on movie description */
 .m-desc.translating {
@@ -5766,23 +5850,29 @@ if ('serviceWorker' in navigator) {
     </button>
     <button class="m-close" onclick="closeModal()">✕</button>
 
-    <!-- Backdrop image -->
-    <div class="m-backdrop" id="mBackdrop">
-      <div class="m-backdrop-grad"></div>
-    </div>
-
-    <!-- ═══════════ SECTION 1 · OVERVIEW (Hero) ═══════════ -->
-    <div class="m-info-strip">
-      <div class="m-poster" id="mPoster"></div>
-      <div class="m-meta-col">
+    <!-- ═══════════ CINEMATIC HERO — autoplay trailer (desktop/tablet) or
+         backdrop image (mobile, or no trailer available); title, meta row,
+         genre pills and primary actions overlaid at the bottom via a
+         gradient vignette. See _setupHeroMedia()/_renderHeroMeta(). ═══════════ -->
+    <div class="m-hero" id="mHero">
+      <div class="m-hero-media" id="mHeroMedia"></div>
+      <div class="m-hero-grad"></div>
+      <button class="m-hero-mute" id="mHeroMute" onclick="toggleHeroMute()" style="display:none" aria-label="Unmute trailer">
+        <svg class="ic-vol-off" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+        <svg class="ic-vol-on" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+      </button>
+      <!-- Kept populated by populateModal() for backward compat; hidden — no
+           poster thumbnail in the full-bleed cinematic layout. -->
+      <div class="m-poster" id="mPoster" style="display:none"></div>
+      <div class="m-hero-content">
         <div class="m-title" id="mTitle"></div>
         <div class="m-orig" id="mOrig"></div>
+        <div class="m-hero-meta-row" id="mHeroMetaRow"></div>
         <span class="ai-match-pill" id="aiMatchPill">
           <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
           <span data-i18n="modal.smartMatch">Smart Match</span>
         </span>
-        <div class="m-starring" id="mStarring"></div>
-        <div class="m-ratings-row" id="mRatings"></div>
+        <div class="m-genre-row" id="mGenreRow"></div>
         <div class="m-actions">
           <button class="btn-trailer" id="btnTrailer" onclick="toggleTrailer()" style="display:none" data-i18n="modal.trailer">▶ Trailer</button>
           <div id="streamingCtAs"></div>
@@ -5797,9 +5887,31 @@ if ('serviceWorker' in navigator) {
       </div>
     </div>
 
+    <!-- ═══════════ Ratings + Cast — plain content flow, edge-to-edge
+         directly under the hero (not a bento-card; a continuation of it) ═══ -->
+    <div class="m-post-hero">
+      <div class="m-ratings-row" id="mRatings"></div>
+      <div class="m-cast-sec">
+        <div class="section-lbl" data-i18n="modal.starring">Starring:</div>
+        <div class="m-starring hide-scrollbar" id="mStarring"></div>
+      </div>
+    </div>
+
     <!-- Sectioned, scrollable body — Bento grid of decision cards -->
     <div class="m-body">
      <div class="bento-grid">
+
+      <!-- ═══════════ CARD · AUDIENCE REVIEWS (TMDB + Reddit, merged) —
+           docked directly below Cast, ahead of the rest of the grid.
+           One quote-card carousel fed by both sources (see
+           refreshReviewsCarousel/_mergeReviewSources) — a small logo badge
+           on each card marks its source. Distinct from "Your Review" below
+           — these are third-party reviews, not something posted on this
+           site. -->
+      <section class="m-sec m-sec--rq bento-card" id="mReviewsQSec" style="display:none">
+        <div class="section-lbl" data-i18n="modal.audienceReviews">Audience Reviews</div>
+        <div class="rq-row hide-scrollbar" id="mReviewsQ"></div>
+      </section>
 
       <!-- ═══════════ CARD · AI TL;DR (synopsis + trailer) ═══════════ -->
       <section class="m-sec m-sec--overview bento-card">
@@ -5866,17 +5978,6 @@ if ('serviceWorker' in navigator) {
       <section class="m-sec m-sec--awards bento-card bento-1">
         <div class="section-lbl" data-i18n="modal.awards">Awards &amp; Recognition</div>
         <div class="awards" id="mAwards"></div>
-      </section>
-
-      <!-- ═══════════ CARD · AUDIENCE REVIEWS (TMDB + Reddit, merged) ═══
-           One quote-card carousel fed by both sources (see
-           refreshReviewsCarousel/_mergeReviewSources) — a small logo badge
-           on each card marks its source. Distinct from "Your Review" below
-           — these are third-party reviews, not something posted on this
-           site. -->
-      <section class="m-sec m-sec--rq bento-card" id="mReviewsQSec" style="display:none">
-        <div class="section-lbl" data-i18n="modal.audienceReviews">Audience Reviews</div>
-        <div class="rq-row hide-scrollbar" id="mReviewsQ"></div>
       </section>
 
       <!-- ═══════════ CARD · COMMUNITY & REVIEWS ═══════════ -->
@@ -6216,6 +6317,9 @@ const TRANSLATIONS = {
     'modal.creator':        'Creator',
     'modal.trailer':        '▶ Trailer',
     'modal.hideTrailer':    '▼ Hide Trailer',
+    'modal.mute':           'Mute',
+    'modal.unmute':         'Unmute',
+    'modal.match':          'Match',
     'modal.share':          '↗ Share',
     'modal.watchlist':      '+ Watchlist',
     'wl.clear':             'Clear all',
@@ -6602,6 +6706,9 @@ const TRANSLATIONS = {
     'modal.creator':        'Creador',
     'modal.trailer':        '▶ Tráiler',
     'modal.hideTrailer':    '▼ Ocultar tráiler',
+    'modal.mute':           'Silenciar',
+    'modal.unmute':         'Activar sonido',
+    'modal.match':          'Coincidencia',
     'modal.share':          '↗ Compartir',
     'modal.watchlist':      '+ Lista de espera',
     'wl.clear':             'Borrar todo',
@@ -6945,6 +7052,9 @@ const TRANSLATIONS = {
     'modal.creator':        'Créateur',
     'modal.trailer':        '▶ Bande-annonce',
     'modal.hideTrailer':    '▼ Cacher la bande-annonce',
+    'modal.mute':           'Muet',
+    'modal.unmute':         'Activer le son',
+    'modal.match':          'Correspondance',
     'modal.share':          '↗ Partager',
     'modal.watchlist':      '+ À voir',
     'wl.clear':             'Tout effacer',
@@ -7288,6 +7398,9 @@ const TRANSLATIONS = {
     'modal.creator':        '创作者',
     'modal.trailer':        '▶ 预告片',
     'modal.hideTrailer':    '▼ 隐藏预告片',
+    'modal.mute':           '静音',
+    'modal.unmute':         '取消静音',
+    'modal.match':          '匹配',
     'modal.share':          '↗ 分享',
     'modal.watchlist':      '+ 观看列表',
     'wl.clear':             '清空',
@@ -7631,6 +7744,9 @@ const TRANSLATIONS = {
     'modal.creator':        'المبدع',
     'modal.trailer':        '▶ إعلان',
     'modal.hideTrailer':    '▼ إخفاء الإعلان',
+    'modal.mute':           'كتم الصوت',
+    'modal.unmute':         'إلغاء الكتم',
+    'modal.match':          'تطابق',
     'modal.share':          '↗ مشاركة',
     'modal.watchlist':      '+ قائمة المشاهدة',
     'wl.clear':             'مسح الكل',
@@ -7972,6 +8088,9 @@ const TRANSLATIONS = {
     'modal.creator':        'Творець',
     'modal.trailer':        '▶ Трейлер',
     'modal.hideTrailer':    '▼ Сховати трейлер',
+    'modal.mute':           'Вимкнути звук',
+    'modal.unmute':         'Увімкнути звук',
+    'modal.match':          'Збіг',
     'modal.share':          '↗ Поділитися',
     'modal.watchlist':      '+ Список перегляду',
     'wl.clear':             'Очистити',
@@ -8330,6 +8449,9 @@ const TRANSLATIONS = {
     'modal.creator':        'Erfinder',
     'modal.trailer':        '▶ Trailer',
     'modal.hideTrailer':    '▼ Trailer ausblenden',
+    'modal.mute':           'Stummschalten',
+    'modal.unmute':         'Ton einschalten',
+    'modal.match':          'Übereinstimmung',
     'modal.share':          '↗ Teilen',
     'modal.watchlist':      '+ Merkliste',
     'wl.clear':             'Alle löschen',
@@ -8697,6 +8819,9 @@ const TRANSLATIONS = {
     'modal.creator':        'Skapare',
     'modal.trailer':        '▶ Trailer',
     'modal.hideTrailer':    '▼ Dölj trailer',
+    'modal.mute':           'Stäng av ljud',
+    'modal.unmute':         'Slå på ljud',
+    'modal.match':          'Matchning',
     'modal.share':          '↗ Dela',
     'modal.watchlist':      '+ Bevakningslista',
     'wl.clear':             'Rensa alla',
@@ -9064,6 +9189,9 @@ const TRANSLATIONS = {
     'modal.creator':        'Skaper',
     'modal.trailer':        '▶ Trailer',
     'modal.hideTrailer':    '▼ Skjul trailer',
+    'modal.mute':           'Demp lyd',
+    'modal.unmute':         'Slå på lyd',
+    'modal.match':          'Match',
     'modal.share':          '↗ Del',
     'modal.watchlist':      '+ Ønskeliste',
     'wl.clear':             'Tøm alle',
@@ -10920,16 +11048,30 @@ function mergeMovieData(movie, det, od, country = DETECTED_COUNTRY) {
     .filter(a => a && a.name)
     .slice(0, CAST_LIMIT)
     .map(a => ({
-      id:    a.id ?? null,
-      name:  a.name,
-      photo: a.profile_path ? TIMG_W45 + a.profile_path : null,
+      id:        a.id ?? null,
+      name:      a.name,
+      photo:     a.profile_path ? TIMG_W45 + a.profile_path : null,
+      character: a.character || null,
     }));
 
-  // Trailer — prefer official Trailer, fallback to any YouTube video
+  // Runtime — TMDB includes this on the base detail resource (movies: minutes;
+  // TV: episode_run_time[0]), no append_to_response needed. Used by the hero
+  // metadata row.
+  movie.runtime = movie.isTV
+    ? ((det.episode_run_time || [])[0] || movie.runtime || null)
+    : (det.runtime || movie.runtime || null);
+
+  // Trailer — prefer official Trailer, fallback to any YouTube video. Guard
+  // on trl.key (not just trl) — a video result with a falsy/missing key would
+  // otherwise produce the literal string ".../embed/undefined" as a "valid"
+  // trailer, which _trailerKeyOf()'s regex fallback would then happily accept.
   const vids = det.videos?.results || [];
-  const trl  = vids.find(v => v.site === 'YouTube' && v.type === 'Trailer')
-             || vids.find(v => v.site === 'YouTube');
-  movie.trailer = trl ? `https://www.youtube.com/embed/${trl.key}` : movie.trailer || null;
+  const trl  = (vids.find(v => v.site === 'YouTube' && v.type === 'Trailer' && v.key)
+             || vids.find(v => v.site === 'YouTube' && v.key)) || null;
+  movie.trailer    = trl ? `https://www.youtube.com/embed/${trl.key}` : movie.trailer || null;
+  // Raw YouTube video id, kept alongside the embed URL above — the cinematic
+  // hero background needs the bare key to build its own autoplay/loop params.
+  movie.trailerKey = trl ? trl.key : movie.trailerKey || null;
 
   // Watch providers — use visitor's country, fallback to US
   const wpResults = det['watch/providers']?.results || {};
@@ -12584,6 +12726,10 @@ async function openMovie(tmdbId, listName = '') {
       refreshModalDetails(m);
       refreshWatchProviders(m);
       refreshReviewsCarousel(m);
+      // Trailer id, runtime and genres usually only land with this fetch —
+      // upgrade the hero from its initial image fallback and fill the meta row.
+      _setupHeroMedia(m);
+      _renderHeroMeta(m);
     }
   } else if (m.imdbId && m.rt === null && m.mc === null) {
     // Cached movies are pre-enriched by sync-worker (TMDB only, no OMDb).
@@ -12628,9 +12774,10 @@ async function openMovie(tmdbId, listName = '') {
           .filter(a => a && a.name)
           .slice(0, CAST_LIMIT)
           .map(a => ({
-            id:    a.id ?? null,
-            name:  a.name,
-            photo: a.profile_path ? TIMG_W45 + a.profile_path : null,
+            id:        a.id ?? null,
+            name:      a.name,
+            photo:     a.profile_path ? TIMG_W45 + a.profile_path : null,
+            character: a.character || null,
           }));
         if (!photos.length) return;
         // Cache onto the movie even if the user already navigated away, so the
@@ -12763,23 +12910,155 @@ async function refreshFitSummary(m) {
   }
 }
 
-function populateModal(m) {
-  // Backdrop
-  const bd = document.getElementById('mBackdrop');
-  if (m.backdrop) {
-    bd.innerHTML = `<img class="m-backdrop-img" src="${TIMG_W1280}${m.backdrop}" alt=""
-      onerror="this.src='${TIMG_W780}${m.backdrop}'">
-      <div class="m-backdrop-grad"></div>`;
-  } else if (m.poster) {
-    bd.innerHTML = `<img class="m-backdrop-img" src="${TIMG_W500}${m.poster}" alt=""
-      style="filter:blur(5px);transform:scale(1.1)"
-      onerror="this.parentNode.innerHTML='<div class=\\'m-backdrop-fill\\' style=\\'background:${m.grad}\\'>${m.emoji}</div><div class=\\'m-backdrop-grad\\'></div>'">
-      <div class="m-backdrop-grad"></div>`;
-  } else {
-    bd.innerHTML = `<div class="m-backdrop-fill" style="background:${m.grad}">${m.emoji}</div><div class="m-backdrop-grad"></div>`;
-  }
+/* ═══════════════════════════════════
+   CINEMATIC HERO — autoplay trailer / backdrop, meta row, genre pills
+═══════════════════════════════════ */
+let HERO_MUTED = true; // hero video always starts muted (required for autoplay to be allowed)
 
-  // Poster
+// #fCountry-style contract: m.trailerKey is the bare YouTube id when known
+// (set by mergeMovieData for live-fetched movies). Cached/older movie objects
+// only ever got the full m.trailer embed URL, so fall back to parsing the id
+// back out of that — same shape every trailer URL in this codebase has used
+// since it was introduced (`https://www.youtube.com/embed/{key}`).
+function _trailerKeyOf(m) {
+  if (m.trailerKey) return m.trailerKey;
+  const match = typeof m.trailer === 'string' && m.trailer.match(/embed\/([^?&]+)/);
+  return match ? match[1] : null;
+}
+
+// Last-known wide/narrow state _setupHeroMedia() decided on, so the resize
+// listener below only re-runs it on an actual breakpoint crossing rather
+// than every resize event.
+let _heroWasWide = null;
+
+// Cinematic hero background: a silently autoplaying, looping trailer on
+// desktop/tablet (room to breathe, no cellular-data concern), the same
+// image fallback everywhere else — narrow viewports keep the lighter,
+// already mobile-tuned backdrop-image treatment rather than paying for a
+// video fetch on a phone. Re-run after enrichment too: a live-fetched
+// movie's trailer id is usually not known until then. Also re-run by the
+// resize listener below, so a modal that's resized/rotated across the
+// breakpoint while open doesn't strand an oversized iframe past where the
+// mobile layout expects a plain image (or vice versa).
+function _setupHeroMedia(m) {
+  const media = document.getElementById('mHeroMedia');
+  const muteBtn = document.getElementById('mHeroMute');
+  if (!media) return;
+  const key  = _trailerKeyOf(m);
+  const wide = window.matchMedia('(min-width: 769px)').matches;
+  _heroWasWide = wide;
+  if (wide && key) {
+    HERO_MUTED = true;
+    if (muteBtn) {
+      muteBtn.style.display = 'flex';
+      muteBtn.classList.remove('unmuted');
+      muteBtn.setAttribute('aria-label', t('modal.unmute'));
+    }
+    // esc() the whole URL (not just `key`) — this is going into an HTML
+    // attribute via innerHTML, not just a JS string, so a `"` (or any of
+    // esc()'s other targets) in a malformed TMDB video key must not be able
+    // to break out of src="...". The literal "&" between query params is
+    // expected to round-trip as "&amp;" here — that's correct HTML, not a
+    // bug: the parser decodes it back to "&" before the URL is ever used.
+    const src = `https://www.youtube.com/embed/${key}?autoplay=1&mute=1&controls=0&loop=1&playlist=${key}&modestbranding=1&rel=0&playsinline=1&enablejsapi=1`;
+    media.innerHTML = `<iframe id="mHeroFrame" src="${esc(src)}" title=""
+      allow="autoplay; encrypted-media" allowfullscreen tabindex="-1"></iframe>`;
+    return;
+  }
+  if (muteBtn) muteBtn.style.display = 'none';
+  // Same 3-tier fallback populateModal() has always used: real backdrop >
+  // blurred poster > flat gradient + emoji.
+  if (m.backdrop) {
+    media.innerHTML = `<img class="m-backdrop-img" src="${TIMG_W1280}${m.backdrop}" alt=""
+      onerror="this.src='${TIMG_W780}${m.backdrop}'">`;
+  } else if (m.poster) {
+    media.innerHTML = `<img class="m-backdrop-img" src="${TIMG_W500}${m.poster}" alt=""
+      style="filter:blur(5px);transform:scale(1.1)"
+      onerror="this.parentNode.innerHTML='<div class=\\'m-backdrop-fill\\' style=\\'background:${m.grad}\\'>${m.emoji}</div>'">`;
+  } else {
+    media.innerHTML = `<div class="m-backdrop-fill" style="background:${m.grad}">${m.emoji}</div>`;
+  }
+}
+
+// Toggled by the floating hero mute button. Uses the YouTube iframe's
+// documented postMessage control surface (enablejsapi=1 on the src is what
+// makes the embed listen for these) instead of loading the full IFrame
+// Player API just to flip one flag — no reload, no restart-from-0 flicker.
+function toggleHeroMute() {
+  const frame = document.getElementById('mHeroFrame');
+  const btn   = document.getElementById('mHeroMute');
+  if (!frame?.contentWindow) return;
+  HERO_MUTED = !HERO_MUTED;
+  const send = () => frame.contentWindow?.postMessage(
+    JSON.stringify({ event: 'command', func: HERO_MUTED ? 'mute' : 'unMute', args: [] }), '*'
+  );
+  send();
+  // The embed only starts listening for postMessage commands once its own
+  // script has booted, which can lose a command sent in the first instant
+  // after the iframe is created (e.g. a click right as the modal opens) with
+  // no error or feedback. There's no lightweight way to await "ready" without
+  // loading the full IFrame Player API just for this, so resend a couple of
+  // times over the following second instead — cheap, and self-correcting if
+  // the first send really was dropped.
+  setTimeout(send, 300);
+  setTimeout(send, 900);
+  if (btn) {
+    btn.classList.toggle('unmuted', !HERO_MUTED);
+    btn.setAttribute('aria-label', t(HERO_MUTED ? 'modal.unmute' : 'modal.mute'));
+  }
+}
+
+// Re-decide video-vs-image whenever the modal is open and the viewport
+// crosses the 769px breakpoint (resize, rotation, split-view) — see
+// _setupHeroMedia()'s own comment for why this matters.
+window.addEventListener('resize', () => {
+  if (!ACTIVE_MOVIE) return;
+  const wide = window.matchMedia('(min-width: 769px)').matches;
+  if (wide === _heroWasWide) return;
+  _setupHeroMedia(ACTIVE_MOVIE);
+});
+
+// A believable, deterministic-per-title "Match" percentage in the same spirit
+// as calcMatchScore() above (real signal + small per-id variance, capped at
+// 99) but for the movie standing alone rather than compared against another
+// title — this is the number shown in the hero's own metadata row.
+function heroMatchPercent(m) {
+  const score = Math.min(10, Math.max(0, calcAvgNum(m) || 0));
+  const base   = 72 + Math.round((score / 10) * 24); // 72–96 from the real rating
+  const jitter = (Number(m.id) || 0) % 5;             // +0–4, stable per title
+  return Math.min(99, base + jitter);
+}
+
+function _runtimeLabel(m) {
+  if (!m.runtime) return '';
+  const h = Math.floor(m.runtime / 60), min = m.runtime % 60;
+  return h ? `${h}h ${min}m` : `${min}m`;
+}
+
+function _renderHeroMeta(m) {
+  const row = document.getElementById('mHeroMetaRow');
+  if (row) {
+    const parts = [];
+    if (m.year) parts.push(`<span class="m-hero-meta-item">${esc(String(m.year))}</span>`);
+    const rt = _runtimeLabel(m);
+    if (rt) parts.push(`<span class="m-hero-meta-item">${esc(rt)}</span>`);
+    parts.push(`<span class="m-hero-meta-item m-match-pct">${heroMatchPercent(m)}% ${t('modal.match')}</span>`);
+    row.innerHTML = parts.join('<span class="m-hero-meta-dot">•</span>');
+  }
+  const genreRow = document.getElementById('mGenreRow');
+  if (genreRow) {
+    const genres = Array.isArray(m.genres) ? m.genres.slice(0, 4) : [];
+    genreRow.innerHTML = genres.map(g => `<span class="m-genre-chip">${esc(g)}</span>`).join('');
+    genreRow.style.display = genres.length ? '' : 'none';
+  }
+}
+
+function populateModal(m) {
+  _setupHeroMedia(m);   // cinematic hero: autoplay trailer (desktop) or backdrop image + mute toggle
+  _renderHeroMeta(m);   // year · runtime · Match% row + genre pills, overlaid on the hero
+
+  // Poster — kept populated (unused in the cinematic hero layout, #mPoster is
+  // hidden by CSS) so nothing downstream that might reference it breaks.
   const poster = document.getElementById('mPoster');
   if (m.poster) {
     poster.innerHTML = `<img src="${TIMG_W500}${m.poster}" alt="${esc(m.title)}"
@@ -12789,8 +13068,9 @@ function populateModal(m) {
   }
 
   document.getElementById('mTitle').textContent = m.title;
-  const origLine = (m.titleOrig && m.titleOrig !== m.title ? m.titleOrig + ' · ' : '') + (m.year || '');
-  document.getElementById('mOrig').textContent = origLine;
+  // Year now lives in the hero meta row (#mHeroMetaRow) — #mOrig is just the
+  // original-language title when it differs from the (possibly translated) one.
+  document.getElementById('mOrig').textContent = (m.titleOrig && m.titleOrig !== m.title) ? m.titleOrig : '';
   // Show "Smart Match" badge when movie was surfaced by AI search
   document.getElementById('aiMatchPill').classList.toggle('show', AI_SEARCH_ACTIVE);
 
@@ -13337,7 +13617,8 @@ function refreshModalDetails(m) {
       const avatar = a.photo
         ? `<img class="m-starring-avatar" src="${esc(a.photo)}" alt="" loading="lazy">`
         : `<div class="m-starring-avatar m-starring-initials">${esc(initials(a.name))}</div>`;
-      const inner = `${avatar}<span class="m-starring-name">${esc(a.name)}</span>`;
+      const charLine = a.character ? `<span class="m-starring-character">${esc(a.character)}</span>` : '';
+      const inner = `${avatar}<span class="m-starring-name">${esc(a.name)}</span>${charLine}`;
       // Coerce rather than test a.id directly: it must end up as a bare number in
       // the inline handler. Accepts a numeric string, rejects null/garbage, and
       // falls back to a non-clickable chip so a bad id degrades instead of
@@ -13757,6 +14038,14 @@ async function openActorProfile(personId) {
   // Record this hop in the modal view-history before the overlay opens, so
   // _recordNavigation still sees the outgoing view's overlay state.
   _recordNavigation({ type: 'actor', id: personId });
+  // Same reasoning as closeModal(): the actor overlay is fully opaque and sits
+  // on top of the movie modal, so a still-playing hero trailer (audio and all,
+  // if the user had unmuted it) would keep running hidden behind it. Only
+  // reachable while the movie modal is open (see call sites), and goBack() →
+  // openMovie() rebuilds the hero fresh if the user returns to the movie, so
+  // it's always safe to drop it here.
+  const heroMedia = document.getElementById('mHeroMedia');
+  if (heroMedia) heroMedia.innerHTML = '';
   document.getElementById('actorOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
   document.getElementById('actorName').textContent = '';
@@ -14816,6 +15105,11 @@ function closeModal() {
   document.getElementById('actorOverlay').classList.remove('open');
   document.getElementById('trailerFrame').src = '';
   document.getElementById('trailerWrap').classList.remove('active');
+  // Blanking the hero's innerHTML (rather than just an .src reset) drops the
+  // iframe entirely, which is what actually stops a playing/looping YouTube
+  // embed — leaving it in the DOM keeps it playing (silently) behind the closed modal.
+  const heroMedia = document.getElementById('mHeroMedia');
+  if (heroMedia) heroMedia.innerHTML = '';
   document.body.style.overflow = '';
   ACTIVE_MOVIE = null;
   TRAILER_OPEN = false;
@@ -14837,6 +15131,8 @@ window.addEventListener('popstate', () => {
     document.getElementById('actorOverlay').classList.remove('open');
     document.getElementById('trailerFrame').src = '';
     document.getElementById('trailerWrap').classList.remove('active');
+    const heroMedia = document.getElementById('mHeroMedia');
+    if (heroMedia) heroMedia.innerHTML = '';
     document.body.style.overflow = '';
     ACTIVE_MOVIE = null;
     TRAILER_OPEN = false;
@@ -14860,10 +15156,21 @@ function toggleTrailer() {
     frame.src = ACTIVE_MOVIE.trailer + '?autoplay=1';
     wrap.classList.add('active');
     document.getElementById('btnTrailer').textContent = t('modal.hideTrailer');
+    // Drop the hero's own silent, looping copy of this same trailer while the
+    // bigger inline panel plays it — otherwise the same video plays twice at
+    // once, and if the hero had been unmuted the two copies overlap out of sync.
+    const heroMedia = document.getElementById('mHeroMedia');
+    if (heroMedia) heroMedia.innerHTML = '';
+    // The trailer button now lives in the hero; the panel it opens can be a
+    // full scroll below the fold, so bring it into view instead of leaving
+    // the user to notice audio playing from somewhere off-screen.
+    wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } else {
     frame.src = '';
     wrap.classList.remove('active');
     document.getElementById('btnTrailer').textContent = t('modal.trailer');
+    // Bring the hero's ambient loop back now that the inline panel is closed.
+    _setupHeroMedia(ACTIVE_MOVIE);
   }
 }
 
