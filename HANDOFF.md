@@ -4,7 +4,7 @@
 
 ## ⚡ Most Recent Session (2026-09-24) — Movie vs TV Deep-Link Query Params
 
-Commits on `main`, pushed. **Not yet deployed** — run `./deploy.sh` to put it live on https://findfilm.ai.
+All commits on `main`, deployed live on https://findfilm.ai (Pages deployment `29034af3`; `./deploy.sh` reported 16/16 sensitive paths unpublished on the origin and both custom domains). Checked on production: `?TVShows=1396` → *Breaking Bad* on the TV tab, `?movie=1396` → *Mirror* (fetched via `/api/tmdb/movie/1396`).
 
 | Commit | Feature |
 |--------|---------|
@@ -18,7 +18,7 @@ Commits on `main`, pushed. **Not yet deployed** — run `./deploy.sh` to put it 
 - The Cast-to-TV receiver (`/tv/:id`, `tv/index.html`) is a separate *path*-based URL that only ever fetches `/movie/{id}`, so casting a TV show shows the wrong title. It's the same id-without-type problem; untouched because it isn't a query param.
 - Collision ids handy for regression checks: `1396` (Breaking Bad / Mirror), `2316` (The Office / The Story of an African Farm), `238` (Star Cops / The Godfather), `27205` (Alone in the Wild / Inception).
 
-**Local-dev note:** plain `npx wrangler pages dev` fails on a machine with no Cloudflare login (`env.AI` is remote-only → "set CLOUDFLARE_API_TOKEN"). Workaround used: a scratch dir containing a copy of `wrangler.toml` **without the `[ai]` block** plus symlinks to `dist/`, `functions/`, `.dev.vars`, run with `npx wrangler pages dev --port 8283 --cwd <scratch>` (AI-backed routes such as `/api/fit-summary` then 503 — irrelevant to routing tests). The served directory is still the allowlisted `dist/` (re-run `./deploy.sh --stage-only` after each edit), so nothing outside it is exposed.
+**Deploy/local-dev note:** wrangler's saved OAuth login had expired on this machine ("Not logged in. Your auth token has expired and could not be refreshed"), so the first `./deploy.sh` stopped at upload with nothing published — it needed an interactive `npx wrangler login` (or `CLOUDFLARE_API_TOKEN`) first; the second run went through. While logged out, plain `npx wrangler pages dev` also fails (`env.AI` is remote-only → "set CLOUDFLARE_API_TOKEN"); the local-testing workaround used then: a scratch dir containing a copy of `wrangler.toml` **without the `[ai]` block** plus symlinks to `dist/`, `functions/`, `.dev.vars`, run with `npx wrangler pages dev --port 8283 --cwd <scratch>` (AI-backed routes such as `/api/fit-summary` then 503 — irrelevant to routing tests). The served directory is still the allowlisted `dist/` (re-run `./deploy.sh --stage-only` after each edit), so nothing outside it is exposed.
 
 ---
 
@@ -2550,7 +2550,7 @@ The site is fully installable as a PWA on all platforms.
 
 ## Pending / Next Steps
 
-- [ ] **Deploy `ffa7e37`** (`?movie=` / `?TVShows=` deep links) — committed and pushed, not yet live; run `./deploy.sh`
+- [x] **Deploy `ffa7e37`** (`?movie=` / `?TVShows=` deep links) — live (deployment `29034af3`)
 - [ ] **Cast-to-TV receiver for TV shows** — `/tv/:id` (`tv/index.html`) only fetches `/movie/{id}`; needs a media-type signal in its URL and a TV-aware fetch
 - [ ] **Media type through id-only lookups** — `MOVIES.find(x => x.id === id)` sites (`openMovie`, `enrichNow`, `updateCardInGrid`, watchlist, card `onclick`s) can still collide across movie/TV ids via actor filmographies
 - [ ] **Product Hunt listing** — confirm title, tagline, description, and gallery screenshots are ready
