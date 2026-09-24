@@ -2,6 +2,26 @@
 
 ---
 
+## ⚡ Most Recent Session (2026-09-24) — Movie vs TV Deep-Link Query Params
+
+Commits on `main`, pushed. **Not yet deployed** — run `./deploy.sh` to put it live on https://findfilm.ai.
+
+| Commit | Feature |
+|--------|---------|
+| `ffa7e37` | **Separate `?movie=<id>` and `?TVShows=<id>` deep links (`index.html`).** TMDB numbers movies and TV shows in separate id spaces — 1396 is both *Breaking Bad* and the film *Mirror*, and 18 of 30 popular TV ids tried were also valid movie ids — so the old shared `?movie=` key couldn't say which one a link meant (a TV link reloaded as the wrong film or nothing). **Helpers** (new "MEDIA DEEP LINKS" block above `openMovie`): `MEDIA_QUERY_KEY` (`{movie:'movie', tv:'TVShows'}`), `mediaTypeOf(m)`, `mediaQuery(type,id)`, `mediaShareUrl(type,id)`, `parseMediaDeepLink(search)` (both keys, key match case-insensitive, first valid key wins, id via lenient `parseInt` > 0). **Generation:** `openMovie()` pushes/replaces `?movie=`/`?TVShows=` from `m.isTV` and stores `history.state = {movie:id, type}` (`state.movie` is still the "modal is open" marker `closeModal()` checks); `shareMovie(id, type)` takes the card's own type (`renderCardHTML()` passes `mediaTypeOf(m)`); `openShare()`/`nativeShare()`/`copyLink()` now use new `activeShareUrl()` (built from `ACTIVE_MOVIE`) instead of reading `location.href` back. **Parsing/fetching:** `init()` parses once via `parseMediaDeepLink()` and fetches `/api/tmdb/${type}/${id}` — `movie` → `/movie/{id}`, `TVShows` → `/tv/{id}`. Already-loaded / cached lookups are type-aware (`mediaTypeOf(x) === type`; `CACHE_MOVIES` is films-only). **A `?TVShows=` link enters the TV tab before anything loads** (`CONTENT_TYPE='tv'` + new `syncContentTypeUI(type)`, split out of `setContentType()`), so genres, grid, hero and toggle match the title and `MOVIES` never holds a film and a series with the same id; it also skips `restoreSession()` (saved genre ids belong to whichever tab set them). Reload with a TV modal open now returns to the same show on the TV tab. **Normalizer:** new `fromTMDbAs(raw, type)`; `fromTMDb(raw)` is now a single-argument wrapper over it with `CONTENT_TYPE` (must stay single-arg — `loadMovies()` passes it bare to `.map()`, so a defaulted 2nd param would receive the array index and silently turn every TV grid item into a film). `loadSimilarMovies()` registers recommendations with `fromTMDbAs(raw, type)` so a series' related titles are real TV items that link to `?TVShows=` (previously normalised as `'Untitled'` films when the Movies tab was active, e.g. a series opened from an actor page). `redirect-worker/worker.js`: comment-only (it already forwards `url.search`; not redeployed). |
+
+**Verified locally** (Browser pane, real UI + network log): `?TVShows=1396` → *Breaking Bad* via `/api/tmdb/tv/1396` and `?movie=1396` → *Mirror* via `/api/tmdb/movie/1396`; TV tab card / related / actor-credit / Back-stack / browser-Back all emit the right key; `nativeShare`, `copyLink`, social links and the grid-card Share button carry `?TVShows=` for TV and `?movie=` for films; reload round-trip; lowercase key canonicalises to `?TVShows=`; `abc`, `0`, a nonexistent id and `?movie=<TV-only id>` open nothing without errors; both keys present → first wins; a top-rated-films session + `?TVShows=238` opens *Star Cops* (not *The Godfather*) with no film left in `MOVIES`.
+
+**Deliberately not changed / known limits**
+- Old shared links: a TV show shared as `?movie=<tvId>` never resolved on reload before either (it fetched `/movie/<tvId>`), so nothing working is lost; under the strict scheme it now opens the *film* with that id, or nothing. No 404→TV fallback was added, by design.
+- `MOVIES` is still keyed by bare TMDB id everywhere (`enrichNow`, `updateCardInGrid`, watchlist, card `onclick="openMovie(id)"`). Tab switching keeps one type in it, but an **actor filmography mixes both**, so a movie/TV id collision there can still resolve to the wrong item. Fully fixing that means threading a media type through every id-only call site — out of scope for a URL change.
+- The Cast-to-TV receiver (`/tv/:id`, `tv/index.html`) is a separate *path*-based URL that only ever fetches `/movie/{id}`, so casting a TV show shows the wrong title. It's the same id-without-type problem; untouched because it isn't a query param.
+- Collision ids handy for regression checks: `1396` (Breaking Bad / Mirror), `2316` (The Office / The Story of an African Farm), `238` (Star Cops / The Godfather), `27205` (Alone in the Wild / Inception).
+
+**Local-dev note:** plain `npx wrangler pages dev` fails on a machine with no Cloudflare login (`env.AI` is remote-only → "set CLOUDFLARE_API_TOKEN"). Workaround used: a scratch dir containing a copy of `wrangler.toml` **without the `[ai]` block** plus symlinks to `dist/`, `functions/`, `.dev.vars`, run with `npx wrangler pages dev --port 8283 --cwd <scratch>` (AI-backed routes such as `/api/fit-summary` then 503 — irrelevant to routing tests). The served directory is still the allowlisted `dist/` (re-run `./deploy.sh --stage-only` after each edit), so nothing outside it is exposed.
+
+---
+
 ## ⚡ Most Recent Session (2026-09-18) — Cinematic Movie Modal Hero
 
 All commits on `main`, deployed live on https://findfilm.ai.
@@ -2368,6 +2388,11 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 | `toggleHeroMute()` | postMessage `mute`/`unMute` to `#mHeroFrame` (resent twice over ~1s in case the embed's script hadn't finished booting yet) |
 | `_trailerKeyOf(m)` / `heroMatchPercent(m)` / `_runtimeLabel(m)` | Bare YouTube id (prefers `m.trailerKey`, else parses `m.trailer`) / deterministic-per-title "Match" % from `calcAvgNum(m)` / `"Xh Ym"` runtime string |
 | `_renderHeroMeta(m)` | Fills `#mHeroMetaRow` (year·runtime·Match%) and `#mGenreRow` (genre pills) |
+| `parseMediaDeepLink(search)` | `location.search` → `{type:'movie'\|'tv', id}` or `null`; recognises `?movie=` and `?TVShows=` (case-insensitive key, first valid wins). Used by `init()` |
+| `mediaTypeOf(m)` / `mediaQuery(type,id)` / `mediaShareUrl(type,id)` / `MEDIA_QUERY_KEY` | `m.isTV` → `'tv'\|'movie'` / `?movie=<id>` or `?TVShows=<id>` / absolute share URL / the two canonical key names. Single source for every URL the app writes |
+| `activeShareUrl()` | Canonical link for `ACTIVE_MOVIE`, used by `openShare()`, `nativeShare()`, `copyLink()`. `shareMovie(id, type)` is the grid-card equivalent (type passed by `renderCardHTML()`) |
+| `fromTMDb(raw)` / `fromTMDbAs(raw, type)` | Normalize a TMDB list/detail item; the first uses the active tab's `CONTENT_TYPE` (keep it single-arg — it is passed bare to `.map()`), the second takes an explicit `'movie'\|'tv'` |
+| `syncContentTypeUI(type)` | Movies/TV toggle + hero copy + feed-section visibility for a media type; called by `setContentType()` and by `init()` for `?TVShows=` links |
 
 Backend (`functions/api/[[path]].js`): `_actorMovies(actorName, env)` resolves an actor name → top 12 movie credits via TMDB `/search/person` + `/person/{id}/movie_credits`; used by `handleAISearch()`'s actor-query branch (triggered by `_parseIntent()`'s `actor_search` intent).
 
@@ -2525,6 +2550,9 @@ The site is fully installable as a PWA on all platforms.
 
 ## Pending / Next Steps
 
+- [ ] **Deploy `ffa7e37`** (`?movie=` / `?TVShows=` deep links) — committed and pushed, not yet live; run `./deploy.sh`
+- [ ] **Cast-to-TV receiver for TV shows** — `/tv/:id` (`tv/index.html`) only fetches `/movie/{id}`; needs a media-type signal in its URL and a TV-aware fetch
+- [ ] **Media type through id-only lookups** — `MOVIES.find(x => x.id === id)` sites (`openMovie`, `enrichNow`, `updateCardInGrid`, watchlist, card `onclick`s) can still collide across movie/TV ids via actor filmographies
 - [ ] **Product Hunt listing** — confirm title, tagline, description, and gallery screenshots are ready
 - [ ] **SEO** — `<meta name="description">`, Open Graph tags, `<link rel="canonical">` minimal — expand before marketing push
 - [ ] **`www.findfilm.ai` redirect** — verify Cloudflare Redirect Rule for `www` → apex is active
