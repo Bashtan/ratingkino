@@ -7,7 +7,8 @@
  *
  * Examples:
  *   https://ratingkino.com/            → https://findfilm.ai/
- *   https://ratingkino.com/?movie=123  → https://findfilm.ai/?movie=123
+ *   https://ratingkino.com/?movie=123    → https://findfilm.ai/?movie=123
+ *   https://ratingkino.com/?TVShows=123  → https://findfilm.ai/?TVShows=123
  *   https://www.ratingkino.com/        → https://findfilm.ai/
  */
 export default {

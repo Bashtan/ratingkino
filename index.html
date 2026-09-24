@@ -10057,7 +10057,7 @@ function resetToHome(e) {
   if (mobInp) mobInp.value = '';
 
   // ── Close everything that can be on screen ──
-  closeModal();          // movie + actor detail, trailer iframe, share, view stack, ?movie=
+  closeModal();          // movie + actor detail, trailer iframe, share, view stack, ?movie=/?TVShows=
   closeAiResults();
   closeWizard();
   closeGroupPicker();
@@ -10600,10 +10600,10 @@ function setGenre(genreId) {
   applyFilters();
 }
 
-function setContentType(type) {
-  if (CONTENT_TYPE === type) return;
-  CONTENT_TYPE = type;
-  ACTIVE_GENRE = '';
+// The Movies / TV Shows chrome for a media type: toggle button, hero copy, and the
+// movie-only feed rows. Split out of setContentType() so init() can enter the TV tab
+// for a ?TVShows= deep link before anything has loaded.
+function syncContentTypeUI(type) {
   // Toggle button states
   document.getElementById('ctMovies').classList.toggle('active', type === 'movie');
   document.getElementById('ctTV').classList.toggle('active', type === 'tv');
@@ -10616,6 +10616,13 @@ function setContentType(type) {
   }
   // Feed sections: only shown for movies
   document.getElementById('feedSections').style.display = type === 'movie' ? '' : 'none';
+}
+
+function setContentType(type) {
+  if (CONTENT_TYPE === type) return;
+  CONTENT_TYPE = type;
+  ACTIVE_GENRE = '';
+  syncContentTypeUI(type);
   if (type === 'movie') loadFeedSections();
   // Flush state
   MOVIES       = [];
@@ -10632,8 +10639,17 @@ function setContentType(type) {
 /* ═══════════════════════════════════
    MOVIE OBJECT
 ═══════════════════════════════════ */
-function fromTMDb(raw) {
-  const isTV = CONTENT_TYPE === 'tv';
+/* Grid results: the media type is whichever tab (Movies / TV Shows) is active.
+ * Deliberately single-argument — it is passed bare to `.map(fromTMDb)`, where a
+ * second parameter would receive the array index. */
+function fromTMDb(raw) { return fromTMDbAs(raw, CONTENT_TYPE); }
+
+/* Same, for when the raw item's media type is known and may differ from the tab:
+ * the deep-linked title on load (its type comes from the URL key) or a series'
+ * recommendations while the Movies tab is showing. Without it a series is
+ * normalised as a film. */
+function fromTMDbAs(raw, type) {
+  const isTV = type === 'tv';
   const title = isTV ? (raw.name || raw.original_name) : (raw.title || raw.original_title);
   const titleOrig = isTV ? (raw.original_name || '') : (raw.original_title || '');
   const dateStr = isTV ? raw.first_air_date : raw.release_date;
@@ -11231,7 +11247,7 @@ function renderCardHTML(m) {
       <div class="poster-ratings">${tvBadge}${avgBadgeHTML(m)}</div>
       <div class="card-hover-overlay">
         <button class="card-ov-btn card-ov-view" onclick="event.stopPropagation();openMovie(${m.id})">${t('card.viewDetails')}</button>
-        <button class="card-ov-btn card-ov-share" onclick="event.stopPropagation();shareMovie(${m.id})" aria-label="Share" title="${esc(t('share.title')||'Share')}">
+        <button class="card-ov-btn card-ov-share" onclick="event.stopPropagation();shareMovie(${m.id},'${mediaTypeOf(m)}')" aria-label="Share" title="${esc(t('share.title')||'Share')}">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
         </button>
       </div>
@@ -12664,6 +12680,31 @@ async function randomMovie() {
 }
 
 /* ═══════════════════════════════════
+   MEDIA DEEP LINKS — ?movie=<id> · ?TVShows=<id>
+   TMDB numbers movies and TV shows in separate id spaces, so one number can name
+   both a film and a series. Each media type therefore gets its own query key: the
+   URL alone says whether to fetch /movie/{id} or /tv/{id}, and a shared link can
+   never open the wrong title.
+═══════════════════════════════════ */
+const MEDIA_QUERY_KEY = { movie: 'movie', tv: 'TVShows' };
+const mediaTypeOf   = m => (m && m.isTV ? 'tv' : 'movie');
+const mediaQuery    = (type, id) => `?${MEDIA_QUERY_KEY[type === 'tv' ? 'tv' : 'movie']}=${id}`;
+const mediaShareUrl = (type, id) => `${location.origin}${location.pathname}${mediaQuery(type, id)}`;
+
+// First recognised key in the query string → { type: 'movie'|'tv', id }, else null.
+// Keys match case-insensitively (hand-typed or lower-cased links still resolve);
+// links we generate always use the canonical spelling above.
+function parseMediaDeepLink(search = location.search) {
+  for (const [key, val] of new URLSearchParams(search)) {
+    const type = Object.keys(MEDIA_QUERY_KEY)
+      .find(tp => MEDIA_QUERY_KEY[tp].toLowerCase() === key.toLowerCase());
+    const id = parseInt(val, 10);
+    if (type && id > 0) return { type, id };
+  }
+  return null;
+}
+
+/* ═══════════════════════════════════
    MODAL
 ═══════════════════════════════════ */
 async function openMovie(tmdbId, listName = '') {
@@ -12713,11 +12754,13 @@ async function openMovie(tmdbId, listName = '') {
   // Push history state so the mobile back gesture closes the modal
   // instead of leaving the page. If already in a movie state (switching
   // movies without closing), replace rather than push to keep history clean.
-  const histState = { movie: tmdbId };
+  // The URL key follows the title's media type — ?movie=<id> or ?TVShows=<id>.
+  const mediaType = mediaTypeOf(m);
+  const histState = { movie: tmdbId, type: mediaType };
   if (history.state?.movie) {
-    history.replaceState(histState, '', `?movie=${tmdbId}`);
+    history.replaceState(histState, '', mediaQuery(mediaType, tmdbId));
   } else {
-    history.pushState(histState, '', `?movie=${tmdbId}`);
+    history.pushState(histState, '', mediaQuery(mediaType, tmdbId));
   }
   if (!m.enriched) {
     await enrichNow(tmdbId);
@@ -13486,8 +13529,11 @@ async function loadSimilarMovies(m) {
       return;
     }
 
+    // Recommendations share the parent's media type, which need not be the active
+    // tab's (a series opened from an actor's filmography while the Movies tab is
+    // showing): normalise by `type` so each one opens as — and links to — what it is.
     results.forEach(raw => {
-      if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromTMDb(raw));
+      if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromTMDbAs(raw, type));
     });
 
     // Build lightweight card-view objects (full poster URL + string avg, unlike
@@ -15117,7 +15163,7 @@ function closeModal() {
   VIEW_STACK = [];
   CURRENT_VIEW = null;
   _updateBackBtns();
-  // Clean up the ?movie= param without firing popstate
+  // Clean up the ?movie= / ?TVShows= param without firing popstate
   if (history.state?.movie) {
     history.replaceState(null, '', location.pathname);
   }
@@ -15289,11 +15335,13 @@ function submitReview() {
 /* ═══════════════════════════════════
    SHARE
 ═══════════════════════════════════ */
-// Share a movie directly from a grid card (native share sheet, or open modal + share panel as fallback).
-function shareMovie(id) {
-  const m = MOVIES.find(x => x.id === id);
+// Share a movie or TV show directly from a grid card (native share sheet, or open modal + share panel
+// as fallback). `type` is the card's own media type, so the link gets the right key
+// (?movie= / ?TVShows=) even if the title isn't in MOVIES.
+function shareMovie(id, type) {
+  const m = MOVIES.find(x => x.id === id && (!type || mediaTypeOf(x) === type));
   const title = (m && m.title) ? m.title : (document.querySelector(`#card-${id} .movie-title`)?.textContent || 'FindFilm.ai');
-  const url = `${location.origin}${location.pathname}?movie=${id}`;
+  const url = mediaShareUrl(type || mediaTypeOf(m), id);
   if (navigator.share) {
     navigator.share({ title: `${title} — FindFilm.ai`, url }).catch(() => {});
     return;
@@ -15303,10 +15351,16 @@ function shareMovie(id) {
   setTimeout(openShare, 380);
 }
 
+// Canonical link to the open modal's title — built from its media type rather than
+// read back from the address bar, so it can never carry the wrong key.
+function activeShareUrl() {
+  return mediaShareUrl(mediaTypeOf(ACTIVE_MOVIE), ACTIVE_MOVIE.id);
+}
+
 function openShare() {
   if (!ACTIVE_MOVIE) return;
   const m = ACTIVE_MOVIE;
-  const url   = encodeURIComponent(window.location.href);
+  const url   = encodeURIComponent(activeShareUrl());
   const title = encodeURIComponent(m.title + ' — FindFilm.ai');
   document.getElementById('shareGrid').innerHTML = [
     { icon:'📘', label:'Facebook',  href:`https://www.facebook.com/sharer/sharer.php?u=${url}` },
@@ -15445,7 +15499,7 @@ function copyCastTvLink() {
 }
 function nativeShare() {
   if (!ACTIVE_MOVIE || !navigator.share) return;
-  navigator.share({ title: ACTIVE_MOVIE.title + ' — FindFilm.ai', url: window.location.href });
+  navigator.share({ title: ACTIVE_MOVIE.title + ' — FindFilm.ai', url: activeShareUrl() });
 }
 
 function legacyCopy(text) {
@@ -15459,7 +15513,7 @@ function legacyCopy(text) {
 
 function copyLink() {
   if (!ACTIVE_MOVIE) return;
-  const url = window.location.href; // already contains ?movie=id
+  const url = activeShareUrl(); // ?movie=<id> or ?TVShows=<id>
   const btn = document.getElementById('shareCopy');
   const confirm = () => {
     btn.textContent = t('share.copied');
@@ -16375,42 +16429,56 @@ function dismissFirstVisit() {
    INIT
 ═══════════════════════════════════ */
 async function init() {
+  // A ?TVShows= link belongs to the TV tab, so enter it before anything loads:
+  // the genre list, grid and hero then all describe the same media type as the
+  // title about to open, and MOVIES never holds a film and a series that share an
+  // id (TMDB reuses ids across the two) — the invariant setContentType() keeps by
+  // flushing MOVIES on every tab switch.
+  const deep = parseMediaDeepLink();
+  const deepTV = deep?.type === 'tv';
+  if (deepTV) { CONTENT_TYPE = 'tv'; syncContentTypeUI('tv'); }
+
   await detectLang();
   await loadGenres();
   buildCountryOptionsUI(); // populate the custom country dropdown from #fCountry's <option>s
-  restoreSession(); // re-populate inputs before the first loadMovies call
-  loadFeedSections(); // fire and forget — loads KV rows in parallel
+  // Saved filters carry genre ids from whichever tab they were set on, and a TV
+  // link opens on a fresh TV tab — so it skips them.
+  if (!deepTV) restoreSession(); // re-populate inputs before the first loadMovies call
+  loadFeedSections(); // fire and forget — loads KV rows in parallel (Movies tab only)
   loadCatalogFreshness(); // fire and forget — stamps the hero + ratings modal
   await loadMovies(1, false);
 
-  // ── Deep-link: open ?movie=<id> on direct navigation ──────
-  const deepId = parseInt(new URLSearchParams(location.search).get('movie'));
-  if (deepId && !isNaN(deepId)) {
+  // ── Deep-link: open ?movie=<id> / ?TVShows=<id> on direct navigation ──────
+  // The key names the media type, and that type decides which TMDB endpoint the
+  // id is looked up in — a series' id is not a film's.
+  if (deep) {
+    const { type, id: deepId } = deep;
+    const findDeep = () => MOVIES.find(x => x.id === deepId && mediaTypeOf(x) === type);
     // 1. Already in MOVIES (e.g. was in popular list or KV cache)
-    if (!MOVIES.find(x => x.id === deepId)) {
-      // 2. In CACHE_MOVIES (loaded separately) but not in MOVIES yet
-      const cachedMovie = CACHE_MOVIES.find(x => x.id === deepId);
+    if (!findDeep()) {
+      // 2. In CACHE_MOVIES (films only, loaded separately) but not in MOVIES yet
+      const cachedMovie = type === 'movie' ? CACHE_MOVIES.find(x => x.id === deepId) : null;
       if (cachedMovie) {
         MOVIES = [cachedMovie, ...MOVIES];
       } else {
-        // 3. Fetch directly from TMDB
+        // 3. Fetch directly from TMDB: /movie/{id} or /tv/{id}, per the URL's key
         try {
-          const res = await fetch(`/api/tmdb/movie/${deepId}?language=en-US`);
+          const res = await fetch(`/api/tmdb/${type}/${deepId}?language=en-US`);
           if (res.ok) {
             const raw = await res.json();
-            // Detail endpoint returns genres:[{id,name}]; fromTMDb expects genre_ids
+            // Detail endpoint returns genres:[{id,name}]; the normalizer expects genre_ids
             raw.genre_ids = (raw.genres || []).map(g => g.id);
-            MOVIES = [fromTMDb(raw), ...MOVIES];
+            MOVIES = [fromTMDbAs(raw, type), ...MOVIES];
           }
         } catch (e) {
           console.warn('[deeplink] TMDB fetch failed:', e.message);
         }
       }
     }
-    // Replace current history entry so the URL keeps ?movie= and back
+    // Replace current history entry so the URL keeps its key and back
     // button takes the user to wherever they came from, not a duplicate entry
-    history.replaceState({ movie: deepId }, '', location.search);
-    if (MOVIES.find(x => x.id === deepId)) openMovie(deepId);
+    history.replaceState({ movie: deepId, type }, '', location.search);
+    if (findDeep()) openMovie(deepId);
   }
 }
 init();
