@@ -4,7 +4,7 @@
 
 ## ⚡ Most Recent Session (2026-09-27) — Beta UI Prototype (Apple TV × Netflix)
 
-Committed on `main`. **Not deployed and not deployable as-is**: `beta/` is deliberately absent from `deploy.sh`'s `PUBLIC` allowlist, so `./deploy.sh` never publishes it. Production (`index.html`) is untouched.
+Committed on `main`. **Not on production**: `beta/` is deliberately absent from `deploy.sh`'s `PUBLIC` allowlist, so `./deploy.sh` never publishes it, and production (`index.html`) is untouched. **Preview link (for phone testing): https://beta-ui.ratingkino.pages.dev**. That's a Cloudflare Pages *Preview* deployment (`c224ee6d`, branch `beta-ui`; production is branch `main`, still `29034af3`, verified byte-identical before and after). Its whole payload is one file, `index.html` = `beta/index.html`: no Functions and no bindings, so the page uses the live findfilm.ai API. Every other path, `/.dev.vars` included, just gets Pages' SPA fallback (the same page), and previews send `X-Robots-Tag: noindex`. **To update the preview** after editing `beta/index.html`, copy it to `<scratch>/site/index.html` and run `npx wrangler pages deploy site --project-name=ratingkino --branch=beta-ui` from `<scratch>`. **Never from the repo root:** wrangler bundles `./functions` relative to the working directory and reads the root `wrangler.toml`, so that would ship the API to a preview environment that has no TMDB/OMDB secrets.
 
 | Commit | Feature |
 |--------|---------|
@@ -2566,7 +2566,7 @@ The site is fully installable as a PWA on all platforms.
 
 ## Pending / Next Steps
 
-- [ ] **Beta UI prototype feedback** (`beta/index.html`, `1bc546f`) — collect the owner's feedback, then decide: ship it at `/beta/` (add `beta` to `PUBLIC`), port pieces into `index.html`, or iterate. Not yet in it: TV shows, i18n, watchlist, voice
+- [ ] **Beta UI prototype feedback** (`beta/index.html`, `1bc546f`; preview https://beta-ui.ratingkino.pages.dev) — collect the owner's feedback, then decide: ship it at `/beta/` (add `beta` to `PUBLIC`), port pieces into `index.html`, or iterate. Not yet in it: TV shows, i18n, watchlist, voice
 - [x] **Deploy `ffa7e37`** (`?movie=` / `?TVShows=` deep links) — live (deployment `29034af3`)
 - [ ] **Cast-to-TV receiver for TV shows** — `/tv/:id` (`tv/index.html`) only fetches `/movie/{id}`; needs a media-type signal in its URL and a TV-aware fetch
 - [ ] **Media type through id-only lookups** — `MOVIES.find(x => x.id === id)` sites (`openMovie`, `enrichNow`, `updateCardInGrid`, watchlist, card `onclick`s) can still collide across movie/TV ids via actor filmographies
