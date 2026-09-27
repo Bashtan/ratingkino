@@ -1,0 +1,1626 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#050505">
+<meta name="color-scheme" content="dark">
+<title>FindFilm.ai — Beta</title>
+<!--
+  FindFilm.ai BETA — standalone UI prototype (Apple TV × Netflix direction).
+
+  Deliberately self-contained: it shares no code, CSS or storage with the
+  production app in /index.html, so nothing here can change the live site.
+  It is also NOT in deploy.sh's PUBLIC allowlist, so ./deploy.sh never
+  publishes it.
+
+  Data: the real FindFilm API. Same-origin /api when that exists (wrangler
+  pages dev, or /beta/ on findfilm.ai if it ever ships); otherwise the live
+  https://findfilm.ai API, which answers any origin (CORS *).
+-->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23fff'/%3E%3Cpath d='M10 7h13v4h-8.5v3.5h7v4h-7V25H10z' fill='%23050505'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://image.tmdb.org">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Inter only ever renders where there is no system SF font (Windows, Android,
+     Linux): -apple-system wins on Apple devices, and unused faces never download. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   TOKENS
+═══════════════════════════════════════════════════════════════ */
+:root {
+  color-scheme: dark;
+  --bg: #050505;
+  --text: #ffffff;
+  --text-2: #a1a1aa;
+  --text-3: #71717a;
+  --fill-1: rgba(255, 255, 255, .06);
+  --fill-2: rgba(255, 255, 255, .10);
+  --fill-3: rgba(255, 255, 255, .16);
+  --glass: blur(24px) saturate(170%);
+  --edge: inset 0 1px 0 rgba(255, 255, 255, .07);   /* specular top edge — not a border */
+  --r-card: 8px;
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-sheet: cubic-bezier(.32, .72, 0, 1);
+  --gutter: clamp(16px, 4vw, 48px);
+  --header-h: 64px;
+  --sbw: 0px;                                         /* scrollbar width, set while scroll-locked */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter",
+          "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BASE
+═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { background: var(--bg); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html.locked { overflow: hidden; }
+html.locked body { padding-right: var(--sbw); }
+body {
+  margin: 0; min-height: 100vh;
+  background: var(--bg); color: var(--text);
+  font-family: var(--font); font-size: 16px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+a { color: inherit; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+img { display: block; max-width: 100%; }
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
+:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.sr-only {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.skip {
+  position: fixed; left: 16px; top: -64px; z-index: 200;
+  background: #fff; color: #000; font-weight: 600; font-size: 14px;
+  padding: 10px 16px; border-radius: 999px; transition: top .2s var(--ease-out);
+}
+.skip:focus { top: 12px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   SKELETON — the only loading indicator anywhere on the page
+═══════════════════════════════════════════════════════════════ */
+.skel { position: relative; overflow: hidden; background-color: #0f0f11; }
+.skel::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, .055) 50%, transparent 100%);
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+@keyframes shimmer { to { transform: translateX(100%); } }
+.sk-line { display: block; height: 12px; border-radius: 6px; }
+.sk-short { width: 56px; margin: 0 auto; }
+.sk-lines { display: grid; gap: 10px; }
+.sk-lines .sk-line:last-child { width: 62%; }
+.sk-pill { display: inline-block; width: 150px; height: 44px; border-radius: 999px; }
+.sk-pill-w { width: 176px; }
+.sk-chip { display: inline-block; width: 74px; height: 29px; border-radius: 999px; }
+img.fade { opacity: 0; transition: opacity .45s var(--ease-out); }
+img.fade.loaded { opacity: 1; }
+
+/* ═══════════════════════════════════════════════════════════════
+   HEADER — transparent over the hero, glass once the page scrolls
+═══════════════════════════════════════════════════════════════ */
+.topbar { position: fixed; inset: 0 0 auto 0; z-index: 50; padding-top: env(safe-area-inset-top); }
+html.locked .topbar { padding-right: var(--sbw); }
+.topbar::before {
+  content: ""; position: absolute; inset: 0;
+  background: rgba(10, 10, 12, .62);
+  backdrop-filter: var(--glass); -webkit-backdrop-filter: var(--glass);
+  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, .6);
+  opacity: 0; transition: opacity .35s var(--ease-out);
+}
+.topbar.scrolled::before { opacity: 1; }
+.topbar-inner {
+  position: relative; height: var(--header-h); max-width: 1680px; margin: 0 auto;
+  padding: 0 var(--gutter); display: flex; align-items: center; gap: 20px;
+}
+.brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.brand-mark { width: 30px; height: 30px; border-radius: 9px; background: #fff; color: #050505; display: grid; place-items: center; }
+.brand-word { font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
+.brand-word span { color: var(--text-2); font-weight: 600; }
+.beta-pill {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-2); background: var(--fill-2); padding: 3px 8px; border-radius: 999px;
+}
+.mini-search {
+  position: relative; flex: 1; max-width: 520px; height: 40px; margin: 0 auto;
+  display: flex; align-items: center; gap: 10px; padding: 0 8px 0 14px;
+  border-radius: 999px; background: var(--fill-2); overflow: hidden;
+  opacity: 0; transform: translateY(-6px); pointer-events: none;
+  transition: opacity .3s var(--ease-out), transform .3s var(--ease-out), background-color .2s;
+}
+.topbar.show-mini .mini-search { opacity: 1; transform: none; pointer-events: auto; }
+.mini-search:focus-within { background: rgba(255, 255, 255, .15); }
+.mini-search svg { flex-shrink: 0; color: var(--text-2); }
+.mini-search input {
+  flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0;
+  background: transparent; color: #fff; font: inherit; font-size: 15px;
+  -webkit-appearance: none; appearance: none;
+}
+.mini-search input::placeholder { color: var(--text-3); }
+.kbd { flex-shrink: 0; font: 500 12px/1 var(--font); color: var(--text-3); background: var(--fill-1); padding: 5px 7px; border-radius: 6px; }
+.mini-search.loading::after, .cmd.loading .cmd-progress::after {
+  content: ""; position: absolute; bottom: 0; height: 2px; width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .85), transparent);
+  animation: sweep 1.2s var(--ease-out) infinite;
+}
+.mini-search.loading::after { left: 0; }
+@keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+.topbar-right { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0; }
+.text-link {
+  font-size: 14px; font-weight: 500; color: var(--text-2);
+  padding: 8px 12px; border-radius: 999px; transition: color .2s, background-color .2s;
+}
+.text-link:hover { color: #fff; background: var(--fill-1); }
+.icon-btn {
+  width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center;
+  color: #fff; background: var(--fill-1); transition: background-color .2s;
+}
+.icon-btn:hover { background: var(--fill-2); }
+.mob-search { display: none; }
+
+/* ═══════════════════════════════════════════════════════════════
+   HERO — the AI command center
+═══════════════════════════════════════════════════════════════ */
+.hero {
+  position: relative; isolation: isolate; overflow: hidden;
+  min-height: clamp(560px, 80vh, 860px);
+  /* minmax(0, 1fr), not the implicit `auto`: an auto column grows to fit the
+     chip row's scrolling content and pushes the whole hero off a phone screen. */
+  display: grid; grid-template-columns: minmax(0, 1fr); place-items: center;
+  padding: calc(var(--header-h) + env(safe-area-inset-top) + 40px) var(--gutter) 56px;
+}
+/* A faint, tilted wall of this week's posters — texture, not content. */
+.mosaic {
+  position: absolute; z-index: -2; top: -20%; left: -12%; right: -12%; height: 140%;
+  display: grid; grid-template-columns: repeat(9, 1fr); gap: 14px; align-content: start;
+  transform: rotate(-9deg);
+  -webkit-mask-image: radial-gradient(ellipse 72% 62% at 50% 46%, #000 25%, transparent 78%);
+          mask-image: radial-gradient(ellipse 72% 62% at 50% 46%, #000 25%, transparent 78%);
+  opacity: 0; transition: opacity 1.6s var(--ease-out);
+}
+.mosaic.ready { opacity: .3; }
+.mosaic img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 8px; filter: saturate(.9) brightness(.8); }
+.hero::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background:
+    radial-gradient(ellipse 55% 42% at 50% 50%, rgba(5, 5, 5, .72) 0%, rgba(5, 5, 5, .25) 100%),
+    linear-gradient(180deg, rgba(5, 5, 5, .7) 0%, rgba(5, 5, 5, 0) 26%, rgba(5, 5, 5, 0) 62%, #050505 100%);
+}
+.hero-inner { width: 100%; max-width: 1080px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px; margin: 0 0 18px;
+  font-size: 12.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-2);
+}
+.hero-title {
+  margin: 0; max-width: 820px;
+  font-size: clamp(2.35rem, 6vw, 4.6rem); line-height: 1.02; font-weight: 800; letter-spacing: -.038em;
+  color: #fff; text-wrap: balance;
+}
+.hero-sub { margin: 18px 0 0; max-width: 560px; font-size: clamp(1rem, 1.6vw, 1.2rem); line-height: 1.5; color: var(--text-2); text-wrap: pretty; }
+
+.cmd { position: relative; width: 100%; max-width: 780px; margin-top: 40px; }
+/* Soft aura on focus: a slowly turning, heavily blurred colour field behind the
+   field — present, never neon. */
+@property --glow-a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.cmd-glow {
+  position: absolute; inset: 2px; border-radius: 999px; pointer-events: none;
+  background: conic-gradient(from var(--glow-a), #7b6cff, #c06cff, #ff7ab6, #ffb26b, #6cc8ff, #7b6cff);
+  filter: blur(26px); opacity: 0;
+  transition: opacity .7s var(--ease-out);
+  animation: glow-spin 10s linear infinite; animation-play-state: paused;
+}
+.cmd:focus-within .cmd-glow { opacity: .4; animation-play-state: running; }
+@keyframes glow-spin { to { --glow-a: 360deg; } }
+.cmd-field {
+  position: relative; display: flex; align-items: center; gap: 14px;
+  height: 68px; padding: 0 10px 0 24px; border-radius: 999px;
+  background: rgba(30, 30, 34, .6);
+  backdrop-filter: var(--glass); -webkit-backdrop-filter: var(--glass);
+  box-shadow: var(--edge), 0 24px 60px -24px rgba(0, 0, 0, .85);
+  transition: background-color .35s var(--ease-out), box-shadow .35s var(--ease-out);
+}
+.cmd-field:hover { background: rgba(36, 36, 41, .64); }
+.cmd:focus-within .cmd-field {
+  background: rgba(20, 20, 24, .88);
+  box-shadow: var(--edge), 0 0 0 5px rgba(255, 255, 255, .03), 0 28px 70px -20px rgba(0, 0, 0, .9);
+}
+.cmd-icon { flex-shrink: 0; color: var(--text-2); transition: color .3s; }
+.cmd:focus-within .cmd-icon { color: #fff; }
+.cmd-input-wrap { position: relative; flex: 1; min-width: 0; height: 100%; }
+.cmd-input {
+  width: 100%; height: 100%; padding: 0; border: 0; outline: 0; background: transparent;
+  color: #fff; caret-color: #fff; font: inherit; font-size: 20px; font-weight: 500; letter-spacing: -.012em;
+  -webkit-appearance: none; appearance: none;
+}
+/* Typing "placeholder": an overlay, so it can carry a caret and scroll like real typing. */
+.cmd-ph {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  overflow: hidden; white-space: nowrap; pointer-events: none;
+  color: var(--text-3); font-size: 20px; font-weight: 500; letter-spacing: -.012em;
+}
+.cmd-ph-text { flex-shrink: 0; }
+.cmd-caret { flex-shrink: 0; width: 2px; height: 1.15em; margin-left: 2px; border-radius: 1px; background: rgba(255, 255, 255, .55); animation: caret 1.05s steps(1) infinite; }
+@keyframes caret { 50% { opacity: 0; } }
+.cmd:focus-within .cmd-caret { display: none; }
+.cmd.has-value .cmd-ph { visibility: hidden; }
+.cmd-clear {
+  display: none; flex-shrink: 0; width: 32px; height: 32px; border-radius: 999px;
+  place-items: center; color: var(--text-2); background: var(--fill-1); transition: background-color .2s, color .2s;
+}
+.cmd-clear:hover { background: var(--fill-2); color: #fff; }
+.cmd.has-value .cmd-clear { display: grid; }
+.cmd-go {
+  flex-shrink: 0; width: 48px; height: 48px; border-radius: 999px; display: grid; place-items: center;
+  background: #fff; color: #050505; transition: transform .2s var(--ease-out), background-color .25s, color .25s;
+}
+.cmd-go:hover { transform: scale(1.06); }
+.cmd:not(.has-value) .cmd-go { background: var(--fill-2); color: var(--text-3); }
+.cmd-progress { position: absolute; left: 32px; right: 32px; bottom: 0; height: 2px; overflow: hidden; border-radius: 2px; pointer-events: none; }
+
+.chips-wrap { width: 100%; margin-top: 22px; }
+.chips {
+  overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; overscroll-behavior-x: contain;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 32px, #000 calc(100% - 32px), transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0, #000 32px, #000 calc(100% - 32px), transparent 100%);
+}
+.chips::-webkit-scrollbar { display: none; }
+.chips-track { display: flex; gap: 10px; width: max-content; margin: 0 auto; padding: 6px 32px; }
+.chip {
+  flex-shrink: 0; scroll-snap-align: center;
+  display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 16px;
+  border-radius: 999px; white-space: nowrap;
+  background: rgba(255, 255, 255, .07); color: #d4d4d8;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  font-size: 14px; font-weight: 500; letter-spacing: -.005em;
+  transition: background-color .25s var(--ease-out), color .25s var(--ease-out), transform .2s var(--ease-out);
+}
+.chip:hover { background: rgba(255, 255, 255, .15); color: #fff; }
+.chip:active { transform: scale(.97); }
+.chip[aria-pressed="true"] { background: #fff; color: #050505; }
+.chip svg { flex-shrink: 0; opacity: .75; }
+.chip-sm { height: 32px; padding: 0 13px; font-size: 13px; scroll-snap-align: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+/* ═══════════════════════════════════════════════════════════════
+   RESULTS + CINEMATIC GRID
+═══════════════════════════════════════════════════════════════ */
+.results {
+  position: relative; max-width: 1680px; margin: 0 auto;
+  padding: 8px var(--gutter) 80px; scroll-margin-top: calc(var(--header-h) + 12px);
+  /* Tall enough that a short result set (AI returns ~6) can still be scrolled
+     up under the header, so every search settles in the same place. */
+  min-height: calc(100vh - var(--header-h));
+  min-height: calc(100dvh - var(--header-h));
+}
+.results-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; min-height: 58px; margin-bottom: 22px; }
+.results-title { margin: 0; font-size: clamp(1.4rem, 2.4vw, 1.9rem); line-height: 1.15; font-weight: 700; letter-spacing: -.028em; overflow-wrap: anywhere; }
+.results-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 6px 0 0; min-height: 22px; font-size: 15px; color: var(--text-2); }
+.results-sub svg { flex-shrink: 0; }
+.results-sub .muted { color: var(--text-3); }
+.results-sub.thinking {
+  display: block; width: max-content; max-width: 100%;
+  background: linear-gradient(90deg, #71717a 0%, #71717a 35%, #fff 50%, #71717a 65%, #71717a 100%);
+  background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: text-shimmer 1.8s linear infinite;
+}
+@keyframes text-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.link-btn { color: #fff; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; border-radius: 6px; }
+.link-btn:hover { text-decoration: underline; text-underline-offset: 3px; }
+.pill-btn {
+  flex-shrink: 0; height: 38px; padding: 0 16px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--fill-1); color: #fff; font-size: 14px; font-weight: 500; transition: background-color .2s;
+}
+.pill-btn:hover { background: var(--fill-2); }
+.refine { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: -8px 0 24px; }
+.refine-label { font-size: 13px; color: var(--text-3); margin-right: 2px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: 28px 18px; }
+.tile { position: relative; animation: rise .55s var(--ease-out) backwards; animation-delay: calc(var(--d, 0) * 1ms); }
+.tile:hover { z-index: 3; }
+.skel-tile { animation: none; }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+
+/* The poster IS the card: no frame, no padding, strict 2:3. */
+.card {
+  position: relative; display: block; width: 100%; aspect-ratio: 2 / 3;
+  border-radius: var(--r-card); overflow: hidden; isolation: isolate;
+  background-color: #101012; text-align: left;
+  transition: transform .3s ease-out, box-shadow .3s ease-out;
+}
+.card:focus-visible { outline-offset: 4px; }
+.poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.noposter {
+  position: absolute; inset: 0; display: flex; align-items: flex-end; padding: 14px;
+  background: linear-gradient(160deg, #1c1c21 0%, #0c0c0e 100%);
+  font-size: 14px; font-weight: 600; line-height: 1.25; color: #d4d4d8;
+}
+.ov {
+  position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 14px;
+  background: linear-gradient(0deg, rgba(0, 0, 0, .94) 0%, rgba(0, 0, 0, .74) 24%, rgba(0, 0, 0, .2) 55%, rgba(0, 0, 0, 0) 72%);
+  opacity: 0; transition: opacity .3s ease-out;
+}
+.ov-row { display: flex; align-items: flex-end; gap: 10px; transform: translateY(8px); transition: transform .3s ease-out; }
+.ov-text { flex: 1; min-width: 0; }
+.ov-tag { display: block; margin-bottom: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #e4e4e7; }
+.ov-title {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  font-size: 15px; font-weight: 650; line-height: 1.2; letter-spacing: -.01em; color: #fff;
+}
+.ov-meta { display: block; margin-top: 4px; font-size: 12.5px; color: var(--text-2); }
+.ov-view {
+  flex-shrink: 0; width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center;
+  background: #fff; color: #050505; box-shadow: 0 4px 14px rgba(0, 0, 0, .45);
+}
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    transform: scale(1.05);
+    /* Lift: a deep shadow plus a faint cool halo — a pure black shadow alone
+       vanishes on a black page. */
+    box-shadow: 0 30px 56px -14px rgba(0, 0, 0, 1), 0 0 44px -6px rgba(170, 170, 200, .16);
+  }
+  .card:hover .ov { opacity: 1; }
+  .card:hover .ov-row { transform: none; }
+}
+@media (hover: none) { .card:active { transform: scale(.97); } }
+.card:focus-visible .ov { opacity: 1; }
+.card:focus-visible .ov-row { transform: none; }
+
+.state { grid-column: 1 / -1; padding: 72px 16px; text-align: center; }
+.state-title { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: -.015em; }
+.state-sub { margin: 8px auto 22px; max-width: 420px; color: var(--text-2); }
+.sentinel { height: 1px; }
+
+.foot { max-width: 1680px; margin: 0 auto; padding: 0 var(--gutter) calc(40px + env(safe-area-inset-bottom)); color: var(--text-3); font-size: 12.5px; line-height: 1.6; }
+.foot a { color: var(--text-2); }
+.foot a:hover { color: #fff; }
+
+/* ═══════════════════════════════════════════════════════════════
+   QUICK VIEW — floating glass drawer (desktop) / bottom sheet (phone)
+═══════════════════════════════════════════════════════════════ */
+.qv-scrim {
+  position: fixed; inset: 0; z-index: 80; background: rgba(0, 0, 0, .42);
+  opacity: 0; visibility: hidden; transition: opacity .45s var(--ease-out), visibility 0s linear .45s;
+}
+.qv-scrim.open { opacity: 1; visibility: visible; transition: opacity .45s var(--ease-out), visibility 0s; }
+.qv {
+  position: fixed; z-index: 90; top: 12px; right: 12px; bottom: 12px;
+  width: min(560px, calc(100vw - 24px)); border-radius: 22px; overflow: hidden;
+  display: flex; flex-direction: column;
+  background: rgba(18, 18, 21, .74);
+  backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: var(--edge), 0 40px 120px -20px rgba(0, 0, 0, .9);
+  transform: translateX(calc(100% + 24px)); visibility: hidden;
+  transition: transform .55s var(--ease-sheet), visibility 0s linear .55s;
+}
+.qv.open { transform: none; visibility: visible; transition: transform .55s var(--ease-sheet), visibility 0s; }
+.qv-scroll {
+  flex: 1; overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .18) transparent;
+}
+.qv-body.swap { animation: qv-in .4s var(--ease-out); }
+@keyframes qv-in { from { opacity: 0; transform: translateY(10px); } }
+.qv-close, .qv-back {
+  position: absolute; top: 14px; z-index: 5; width: 38px; height: 38px; border-radius: 999px;
+  display: grid; place-items: center; color: #fff;
+  background: rgba(20, 20, 24, .55);
+  backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
+  transition: background-color .2s, transform .2s var(--ease-out);
+}
+.qv-close { right: 14px; }
+.qv-back { left: 14px; }
+.qv-close:hover, .qv-back:hover { background: rgba(48, 48, 54, .8); transform: scale(1.06); }
+.qv-handle { display: none; }
+
+.qv-hero { position: relative; aspect-ratio: 16 / 9; background: #0c0c0e; overflow: hidden; }
+.qv-media { position: absolute; inset: 0; }
+.qv-backdrop {
+  width: 100%; height: 100%; object-fit: cover;
+  -webkit-mask-image: linear-gradient(180deg, #000 45%, transparent 100%);
+          mask-image: linear-gradient(180deg, #000 45%, transparent 100%);
+}
+.qv-backdrop.is-poster { filter: blur(28px) saturate(1.25); transform: scale(1.25); }
+.qv-trailer { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
+.qv-hero.playing .qv-backdrop { visibility: hidden; }
+.qv-head { position: relative; z-index: 1; padding: 0 28px; margin-top: -64px; transition: margin-top .45s var(--ease-out); }
+.qv-hero.playing + .qv-head { margin-top: 22px; }
+.qv-titlebox { position: relative; min-height: 84px; display: flex; align-items: flex-end; }
+.qv-title { margin: 0; font-size: clamp(1.65rem, 4vw, 2.2rem); line-height: 1.06; font-weight: 800; letter-spacing: -.032em; text-wrap: balance; transition: opacity .3s; }
+/* Title art (Apple TV–style). The <h2> stays in place underneath at opacity 0,
+   so the dialog keeps its accessible name and nothing shifts when art loads. */
+.qv-logo {
+  position: absolute; left: 0; bottom: 0; max-width: min(80%, 340px); max-height: 96px;
+  object-fit: contain; object-position: left bottom; opacity: 0;
+  filter: drop-shadow(0 6px 22px rgba(0, 0, 0, .6)); transition: opacity .45s var(--ease-out);
+}
+.qv-logo.invert { filter: brightness(0) invert(1) drop-shadow(0 6px 22px rgba(0, 0, 0, .6)); }
+.qv-titlebox.has-logo .qv-logo { opacity: 1; }
+.qv-titlebox.has-logo .qv-title { opacity: 0; }
+.qv-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-height: 22px; margin-top: 12px; font-size: 14px; color: var(--text-2); }
+.qv-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-3); }
+.qv-meta .rating { color: #fff; font-weight: 600; }
+.badge { font-size: 11.5px; font-weight: 600; line-height: 1; padding: 4px 7px; border-radius: 5px; background: var(--fill-2); color: #e4e4e7; letter-spacing: .02em; }
+.qv-actions { display: flex; flex-wrap: wrap; gap: 10px; min-height: 44px; margin-top: 20px; }
+.btn-primary, .btn-glass {
+  height: 44px; padding: 0 20px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600;
+}
+.btn-primary { background: #fff; color: #050505; transition: transform .2s var(--ease-out), background-color .2s; }
+.btn-primary:hover { transform: scale(1.03); }
+.btn-glass { background: var(--fill-2); color: #fff; transition: background-color .2s; }
+.btn-glass:hover { background: var(--fill-3); }
+
+.qv-content { display: flex; flex-direction: column; gap: 26px; padding: 26px 28px 44px; }
+.qv-body { display: flex; flex-direction: column; gap: 26px; }
+.qv-why {
+  display: flex; gap: 12px; padding: 14px 16px; border-radius: 14px;
+  background: linear-gradient(135deg, rgba(123, 108, 255, .17), rgba(255, 122, 182, .1));
+  font-size: 14.5px; line-height: 1.5; color: #e4e4e7;
+}
+.qv-why svg { flex-shrink: 0; margin-top: 2px; color: #fff; }
+.qv-why b { display: block; margin-bottom: 2px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: #fff; }
+.qv-genres { display: flex; flex-wrap: wrap; gap: 8px; }
+.gchip { font-size: 13px; padding: 6px 12px; border-radius: 999px; background: var(--fill-1); color: #d4d4d8; }
+.qv-copy { display: grid; gap: 10px; }
+.qv-tagline { margin: 0; font-size: 15px; font-style: italic; color: var(--text-2); }
+.qv-overview { margin: 0; font-size: 16px; line-height: 1.62; color: #e4e4e7; }
+.qv-note { margin: 0; color: var(--text-2); font-size: 14px; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 9px 20px; margin: 0; font-size: 14px; }
+.facts dt { color: var(--text-3); }
+.facts dd { margin: 0; color: #e4e4e7; }
+.qv-sec h3 { margin: 0 0 14px; font-size: 17px; font-weight: 650; letter-spacing: -.012em; }
+.qv-sec h3 span { color: var(--text-3); font-weight: 500; }
+.cast {
+  display: flex; gap: 14px; margin: 0 -28px; padding: 2px 28px 6px;
+  overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none;
+}
+.cast::-webkit-scrollbar { display: none; }
+.cast-item { flex: 0 0 84px; scroll-snap-align: start; text-align: center; }
+.cast-img {
+  width: 72px; height: 72px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden;
+  display: grid; place-items: center; background-color: #1a1a1d;
+  font-size: 18px; font-weight: 600; color: var(--text-2);
+}
+.cast-img img { width: 100%; height: 100%; object-fit: cover; }
+.cast-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 12.5px; font-weight: 600; line-height: 1.25; }
+.cast-role { margin-top: 2px; font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.providers { display: flex; flex-wrap: wrap; gap: 10px; }
+.prov {
+  display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px;
+  border-radius: 12px; background: var(--fill-1); font-size: 13.5px; font-weight: 500; transition: background-color .2s;
+}
+.prov:hover { background: var(--fill-2); }
+.prov img { width: 32px; height: 32px; border-radius: 8px; }
+.more { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.more .ov { padding: 10px; }
+.more .ov-title { font-size: 13px; }
+.more .ov-meta { font-size: 11.5px; }
+.more .ov-view { width: 26px; height: 26px; }
+@media (hover: hover) and (pointer: fine) { .more .card:hover { transform: scale(1.04); } }
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════════════════ */
+@media (max-width: 1023px) {
+  .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 22px 14px; }
+}
+@media (max-width: 767px) {
+  :root { --header-h: 56px; }
+  .mini-search { display: none; }
+  .topbar.show-mini .mob-search { display: grid; }
+  .brand-word { font-size: 17px; }
+  .text-link { font-size: 13px; padding: 8px 10px; }
+  .hero { min-height: auto; padding-top: calc(var(--header-h) + env(safe-area-inset-top) + 44px); padding-bottom: 36px; }
+  .mosaic { grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .hero-sub { margin-top: 14px; }
+  .cmd { margin-top: 30px; }
+  .cmd-field { height: 58px; padding: 0 7px 0 18px; gap: 10px; }
+  .cmd-input, .cmd-ph { font-size: 17px; }
+  .cmd-go { width: 44px; height: 44px; }
+  .chips-wrap { margin-top: 16px; width: calc(100% + 2 * var(--gutter)); }
+  .chips-track { padding: 6px var(--gutter); }
+  .results-head { min-height: 0; margin-bottom: 16px; }
+  .results-sub { font-size: 14px; }
+  .pill-btn { height: 34px; padding: 0 14px; font-size: 13px; }
+
+  .qv {
+    top: auto; left: 0; right: 0; bottom: 0; width: 100%;
+    height: calc(100dvh - 40px - env(safe-area-inset-top));
+    border-radius: 22px 22px 0 0; transform: translateY(100%);
+  }
+  .qv.open { transform: none; }
+  .qv-handle { display: block; position: absolute; top: 0; left: 0; right: 0; z-index: 4; height: 30px; touch-action: none; cursor: grab; }
+  .qv-handle::after { content: ""; position: absolute; top: 8px; left: 50%; width: 40px; height: 5px; margin-left: -20px; border-radius: 3px; background: rgba(255, 255, 255, .38); }
+  .qv-head { padding: 0 20px; margin-top: -52px; }
+  .btn-primary, .btn-glass { padding: 0 16px; font-size: 14.5px; }
+  .qv-content { padding: 22px 20px calc(36px + env(safe-area-inset-bottom)); }
+  .cast { margin: 0 -20px; padding: 2px 20px 6px; }
+}
+@media (max-width: 599px) {
+  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; }
+  .ov { padding: 10px; }
+  .ov-title { font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+  .card:hover, .more .card:hover { transform: none; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#results">Skip to results</a>
+
+<header class="topbar" id="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="./" aria-label="FindFilm.ai beta — home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 1.5h10.2v3.2H6.6v2.6h5.6v3.1H6.6v4.1H3z" fill="currentColor"/></svg>
+      </span>
+      <span class="brand-word">FindFilm<span>.ai</span></span>
+      <span class="beta-pill">Beta</span>
+    </a>
+    <form class="mini-search" id="miniSearch" role="search" aria-label="Search films">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="miniInput" type="search" placeholder="Ask FindFilm AI…" enterkeyhint="search" autocomplete="off" spellcheck="false" maxlength="300" aria-label="Describe what you want to watch">
+      <kbd class="kbd" id="kbdHint">⌘K</kbd>
+    </form>
+    <div class="topbar-right">
+      <button class="icon-btn mob-search" id="mobSearchBtn" type="button" aria-label="Search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
+      <a class="text-link" id="classicLink" href="https://findfilm.ai/">Classic site</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" aria-labelledby="heroTitle">
+    <div class="mosaic" id="mosaic" aria-hidden="true"></div>
+    <div class="hero-inner">
+      <p class="eyebrow">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>
+        FindFilm AI
+      </p>
+      <h1 class="hero-title" id="heroTitle">What are you in the mood for?</h1>
+      <p class="hero-sub">Describe a feeling, a plot, or a vibe. We’ll find the film.</p>
+
+      <form class="cmd" id="cmdForm" role="search" aria-label="AI film search">
+        <div class="cmd-glow" aria-hidden="true"></div>
+        <div class="cmd-field">
+          <svg class="cmd-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>
+          <div class="cmd-input-wrap">
+            <input class="cmd-input" id="cmdInput" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false" maxlength="300" aria-label="Describe what you want to watch">
+            <div class="cmd-ph" id="cmdPh" aria-hidden="true"><span class="cmd-ph-text" id="cmdPhText"></span><span class="cmd-caret"></span></div>
+          </div>
+          <button class="cmd-clear" id="cmdClear" type="button" aria-label="Clear search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+          <button class="cmd-go" id="cmdGo" type="submit" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+        </div>
+        <div class="cmd-progress" aria-hidden="true"></div>
+      </form>
+
+      <div class="chips-wrap">
+        <div class="chips" id="chips">
+          <div class="chips-track" id="chipsTrack" role="group" aria-label="Quick picks"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="results" id="results" aria-labelledby="resultsTitle">
+    <div class="results-head">
+      <div>
+        <h2 class="results-title" id="resultsTitle">Trending this week</h2>
+        <p class="results-sub" id="resultsSub">What everyone’s watching right now</p>
+      </div>
+      <button class="pill-btn" id="clearBtn" type="button" hidden>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        Clear
+      </button>
+    </div>
+    <div class="refine" id="refine" hidden></div>
+    <div class="grid" id="grid" aria-busy="true"></div>
+    <div class="sentinel" id="sentinel" aria-hidden="true"></div>
+  </section>
+
+  <footer class="foot">
+    FindFilm.ai Beta — a design prototype for feedback. Film data from
+    <a href="https://www.themoviedb.org" target="_blank" rel="noopener">TMDB</a>; this product uses the TMDB API but is not endorsed or certified by TMDB.
+  </footer>
+</main>
+
+<div class="sr-only" id="srStatus" role="status" aria-live="polite"></div>
+
+<div class="qv-scrim" id="qvScrim"></div>
+<div class="qv" id="qv" role="dialog" aria-modal="true" aria-labelledby="qvTitle" inert>
+  <div class="qv-handle" id="qvHandle" aria-hidden="true"></div>
+  <button class="qv-back" id="qvBack" type="button" aria-label="Back" hidden>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>
+  <button class="qv-close" id="qvClose" type="button" aria-label="Close">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+  <div class="qv-scroll" id="qvScroll">
+    <div class="qv-body" id="qvBody"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════════════════════════════ */
+const PROD = 'https://findfilm.ai';
+const IMG = 'https://image.tmdb.org/t/p/';
+const MAX_PAGES = 8;                     // infinite scroll stops at ~160 titles
+
+const PROMPTS = [
+  'Find a cyberpunk movie with philosophical themes…',
+  'A thriller for a rainy evening…',
+  'Something like Arrival, but more hopeful…',
+  'A heist movie with a clever twist…',
+  'A slow-burn mystery set in a small town…',
+  'Visually stunning sci-fi with a great soundtrack…',
+  'A feel-good comedy for family movie night…',
+];
+
+// `ai` chips go through /api/ai-search; `discover` chips are instant TMDB queries.
+const CHIPS = [
+  { id: 'mind',   label: 'Mind-bending',          ai: 'Mind-bending movies that twist reality, memory or time' },
+  { id: 'scifi90',label: '90s Sci-Fi',            sub: 'The decade’s most-loved science fiction',
+    discover: { with_genres: '878', 'primary_release_date.gte': '1990-01-01', 'primary_release_date.lte': '1999-12-31', sort_by: 'vote_count.desc', 'vote_count.gte': '200' } },
+  { id: 'top2026',label: 'Top Rated 2026',        sub: 'This year’s best-reviewed releases so far',
+    discover: { primary_release_year: '2026', sort_by: 'vote_average.desc', 'vote_count.gte': '200', without_genres: '99,10770' } },
+  { id: 'rainy',  label: 'Rainy-night thrillers', ai: 'A gripping thriller for a rainy evening' },
+  { id: 'cozy',   label: 'Cozy & feel-good',      ai: 'Cozy, feel-good movies for a quiet night in' },
+  { id: 'true',   label: 'Based on a true story', sub: 'Real events, dramatized',
+    discover: { with_keywords: '9672', sort_by: 'popularity.desc', 'vote_count.gte': '300' } },
+  { id: 'a24',    label: 'A24',                   sub: 'From the indie studio behind Everything Everywhere All at Once',
+    discover: { with_companies: '41077', sort_by: 'popularity.desc', 'vote_count.gte': '150' } },
+  { id: 'anim',   label: 'Animation for adults',  ai: 'Animated films made for adults, not kids' },
+  { id: 'heist',  label: 'Clever heists',         ai: 'Clever heist movies with a satisfying twist' },
+  { id: 'epic',   label: 'Epic worlds',           ai: 'Epic sci-fi and fantasy with incredible world-building' },
+];
+
+const THINKING = ['Reading the vibe…', 'Searching 240,000 films…', 'Weighing critics and audiences…', 'Picking the best matches…'];
+
+const ICON = {
+  spark:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>',
+  sparkSm: '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>',
+  view:    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8.5 7H17v8.5"/></svg>',
+  play:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.6v14.8L19.4 12z"/></svg>',
+  stop:    '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2.5"/></svg>',
+  out:     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v4.5A1.5 1.5 0 0 1 16.5 20h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/></svg>',
+  plus:    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════════════════ */
+const $ = (sel, root = document) => root.querySelector(sel);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const normTitle = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const keyOf = it => `${it.type}:${it.id}`;
+const fmtInt = n => Number(n || 0).toLocaleString('en-US');
+const isAbort = e => e && e.name === 'AbortError';
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const isSheet = () => matchMedia('(max-width: 767px)').matches;
+const scrollBehavior = () => (reduceMotion.matches ? 'auto' : 'smooth');
+const imgURL = (path, size) => (!path ? null : /^https?:/.test(path) ? path : IMG + size + path);
+const fmtRuntime = m => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ''}` : `${m}m`);
+const fmtDate = s => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s || '')) return '';
+  return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${s}T00:00:00Z`));
+};
+const regionName = cc => { try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(cc) || cc; } catch { return cc; } };
+const initials = name => String(name || '').split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+
+/* ═══════════════════════════════════════════════════════════════
+   API — same origin when available, else the live findfilm.ai API
+═══════════════════════════════════════════════════════════════ */
+const api = { base: PROD, country: 'US' };
+
+async function getJSON(url, { signal, timeout = 15000, ...init } = {}) {
+  const ctrl = new AbortController();
+  const relay = () => ctrl.abort(signal.reason);
+  if (signal) { if (signal.aborted) relay(); else signal.addEventListener('abort', relay, { once: true }); }
+  // A timeout is a failure (so callers fall back), not a supersede — hence its own error name.
+  const timer = setTimeout(() => ctrl.abort(new DOMException('Request timed out', 'TimeoutError')), timeout);
+  try {
+    const res = await fetch(url, { ...init, signal: ctrl.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+    if (signal) signal.removeEventListener('abort', relay);
+  }
+}
+
+async function resolveApi() {
+  try {
+    const res = await fetch('/api/geo-lang', { cache: 'no-store' });
+    if (res.ok && (res.headers.get('content-type') || '').includes('json')) {
+      const d = await res.json();
+      api.base = '';
+      api.country = d.country || 'US';
+      return;
+    }
+  } catch { /* file:// or no network — fall through */ }
+  console.info('[beta] No /api on this origin; using the live findfilm.ai API.');
+  api.base = PROD;
+  try { api.country = (await getJSON(`${PROD}/api/geo-lang`, { timeout: 5000 })).country || 'US'; } catch {}
+}
+const apiReady = resolveApi();
+
+async function call(path, opts) {
+  await apiReady;
+  return getJSON(api.base + path, opts);
+}
+function tmdb(path, params = {}, opts) {
+  const qs = new URLSearchParams({ language: 'en-US', ...params });
+  if (api.country) qs.set('client_region', api.country);
+  return call(`/api/tmdb${path}?${qs}`, opts);
+}
+const classicBase = () => (api.base === '' ? '' : PROD);
+
+// KV catalog the closed-world branch of /api/ai-search answers with bare ids from.
+let catalogPromise = null;
+function loadCatalog() {
+  catalogPromise ??= call('/api/cache/new-releases')
+    .then(d => (Array.isArray(d) ? d : []))
+    .catch(e => { catalogPromise = null; throw e; });
+  return catalogPromise;
+}
+
+/* ── Normalisers → one item shape for every source ── */
+function fromTMDB(r, type = 'movie') {
+  const isTV = type === 'tv' || r.media_type === 'tv';
+  return {
+    id: Number(r.id),
+    type: isTV ? 'tv' : 'movie',
+    title: (isTV ? (r.name || r.original_name) : (r.title || r.original_title)) || 'Untitled',
+    year: String((isTV ? r.first_air_date : r.release_date) || '').slice(0, 4),
+    rating: r.vote_count >= 5 && r.vote_average ? r.vote_average : null,
+    poster: r.poster_path || null,
+    backdrop: r.backdrop_path || null,
+    overview: r.overview || '',
+  };
+}
+function fromKV(m) {
+  return {
+    id: Number(m.id), type: 'movie', title: m.title || 'Untitled',
+    year: String(m.year || '').slice(0, 4),
+    rating: m.tmdbScore ? Number(m.tmdbScore) : null,
+    poster: m.poster || null, backdrop: m.backdrop || null, overview: m.desc || '',
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DOM
+═══════════════════════════════════════════════════════════════ */
+const topbar = $('#topbar'), main = $('#main');
+const cmd = $('#cmdForm'), cmdInput = $('#cmdInput'), cmdPh = $('#cmdPh'), cmdPhText = $('#cmdPhText'), cmdClear = $('#cmdClear');
+const miniForm = $('#miniSearch'), miniInput = $('#miniInput'), mobSearchBtn = $('#mobSearchBtn');
+const chipsTrack = $('#chipsTrack'), mosaic = $('#mosaic');
+const results = $('#results'), resultsTitle = $('#resultsTitle'), resultsSub = $('#resultsSub');
+const clearBtn = $('#clearBtn'), refineEl = $('#refine'), grid = $('#grid'), sentinel = $('#sentinel');
+const srStatus = $('#srStatus');
+const qv = $('#qv'), qvScrim = $('#qvScrim'), qvScroll = $('#qvScroll'), qvBody = $('#qvBody');
+const qvClose = $('#qvClose'), qvBack = $('#qvBack'), qvHandle = $('#qvHandle');
+
+const store = new Map();     // "movie:27205" → item, for every card on screen
+const announce = msg => { srStatus.textContent = ''; setTimeout(() => { srStatus.textContent = msg; }, 40); };
+
+/* ═══════════════════════════════════════════════════════════════
+   IMAGES — fade in over the shimmer; a broken poster becomes a title card
+═══════════════════════════════════════════════════════════════ */
+function settle(img) {
+  img.classList.add('loaded');
+  img.closest('.skel')?.classList.remove('skel');
+}
+function broken(img) {
+  img.closest('.skel')?.classList.remove('skel');
+  if (img.classList.contains('poster')) img.insertAdjacentHTML('afterend', `<span class="noposter">${esc(img.dataset.title)}</span>`);
+  img.remove();
+}
+function settleImages(root) {
+  root.querySelectorAll('img.fade').forEach(img => { if (img.complete && img.naturalWidth) settle(img); });
+}
+document.addEventListener('load', e => { const t = e.target; if (t.tagName === 'IMG' && t.classList.contains('fade')) settle(t); }, true);
+document.addEventListener('error', e => { const t = e.target; if (t.tagName === 'IMG' && t.classList.contains('fade')) broken(t); }, true);
+
+/* ═══════════════════════════════════════════════════════════════
+   CARDS
+═══════════════════════════════════════════════════════════════ */
+function cardHTML(it, i = 0, { mini = false } = {}) {
+  const meta = [it.year, it.rating ? `★ ${it.rating.toFixed(1)}` : ''].filter(Boolean).join(' · ');
+  const sizes = mini ? '(max-width: 767px) 30vw, 160px' : '(max-width: 599px) 31vw, (max-width: 1023px) 22vw, 240px';
+  let poster = `<span class="noposter">${esc(it.title)}</span>`;
+  if (it.poster) {
+    poster = /^https?:/.test(it.poster)
+      ? `<img class="poster fade" src="${esc(it.poster)}" data-title="${esc(it.title)}" alt="" loading="lazy" decoding="async">`
+      : `<img class="poster fade" src="${IMG}w342${esc(it.poster)}" srcset="${IMG}w185${esc(it.poster)} 185w, ${IMG}w342${esc(it.poster)} 342w, ${IMG}w500${esc(it.poster)} 500w" sizes="${sizes}" data-title="${esc(it.title)}" alt="" loading="lazy" decoding="async">`;
+  }
+  return `<div class="tile" style="--d:${Math.min(i, 14) * 28}">
+    <button class="card${it.poster ? ' skel' : ''}" type="button" data-key="${keyOf(it)}" aria-label="${esc(it.title)}${it.year ? `, ${it.year}` : ''}">
+      ${poster}
+      <span class="ov" aria-hidden="true">
+        <span class="ov-row">
+          <span class="ov-text">
+            ${it.vibe ? `<span class="ov-tag">${esc(it.vibe)}</span>` : ''}
+            <span class="ov-title">${esc(it.title)}</span>
+            ${meta ? `<span class="ov-meta">${esc(meta)}</span>` : ''}
+          </span>
+          <span class="ov-view">${ICON.view}</span>
+        </span>
+      </span>
+    </button>
+  </div>`;
+}
+const skelTiles = n => '<div class="tile skel-tile" aria-hidden="true"><div class="card skel"></div></div>'.repeat(n);
+const gridCols = () => getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length || 4;
+
+/* ═══════════════════════════════════════════════════════════════
+   VIEWS — home (trending) · discover chip · AI search · title search
+   Each run replaces `view`; anything still in flight for an older view
+   is aborted and its late results are dropped (`stale`).
+═══════════════════════════════════════════════════════════════ */
+let view = null;
+let inflight = null;
+let homeSnap = null;         // trending grid kept in memory, so "Clear" is instant
+let activeChip = null;
+let thinkTimer = 0;
+const stale = v => v !== view;
+
+function startView(kind, extra = {}) {
+  if (inflight) inflight.abort();
+  inflight = new AbortController();
+  view = { kind, page: 0, totalPages: 1, loading: false, failed: false, shown: new Set(), items: [], signal: inflight.signal, ...extra };
+  // A superseded search returns early and never clears its own busy state, so
+  // every new view starts from not-busy; searches switch it back on themselves.
+  setBusy(false);
+  setRefine(null);
+  clearBtn.hidden = kind === 'home';
+  return view;
+}
+
+function setHeader(title, subHTML = '', { thinking = false } = {}) {
+  resultsTitle.textContent = title;
+  clearInterval(thinkTimer);
+  resultsSub.classList.toggle('thinking', thinking);
+  if (thinking) {
+    let i = 0;
+    resultsSub.textContent = THINKING[0];
+    thinkTimer = setInterval(() => { i = (i + 1) % THINKING.length; resultsSub.textContent = THINKING[i]; }, 1700);
+  } else {
+    resultsSub.innerHTML = subHTML;
+  }
+}
+
+function setBusy(on) {
+  cmd.classList.toggle('loading', on);
+  miniForm.classList.toggle('loading', on);
+  grid.setAttribute('aria-busy', String(on));
+}
+
+function showSkeletons(n) {
+  grid.innerHTML = skelTiles(n || gridCols() * 3);
+  grid.setAttribute('aria-busy', 'true');
+}
+
+function renderItems(v, items, { append = false } = {}) {
+  const fresh = [];
+  for (const it of items) {
+    const k = keyOf(it);
+    if (v.shown.has(k)) continue;
+    v.shown.add(k);
+    store.set(k, it);
+    fresh.push(it);
+  }
+  v.items.push(...fresh);
+  grid.querySelectorAll('.skel-tile').forEach(n => n.remove());
+  const html = fresh.map((it, i) => cardHTML(it, i)).join('');
+  if (append) grid.insertAdjacentHTML('beforeend', html);
+  else grid.innerHTML = html;
+  grid.setAttribute('aria-busy', 'false');
+  settleImages(grid);
+  return fresh;
+}
+
+function showState(title, sub, action) {
+  grid.innerHTML = `<div class="state">
+    <p class="state-title">${esc(title)}</p>
+    <p class="state-sub">${esc(sub)}</p>
+    ${action ? `<button class="pill-btn" type="button" data-state-action>${esc(action.label)}</button>` : ''}
+  </div>`;
+  grid.setAttribute('aria-busy', 'false');
+  if (action) grid.querySelector('[data-state-action]').addEventListener('click', action.run, { once: true });
+}
+const showEmpty = q => showState(q ? `No matches for “${q}”` : 'Nothing here yet', 'Try describing a mood, a plot, or a film you loved.');
+const showError = retry => showState('Couldn’t reach FindFilm', 'Check your connection and try again.', { label: 'Try again', run: retry });
+
+/* ── Paged views: trending + discover chips (infinite scroll) ── */
+async function loadPage(v) {
+  if (stale(v) || v.loading || v.failed || v.page >= Math.min(v.totalPages, MAX_PAGES)) return;
+  v.loading = true;
+  const first = v.page === 0;
+  if (first) showSkeletons();
+  else grid.insertAdjacentHTML('beforeend', skelTiles(gridCols() * 2));
+  let ok = false;
+  try {
+    const page = v.page + 1;
+    const d = v.kind === 'home'
+      ? await tmdb('/trending/movie/week', { page }, { signal: v.signal })
+      : await tmdb('/discover/movie', { ...v.chip.discover, include_adult: 'false', page }, { signal: v.signal });
+    if (stale(v)) return;
+    v.page = d.page || page;
+    v.totalPages = d.total_pages || v.page;
+    const items = (d.results || []).filter(r => r.poster_path).map(r => fromTMDB(r, 'movie'));
+    renderItems(v, items, { append: !first });
+    if (first) {
+      if (v.kind === 'home') buildMosaic(items);
+      if (v.kind === 'discover') {
+        setHeader(v.chip.label, `${fmtInt(d.total_results)} titles<span class="muted">·</span>${esc(v.chip.sub)}`);
+        announce(`${v.chip.label}: ${fmtInt(d.total_results)} titles`);
+      }
+      if (!v.items.length) showEmpty();
+    }
+    if (v.kind === 'home') homeSnap = { items: v.items.slice(), page: v.page, totalPages: v.totalPages };
+    ok = true;
+  } catch (e) {
+    if (stale(v) || isAbort(e)) return;
+    v.failed = true;
+    grid.querySelectorAll('.skel-tile').forEach(n => n.remove());
+    if (first) showError(() => (v.kind === 'home' ? showHome() : runDiscover(v.chip)));
+  } finally {
+    v.loading = false;
+  }
+  // A tall screen can swallow a whole page without the sentinel ever leaving
+  // view, and IntersectionObserver only fires on changes — so re-check here.
+  if (ok) requestAnimationFrame(() => {
+    if (!stale(v) && sentinel.getBoundingClientRect().top < innerHeight + 900) loadPage(v);
+  });
+}
+
+function showHome() {
+  setChip(null);
+  const v = startView('home');
+  setHeader('Trending this week', 'What everyone’s watching right now');
+  if (homeSnap) {
+    v.page = homeSnap.page;
+    v.totalPages = homeSnap.totalPages;
+    renderItems(v, homeSnap.items);
+    return;
+  }
+  loadPage(v);
+}
+
+function runDiscover(chip) {
+  const v = startView('discover', { chip });
+  setHeader(chip.label, esc(chip.sub));
+  loadPage(v);
+}
+
+/* ── AI search ── */
+async function runAI(q, { label = null } = {}) {
+  const v = startView('ai', { q, label });
+  const title = label || `“${q}”`;
+  setHeader(title, '', { thinking: true });
+  showSkeletons(Math.max(6, gridCols()));
+  setBusy(true);
+  announce(`Searching for ${q}`);
+  try {
+    const d = await call('/api/ai-search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: q }),
+      signal: v.signal,
+      timeout: 30000,
+    });
+    if (stale(v)) return;
+    let items = [];
+    if (Array.isArray(d.movies) && d.movies.length) {
+      items = d.movies.filter(m => m && m.poster_path).map(m => fromTMDB(m, 'movie'));
+    } else if (Array.isArray(d.ids) && d.ids.length) {
+      const catalog = await loadCatalog();
+      if (stale(v)) return;
+      const byId = new Map(catalog.map(m => [Number(m.id), m]));
+      items = d.ids.map(id => byId.get(Number(id))).filter(Boolean).map(fromKV);
+    }
+    if (!items.length) throw new Error('No AI results');
+    for (const it of items) {
+      it.reason = (d.reasons && d.reasons[it.id]) || null;
+      it.vibe = (d.vibeTags && d.vibeTags[it.id]) || null;
+    }
+    renderItems(v, items);
+    const n = v.items.length;
+    const who = d.actorQuery && d.personName ? ` with ${esc(d.personName)}` : '';
+    setHeader(title, `${ICON.sparkSm}<span>${n} AI pick${n === 1 ? '' : 's'}${who}</span>${d.message ? `<span class="muted">· ${esc(d.message)}</span>` : ''}`);
+    setRefine(q, d.suggestedRefinements);
+    announce(`${n} picks for ${q}`);
+  } catch (e) {
+    if (stale(v) || isAbort(e)) return;
+    await titleFallback(v, q, title);
+  } finally {
+    if (!stale(v)) setBusy(false);
+  }
+}
+
+// AI down or too slow → the title + semantic search endpoint, labelled honestly.
+async function titleFallback(v, q, title) {
+  try {
+    const d = await call(`/api/search?${new URLSearchParams({ q, page: '1', type: 'movie', lang: 'en-US' })}`, { signal: v.signal });
+    if (stale(v)) return;
+    const items = (d.results || []).filter(r => r.poster_path).map(r => fromTMDB(r, 'movie'));
+    if (!items.length) { setHeader(title, ''); showEmpty(q); return; }
+    renderItems(v, items);
+    setHeader(title, `<span>${fmtInt(v.items.length)} matches</span><span class="muted">· AI is busy, so these are title matches ·</span><button class="link-btn" type="button" data-ask-ai>Try AI again</button>`);
+    announce(`${v.items.length} title matches for ${q}`);
+  } catch (e) {
+    if (stale(v) || isAbort(e)) return;
+    setHeader(title, '');
+    showError(() => runAI(q, { label: v.label }));
+  }
+}
+
+/* ── Title search: fast path for things that look like a film's name ── */
+const DESCRIPTIVE = /\b(movies?|films?|shows?|series|about|like|with|where|when|that|for|something|feel|feeling|vibes?|mood|set in|based on|funny|scary|sad|romantic|dark|cozy|thriller|comedy|horror|drama|documentary|animated|recommend|similar|want|watch|night|evening|kids|family|ending|twist)\b/i;
+const looksLikeTitle = q => q.split(/\s+/).filter(Boolean).length <= 4 && !/[,?!]/.test(q) && !DESCRIPTIVE.test(q);
+
+async function runTitle(q) {
+  const v = startView('title', { q });
+  const title = `“${q}”`;
+  setHeader(title, '');
+  showSkeletons();
+  setBusy(true);
+  try {
+    const d = await call(`/api/search?${new URLSearchParams({ q, page: '1', type: 'movie', lang: 'en-US' })}`, { signal: v.signal });
+    if (stale(v)) return;
+    const items = (d.results || []).filter(r => r.poster_path).map(r => fromTMDB(r, 'movie'));
+    const nq = normTitle(q);
+    const hit = nq && items.some(it => {
+      const t = normTitle(it.title);
+      return t === nq || t.startsWith(nq) || (nq.length > 3 && t.includes(nq));
+    });
+    if (!hit) { runAI(q); return; }      // not a title after all — let the AI read it
+    renderItems(v, items);
+    setHeader(title, `<span>${fmtInt(v.items.length)} titles</span><span class="muted">·</span><button class="link-btn" type="button" data-ask-ai>${ICON.sparkSm}Ask AI instead</button>`);
+    announce(`${v.items.length} titles for ${q}`);
+  } catch (e) {
+    if (stale(v) || isAbort(e)) return;
+    runAI(q);
+  } finally {
+    if (!stale(v)) setBusy(false);
+  }
+}
+
+resultsSub.addEventListener('click', e => {
+  if (e.target.closest('[data-ask-ai]') && view?.q) runAI(view.q, { label: view.label });
+});
+
+/* ── Follow-up refinements from the AI ── */
+function setRefine(base, list) {
+  const items = base && Array.isArray(list)
+    ? list.filter(s => typeof s === 'string' && s.trim()).map(s => s.trim()).slice(0, 4)
+    : [];
+  refineEl.hidden = !items.length;
+  refineEl.dataset.base = base || '';
+  refineEl.innerHTML = items.length
+    ? `<span class="refine-label">Refine</span>${items.map(s => `<button class="chip chip-sm" type="button" data-refine="${esc(s)}">${ICON.plus}${esc(s)}</button>`).join('')}`
+    : '';
+}
+refineEl.addEventListener('click', e => {
+  const b = e.target.closest('[data-refine]');
+  if (!b) return;
+  const q = `${refineEl.dataset.base}, ${b.dataset.refine.toLowerCase()}`;
+  setChip(null);
+  setInputs(q);
+  runAI(q);
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   SEARCH INPUTS (hero command center + compact header field)
+═══════════════════════════════════════════════════════════════ */
+function syncValueState() { cmd.classList.toggle('has-value', !!cmdInput.value); }
+function setInputs(val) { cmdInput.value = val; miniInput.value = val; syncValueState(); }
+cmdInput.addEventListener('input', () => { miniInput.value = cmdInput.value; syncValueState(); });
+miniInput.addEventListener('input', () => { cmdInput.value = miniInput.value; syncValueState(); });
+cmdClear.addEventListener('click', () => { setInputs(''); cmdInput.focus(); });
+
+function revealResults() {
+  const y = results.getBoundingClientRect().top + scrollY - (topbar.offsetHeight + 8);
+  if (Math.abs(y - scrollY) > 4) scrollTo({ top: Math.max(0, y), behavior: scrollBehavior() });
+}
+
+function submitQuery(raw) {
+  const q = raw.trim().replace(/\s+/g, ' ');
+  if (!q) { focusSearch(); return; }
+  setChip(null);
+  setInputs(q);
+  if (matchMedia('(hover: none)').matches) document.activeElement?.blur();   // drop the phone keyboard
+  (looksLikeTitle(q) ? runTitle : runAI)(q);
+  revealResults();
+}
+cmd.addEventListener('submit', e => { e.preventDefault(); submitQuery(cmdInput.value); });
+miniForm.addEventListener('submit', e => { e.preventDefault(); submitQuery(miniInput.value); });
+
+function focusSearch() {
+  // Measured now rather than read from the observer-driven `show-mini` class,
+  // which can lag a scroll by a frame.
+  const r = cmd.getBoundingClientRect();
+  if (r.bottom > topbar.offsetHeight && r.top < innerHeight) { cmdInput.focus(); return; }
+  if (!isSheet()) { miniInput.focus(); miniInput.select(); return; }
+  scrollTo({ top: 0, behavior: scrollBehavior() });
+  cmdInput.focus({ preventScroll: true });
+}
+mobSearchBtn.addEventListener('click', focusSearch);
+clearBtn.addEventListener('click', () => { setInputs(''); showHome(); });
+
+/* ── Typing placeholder ── */
+(function typewriter() {
+  let p = 0, c = 0, deleting = false;
+  const step = () => {
+    if (document.hidden || cmdInput.value) { setTimeout(step, 600); return; }
+    const full = PROMPTS[p];
+    if (reduceMotion.matches) {                     // no typing: swap whole prompts
+      cmdPhText.textContent = full;
+      p = (p + 1) % PROMPTS.length;
+      setTimeout(step, 3800);
+      return;
+    }
+    let wait;
+    if (!deleting) {
+      c += 1;
+      if (c >= full.length) { c = full.length; deleting = true; wait = 2300; }
+      else wait = 34 + Math.random() * 46;
+    } else {
+      c = Math.max(0, c - 3);
+      if (c === 0) { deleting = false; p = (p + 1) % PROMPTS.length; wait = 380; }
+      else wait = 14;
+    }
+    cmdPhText.textContent = full.slice(0, c);
+    cmdPh.scrollLeft = cmdPh.scrollWidth;           // long prompts scroll like real typing
+    setTimeout(step, wait);
+  };
+  step();
+})();
+
+/* ── Quick chips ── */
+function renderChips() {
+  chipsTrack.innerHTML = CHIPS.map(c =>
+    `<button class="chip" type="button" data-chip="${c.id}" aria-pressed="false">${c.ai ? ICON.sparkSm : ''}${esc(c.label)}</button>`
+  ).join('');
+}
+function setChip(id) {
+  activeChip = id;
+  chipsTrack.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.chip === id)));
+}
+chipsTrack.addEventListener('click', e => {
+  const b = e.target.closest('[data-chip]');
+  if (!b) return;
+  const chip = CHIPS.find(c => c.id === b.dataset.chip);
+  if (!chip) return;
+  if (activeChip === chip.id) { setInputs(''); showHome(); return; }   // tap again to clear
+  setChip(chip.id);
+  if (chip.ai) { setInputs(chip.ai); runAI(chip.ai, { label: chip.label }); }
+  else { setInputs(''); runDiscover(chip); }
+  revealResults();
+});
+
+/* ── Hero poster wall ── */
+function buildMosaic(items) {
+  if (mosaic.childElementCount) return;
+  const posters = items.map(it => it.poster).filter(p => p && !/^https?:/.test(p));
+  if (posters.length < 8) return;
+  const cells = (isSheet() ? 5 : 9) * 5;
+  mosaic.innerHTML = Array.from({ length: cells }, (_, i) =>
+    `<img src="${IMG}w185${esc(posters[(i * 7) % posters.length])}" alt="" decoding="async" fetchpriority="low">`).join('');
+  const imgs = [...mosaic.querySelectorAll('img')];
+  let pending = Math.min(imgs.length, 18);
+  const tick = () => { if (--pending <= 0) mosaic.classList.add('ready'); };
+  imgs.forEach(img => (img.complete ? tick() : img.addEventListener('load', tick, { once: true })));
+  setTimeout(() => mosaic.classList.add('ready'), 2500);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HEADER STATE + INFINITE SCROLL
+═══════════════════════════════════════════════════════════════ */
+let scrollTick = false;
+addEventListener('scroll', () => {
+  if (scrollTick) return;
+  scrollTick = true;
+  requestAnimationFrame(() => { scrollTick = false; topbar.classList.toggle('scrolled', scrollY > 8); });
+}, { passive: true });
+new IntersectionObserver(([e]) => topbar.classList.toggle('show-mini', !e.isIntersecting),
+  { rootMargin: '-72px 0px 0px 0px' }).observe(cmd);
+new IntersectionObserver(entries => {
+  if (entries[0].isIntersecting && view && (view.kind === 'home' || view.kind === 'discover')) loadPage(view);
+}, { rootMargin: '0px 0px 900px 0px' }).observe(sentinel);
+
+/* ═══════════════════════════════════════════════════════════════
+   QUICK VIEW
+   Opens over the grid (never navigates), so the search context stays
+   exactly where it was. Each open / "More like this" hop is a history
+   entry: the phone back gesture steps back through them, then closes.
+═══════════════════════════════════════════════════════════════ */
+const QV = { open: false, stack: [], opener: null, token: 0, cache: new Map() };
+const slot = name => qvBody.querySelector(`[data-slot="${name}"]`);
+
+function getDetails(it) {
+  const k = keyOf(it);
+  if (!QV.cache.has(k)) {
+    const append = it.type === 'tv'
+      ? 'credits,videos,images,content_ratings,watch/providers,recommendations'
+      : 'credits,videos,images,release_dates,watch/providers,recommendations';
+    QV.cache.set(k, tmdb(`/${it.type}/${it.id}`, { append_to_response: append, include_image_language: 'en,null' })
+      .catch(e => { QV.cache.delete(k); throw e; }));
+  }
+  return QV.cache.get(k);
+}
+
+function metaHTML(parts) { return parts.filter(Boolean).join('<span class="dot" aria-hidden="true"></span>'); }
+function certOf(it, d) {
+  if (it.type === 'tv') {
+    const r = d.content_ratings?.results || [];
+    return (r.find(x => x.iso_3166_1 === 'US') || r.find(x => x.iso_3166_1 === api.country))?.rating || '';
+  }
+  const r = d.release_dates?.results || [];
+  const pick = cc => r.find(x => x.iso_3166_1 === cc)?.release_dates?.find(x => x.certification)?.certification;
+  return pick('US') || pick(api.country) || '';
+}
+function pickTrailer(d) {
+  const v = (d.videos?.results || []).filter(x => x.site === 'YouTube' && x.key);
+  return v.find(x => x.type === 'Trailer' && x.official) || v.find(x => x.type === 'Trailer') || v.find(x => x.type === 'Teaser') || null;
+}
+function pickLogo(d) {
+  const logos = d.images?.logos || [];
+  const pool = logos.filter(l => l.iso_639_1 === 'en');
+  if (!pool.length) return null;
+  const best = pool.slice().sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0))[0];
+  return best.file_path.endsWith('.svg') ? `${IMG}original${best.file_path}` : `${IMG}w500${best.file_path}`;
+}
+
+function shellHTML(it) {
+  const bd = it.backdrop ? imgURL(it.backdrop, 'w1280') : it.poster ? imgURL(it.poster, 'w500') : null;
+  const metaLite = metaHTML([it.year && `<span>${esc(it.year)}</span>`, it.rating && `<span class="rating">★ ${it.rating.toFixed(1)}</span>`]);
+  return `
+    <div class="qv-hero${bd ? ' skel' : ''}">
+      <div class="qv-media">${bd ? `<img class="qv-backdrop fade${it.backdrop ? '' : ' is-poster'}" src="${esc(bd)}" alt="" decoding="async">` : ''}</div>
+    </div>
+    <div class="qv-head">
+      <div class="qv-titlebox"><h2 class="qv-title" id="qvTitle">${esc(it.title)}</h2></div>
+      <div class="qv-meta" data-slot="meta">${metaLite}</div>
+      <div class="qv-actions" data-slot="actions"><span class="skel sk-pill"></span><span class="skel sk-pill sk-pill-w"></span></div>
+    </div>
+    <div class="qv-content">
+      ${it.reason ? `<div class="qv-why">${ICON.spark}<div><b>Why it’s a match</b>${esc(it.reason)}</div></div>` : ''}
+      <div class="qv-body" data-slot="body">
+        <div class="qv-genres"><span class="skel sk-chip"></span><span class="skel sk-chip"></span><span class="skel sk-chip"></span></div>
+        ${it.overview ? `<p class="qv-overview">${esc(it.overview)}</p>` : `<div class="sk-lines">${'<span class="skel sk-line"></span>'.repeat(4)}</div>`}
+        <section class="qv-sec"><h3>Cast</h3><div class="cast">${'<div class="cast-item"><div class="cast-img skel"></div><span class="skel sk-line sk-short"></span></div>'.repeat(6)}</div></section>
+      </div>
+    </div>`;
+}
+
+function actionsHTML(it, d) {
+  const tr = pickTrailer(d);
+  const full = `${classicBase()}/?${it.type === 'tv' ? 'TVShows' : 'movie'}=${it.id}`;
+  return `${tr ? `<button class="btn-primary" type="button" data-trailer="${esc(tr.key)}">${ICON.play}<span>Play Trailer</span></button>` : ''}
+    <a class="btn-glass" href="${esc(full)}">${ICON.out}<span>Open in FindFilm</span></a>`;
+}
+
+function providersHTML(d) {
+  const all = d['watch/providers']?.results || {};
+  const cc = all[api.country] ? api.country : all.US ? 'US' : null;
+  if (!cc) return '';
+  const r = all[cc];
+  let label = 'Stream', list = r.flatrate || [];
+  if (!list.length && r.free?.length) { label = 'Free'; list = r.free; }
+  if (!list.length) {
+    label = 'Rent or buy';
+    const seen = new Set();
+    list = [...(r.rent || []), ...(r.buy || [])].filter(p => !seen.has(p.provider_id) && seen.add(p.provider_id));
+  }
+  if (!list.length) return '';
+  return `<section class="qv-sec"><h3>Where to watch <span>· ${esc(label)} in ${esc(regionName(cc))}</span></h3>
+    <div class="providers">${list.slice(0, 6).map(p => `<a class="prov" href="${esc(r.link || '#')}" target="_blank" rel="noopener">
+      ${p.logo_path ? `<img src="${IMG}w92${esc(p.logo_path)}" alt="" loading="lazy">` : ''}${esc(p.provider_name)}</a>`).join('')}</div></section>`;
+}
+
+function bodyHTML(it, d) {
+  const overview = d.overview || it.overview;
+  const genres = (d.genres || []).map(g => `<span class="gchip">${esc(g.name)}</span>`).join('');
+  const people = it.type === 'tv'
+    ? (d.created_by || []).map(p => p.name)
+    : (d.credits?.crew || []).filter(c => c.job === 'Director').map(c => c.name);
+  const facts = [
+    [it.type === 'tv' ? 'Created by' : people.length > 1 ? 'Directors' : 'Director', people.slice(0, 2).join(', ')],
+    [it.type === 'tv' ? 'First aired' : 'Released', fmtDate(d.release_date || d.first_air_date)],
+    ['Language', d.spoken_languages?.[0]?.english_name || ''],
+    ['Studio', (d.production_companies || []).slice(0, 2).map(c => c.name).join(', ')],
+  ].filter(([, val]) => val);
+  const cast = (d.credits?.cast || []).slice(0, 16);
+  const recs = (d.recommendations?.results || []).filter(r => r.poster_path).slice(0, 9).map(r => fromTMDB(r, it.type));
+  recs.forEach(r => { if (!store.has(keyOf(r))) store.set(keyOf(r), r); });
+  return `
+    ${genres ? `<div class="qv-genres">${genres}</div>` : ''}
+    ${d.tagline || overview ? `<div class="qv-copy">${d.tagline ? `<p class="qv-tagline">${esc(d.tagline)}</p>` : ''}${overview ? `<p class="qv-overview">${esc(overview)}</p>` : ''}</div>` : ''}
+    ${facts.length ? `<dl class="facts">${facts.map(([k, val]) => `<dt>${esc(k)}</dt><dd>${esc(val)}</dd>`).join('')}</dl>` : ''}
+    ${cast.length ? `<section class="qv-sec"><h3>Cast</h3><div class="cast">${cast.map(c => `
+      <div class="cast-item">
+        <div class="cast-img${c.profile_path ? ' skel' : ''}">${c.profile_path
+          ? `<img class="fade" src="${IMG}w185${esc(c.profile_path)}" alt="" loading="lazy" decoding="async">`
+          : `<span aria-hidden="true">${esc(initials(c.name))}</span>`}</div>
+        <div class="cast-name">${esc(c.name)}</div>
+        ${c.character ? `<div class="cast-role">${esc(c.character)}</div>` : ''}
+      </div>`).join('')}</div></section>` : ''}
+    ${providersHTML(d)}
+    ${recs.length ? `<section class="qv-sec"><h3>More like this</h3><div class="more">${recs.map((r, i) => cardHTML(r, i, { mini: true })).join('')}</div></section>` : ''}`;
+}
+
+// Title art: pick the English logo; if it is dark ink (many are), flip it to
+// white so it reads on the dark hero. TMDB images send CORS headers, so the
+// canvas read is allowed.
+function mountLogo(url) {
+  const box = qvBody.querySelector('.qv-titlebox');
+  if (!box) return;
+  const img = new Image();
+  img.className = 'qv-logo';
+  img.alt = '';
+  img.decoding = 'async';
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    if (!img.isConnected) return;
+    try {
+      const w = 48, h = Math.max(1, Math.round((w * img.naturalHeight) / img.naturalWidth));
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      const ctx = cv.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, w, h);
+      const px = ctx.getImageData(0, 0, w, h).data;
+      let sum = 0, n = 0;
+      for (let i = 0; i < px.length; i += 4) {
+        if (px[i + 3] < 140) continue;
+        sum += (0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2]) / 255;
+        n += 1;
+      }
+      if (n > 20 && sum / n < 0.3) img.classList.add('invert');
+    } catch { /* tainted canvas — keep the art as-is */ }
+    box.classList.add('has-logo');
+  };
+  img.onerror = () => img.remove();
+  img.src = url;
+  box.appendChild(img);
+}
+
+function fillQV(it, d) {
+  const hero = qvBody.querySelector('.qv-hero');
+  const media = hero?.querySelector('.qv-media');
+  const current = media?.querySelector('img');
+  // Upgrade a missing hero, or a blurred-poster stand-in, to the real backdrop.
+  if (media && d.backdrop_path && (!current || current.classList.contains('is-poster'))) {
+    media.innerHTML = `<img class="qv-backdrop fade" src="${esc(imgURL(d.backdrop_path, 'w1280'))}" alt="" decoding="async">`;
+    hero.classList.add('skel');
+  }
+  const logo = pickLogo(d);
+  if (logo) mountLogo(logo);
+  const year = String(d.release_date || d.first_air_date || '').slice(0, 4) || it.year;
+  const runtime = d.runtime || (d.episode_run_time || [])[0] || 0;
+  const cert = certOf(it, d);
+  const rating = d.vote_count >= 5 && d.vote_average ? d.vote_average : it.rating;
+  slot('meta').innerHTML = metaHTML([
+    year && `<span>${esc(year)}</span>`,
+    runtime && `<span>${fmtRuntime(runtime)}</span>`,
+    it.type === 'tv' && d.number_of_seasons && `<span>${d.number_of_seasons} season${d.number_of_seasons > 1 ? 's' : ''}</span>`,
+    cert && `<span class="badge">${esc(cert)}</span>`,
+    rating && `<span class="rating">★ ${Number(rating).toFixed(1)}</span>`,
+  ]);
+  slot('actions').innerHTML = actionsHTML(it, d);
+  slot('body').innerHTML = bodyHTML(it, d);
+  settleImages(qvBody);
+}
+
+async function renderQV(it) {
+  const token = ++QV.token;
+  qvBack.hidden = QV.stack.length < 2;
+  qvBody.innerHTML = shellHTML(it);
+  qvBody.classList.remove('swap');
+  void qvBody.offsetWidth;                       // restart the content fade on every hop
+  qvBody.classList.add('swap');
+  qvScroll.scrollTop = 0;
+  settleImages(qvBody);
+  try {
+    const d = await getDetails(it);
+    if (token !== QV.token) return;
+    fillQV(it, d);
+  } catch (e) {
+    if (token !== QV.token) return;
+    slot('actions').innerHTML = '<button class="btn-glass" type="button" data-qv-retry>Try again</button>';
+    slot('body').innerHTML = `${it.overview ? `<p class="qv-overview">${esc(it.overview)}</p>` : ''}<p class="qv-note">Couldn’t load the cast and details just now.</p>`;
+  }
+}
+
+function lockScroll(on) {
+  const root = document.documentElement;
+  if (on) {
+    root.style.setProperty('--sbw', `${innerWidth - root.clientWidth}px`);
+    root.classList.add('locked');
+  } else {
+    root.classList.remove('locked');
+    root.style.setProperty('--sbw', '0px');
+  }
+}
+
+function showQV() {
+  if (QV.open) return;
+  QV.open = true;
+  lockScroll(true);
+  main.inert = true;
+  topbar.inert = true;
+  qv.inert = false;
+  qv.classList.add('open');
+  qvScrim.classList.add('open');
+  requestAnimationFrame(() => qvClose.focus({ preventScroll: true }));
+}
+function hideQV() {
+  if (!QV.open) return;
+  QV.open = false;
+  QV.token += 1;
+  qv.inert = true;
+  qv.style.transform = '';                        // hand a dragged sheet back to the CSS transition
+  qv.classList.remove('open');
+  qvScrim.classList.remove('open');
+  qvBody.querySelector('.qv-trailer')?.remove();  // stop any trailer audio right away
+  main.inert = false;
+  topbar.inert = false;
+  lockScroll(false);
+  const opener = QV.opener;
+  QV.opener = null;
+  QV.stack = [];
+  if (opener && opener.isConnected) opener.focus({ preventScroll: true });
+  setTimeout(() => { if (!QV.open) qvBody.innerHTML = ''; }, 600);
+}
+
+function openQuickView(it, opener) {
+  QV.opener = opener || null;
+  QV.stack = [it];
+  history.pushState({ ffqv: 1 }, '');
+  showQV();
+  renderQV(it);
+}
+function pushQuickView(it) {
+  QV.stack.push(it);
+  history.pushState({ ffqv: QV.stack.length }, '');
+  renderQV(it);
+}
+function requestCloseQV() {
+  const depth = (history.state && history.state.ffqv) || 0;
+  hideQV();                                       // close now; the popstate this causes is ignored
+  if (depth > 0) history.go(-depth);
+}
+addEventListener('popstate', () => {
+  if (!QV.open) return;
+  const depth = (history.state && history.state.ffqv) || 0;
+  if (depth === 0) { hideQV(); return; }
+  if (depth < QV.stack.length) {
+    QV.stack.length = depth;
+    renderQV(QV.stack[depth - 1]);
+  }
+});
+if (history.state && history.state.ffqv) history.replaceState(null, '');   // stale entry from a reload
+
+qvClose.addEventListener('click', requestCloseQV);
+qvScrim.addEventListener('click', requestCloseQV);
+qvBack.addEventListener('click', () => { if (QV.stack.length > 1) history.back(); });
+
+grid.addEventListener('click', e => {
+  const card = e.target.closest('.card[data-key]');
+  const it = card && store.get(card.dataset.key);
+  if (it) openQuickView(it, card);
+});
+qvBody.addEventListener('click', e => {
+  const trailer = e.target.closest('[data-trailer]');
+  if (trailer) { toggleTrailer(trailer); return; }
+  if (e.target.closest('[data-qv-retry]')) { renderQV(QV.stack[QV.stack.length - 1]); return; }
+  const card = e.target.closest('.card[data-key]');
+  const it = card && store.get(card.dataset.key);
+  if (it) pushQuickView(it);
+});
+
+function toggleTrailer(btn) {
+  const hero = qvBody.querySelector('.qv-hero');
+  const media = hero?.querySelector('.qv-media');
+  if (!media) return;
+  if (hero.classList.contains('playing')) {
+    media.querySelector('.qv-trailer')?.remove();
+    hero.classList.remove('playing');
+    btn.innerHTML = `${ICON.play}<span>Play Trailer</span>`;
+    return;
+  }
+  media.insertAdjacentHTML('beforeend',
+    `<iframe class="qv-trailer" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(btn.dataset.trailer)}?autoplay=1&amp;rel=0&amp;modestbranding=1&amp;playsinline=1" title="Trailer" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`);
+  hero.classList.add('playing');
+  btn.innerHTML = `${ICON.stop}<span>Stop Trailer</span>`;
+  qvScroll.scrollTo({ top: 0, behavior: scrollBehavior() });
+}
+
+// Warm the detail request while the pointer rests on a card, so the drawer
+// usually opens already filled in.
+let hoverTimer = 0, hoverKey = '';
+function prefetchOnHover(e) {
+  const card = e.target.closest && e.target.closest('.card[data-key]');
+  const k = card ? card.dataset.key : '';
+  if (k === hoverKey) return;
+  hoverKey = k;
+  clearTimeout(hoverTimer);
+  if (!k) return;
+  hoverTimer = setTimeout(() => { const it = store.get(k); if (it) getDetails(it).catch(() => {}); }, 200);
+}
+grid.addEventListener('pointerover', prefetchOnHover);
+qvBody.addEventListener('pointerover', prefetchOnHover);
+
+// Phone: drag the sheet down by its handle to dismiss.
+let drag = null;
+qvHandle.addEventListener('pointerdown', e => {
+  if (!isSheet() || !QV.open) return;
+  drag = { id: e.pointerId, y: e.clientY, t: performance.now(), dy: 0 };
+  try { qvHandle.setPointerCapture(e.pointerId); } catch { /* keep dragging without capture */ }
+  qv.style.transition = 'none';
+});
+qvHandle.addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  drag.dy = Math.max(0, e.clientY - drag.y);
+  qv.style.transform = `translateY(${drag.dy}px)`;
+});
+function endDrag() {
+  if (!drag) return;
+  const { dy, t } = drag;
+  drag = null;
+  qv.style.transition = '';
+  const velocity = dy / Math.max(1, performance.now() - t);
+  // A long pull, or a real flick — a few pixels of jitter on a tap must not dismiss.
+  if (dy > 120 || (dy > 48 && velocity > 0.6)) requestCloseQV();   // hideQV clears the inline transform in the same frame
+  else qv.style.transform = '';
+}
+qvHandle.addEventListener('pointerup', endDrag);
+qvHandle.addEventListener('pointercancel', endDrag);
+
+/* ═══════════════════════════════════════════════════════════════
+   KEYBOARD
+═══════════════════════════════════════════════════════════════ */
+const isApple = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
+$('#kbdHint').textContent = isApple ? '⌘K' : 'Ctrl K';
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && QV.open) { e.preventDefault(); requestCloseQV(); return; }
+  if (QV.open) return;
+  const el = document.activeElement;
+  const typing = el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable);
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); focusSearch(); return; }
+  if (e.key === '/' && !typing) { e.preventDefault(); focusSearch(); }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════════════════════════ */
+renderChips();
+showSkeletons(18);
+apiReady.then(() => {
+  $('#classicLink').href = `${classicBase()}/`;
+  showHome();
+});
+})();
+</script>
+</body>
+</html>
