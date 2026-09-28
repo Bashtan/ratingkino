@@ -4,7 +4,7 @@
 
 ## ⚡ Most Recent Session (2026-09-28b) — Layout Toggle Beside the Logo, Pixel-Identical in Both Layouts
 
-All commits on `main`, **deployed live on https://findfilm.ai** (Pages production `f7503b66` from `08bb2e6`, 2026-09-28; `./deploy.sh`: 16/16 sensitive paths unpublished, custom domains clean; `/`, `/cinematic/` and both `layout-switch.*?v=8b45db4c` files byte-identical to the repo; live phone round trip Classic → Cinematic → Classic kept the toggle at the same rect; no JS errors). This ships the 2026-09-28 layout switch below for the first time too. Earlier preview: **https://layout-switch.ratingkino.pages.dev** (Pages Preview `d140f102`, built from `181aaab` with the same `/api` pass-through recipe as below; production byte-identical before and after).
+All commits on `main`, **deployed live on https://findfilm.ai** (Pages production `f7503b66` from `08bb2e6`, 2026-09-28; `./deploy.sh`: 16/16 sensitive paths unpublished, custom domains clean; `/`, `/cinematic/` and both `layout-switch.*?v=8b45db4c` files byte-identical to the repo; live phone round trip Classic → Cinematic → Classic kept the toggle at the same rect; no JS errors). This ships the 2026-09-28 layout switch below for the first time too. **Preview removed (2026-09-28):** both `layout-switch` deployments (`d140f102`, `b3f3ff4d`) were deleted because their `/api` pass-through wrote to production; the alias and both hash URLs now 404. **Earlier preview:** **https://layout-switch.ratingkino.pages.dev** (Pages Preview `d140f102`, built from `181aaab` with the same `/api` pass-through recipe as below; production byte-identical before and after).
 
 | Commit | Feature |
 |--------|---------|
@@ -2603,6 +2603,7 @@ The site is fully installable as a PWA on all platforms.
 
 ## Pending / Next Steps
 
+- [ ] **Old preview deployments can still write to production** — ~18 full-site previews from 2026-08 (branches `fix-*`, `feat*`, `feature-*`) remain live (e.g. `https://9f183e16.ratingkino.pages.dev`) and are bound to the production KV (`/api/cache/new-releases` returns the 119 live items) and the production D1 (Pitch API active). Pages previews inherit wrangler.toml's bindings. Delete them (`npx wrangler pages deployment delete <id> --project-name ratingkino --force`; **without `--force` wrangler's non-interactive prompt defaults to "no" and deletes nothing**), and/or give previews their own KV/D1 via `[env.preview]` in wrangler.toml. `beta-ui` is a static page with no Functions of its own
 - [ ] **Preview-environment secrets** — the Pages preview env has none, so real full-stack previews (branch deploys running their own Functions) can't work. Either set TMDB_KEY/OMDB_KEY/WATCHMODE_API_KEY for `--env preview`, or keep using the pass-through recipe in the 2026-09-28 session block
 - [x] **Deploy the layout switch** (`e9e186e` + `181aaab`) — live since 2026-09-28 (production `f7503b66`) Classic stays the default; to make Cinematic the default instead, change `DEFAULT_LAYOUT` in the router at the top of `index.html`
 - [ ] **Cinematic gaps vs Classic**: TV browsing (TV deep links work, but there's no TV tab), the 9-language UI, watchlist, voice search
