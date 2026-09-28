@@ -4,7 +4,7 @@
 
 ## ⚡ Most Recent Session (2026-09-28b) — Layout Toggle Beside the Logo, Pixel-Identical in Both Layouts
 
-Committed and pushed on `main`. **Not deployed yet**; the next `./deploy.sh` ships it. Phone/desktop preview: **https://layout-switch.ratingkino.pages.dev** (Pages Preview `d140f102`, built from `181aaab` with the same `/api` pass-through recipe as below; production byte-identical before and after).
+All commits on `main`, **deployed live on https://findfilm.ai** (Pages production `f7503b66` from `08bb2e6`, 2026-09-28; `./deploy.sh`: 16/16 sensitive paths unpublished, custom domains clean; `/`, `/cinematic/` and both `layout-switch.*?v=8b45db4c` files byte-identical to the repo; live phone round trip Classic → Cinematic → Classic kept the toggle at the same rect; no JS errors). This ships the 2026-09-28 layout switch below for the first time too. Earlier preview: **https://layout-switch.ratingkino.pages.dev** (Pages Preview `d140f102`, built from `181aaab` with the same `/api` pass-through recipe as below; production byte-identical before and after).
 
 | Commit | Feature |
 |--------|---------|
@@ -2604,7 +2604,7 @@ The site is fully installable as a PWA on all platforms.
 ## Pending / Next Steps
 
 - [ ] **Preview-environment secrets** — the Pages preview env has none, so real full-stack previews (branch deploys running their own Functions) can't work. Either set TMDB_KEY/OMDB_KEY/WATCHMODE_API_KEY for `--env preview`, or keep using the pass-through recipe in the 2026-09-28 session block
-- [ ] **Deploy the layout switch** (`e9e186e` + `181aaab`, toggle beside the logo; phone preview https://layout-switch.ratingkino.pages.dev) once it has been tested on a phone: `./deploy.sh`. Classic stays the default; to make Cinematic the default instead, change `DEFAULT_LAYOUT` in the router at the top of `index.html`
+- [x] **Deploy the layout switch** (`e9e186e` + `181aaab`) — live since 2026-09-28 (production `f7503b66`) Classic stays the default; to make Cinematic the default instead, change `DEFAULT_LAYOUT` in the router at the top of `index.html`
 - [ ] **Cinematic gaps vs Classic**: TV browsing (TV deep links work, but there's no TV tab), the 9-language UI, watchlist, voice search
 - [ ] **Beta UI prototype feedback** (now `cinematic/index.html`; old preview https://beta-ui.ratingkino.pages.dev) — collect the owner's feedback, then decide: ship it at `/beta/` (add `beta` to `PUBLIC`), port pieces into `index.html`, or iterate. Not yet in it: TV shows, i18n, watchlist, voice
 - [x] **Deploy `ffa7e37`** (`?movie=` / `?TVShows=` deep links) — live (deployment `29034af3`)
