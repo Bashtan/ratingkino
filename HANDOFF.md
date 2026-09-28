@@ -2,7 +2,21 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-09-27) — Beta UI Prototype (Apple TV × Netflix)
+## ⚡ Most Recent Session (2026-09-28) — Classic ⇄ Cinematic Layout Switch
+
+Committed and pushed on `main`. **Not deployed yet**: the next `./deploy.sh` ships it (Classic stays the default for everyone, and `/cinematic/` goes live).
+
+| Commit | Feature |
+|--------|---------|
+| `e9e186e` | **Two layouts, one entry router.** The Cinematic prototype moved `beta/index.html` → **`cinematic/index.html`**, served at `/cinematic/`, and `cinematic` is now in `deploy.sh` `PUBLIC`. **Why two documents instead of mounting the new UI inside `index.html`:** there's no framework. Classic is one global document with ~20 page-wide listeners (click/keydown/popstate/resize/scroll), its own history handling, a service worker and startup fetches, so sharing a page would put both apps' Escape/Back/scroll logic and network boot in play at once. Separate documents make CSS/JS leakage impossible in both directions. **Layout router** (the FIRST `<script>` in Classic's `<head>`; `<meta charset>` moved above it, which is the only line removed from `index.html`): reads `localStorage.ff_layout` (`'classic'`\|`'cinematic'`; `DEFAULT_LAYOUT = 'classic'` for visitors who haven't chosen). When it's Cinematic and the path is `/`, it calls `window.stop()` (so no Classic scripts, API calls or GA pageview run) and then `location.replace('/cinematic/' + query + hash)`, which carries `?movie=`/`?TVShows=`. `?layout=classic\|cinematic` sets the choice from a link and is stripped from the URL. A `pageshow` (bfcache) re-check handles a choice changed since the page was cached. When the `ff_layout_vt` sessionStorage flag is set, it injects `@view-transition { navigation: auto; }` so the switch crossfades (Chrome 126+, Safari 18.2+; other browsers just navigate). **Classic UI (additive):** `.layout-switch` pill (`.ls-opt[data-layout]` buttons, `aria-pressed`, `.ls-thumb`) at the start of `.header-btns` on desktop/tablet. On phones (≤768px) the header has no room (18 px spare), so the `.ls-compact` icon button sits at the end of `.filter-row-1` (the sticky Movies/TV/Filters bar), hidden ≤340px. `switchLayout('cinematic')` saves the choice, sets the VT flag, slides the thumb (widths measured, so it works for any locale and in RTL), sends a `gtag('event','layout_switch')` and `location.replace()`s after 260 ms (0 with reduced motion). New strings `nav.layout`, `nav.layoutClassic`, `nav.layoutCinematic`, `nav.layoutSwitch` in all 9 locales. **Cinematic:** `#layoutSwitch` `.lsw` mirrored toggle (icons only ≤767px) → `switchToClassic()`. `openDeepLink()` opens `?movie=`/`?TVShows=` in the Quick View (movies **and TV**) and cleans the URL, so Back closes it. The Quick View's "Open in FindFilm" became **Share** (`shareItem()`: native share sheet, else it copies `origin/?movie=<id>`, a layout-agnostic link, and shows "Link copied"). It also got real site favicons, a canonical link to `/`, and the same GA4 property. |
+
+**Verified locally** (`findfilm-full` = `./deploy.sh --stage-only && npx wrangler pages dev --port 8283`, desktop 1440 + phone 375/360/320). Default visitor → Classic with the pill, Classic pressed. Real clicks switch Classic → Cinematic → Classic without adding history entries, and the crossfade opt-in lands on arrival. With Cinematic saved, `/` hands off, and the server log shows **zero Classic API calls** between `GET /` and `GET /cinematic/`. `/?movie=27205` → Inception Quick View, `/?TVShows=1396` → Breaking Bad with TV details, Back closes. `?layout=` works in both directions and keeps other params. Share copies `/?TVShows=1396`. Arabic/German labels, RTL mirroring and the RTL thumb landing are correct. No horizontal overflow at 375/360. Classic smoke test (TV tab, filters drawer, title search, modal + `?movie=`) passes. The only 404s are `/api/cache/*` against the empty local KV (pre-existing, 200 in production). **Gotchas seen while testing:** (1) with the Browser pane hidden, CSS transitions don't advance, so a just-closed Quick View drawer can sit over the Cinematic toggle and swallow a click. That's a test artifact; visible browsers finish it in 0.55 s. (2) If the dev server is down, the service worker serves the cached Classic shell at any URL, `/cinematic/` included. The router only redirects from `/`, so that can't loop, but it looks like "Classic at /cinematic/".
+
+---
+
+## ⚡ Session (2026-09-27) — Beta UI Prototype (Apple TV × Netflix)
+
+> **Superseded path:** `beta/index.html` is now `cinematic/index.html` (see 2026-09-28 above). The `beta-ui.ratingkino.pages.dev` preview still serves the older prototype snapshot.
 
 Committed on `main`. **Not on production**: `beta/` is deliberately absent from `deploy.sh`'s `PUBLIC` allowlist, so `./deploy.sh` never publishes it, and production (`index.html`) is untouched. **Preview link (for phone testing): https://beta-ui.ratingkino.pages.dev**. That's a Cloudflare Pages *Preview* deployment (`c224ee6d`, branch `beta-ui`; production is branch `main`, still `29034af3`, verified byte-identical before and after). Its whole payload is one file, `index.html` = `beta/index.html`: no Functions and no bindings, so the page uses the live findfilm.ai API. Every other path, `/.dev.vars` included, just gets Pages' SPA fallback (the same page), and previews send `X-Robots-Tag: noindex`. **To update the preview** after editing `beta/index.html`, copy it to `<scratch>/site/index.html` and run `npx wrangler pages deploy site --project-name=ratingkino --branch=beta-ui` from `<scratch>`. **Never from the repo root:** wrangler bundles `./functions` relative to the working directory and reads the root `wrangler.toml`, so that would ship the API to a preview environment that has no TMDB/OMDB secrets.
 
@@ -2243,8 +2257,9 @@ ratingkino/
 ├── dist/                 ← generated by deploy.sh, gitignored. Never edit or commit.
 ├── .githooks/pre-commit  ← blocks secret filenames + values from entering git
 ├── index.html            ← entire site: CSS + JS + HTML (~7500 lines)
-├── beta/index.html       ← standalone redesign prototype (Apple TV × Netflix). NOT in
-│                           PUBLIC, so never deployed. Local: launch entry findfilm-beta
+├── cinematic/index.html  ← the Cinematic layout (/cinematic/), a separate document from
+│                           index.html; chosen by the layout router at the top of
+│                           index.html's <head> (localStorage ff_layout). In PUBLIC.
 ├── sw.js                 ← Service Worker (PWA offline cache + install prompt trigger)
 ├── functions/
 │   └── api/[[path]].js   ← Cloudflare Pages Function (API proxy + KV reader + AI)
@@ -2409,6 +2424,9 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 | `activeShareUrl()` | Canonical link for `ACTIVE_MOVIE`, used by `openShare()`, `nativeShare()`, `copyLink()`. `shareMovie(id, type)` is the grid-card equivalent (type passed by `renderCardHTML()`) |
 | `fromTMDb(raw)` / `fromTMDbAs(raw, type)` | Normalize a TMDB list/detail item; the first uses the active tab's `CONTENT_TYPE` (keep it single-arg — it is passed bare to `.map()`), the second takes an explicit `'movie'\|'tv'` |
 | `syncContentTypeUI(type)` | Movies/TV toggle + hero copy + feed-section visibility for a media type; called by `setContentType()` and by `init()` for `?TVShows=` links |
+| Layout router (inline IIFE, first `<script>` in `<head>`) | Picks Classic vs Cinematic before anything renders: `localStorage.ff_layout` \|\| `DEFAULT_LAYOUT`; on Cinematic at `/` it runs `window.stop()` then `location.replace('/cinematic/'+query)`. Also handles `?layout=`, the bfcache `pageshow` re-check, and the `ff_layout_vt` crossfade opt-in |
+| `switchLayout(target)` | Classic → Cinematic: saves `ff_layout`, sets the VT flag, slides `.ls-thumb` in every `.layout-switch`, marks `.ls-compact`, GA `layout_switch`, `location.replace('/cinematic/'+query)` |
+| `switchToClassic()` / `openDeepLink()` / `shareItem(it, btn)` (in `cinematic/index.html`) | Cinematic → Classic (mirror of `switchLayout`) / opens `?movie=`\|`?TVShows=` in the Quick View and cleans the URL / Quick View Share: native sheet, else it copies the layout-agnostic `/?movie=` link |
 
 Backend (`functions/api/[[path]].js`): `_actorMovies(actorName, env)` resolves an actor name → top 12 movie credits via TMDB `/search/person` + `/person/{id}/movie_credits`; used by `handleAISearch()`'s actor-query branch (triggered by `_parseIntent()`'s `actor_search` intent).
 
@@ -2566,7 +2584,9 @@ The site is fully installable as a PWA on all platforms.
 
 ## Pending / Next Steps
 
-- [ ] **Beta UI prototype feedback** (`beta/index.html`, `1bc546f`; preview https://beta-ui.ratingkino.pages.dev) — collect the owner's feedback, then decide: ship it at `/beta/` (add `beta` to `PUBLIC`), port pieces into `index.html`, or iterate. Not yet in it: TV shows, i18n, watchlist, voice
+- [ ] **Deploy the layout switch** (`e9e186e`) once it has been tested locally: `./deploy.sh`. Classic stays the default; to make Cinematic the default instead, change `DEFAULT_LAYOUT` in the router at the top of `index.html`
+- [ ] **Cinematic gaps vs Classic**: TV browsing (TV deep links work, but there's no TV tab), the 9-language UI, watchlist, voice search
+- [ ] **Beta UI prototype feedback** (now `cinematic/index.html`; old preview https://beta-ui.ratingkino.pages.dev) — collect the owner's feedback, then decide: ship it at `/beta/` (add `beta` to `PUBLIC`), port pieces into `index.html`, or iterate. Not yet in it: TV shows, i18n, watchlist, voice
 - [x] **Deploy `ffa7e37`** (`?movie=` / `?TVShows=` deep links) — live (deployment `29034af3`)
 - [ ] **Cast-to-TV receiver for TV shows** — `/tv/:id` (`tv/index.html`) only fetches `/movie/{id}`; needs a media-type signal in its URL and a TV-aware fetch
 - [ ] **Media type through id-only lookups** — `MOVIES.find(x => x.id === id)` sites (`openMovie`, `enrichNow`, `updateCardInGrid`, watchlist, card `onclick`s) can still collide across movie/TV ids via actor filmographies
