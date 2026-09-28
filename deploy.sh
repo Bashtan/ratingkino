@@ -52,6 +52,7 @@ PUBLIC=(
   functions
   pitch
   tv
+  cinematic      # the Cinematic layout (/cinematic/), chosen by the router in index.html
 )
 
 # ── Stage ──────────────────────────────────────────────────────────────────

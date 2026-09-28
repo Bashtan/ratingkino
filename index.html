@@ -1,6 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<meta charset="UTF-8">
+<!-- ── Layout router — keep this the FIRST script on the page ────────────────
+     FindFilm has two layouts in two separate documents: Classic (this file,
+     served at /) and Cinematic (/cinematic/index.html). They share no CSS and
+     no JS — only the `ff_layout` localStorage choice — so neither can leak
+     into or regress the other. This is the one place that picks between them.
+     It runs before analytics, styles and the app: when the choice is
+     Cinematic it stops this document and replaces it with /cinematic/,
+     carrying the query (so ?movie= / ?TVShows= links still open), with
+     location.replace so Back is never trapped. `?layout=classic|cinematic`
+     sets the choice from a link. DEFAULT_LAYOUT is what visitors get before
+     they have chosen. The toggle itself: .layout-switch / switchLayout(). -->
+<script>
+(function () {
+  var KEY = 'ff_layout';
+  var DEFAULT_LAYOUT = 'classic';            // 'classic' | 'cinematic'
+  function chosen() {
+    try { return localStorage.getItem(KEY) || DEFAULT_LAYOUT; } catch (e) { return DEFAULT_LAYOUT; }
+  }
+  function toCinematic(search) {
+    try { window.stop(); } catch (e) {}      // no Classic scripts, requests or pageview for a page being replaced
+    location.replace('/cinematic/' + search + location.hash);
+  }
+  try {
+    var q = new URLSearchParams(location.search);
+    var forced = q.get('layout');
+    if (forced === 'classic' || forced === 'cinematic') {
+      try { localStorage.setItem(KEY, forced); } catch (e) {}
+      q.delete('layout');
+    } else {
+      forced = null;
+    }
+    var rest = q.toString() ? '?' + q.toString() : '';
+    if (location.pathname === '/' && (forced || chosen()) === 'cinematic') { toCinematic(rest); return; }
+    if (forced) history.replaceState(history.state, '', location.pathname + rest + location.hash);
+    // Arriving from the Cinematic toggle: join the cross-document crossfade it
+    // started (both documents must opt in; the flag keeps every other load plain).
+    if (sessionStorage.getItem('ff_layout_vt')) {
+      sessionStorage.removeItem('ff_layout_vt');
+      var s = document.createElement('style');
+      s.textContent = '@view-transition { navigation: auto; }';
+      document.head.appendChild(s);
+    }
+  } catch (e) {}
+  // A Classic page restored from the back/forward cache never re-runs this
+  // script, so honour a Cinematic choice made since it was cached.
+  addEventListener('pageshow', function (e) {
+    if (e.persisted && location.pathname === '/' && chosen() === 'cinematic') toCinematic(location.search);
+  });
+})();
+</script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-XF0GTFNRHX"></script>
 <script>
@@ -9,7 +60,6 @@
   gtag('js', new Date());
   gtag('config', 'G-XF0GTFNRHX');
 </script>
-<meta charset="UTF-8">
 <!-- interactive-widget=resizes-visual: when the virtual keyboard opens, resize ONLY the
      visual viewport, never the layout viewport / initial containing block. Without it,
      Android Chrome (and iOS 17+) shrink the layout viewport, which re-resolves every
@@ -495,6 +545,72 @@ header {
 }
 .hdr-feat svg { width: 18px; height: 18px; }
 .hdr-feat:hover { background: rgba(99,102,241,0.16); border-color: rgba(99,102,241,0.5); color: #fff; }
+
+/* ── Layout switch: Classic ⇄ Cinematic ───────────────────────────────────
+   Cinematic is a separate document (/cinematic/) picked by the layout router
+   at the top of <head>; switchLayout() saves the choice and hands off to it.
+   Desktop/tablet: a two-option pill in the header, styled like .ct-toggle.
+   Phones: the header has no room, so .ls-compact sits in the sticky Movies/TV
+   bar instead. Every selector here is .layout-switch / .ls-* — names used
+   nowhere else in this file. */
+.layout-switch {
+  position: relative; display: flex; align-items: center; flex-shrink: 0;
+  height: 32px; padding: 2px; margin-inline-end: 4px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 18px;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.ls-opt {
+  position: relative; z-index: 1;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 26px; padding: 0 11px;
+  border: none; border-radius: 14px; background: transparent;
+  color: #94a3b8; font-family: 'Montserrat', sans-serif;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  white-space: nowrap; cursor: pointer;
+  transition: color 0.2s, background 0.25s, box-shadow 0.25s;
+}
+.ls-opt svg { flex-shrink: 0; }
+.ls-opt:hover { color: #e2e8f0; }
+.ls-opt[aria-pressed="true"] {
+  color: #fff; cursor: default;
+  background: linear-gradient(135deg, #6366f1, #7c3aed);
+  box-shadow: 0 2px 10px rgba(99,102,241,0.4);
+}
+/* While switching, the fill leaves the buttons and rides a thumb that slides
+   to the chosen option (positions are measured in switchLayout()). */
+.ls-thumb {
+  position: absolute; top: 2px; bottom: 2px; left: 0; border-radius: 14px;
+  background: linear-gradient(135deg, #6366f1, #7c3aed);
+  box-shadow: 0 2px 10px rgba(99,102,241,0.4);
+  opacity: 0; pointer-events: none;
+  transition: transform 0.3s cubic-bezier(.22,1,.36,1), width 0.3s cubic-bezier(.22,1,.36,1);
+}
+.layout-switch.is-sliding .ls-thumb { opacity: 1; }
+.layout-switch.is-sliding .ls-opt { background: transparent; box-shadow: none; color: #94a3b8; }
+.layout-switch.is-sliding .ls-opt[aria-pressed="true"] { color: #fff; }
+.ls-compact { display: none; }
+@media (max-width: 768px) {
+  .layout-switch { display: none; }
+  .ls-compact {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 30px; height: 30px; padding: 0;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 50%;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    color: #c4b5fd; cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.2s;
+  }
+  .ls-compact:active { transform: scale(0.92); }
+  .ls-compact.is-switching {
+    color: #fff; border-color: transparent;
+    background: linear-gradient(135deg, #6366f1, #7c3aed);
+    box-shadow: 0 2px 10px rgba(99,102,241,0.4);
+  }
+}
+/* At 320px that bar has no room left: the switch hides rather than overflow. */
+@media (max-width: 340px) { .ls-compact { display: none; } }
+@media (prefers-reduced-motion: reduce) { .ls-thumb { transition: none; } }
 
 /* Styled hover tooltip for the icon-only header actions. These buttons are
    pure glyphs with no label, so what they do was previously only discoverable
@@ -5409,6 +5525,19 @@ if ('serviceWorker' in navigator) {
     </a>
 
     <div class="header-btns">
+      <!-- Layout switch (Classic ⇄ Cinematic): see the router at the top of <head>
+           and switchLayout(). Phones get .ls-compact in the Movies/TV bar instead. -->
+      <div class="layout-switch" role="group" aria-label="Layout" data-i18n-aria="nav.layout">
+        <span class="ls-thumb" aria-hidden="true"></span>
+        <button class="ls-opt" type="button" data-layout="classic" aria-pressed="true">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></svg>
+          <span data-i18n="nav.layoutClassic">Classic</span>
+        </button>
+        <button class="ls-opt" type="button" data-layout="cinematic" aria-pressed="false" onclick="switchLayout('cinematic')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>
+          <span data-i18n="nav.layoutCinematic">Cinematic</span>
+        </button>
+      </div>
       <!-- Mobile-only: the 3 discovery actions live here as dense icon buttons
            (≤768px). On desktop they live as text-link tabs in the sub-nav (.nav-feats). -->
       <div class="hdr-feats" role="group" aria-label="Quick discovery actions">
@@ -5698,6 +5827,10 @@ if ('serviceWorker' in navigator) {
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
       <span data-i18n="filter.filters">Filters</span>
       <span class="filters-count" id="filtersCount"></span>
+    </button>
+    <!-- Phone-only layout switch (the header pill has no room ≤768px). -->
+    <button class="ls-compact" type="button" onclick="switchLayout('cinematic')" aria-label="Switch to the Cinematic layout" data-i18n-aria="nav.layoutSwitch">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>
     </button>
   </div>
 </div>
@@ -6245,6 +6378,10 @@ const TRANSLATIONS = {
   en: {
     'nav.movies':           'Movies',
     'nav.tvShows':          'TV Shows',
+    'nav.layout':           'Layout',
+    'nav.layoutClassic':    'Classic',
+    'nav.layoutCinematic':  'Cinematic',
+    'nav.layoutSwitch':     'Switch to the Cinematic layout',
     'filter.all':           'All',
     'filter.country':       'Country',
     'filter.allCountries':  'All Countries',
@@ -6641,6 +6778,10 @@ const TRANSLATIONS = {
   es: {
     'nav.movies':           'Películas',
     'nav.tvShows':          'Series',
+    'nav.layout':           'Diseño',
+    'nav.layoutClassic':    'Clásico',
+    'nav.layoutCinematic':  'Cinemático',
+    'nav.layoutSwitch':     'Cambiar al diseño Cinemático',
     'filter.all':           'Todo',
     'filter.country':       'País',
     'filter.allCountries':  'Todos los países',
@@ -6987,6 +7128,10 @@ const TRANSLATIONS = {
   fr: {
     'nav.movies':           'Films',
     'nav.tvShows':          'Séries',
+    'nav.layout':           'Affichage',
+    'nav.layoutClassic':    'Classique',
+    'nav.layoutCinematic':  'Cinéma',
+    'nav.layoutSwitch':     'Passer à l’affichage Cinéma',
     'filter.all':           'Tous',
     'filter.country':       'Pays',
     'filter.allCountries':  'Tous les pays',
@@ -7333,6 +7478,10 @@ const TRANSLATIONS = {
   zh: {
     'nav.movies':           '电影',
     'nav.tvShows':          '电视剧',
+    'nav.layout':           '布局',
+    'nav.layoutClassic':    '经典',
+    'nav.layoutCinematic':  '影院',
+    'nav.layoutSwitch':     '切换到影院布局',
     'filter.all':           '全部',
     'filter.country':       '国家',
     'filter.allCountries':  '所有国家',
@@ -7679,6 +7828,10 @@ const TRANSLATIONS = {
   ar: {
     'nav.movies':           'أفلام',
     'nav.tvShows':          'مسلسلات',
+    'nav.layout':           'التخطيط',
+    'nav.layoutClassic':    'كلاسيكي',
+    'nav.layoutCinematic':  'سينمائي',
+    'nav.layoutSwitch':     'التبديل إلى التخطيط السينمائي',
     'filter.all':           'الكل',
     'filter.country':       'الدولة',
     'filter.allCountries':  'كل الدول',
@@ -8025,6 +8178,10 @@ const TRANSLATIONS = {
   uk: {
     'nav.movies':           'Фільми',
     'nav.tvShows':          'Серіали',
+    'nav.layout':           'Макет',
+    'nav.layoutClassic':    'Класичний',
+    'nav.layoutCinematic':  'Кіно',
+    'nav.layoutSwitch':     'Перейти до макета «Кіно»',
     'filter.all':           'Всі',
     'filter.country':       'Країна',
     'filter.allCountries':  'Всі країни',
@@ -8377,6 +8534,10 @@ const TRANSLATIONS = {
   de: {
     'nav.movies':           'Filme',
     'nav.tvShows':          'Serien',
+    'nav.layout':           'Layout',
+    'nav.layoutClassic':    'Klassisch',
+    'nav.layoutCinematic':  'Kino',
+    'nav.layoutSwitch':     'Zum Kino-Layout wechseln',
     'filter.all':           'Alle',
     'filter.country':       'Land',
     'filter.allCountries':  'Alle Länder',
@@ -8747,6 +8908,10 @@ const TRANSLATIONS = {
   sv: {
     'nav.movies':           'Filmer',
     'nav.tvShows':          'TV-serier',
+    'nav.layout':           'Layout',
+    'nav.layoutClassic':    'Klassisk',
+    'nav.layoutCinematic':  'Bio',
+    'nav.layoutSwitch':     'Byt till Bio-layouten',
     'filter.all':           'Alla',
     'filter.country':       'Land',
     'filter.allCountries':  'Alla länder',
@@ -9117,6 +9282,10 @@ const TRANSLATIONS = {
   no: {
     'nav.movies':           'Filmer',
     'nav.tvShows':          'TV-serier',
+    'nav.layout':           'Oppsett',
+    'nav.layoutClassic':    'Klassisk',
+    'nav.layoutCinematic':  'Kino',
+    'nav.layoutSwitch':     'Bytt til Kino-oppsettet',
     'filter.all':           'Alle',
     'filter.country':       'Land',
     'filter.allCountries':  'Alle land',
@@ -10634,6 +10803,51 @@ function setContentType(type) {
   ACTIVE_ENRICHERS = 0;
   updateFilterCount();
   loadGenres().then(() => loadMovies(1, false));
+}
+
+/* ═══════════════════════════════════
+   LAYOUT SWITCH — Classic ⇄ Cinematic
+   The Cinematic layout is its own document (/cinematic/), picked by the
+   router at the top of <head>. This saves the choice and hands off to it —
+   location.replace(), not a push, so Back never bounces between layouts.
+   Classic is this page, so only 'cinematic' does anything here.
+═══════════════════════════════════ */
+let _layoutSwitching = false;
+function switchLayout(target) {
+  if (target !== 'cinematic' || _layoutSwitching) return;
+  _layoutSwitching = true;
+  try {
+    localStorage.setItem('ff_layout', 'cinematic');
+    sessionStorage.setItem('ff_layout_vt', '1');   // /cinematic/ joins the crossfade
+  } catch {}
+  // Header pill: slide a thumb from Classic to Cinematic. Measured rather than
+  // hard-coded, so it fits every language's labels and works the same in RTL.
+  document.querySelectorAll('.layout-switch').forEach(sw => {
+    const from  = sw.querySelector('.ls-opt[aria-pressed="true"]');
+    const to    = sw.querySelector('.ls-opt[data-layout="cinematic"]');
+    const thumb = sw.querySelector('.ls-thumb');
+    if (!from || !to || !thumb || !sw.offsetWidth) return;   // hidden on phones
+    thumb.style.transition = 'none';
+    thumb.style.width = from.offsetWidth + 'px';
+    thumb.style.transform = `translateX(${from.offsetLeft}px)`;
+    sw.classList.add('is-sliding');
+    void thumb.offsetWidth;                                   // commit the start position
+    thumb.style.transition = '';
+    thumb.style.width = to.offsetWidth + 'px';
+    thumb.style.transform = `translateX(${to.offsetLeft}px)`;
+    from.setAttribute('aria-pressed', 'false');
+    to.setAttribute('aria-pressed', 'true');
+  });
+  document.querySelectorAll('.ls-compact').forEach(b => b.classList.add('is-switching'));
+  // Cross-document crossfade (Chrome 126+, Safari 18.2+); elsewhere a plain navigation.
+  const vt = document.createElement('style');
+  vt.textContent = '@view-transition { navigation: auto; }';
+  document.head.appendChild(vt);
+  if (typeof gtag === 'function') gtag('event', 'layout_switch', { layout: 'cinematic' });
+  // Carry the query along, so an open ?movie= / ?TVShows= title reopens there.
+  const url = '/cinematic/' + location.search + location.hash;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  setTimeout(() => location.replace(url), reduce ? 0 : 260);
 }
 
 /* ═══════════════════════════════════
