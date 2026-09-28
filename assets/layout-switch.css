@@ -1,0 +1,114 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Brand + layout switch — SHARED by / (Classic, index.html) and /cinematic/
+   (Cinematic, cinematic/index.html).
+
+   Both documents link this one file and use the same markup for the logo and
+   the Classic | Cinematic toggle, so the two are identical by construction.
+   Switching layouts loads the other document; for the toggle to sit on the
+   same pixels before and after, each header also provides the same row:
+     desktop (≥769px)  64px tall; container max-width 1200px, 20px side padding,
+                       12px gap — Classic's header / .header-inner
+     phones (≤768px)   52px tall; 14px side padding (12px ≤375px), 10px gap
+   and both add the env(safe-area-inset-*) paddings. If you change either
+   header's geometry, change the other one to match.
+
+   Every property is set explicitly: neither page's global resets (Classic's
+   `*` margin reset, Cinematic's `button` reset) can make it render differently.
+
+   Both pages link this file (and layout-switch.js) as ?v=<hash>. The service
+   worker serves /assets/* stale-while-revalidate, so after editing either
+   file, bump ?v= in BOTH index.html and cinematic/index.html — otherwise
+   returning visitors get the old copy once, and possibly a mismatched one.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Page scrollbar ──────────────────────────────────────────────────────── */
+/* Part of the shared geometry: on desktop the header's centered 1200px row sits
+   in the width left beside the scrollbar, so both layouts need the same one
+   (Classic's: a 5px bar in a permanently reserved gutter). Colours stay each
+   layout's own; a styled bar needs its thumb/track styled too. */
+html { scrollbar-gutter: stable; }
+::-webkit-scrollbar { width: 5px; }
+/* …but Chromium only reserves that gutter while a page actually scrolls, and
+   Classic's home can be exactly one screen tall while Cinematic always
+   scrolls. On wide screens the header row is centred, so a scrollbar in one
+   layout and none in the other would shift it by half the bar. Centre it on
+   the full window width (100vw) instead, which no scrollbar changes. Narrower
+   than 1200px the row is full-width and left-anchored anyway. Both pages'
+   header rows are named here on purpose. */
+@media (min-width: 1200px) {
+  .header-inner, .topbar-inner { margin-left: max(0px, calc((100vw - 1200px) / 2)); margin-right: auto; }
+}
+
+/* ── Logo ────────────────────────────────────────────────────────────────── */
+/* Classic's logo, as defined in index.html, plus two things: a fixed width
+   (the rendered logo is 119.5px), so the toggle's position never depends on
+   when the Montserrat web font arrives; and nowrap, so a fallback font can't
+   wrap the wordmark onto two lines. On phones the wordmark goes: the header
+   has no room for it next to the toggle and Classic's five header buttons. */
+.logo {
+  display: flex; align-items: center; gap: 7px; flex-shrink: 0;
+  width: 120px; margin: 0;
+  text-decoration: none; transition: opacity 0.2s;
+  view-transition-name: ff-logo;
+}
+.logo:hover { opacity: 0.85; }
+.logo:hover .logo-icon { filter: drop-shadow(0 0 8px rgba(139,92,246,0.75)) drop-shadow(0 0 18px rgba(6,182,212,0.45)); }
+.logo-icon { display: block; width: 28px; height: 28px; margin: 0; flex-shrink: 0; transition: filter 0.25s; }
+.logo-text { display: flex; flex-direction: column; gap: 0; margin: 0; }
+.logo-name {
+  margin: 0; white-space: nowrap;
+  font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 15px;
+  color: #fff; letter-spacing: -0.5px; line-height: 1.1;
+}
+.logo-ai { color: #06B6D4; }
+@media (max-width: 440px) {
+  .logo { width: 28px; }
+  .logo-text { display: none; }
+}
+
+/* ── Classic | Cinematic toggle ─────────────────────────────────────────── */
+/* The pressed option carries the white fill. While switching, the fill moves
+   onto a thumb that slides to the chosen option (layout-switch.js measures
+   the positions); the page then crossfades to the other document, where the
+   same toggle — `view-transition-name` — is already in its new state. */
+.ffl {
+  position: relative; display: flex; align-items: center; flex-shrink: 0;
+  box-sizing: border-box; height: 32px; margin: 0; padding: 3px;
+  border: 0; border-radius: 999px; background: rgba(255,255,255,0.07);
+  direction: ltr;                  /* same option order in every language */
+  view-transition-name: ff-layout-switch;
+}
+.ffl-opt {
+  position: relative; z-index: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  box-sizing: border-box; height: 26px; margin: 0; padding: 0 12px;
+  border: 0; border-radius: 999px; background: transparent; color: #a1a1aa;
+  font-family: 'Montserrat', sans-serif; font-size: 10.5px; font-weight: 700;
+  font-style: normal; line-height: 1; letter-spacing: 0.6px; text-transform: uppercase;
+  white-space: nowrap; cursor: pointer;
+  -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent;
+  transition: color 0.2s, background-color 0.25s;
+}
+.ffl-opt svg { display: block; flex-shrink: 0; width: 12px; height: 12px; margin: 0; }
+.ffl-opt span { display: block; margin: 0; }
+.ffl-opt:hover { color: #fff; }
+.ffl-opt[aria-pressed="true"] { background: #fff; color: #050505; cursor: default; }
+.ffl-opt:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.ffl-thumb {
+  position: absolute; top: 3px; bottom: 3px; left: 0; margin: 0;
+  border-radius: 999px; background: #fff; opacity: 0; pointer-events: none;
+  transition: transform 0.3s cubic-bezier(.22,1,.36,1), width 0.3s cubic-bezier(.22,1,.36,1);
+}
+.ffl.is-sliding .ffl-thumb { opacity: 1; }
+.ffl.is-sliding .ffl-opt { background: transparent; color: #a1a1aa; }
+.ffl.is-sliding .ffl-opt[aria-pressed="true"] { color: #050505; }
+
+/* Phones: icons only (each button still has an aria-label). */
+@media (max-width: 768px) {
+  .ffl-opt { width: 30px; padding: 0; }
+  .ffl-opt span { display: none; }
+  .ffl-opt svg { width: 13px; height: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ffl-thumb { transition: none; }
+}

@@ -6,12 +6,13 @@
   FindFilm.ai — CINEMATIC layout (Apple TV × Netflix direction), served at /cinematic/.
 
   FindFilm has two layouts in two separate documents: Classic (/index.html,
-  served at /) and this one. They share no code, CSS or storage beyond the
-  `ff_layout` preference, so neither can leak into or regress the other.
+  served at /) and this one. Their CSS and JS are separate, so neither can
+  leak into or regress the other. What they share on purpose is the header's
+  logo + Classic | Cinematic toggle (/assets/layout-switch.css + .js, same
+  markup in both), so the toggle stays on the same pixels across a switch.
   The router at the top of /index.html's <head> sends visitors whose saved
   choice is Cinematic here — along with any ?movie= / ?TVShows= deep link,
-  which this page opens in its Quick View. The header toggle's
-  switchToClassic() sets the choice back and returns to /.
+  which this page opens in its Quick View.
 
   Data: the FindFilm API. Same-origin /api when the page is served by the
   site itself (production, `wrangler pages dev`); otherwise — a plain static
@@ -56,6 +57,8 @@
 <!-- Inter only ever renders where there is no system SF font (Windows, Android,
      Linux): -apple-system wins on Apple devices, and unused faces never download. -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<!-- Montserrat: the logo and layout toggle's face (same font files Classic uses). -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap">
 <style>
 /* ═══════════════════════════════════════════════════════════════
    TOKENS
@@ -74,9 +77,8 @@
   --r-card: 8px;
   --ease-out: cubic-bezier(.22, 1, .36, 1);
   --ease-sheet: cubic-bezier(.32, .72, 0, 1);
-  --gutter: clamp(16px, 4vw, 48px);
+  --gutter: 20px;                                    /* = Classic's header padding; 14px ≤768, 12px ≤375 */
   --header-h: 64px;
-  --sbw: 0px;                                         /* scrollbar width, set while scroll-locked */
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter",
           "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
 }
@@ -87,8 +89,14 @@
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { background: var(--bg); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* Scroll lock needs no scrollbar compensation: the gutter is permanently
+   reserved (scrollbar-gutter: stable, /assets/layout-switch.css), so nothing
+   moves when the bar goes away. */
 html.locked { overflow: hidden; }
-html.locked body { padding-right: var(--sbw); }
+/* The page scrollbar's width is shared with Classic (layout-switch.css); these are its colours. */
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .22); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, .38); }
 body {
   margin: 0; min-height: 100vh;
   background: var(--bg); color: var(--text);
@@ -136,8 +144,10 @@ img.fade.loaded { opacity: 1; }
 /* ═══════════════════════════════════════════════════════════════
    HEADER — transparent over the hero, glass once the page scrolls
 ═══════════════════════════════════════════════════════════════ */
-.topbar { position: fixed; inset: 0 0 auto 0; z-index: 50; padding-top: env(safe-area-inset-top); }
-html.locked .topbar { padding-right: var(--sbw); }
+.topbar {
+  position: fixed; inset: 0 0 auto 0; z-index: 50;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+}
 .topbar::before {
   content: ""; position: absolute; inset: 0;
   background: rgba(10, 10, 12, .62);
@@ -147,16 +157,8 @@ html.locked .topbar { padding-right: var(--sbw); }
 }
 .topbar.scrolled::before { opacity: 1; }
 .topbar-inner {
-  position: relative; height: var(--header-h); max-width: 1680px; margin: 0 auto;
-  padding: 0 var(--gutter); display: flex; align-items: center; gap: 20px;
-}
-.brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.brand-mark { width: 30px; height: 30px; border-radius: 9px; background: #fff; color: #050505; display: grid; place-items: center; }
-.brand-word { font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
-.brand-word span { color: var(--text-2); font-weight: 600; }
-.beta-pill {
-  font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--text-2); background: var(--fill-2); padding: 3px 8px; border-radius: 999px;
+  position: relative; height: var(--header-h); max-width: 1200px; margin: 0 auto;
+  padding: 0 var(--gutter); display: flex; align-items: center; gap: 12px;
 }
 .mini-search {
   position: relative; flex: 1; max-width: 520px; height: 40px; margin: 0 auto;
@@ -183,26 +185,6 @@ html.locked .topbar { padding-right: var(--sbw); }
 .mini-search.loading::after { left: 0; }
 @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
 .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
-/* Layout toggle (Classic ⇄ Cinematic) — the mirror of the pill in Classic's
-   header. The pressed option carries the white fill; while switching, a thumb
-   slides from one option to the other (see switchToClassic()). */
-.lsw { position: relative; display: flex; align-items: center; height: 36px; padding: 3px; border-radius: 999px; background: var(--fill-1); }
-.lsw-opt {
-  position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 6px;
-  height: 30px; padding: 0 13px; border-radius: 999px;
-  font-size: 13px; font-weight: 600; letter-spacing: -.005em; color: var(--text-2);
-  transition: color .25s var(--ease-out), background-color .25s var(--ease-out);
-}
-.lsw-opt svg { flex-shrink: 0; }
-.lsw-opt:hover { color: #fff; }
-.lsw-opt[aria-pressed="true"] { background: #fff; color: #050505; cursor: default; }
-.lsw-thumb {
-  position: absolute; top: 3px; bottom: 3px; left: 0; border-radius: 999px; background: #fff;
-  opacity: 0; transition: transform .3s var(--ease-out), width .3s var(--ease-out);
-}
-.lsw.is-sliding .lsw-thumb { opacity: 1; }
-.lsw.is-sliding .lsw-opt { background: transparent; color: var(--text-2); }
-.lsw.is-sliding .lsw-opt[aria-pressed="true"] { color: #050505; }
 .icon-btn {
   width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center;
   color: #fff; background: var(--fill-1); transition: background-color .2s;
@@ -336,7 +318,7 @@ html.locked .topbar { padding-right: var(--sbw); }
    RESULTS + CINEMATIC GRID
 ═══════════════════════════════════════════════════════════════ */
 .results {
-  position: relative; max-width: 1680px; margin: 0 auto;
+  position: relative; max-width: 1200px; margin: 0 auto;
   padding: 8px var(--gutter) 80px; scroll-margin-top: calc(var(--header-h) + 12px);
   /* Tall enough that a short result set (AI returns ~6) can still be scrolled
      up under the header, so every search settles in the same place. */
@@ -423,7 +405,7 @@ html.locked .topbar { padding-right: var(--sbw); }
 .state-sub { margin: 8px auto 22px; max-width: 420px; color: var(--text-2); }
 .sentinel { height: 1px; }
 
-.foot { max-width: 1680px; margin: 0 auto; padding: 0 var(--gutter) calc(40px + env(safe-area-inset-bottom)); color: var(--text-3); font-size: 12.5px; line-height: 1.6; }
+.foot { max-width: 1200px; margin: 0 auto; padding: 0 var(--gutter) calc(40px + env(safe-area-inset-bottom)); color: var(--text-3); font-size: 12.5px; line-height: 1.6; }
 .foot a { color: var(--text-2); }
 .foot a:hover { color: #fff; }
 
@@ -553,17 +535,22 @@ html.locked .topbar { padding-right: var(--sbw); }
 /* ═══════════════════════════════════════════════════════════════
    RESPONSIVE
 ═══════════════════════════════════════════════════════════════ */
+/* Header row = Classic's, breakpoint for breakpoint (768px / 375px, not this
+   file's 767px), so the logo and toggle land on the same pixels in both
+   layouts. See /assets/layout-switch.css. */
+@media (max-width: 768px) {
+  :root { --header-h: 52px; --gutter: 14px; }
+  .topbar-inner { gap: 10px; }
+}
+@media (max-width: 375px) {
+  :root { --gutter: 12px; }
+}
 @media (max-width: 1023px) {
   .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 22px 14px; }
 }
 @media (max-width: 767px) {
-  :root { --header-h: 56px; }
   .mini-search { display: none; }
   .topbar.show-mini .mob-search { display: grid; }
-  .brand-word { font-size: 17px; }
-  .lsw { height: 34px; }
-  .lsw-opt { height: 28px; padding: 0 10px; }
-  .lsw-opt span { display: none; }            /* icons only on phones; aria-labels keep the names */
   .hero { min-height: auto; padding-top: calc(var(--header-h) + env(safe-area-inset-top) + 44px); padding-bottom: 36px; }
   .mosaic { grid-template-columns: repeat(5, 1fr); gap: 10px; }
   .hero-sub { margin-top: 14px; }
@@ -600,19 +587,50 @@ html.locked .topbar { padding-right: var(--sbw); }
   .card:hover, .more .card:hover { transform: none; }
 }
 </style>
+<!-- Logo + layout toggle, shared with Classic (index.html) — see the comment above. -->
+<link rel="stylesheet" href="/assets/layout-switch.css?v=8b45db4c">
+<script src="/assets/layout-switch.js?v=8b45db4c" defer></script>
 </head>
 <body>
 <a class="skip" href="#results">Skip to results</a>
 
 <header class="topbar" id="topbar">
   <div class="topbar-inner">
-    <a class="brand" href="./" aria-label="FindFilm.ai — home">
-      <span class="brand-mark" aria-hidden="true">
-        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 1.5h10.2v3.2H6.6v2.6h5.6v3.1H6.6v4.1H3z" fill="currentColor"/></svg>
-      </span>
-      <span class="brand-word">FindFilm<span>.ai</span></span>
-      <span class="beta-pill">Beta</span>
+    <!-- Logo + layout toggle: the same markup as Classic's header (index.html);
+         styles and behaviour come from /assets/layout-switch.css + .js, so both
+         land on the same pixels in either layout. -->
+    <a class="logo" href="/cinematic/" aria-label="FindFilm.ai — home">
+      <svg class="logo-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="ffG" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#8B5CF6"/>
+            <stop offset="100%" stop-color="#06B6D4"/>
+          </linearGradient>
+          <filter id="ffGl" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="1.4" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <rect width="36" height="36" rx="9" fill="url(#ffG)" opacity="0.13"/>
+        <path d="M7 6 L7 30 M7 6 L24 6 M7 17 L19 17"
+              stroke="url(#ffG)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#ffGl)"/>
+        <path d="M19 20.5 L30 25.5 L19 30.5 Z" fill="url(#ffG)" filter="url(#ffGl)"/>
+      </svg>
+      <div class="logo-text">
+        <div class="logo-name">FindFilm<span class="logo-ai">.ai</span></div>
+      </div>
     </a>
+    <div class="ffl" role="group" aria-label="Layout">
+      <span class="ffl-thumb" aria-hidden="true"></span>
+      <button class="ffl-opt" type="button" data-layout="classic" aria-pressed="false" aria-label="Classic layout">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></svg>
+        <span>Classic</span>
+      </button>
+      <button class="ffl-opt" type="button" data-layout="cinematic" aria-pressed="true" aria-label="Cinematic layout">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>
+        <span>Cinematic</span>
+      </button>
+    </div>
     <form class="mini-search" id="miniSearch" role="search" aria-label="Search films">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="miniInput" type="search" placeholder="Ask FindFilm AI…" enterkeyhint="search" autocomplete="off" spellcheck="false" maxlength="300" aria-label="Describe what you want to watch">
@@ -622,17 +640,6 @@ html.locked .topbar { padding-right: var(--sbw); }
       <button class="icon-btn mob-search" id="mobSearchBtn" type="button" aria-label="Search">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       </button>
-      <div class="lsw" id="layoutSwitch" role="group" aria-label="Layout">
-        <span class="lsw-thumb" aria-hidden="true"></span>
-        <button class="lsw-opt" type="button" data-layout="classic" aria-pressed="false" aria-label="Classic layout">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></svg>
-          <span>Classic</span>
-        </button>
-        <button class="lsw-opt" type="button" data-layout="cinematic" aria-pressed="true" aria-label="Cinematic layout">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>
-          <span>Cinematic</span>
-        </button>
-      </div>
     </div>
   </div>
 </header>
@@ -643,7 +650,7 @@ html.locked .topbar { padding-right: var(--sbw); }
     <div class="hero-inner">
       <p class="eyebrow">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>
-        FindFilm AI
+        FindFilm AI · Beta
       </p>
       <h1 class="hero-title" id="heroTitle">What are you in the mood for?</h1>
       <p class="hero-sub">Describe a feeling, a plot, or a vibe. We’ll find the film.</p>
@@ -1532,14 +1539,7 @@ async function renderQV(it) {
 }
 
 function lockScroll(on) {
-  const root = document.documentElement;
-  if (on) {
-    root.style.setProperty('--sbw', `${innerWidth - root.clientWidth}px`);
-    root.classList.add('locked');
-  } else {
-    root.classList.remove('locked');
-    root.style.setProperty('--sbw', '0px');
-  }
+  document.documentElement.classList.toggle('locked', on);
 }
 
 function showQV() {
@@ -1690,47 +1690,6 @@ document.addEventListener('keydown', e => {
   const typing = el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable);
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); focusSearch(); return; }
   if (e.key === '/' && !typing) { e.preventDefault(); focusSearch(); }
-});
-
-/* ═══════════════════════════════════════════════════════════════
-   LAYOUT SWITCH — back to Classic
-   Classic is its own document at /. The choice is saved first, then this
-   page is *replaced* rather than pushed, so Back never bounces between the
-   two layouts. The topbar is inert while the Quick View is open, so this
-   only ever runs from the grid.
-═══════════════════════════════════════════════════════════════ */
-const layoutSwitch = $('#layoutSwitch');
-let switchingLayout = false;
-function switchToClassic() {
-  if (switchingLayout) return;
-  switchingLayout = true;
-  try {
-    localStorage.setItem('ff_layout', 'classic');
-    sessionStorage.setItem('ff_layout_vt', '1');   // Classic's router joins the crossfade
-  } catch { /* storage blocked: still switch for this visit */ }
-  // Slide a thumb from the pressed option to "Classic" instead of just swapping fills.
-  const from = layoutSwitch.querySelector('[aria-pressed="true"]');
-  const to = layoutSwitch.querySelector('[data-layout="classic"]');
-  const thumb = layoutSwitch.querySelector('.lsw-thumb');
-  thumb.style.transition = 'none';
-  thumb.style.width = `${from.offsetWidth}px`;
-  thumb.style.transform = `translateX(${from.offsetLeft}px)`;
-  layoutSwitch.classList.add('is-sliding');
-  void thumb.offsetWidth;                          // commit the start position before animating
-  thumb.style.transition = '';
-  thumb.style.width = `${to.offsetWidth}px`;
-  thumb.style.transform = `translateX(${to.offsetLeft}px)`;
-  from.setAttribute('aria-pressed', 'false');
-  to.setAttribute('aria-pressed', 'true');
-  // Cross-document crossfade (Chrome 126+, Safari 18.2+); elsewhere a plain navigation.
-  const vt = document.createElement('style');
-  vt.textContent = '@view-transition { navigation: auto; }';
-  document.head.appendChild(vt);
-  if (typeof gtag === 'function') gtag('event', 'layout_switch', { layout: 'classic' });
-  setTimeout(() => location.replace('/'), reduceMotion.matches ? 0 : 260);
-}
-layoutSwitch.addEventListener('click', e => {
-  if (e.target.closest('[data-layout="classic"]')) switchToClassic();
 });
 
 /* ── Deep links: /?movie=<id> · /?TVShows=<id> arrive here through Classic's
