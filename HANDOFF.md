@@ -2,7 +2,27 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-09-28b) — Layout Toggle Beside the Logo, Pixel-Identical in Both Layouts
+## ⚡ Most Recent Session (2026-10-08) — Watchlist in Cinematic, One Typed List Shared With Classic
+
+Committed on `main` (local). **Not pushed, not deployed**: `git push origin main` then `./deploy.sh` ships it (needs the owner's go-ahead). Classic stays the default layout.
+
+| Commit | Feature |
+|--------|---------|
+| `89d2a3c` | **Watchlist in Cinematic + one typed list shared with Classic.** New **`assets/watchlist.js`** (`window.FFWatchlist`: `has` · `toggle` · `remove` · `clear` · `list` · `count` · `onChange`), loaded **synchronously in `<head>`** by BOTH documents as `?v=<8-char hash>` (`shasum -a 256 assets/watchlist.js \| cut -c1-8`; same bump rule as `layout-switch.*` — the SW serves `/assets/*` stale-while-revalidate, so recompute and bump `?v=` in `index.html` and `cinematic/index.html` after any edit; currently `64c31e42`). Storage is **`rk_watchlist_v2` = `[{id, type: 'movie'\|'tv'}]`**, oldest first. Classic's old `rk_watchlist` (bare ids) is imported once, as movies, when v2 doesn't exist yet (the old format had no type, so a TV show saved from Classic's TV tab imports as the *film* with that id); the old key is left untouched. A `storage` listener fires `onChange` for changes made in another tab. **Cinematic (`cinematic/index.html`):** header `#wlBtn` + `#wlCount` badge (`aria-pressed` while the view is open) → `showWatchlist()` full grid view (`startView('watchlist')`; entries resolved through `/api/tmdb/{type}/{id}` with `mapPool(…, 6)`; a 404 is skipped quietly, network failures are counted in `view.unloaded` with a `[data-wl-retry]` link; `#clearLabel` reads "Close" there so it can't look like it empties the list); `.wl-tog` bookmark on every tile (a *sibling* of `.card`, since a button can't nest in a button; `data-wl-key`, state class `.is-on`; a title removed inside the Watchlist view stays as `.tile.wl-gone`, dimmed, so a stray tap is undoable); `[data-wl]` button in `actionsHTML()` (icon-only ≤420px, its `aria-label` carries the state); `toggleWL()` / `syncWL()` / `wlTogHTML()` / `toast()` + `#toast`. `WL` falls back to an inert stub if `watchlist.js` is blocked. **Classic (`index.html`):** `initWatchlist` / `isWatchlisted(id, type)` / `toggleWatchlist(id, btn, type)` / `clearWatchlist` are thin wrappers over `FFWatchlist` (`_wlType()` resolves the type for id-only callers such as `aimAddWL`; `_syncWLButtons()` replaces `_updateCardWLBtn`; `.card-wl-btn` and `.wl-item` carry `data-type`). **Drawer fix:** `renderWatchlistDrawer()` now looks entries up by id *and* type and fetches any saved title that isn't in `MOVIES` (`_hydrateWatchlist()` — same endpoint and `fromTMDbAs` as the `?movie=` deep link; `_wlCache` / `_wlTried`), and `_openWatchlisted(id, type)` opens it. Before this the drawer silently dropped titles that weren't in the current feed while the header badge still counted them. |
+
+**Verified locally** (`./deploy.sh --stage-only` + `npx wrangler pages dev --port 8283`, Browser pane, real clicks): save/unsave from a tile and from the Quick View (badge, toast, tile + button states, focus stays on the Quick View button); reload persistence; legacy import (junk, negative and duplicate ids dropped, old key untouched); **`tv:1396` Breaking Bad and `movie:1396` Mirror in one list**, each resolving to the right title in the Cinematic Watchlist view and in Classic's drawer (opens at `?TVShows=1396` with "✓ Saved"); Classic drawer fetching titles that aren't in its feed; two-tab sync Cinematic → Classic, including an open Classic modal flipping to "+ Watchlist"; empty state; phone 375 (header fits, action row on one line) and 320 (header fits; the Quick View row wraps "Share" to a second line — accepted).
+
+**Known limits / gotchas**
+- localStorage only (no accounts); cross-device is still in Pending, but it is now one key to sync.
+- Legacy TV ids import as films (see above). A visit that still runs pre-change Classic code (SW-cached `index.html`) writes only `rk_watchlist`; those adds reach v2 only if v2 doesn't exist yet.
+- Classic's `openMovie()` still resolves by bare id in `MOVIES`. `_openWatchlisted()` prepends a fetched title (as the deep link does) so the right one opens, but a mixed `MOVIES` (actor filmography) can still collide — same as the Pending item below.
+- The tile bookmarks are real buttons: one extra tab stop per card.
+- Local testing: in the Browser pane the service worker fails *uncached* same-origin fetches (a new `?v=` URL shows `net::ERR_FAILED` and `FFWatchlist` is undefined). Unregister it first: `for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); for (const k of await caches.keys()) await caches.delete(k);`. The pane also stops compositing when it isn't fronted — screenshots time out and CSS transitions (e.g. the Quick View scrim's `visibility` delay) stall, which can swallow a click.
+- `preview_start` reads `.claude/launch.json` from the session's *starting* directory; after switching projects mid-turn, start the server through Bash instead (`./deploy.sh --stage-only && npx wrangler pages dev --port 8283`).
+
+---
+
+## Session (2026-09-28b) — Layout Toggle Beside the Logo, Pixel-Identical in Both Layouts
 
 All commits on `main`, **deployed live on https://findfilm.ai** (Pages production `f7503b66` from `08bb2e6`, 2026-09-28; `./deploy.sh`: 16/16 sensitive paths unpublished, custom domains clean; `/`, `/cinematic/` and both `layout-switch.*?v=8b45db4c` files byte-identical to the repo; live phone round trip Classic → Cinematic → Classic kept the toggle at the same rect; no JS errors). This ships the 2026-09-28 layout switch below for the first time too. **Preview removed (2026-09-28):** both `layout-switch` deployments (`d140f102`, `b3f3ff4d`) were deleted because their `/api` pass-through wrote to production; the alias and both hash URLs now 404. **Earlier preview:** **https://layout-switch.ratingkino.pages.dev** (Pages Preview `d140f102`, built from `181aaab` with the same `/api` pass-through recipe as below; production byte-identical before and after).
 
@@ -2276,6 +2296,9 @@ ratingkino/
 ├── assets/layout-switch.css / .js ← shared by index.html + cinematic/index.html: the
 │                           logo + Classic | Cinematic toggle (.ffl), page scrollbar,
 │                           header centring, switch handler. Linked as ?v=<hash>.
+├── assets/watchlist.js   ← shared by index.html + cinematic/index.html: window.FFWatchlist,
+│                           the one typed watchlist (localStorage rk_watchlist_v2). Loaded
+│                           synchronously in <head> as ?v=<hash>.
 ├── cinematic/index.html  ← the Cinematic layout (/cinematic/), a separate document from
 │                           index.html; chosen by the layout router at the top of
 │                           index.html's <head> (localStorage ff_layout). In PUBLIC.
@@ -2413,6 +2436,10 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 
 | Function | Purpose |
 |----------|---------|
+| `FFWatchlist.*` (`assets/watchlist.js`) | The one watchlist, typed `{id, type}`; `toggle(id, type)` returns whether the title is saved afterwards; `onChange(fn)` also fires for other tabs |
+| `toggleWatchlist(id, btn, type)` / `isWatchlisted(id, type)` (Classic) | Wrappers over `FFWatchlist`; `_wlType(id, type)` resolves the type for id-only callers; the listener in `initWatchlist()` repaints badge, `.card-wl-btn`, modal button and drawer |
+| `renderWatchlistDrawer()` + `_hydrateWatchlist()` + `_openWatchlisted(id, type)` (Classic) | Drawer lookup by id+type; fetches saved titles missing from `MOVIES`; opens one (prepends it to `MOVIES`, like the deep link) |
+| `toggleWL(it)` / `syncWL()` / `showWatchlist()` / `wlTogHTML(it)` (Cinematic) | Toggle from a tile or the Quick View; repaint every control; the Watchlist grid view; the `.wl-tog` markup |
 | `loadMovies(page, append)` | Main paginated fetch; sets/clears `IS_LOADING`; calls `renderGrid()` |
 | `aiSearch(query)` | AI semantic search; sets `AI_SEARCH_ACTIVE`; calls `renderGrid()` |
 | `renderGrid(movies, append)` | Renders cards or calls `_showNoResultsState()`; removes `.show` from `#emptyState` |
@@ -2551,7 +2578,9 @@ Taste profile stored in `localStorage['rk_taste_v1']`: `{ genres: {}, directors:
 | `rk_taste_v1` | Taste profile: `{genres:{}, directors:{}, total:0}` |
 | `rk_filters_v1` | Last-used filter state |
 | `rk_visited` | Set to `'1'` after first-visit overlay is dismissed |
-| `rk_watchlist_v1` | AI Watchlist: array of movie objects |
+| `rk_watchlist_v2` | Watchlist shared by Classic + Cinematic (`assets/watchlist.js`): `[{id, type:'movie'\|'tv'}]`, oldest first |
+| `rk_watchlist` | Legacy Classic watchlist: bare TMDB ids. Imported once into v2 when v2 is missing; never written again |
+| `ff_layout` | `classic` \| `cinematic` — read by the layout router at the top of `index.html` |
 | `rk_ios_pwa_dismissed` | Timestamp of last iOS PWA bottom-sheet dismiss (15-day cooldown) |
 | `rk_install_banner_dismissed` | Timestamp of last mobile install banner dismiss (7-day cooldown) |
 
@@ -2606,11 +2635,13 @@ The site is fully installable as a PWA on all platforms.
 - [ ] **Old preview deployments can still write to production** — ~18 full-site previews from 2026-08 (branches `fix-*`, `feat*`, `feature-*`) remain live (e.g. `https://9f183e16.ratingkino.pages.dev`) and are bound to the production KV (`/api/cache/new-releases` returns the 119 live items) and the production D1 (Pitch API active). Pages previews inherit wrangler.toml's bindings. Delete them (`npx wrangler pages deployment delete <id> --project-name ratingkino --force`; **without `--force` wrangler's non-interactive prompt defaults to "no" and deletes nothing**), and/or give previews their own KV/D1 via `[env.preview]` in wrangler.toml. `beta-ui` is a static page with no Functions of its own
 - [ ] **Preview-environment secrets** — the Pages preview env has none, so real full-stack previews (branch deploys running their own Functions) can't work. Either set TMDB_KEY/OMDB_KEY/WATCHMODE_API_KEY for `--env preview`, or keep using the pass-through recipe in the 2026-09-28 session block
 - [x] **Deploy the layout switch** (`e9e186e` + `181aaab`) — live since 2026-09-28 (production `f7503b66`) Classic stays the default; to make Cinematic the default instead, change `DEFAULT_LAYOUT` in the router at the top of `index.html`
-- [ ] **Cinematic gaps vs Classic**: TV browsing (TV deep links work, but there's no TV tab), the 9-language UI, watchlist, voice search
-- [ ] **Beta UI prototype feedback** (now `cinematic/index.html`; old preview https://beta-ui.ratingkino.pages.dev) — collect the owner's feedback, then decide: ship it at `/beta/` (add `beta` to `PUBLIC`), port pieces into `index.html`, or iterate. Not yet in it: TV shows, i18n, watchlist, voice
+- [ ] **Ship the Watchlist** (`89d2a3c`) — committed locally, not pushed or deployed. `git push origin main`, then `./deploy.sh`; afterwards check on production that `/assets/watchlist.js?v=64c31e42` is served and a title saved in `/cinematic/` shows in Classic's drawer
+- [x] **Watchlist in Cinematic** — done in `89d2a3c` (shared typed list, `rk_watchlist_v2`)
+- [ ] **Cinematic gaps vs Classic**: TV browsing (TV deep links and the Watchlist already handle TV; there's no TV tab), the 9-language UI, voice search
+- [ ] **Beta UI prototype feedback** (now `cinematic/index.html`; old preview https://beta-ui.ratingkino.pages.dev) — collect the owner's feedback, then decide: ship it at `/beta/` (add `beta` to `PUBLIC`), port pieces into `index.html`, or iterate. Not yet in it: TV shows, i18n, voice (the watchlist landed in `89d2a3c`)
 - [x] **Deploy `ffa7e37`** (`?movie=` / `?TVShows=` deep links) — live (deployment `29034af3`)
 - [ ] **Cast-to-TV receiver for TV shows** — `/tv/:id` (`tv/index.html`) only fetches `/movie/{id}`; needs a media-type signal in its URL and a TV-aware fetch
-- [ ] **Media type through id-only lookups** — `MOVIES.find(x => x.id === id)` sites (`openMovie`, `enrichNow`, `updateCardInGrid`, watchlist, card `onclick`s) can still collide across movie/TV ids via actor filmographies
+- [ ] **Media type through id-only lookups** — `MOVIES.find(x => x.id === id)` sites (`openMovie`, `enrichNow`, `updateCardInGrid`, card `onclick`s; the watchlist itself is typed since `89d2a3c`, but `_openWatchlisted()` still ends in `openMovie(id)`) can still collide across movie/TV ids via actor filmographies
 - [ ] **Product Hunt listing** — confirm title, tagline, description, and gallery screenshots are ready
 - [ ] **SEO** — `<meta name="description">`, Open Graph tags, `<link rel="canonical">` minimal — expand before marketing push
 - [ ] **`www.findfilm.ai` redirect** — verify Cloudflare Redirect Rule for `www` → apex is active
@@ -2621,7 +2652,7 @@ The site is fully installable as a PWA on all platforms.
 - [ ] **Mobile RTL layout** — Arabic RTL; verify on 375px that filter bar and feed rows are correct
 - [ ] **Star hover state bug** — dual CSS + inline colour on review stars; can leave stuck state on rapid mouse exit (pre-existing)
 - [ ] **Admin password on mobile modal** — client-side toggle only, no real auth
-- [ ] **Cross-device watchlist** — currently localStorage only
+- [ ] **Cross-device watchlist** — currently localStorage only (it is now a single typed key, `rk_watchlist_v2`, behind `FFWatchlist`, so syncing it means changing one file)
 
 ---
 
