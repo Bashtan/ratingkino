@@ -2,7 +2,25 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-08) — Watchlist in Cinematic, One Typed List Shared With Classic
+## ⚡ Most Recent Session (2026-10-08b) — TV Shows in the Cinematic Layout
+
+Committed on `main` (local). **Not pushed, not deployed**: `git push origin main` then `./deploy.sh` ships it (needs the owner's go-ahead). Classic is untouched and stays the default layout. Only `cinematic/index.html` changed — no backend change.
+
+| Commit | Feature |
+|--------|---------|
+| `3a93af7` | **Movies \| TV Shows tab in Cinematic.** Hero control `#seg` (`.seg-opt[data-ctype]`, `aria-pressed`; one white thumb slides via `.seg::before` + `.seg[data-ctype="tv"]`) above the search bar; the tab is the module-level `let ctype` (`'movie'`\|`'tv'`), changed by `setCtype(next, {reload})` (persists `sessionStorage.ff_ctype`, calls `applyTypeCopy()`, clears the input, `showHome()`, announces). Everything that differs between tabs lives in **`TYPES`** (read with `typeCfg(type)`): trending/discover endpoints, chips, typewriter prompts, `ai` flag, hero subline, placeholders, aria-labels, noun (`titles`\|`shows`). `startView()` **captures `ctype` into `view.ctype`**, and `loadPage`/`runTitle` read `v.ctype`, so a late response for the other tab can never be mistaken for the current one. `homeSnaps = {movie, tv}` keeps each tab's trending grid (instant switch back); `showHome()` re-checks the sentinel after restoring a snapshot (the scroll observer only fires on *changes*). **TV feed:** `/trending/tv/week` + `/discover/tv` through `/api/tmdb`; `TV_CHIPS` (12 plain discover queries: Limited series `with_type=2`, Crime & mystery `80\|9648`, Top Rated 2026 `first_air_date_year`, Netflix/HBO/Apple TV+/Prime Video via `with_networks` 213/49/2552/1024, Anime, Animation for adults, 90s Sci-Fi & Fantasy `10765`, Based on a true story, A24) — TV has its own genre ids and `first_air_date*` fields, so the film chips can't be reused. **TV search:** `runTitle` has a TV branch that calls TMDB `/search/tv` directly via `tmdb()`, **not** `/api/search` (that endpoint reads `title`/`original_title`, which shows don't have, and demotes real title matches — e.g. "The Bear" 4th instead of 1st; follow-up task spawned). No AI for shows (backend `/api/ai-search` is films-only; same as Classic): `submitQuery` always routes TV to `runTitle`, and a miss shows the empty state with **`askAIInMovies(q)`** ("Ask AI in Movies" → `setCtype('movie',{reload:false})` + `runAI`). Search icon swaps spark → magnifier (`#cmdIconAI` / `#cmdIconSearch`, `.cmd-icon.off`). `buildMosaic(items, type)` / `mosaicType` rebuild the hero poster wall per tab. **Deep links:** `openDeepLink()` calls `setCtype(type, {reload:false})`, so `?TVShows=` opens on the TV tab and `?movie=` on Movies (overriding the remembered tab). **Mixed lists:** `cardHTML` adds `.tv-badge` ("TV") + ", TV show" to the aria-label when a show appears outside the TV tab or in the Watchlist view. Phones: `.seg-opt` is 40px high ≤767px. |
+
+**Verified locally** (`findfilm-full`, Browser pane, real clicks + DOM clicks through the real handlers): tab switch (copy, chips, icon, poster wall, `ff_ctype`, reload restores the tab); all 12 TV chips return only `tv:` items with sane counts (203 / 362 / 70 / 321 / 63 / 83 / 65 / 360 / 348 / 102 / 33 / 17); page-2 loads on the TV feed; TV title search (`the bear`, `succession`, `severance` → "1 show", `chernobyl`); descriptive + nonsense queries → empty state; "Ask AI in Movies" switches tab, keeps the query and returns 6 AI picks; `?TVShows=1396` → TV tab + Breaking Bad Quick View, closing lands on trending shows; `?movie=27205` with TV remembered → Movies tab; TV Quick View (seasons, TV-MA, Created by, 9 TV recommendations); typed watchlist entries (`{id,type:'tv'}`) and the TV tag in the Watchlist view; Movies regressions (discover chip 193 titles, AI chip 6 picks, title search with "Ask AI instead"); phone 375 and 320 (no horizontal scroll, control fits); fresh-tab console clean.
+
+**Known limits / gotchas**
+- No AI / mood / plot search for shows (backend limit, same as Classic) — a possible follow-up is extending `/api/ai-search` for TV.
+- "Top Rated 2026" (TV) uses `vote_count.gte=100` (70 shows; ≥200 gives only 28 but more mainstream) — tune if the first row looks odd.
+- The four network chips are brand names (owner-approved). Classic does not know the tab: toggling layout from Cinematic's TV tab starts Classic on Movies; `ff_ctype` is per browser tab (`sessionStorage`).
+- **Testing:** when the Browser pane isn't displayed, `document.visibilityState` is `hidden` and IntersectionObserver / `requestAnimationFrame` callbacks don't run — infinite scroll looks stuck at page 1 until the pane paints (take a screenshot). Not an app bug.
+
+---
+
+## Session (2026-10-08) — Watchlist in Cinematic, One Typed List Shared With Classic
 
 All commits on `main`, **deployed live on https://findfilm.ai** (Pages production `643bc588` from `422f90c`, 2026-10-08; `./deploy.sh`: 16/16 sensitive paths unpublished, custom domains clean; `/assets/watchlist.js?v=64c31e42` byte-identical to the repo on findfilm.ai and ratingkino.com, and `/` + `/cinematic/` both reference it). Classic stays the default layout.
 
@@ -2438,6 +2456,8 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 
 | Function | Purpose |
 |----------|---------|
+| `setCtype(next, {reload})` / `applyTypeCopy()` / `typeCfg(type)` + `TYPES` (Cinematic) | The Movies \| TV Shows tab: state `ctype`, persisted in `sessionStorage.ff_ctype`; `TYPES` holds the per-tab endpoints, chips (`CHIPS` / `TV_CHIPS`), prompts, `ai` flag and copy; views capture `ctype` in `view.ctype` |
+| `askAIInMovies(q)` (Cinematic) | TV search miss → switch to Movies without reloading and run the film AI on the same words |
 | `FFWatchlist.*` (`assets/watchlist.js`) | The one watchlist, typed `{id, type}`; `toggle(id, type)` returns whether the title is saved afterwards; `onChange(fn)` also fires for other tabs |
 | `toggleWatchlist(id, btn, type)` / `isWatchlisted(id, type)` (Classic) | Wrappers over `FFWatchlist`; `_wlType(id, type)` resolves the type for id-only callers; the listener in `initWatchlist()` repaints badge, `.card-wl-btn`, modal button and drawer |
 | `renderWatchlistDrawer()` + `_hydrateWatchlist()` + `_openWatchlisted(id, type)` (Classic) | Drawer lookup by id+type; fetches saved titles missing from `MOVIES`; opens one (prepends it to `MOVIES`, like the deep link) |
@@ -2639,8 +2659,12 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Deploy the layout switch** (`e9e186e` + `181aaab`) — live since 2026-09-28 (production `f7503b66`) Classic stays the default; to make Cinematic the default instead, change `DEFAULT_LAYOUT` in the router at the top of `index.html`
 - [x] **Ship the Watchlist** (`89d2a3c`) — pushed and deployed 2026-10-08 (production `643bc588`); verified on findfilm.ai, including a Cinematic → Classic round trip
 - [x] **Watchlist in Cinematic** — done in `89d2a3c` (shared typed list, `rk_watchlist_v2`)
-- [ ] **Cinematic gaps vs Classic**: TV browsing (TV deep links and the Watchlist already handle TV; there's no TV tab), the 9-language UI, voice search
-- [ ] **Beta UI prototype feedback** (now `cinematic/index.html`; old preview https://beta-ui.ratingkino.pages.dev) — collect the owner's feedback, then decide: ship it at `/beta/` (add `beta` to `PUBLIC`), port pieces into `index.html`, or iterate. Not yet in it: TV shows, i18n, voice (the watchlist landed in `89d2a3c`)
+- [ ] **Ship the Cinematic TV tab** (`3a93af7`) — committed locally, not pushed or deployed. `git push origin main`, then `./deploy.sh`; afterwards check on production that `/cinematic/` shows the Movies | TV Shows control, `?TVShows=1396` opens on the TV tab, and TV chips return shows
+- [x] **TV Shows tab in Cinematic** — done in `3a93af7` (trending, 12 chips, title search, Quick View, deep-link tab)
+- [ ] **TV ranking bug in `/api/search`** — `handleSearch` buckets and scores by `title`/`original_title`, which TV results lack (`name`/`original_name`), so shows whose overview matches outrank the real title match (e.g. "the bear" → The Bear 4th). Also affects Classic's TV tab. A fix task was spawned; Cinematic avoids it by calling TMDB `/search/tv` directly
+- [ ] **AI search for TV shows** — `/api/ai-search` is films-only (LLM curation + `search/movie` lookups + movie KV catalog); Cinematic and Classic fall back to title search on the TV tab
+- [ ] **Cinematic gaps vs Classic**: the 9-language UI, voice search (TV browsing, TV deep links and the Watchlist are done)
+- [ ] **Beta UI prototype feedback** (now `cinematic/index.html`; old preview https://beta-ui.ratingkino.pages.dev) — collect the owner's feedback, then decide: ship it at `/beta/` (add `beta` to `PUBLIC`), port pieces into `index.html`, or iterate. Not yet in it: i18n, voice (the watchlist landed in `89d2a3c`, the TV tab in `3a93af7`)
 - [x] **Deploy `ffa7e37`** (`?movie=` / `?TVShows=` deep links) — live (deployment `29034af3`)
 - [ ] **Cast-to-TV receiver for TV shows** — `/tv/:id` (`tv/index.html`) only fetches `/movie/{id}`; needs a media-type signal in its URL and a TV-aware fetch
 - [ ] **Media type through id-only lookups** — `MOVIES.find(x => x.id === id)` sites (`openMovie`, `enrichNow`, `updateCardInGrid`, card `onclick`s; the watchlist itself is typed since `89d2a3c`, but `_openWatchlisted()` still ends in `openMovie(id)`) can still collide across movie/TV ids via actor filmographies
