@@ -4,7 +4,9 @@
 
 ## ⚡ Most Recent Session (2026-10-08c) — `/api/search` Ranks TV Shows by Their Real Titles
 
-Committed on the worktree branch `claude/objective-meitner-de4a1f`, with `main` (`f60dbcc`) merged in, so it fast-forwards into `main` unless `main` has moved since. **Not pushed, not deployed**: merge into `main`, `git push origin main`, then `./deploy.sh` (needs the owner's go-ahead). Production (`9ffb108d`) still runs the old `/api/search`. Backend only — `functions/api/[[path]].js`; no front-end change.
+All commits on `main`, **deployed live on https://findfilm.ai** (Pages production `6ce11eb0` from `e77b088`, 2026-10-08; fast-forwarded from the worktree branch `claude/objective-meitner-de4a1f`, whose worktree was then removed; `./deploy.sh`: 16/16 sensitive paths unpublished, custom domains clean, 0 static files re-uploaded — Functions bundle only). Backend only — `functions/api/[[path]].js`; no front-end change.
+
+**Verified on production** (findfilm.ai and ratingkino.com, the same 12 `/api/search` queries before and after): TV exact-title position `the bear` 4→1, `succession` 3→1, `dark` 6→1, `friends` 13→1, `lost` 7→1, `severance` 1→1; all six `type=movie` queries (inception, batman, the matrix, alien, up, dune) return identical ordered ids, `_tiers` and counts. Classic's real TV tab (search box on the TV Shows tab) now lists The Bear, Friends and Lost first; console clean.
 
 | Commit | Feature |
 |--------|---------|
@@ -2685,7 +2687,7 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Ship the Cinematic TV tab** (`3a93af7` + `723c905`) — pushed and deployed 2026-10-08 (production `9ffb108d`); verified on findfilm.ai
 - [x] **TV Shows tab in Cinematic** — done in `3a93af7` (trending, 12 chips, title search, Quick View, deep-link tab)
 - [x] **TV ranking bug in `/api/search`** — fixed in `ca02d1f` (`_resultTitles`): TV results are bucketed and scored by `name` / `original_name`; "the bear" 4th → 1st, "succession" 3rd → 1st. Classic's TV tab benefits; Cinematic still calls TMDB `/search/tv` directly
-- [ ] **Ship the `/api/search` TV ranking fix** (`ca02d1f`) — on branch `claude/objective-meitner-de4a1f`, not pushed or deployed. Merge into `main`, `git push origin main`, `./deploy.sh`; afterwards check on production that `/api/search?q=the+bear&type=tv` lists The Bear first (`_tiers.t1` > 0) and that `type=movie` for `inception` / `batman` is unchanged
+- [x] **Ship the `/api/search` TV ranking fix** (`ca02d1f`) — merged, pushed and deployed 2026-10-08 (production `6ce11eb0`); verified on findfilm.ai and ratingkino.com
 - [ ] **Diacritic-insensitive title matching in `/api/search`** — fold accents on the query and on `_resultTitles()` output so "shogun" finds *Shōgun* and "amelie" finds *Amélie* in Tier 1; it changes movie ranking too, so it needs the owner's go-ahead
 - [ ] **AI search for TV shows** — `/api/ai-search` is films-only (LLM curation + `search/movie` lookups + movie KV catalog); Cinematic and Classic fall back to title search on the TV tab
 - [ ] **Cinematic gaps vs Classic**: the 9-language UI, voice search (TV browsing, TV deep links and the Watchlist are done)
