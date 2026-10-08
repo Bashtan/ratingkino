@@ -191,6 +191,14 @@ img.fade.loaded { opacity: 1; }
 }
 .icon-btn:hover { background: var(--fill-2); }
 .mob-search { display: none; }
+.wl-btn { position: relative; }
+.wl-btn[aria-pressed="true"] { background: var(--fill-3); }          /* the Watchlist view is open */
+.wl-count {
+  position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
+  background: #fff; color: #050505; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
+  box-shadow: 0 0 0 2px var(--bg);                                     /* a ring in the page colour lifts it off the button */
+}
+.wl-count[hidden] { display: none; }
 
 /* ═══════════════════════════════════════════════════════════════
    HERO — the AI command center
@@ -400,6 +408,37 @@ img.fade.loaded { opacity: 1; }
 .card:focus-visible .ov { opacity: 1; }
 .card:focus-visible .ov-row { transform: none; }
 
+/* ── Watchlist bookmark: a sibling of .card (a button can't nest in a button) ── */
+.wl-tog {
+  position: absolute; top: 8px; right: 8px; z-index: 4; width: 34px; height: 34px; border-radius: 999px;
+  display: grid; place-items: center; color: #fff;
+  background: rgba(10, 10, 12, .58); -webkit-backdrop-filter: var(--glass); backdrop-filter: var(--glass); box-shadow: var(--edge);
+  opacity: 0; transform: scale(.88);
+  transition: opacity .2s, transform .25s var(--ease-out), background-color .2s, color .2s;
+}
+.wl-tog svg { display: block; }
+.wl-tog.is-on { opacity: 1; transform: none; background: #fff; color: #050505; }
+.wl-tog.is-on svg path { fill: currentColor; }
+.wl-tog:focus-visible { opacity: 1; transform: none; }
+@media (hover: hover) and (pointer: fine) {
+  .tile:hover .wl-tog { opacity: 1; transform: none; }
+  .wl-tog:hover { transform: scale(1.08); }
+}
+@media (hover: none) { .wl-tog { opacity: 1; transform: none; width: 30px; height: 30px; top: 6px; right: 6px; } }
+.more .wl-tog { width: 28px; height: 28px; top: 6px; right: 6px; }
+/* In the Watchlist view a removed title stays put, dimmed, so a stray tap can be undone. */
+.tile.wl-gone .card { opacity: .38; filter: saturate(.4); }
+.tile.wl-gone .wl-tog { opacity: 1; transform: none; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); z-index: 120;
+  max-width: calc(100vw - 32px); padding: 11px 18px; border-radius: 999px;
+  background: rgba(38, 38, 42, .86); -webkit-backdrop-filter: var(--glass); backdrop-filter: var(--glass); box-shadow: var(--edge), 0 12px 32px rgba(0, 0, 0, .5);
+  font-size: 14px; font-weight: 550; color: #fff; text-align: center; pointer-events: none;
+  opacity: 0; transform: translate(-50%, 12px); transition: opacity .25s, transform .35s var(--ease-out);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
 .state { grid-column: 1 / -1; padding: 72px 16px; text-align: center; }
 .state-title { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: -.015em; }
 .state-sub { margin: 8px auto 22px; max-width: 420px; color: var(--text-2); }
@@ -582,6 +621,11 @@ img.fade.loaded { opacity: 1; }
   .ov { padding: 10px; }
   .ov-title { font-size: 13px; }
 }
+@media (max-width: 420px) {
+  /* Play Trailer + Watchlist + Share no longer fit on one line: the bookmark keeps its aria-label and drops the word. */
+  .btn-glass[data-wl] { width: 44px; padding: 0; justify-content: center; }
+  .btn-glass[data-wl] span { display: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
   .card:hover, .more .card:hover { transform: none; }
@@ -590,6 +634,8 @@ img.fade.loaded { opacity: 1; }
 <!-- Logo + layout toggle, shared with Classic (index.html) — see the comment above. -->
 <link rel="stylesheet" href="/assets/layout-switch.css?v=8b45db4c">
 <script src="/assets/layout-switch.js?v=8b45db4c" defer></script>
+<!-- Watchlist storage, shared with Classic: one typed list (rk_watchlist_v2). Synchronous on purpose: the page script below reads it at once. -->
+<script src="/assets/watchlist.js?v=64c31e42"></script>
 </head>
 <body>
 <a class="skip" href="#results">Skip to results</a>
@@ -640,6 +686,10 @@ img.fade.loaded { opacity: 1; }
       <button class="icon-btn mob-search" id="mobSearchBtn" type="button" aria-label="Search">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       </button>
+      <button class="icon-btn wl-btn" id="wlBtn" type="button" aria-label="Watchlist" aria-pressed="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        <span class="wl-count" id="wlCount" aria-hidden="true" hidden></span>
+      </button>
     </div>
   </div>
 </header>
@@ -689,7 +739,7 @@ img.fade.loaded { opacity: 1; }
       </div>
       <button class="pill-btn" id="clearBtn" type="button" hidden>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
-        Clear
+        <span id="clearLabel">Clear</span>
       </button>
     </div>
     <div class="refine" id="refine" hidden></div>
@@ -704,6 +754,7 @@ img.fade.loaded { opacity: 1; }
 </main>
 
 <div class="sr-only" id="srStatus" role="status" aria-live="polite"></div>
+<div class="toast" id="toast" aria-hidden="true"></div>
 
 <div class="qv-scrim" id="qvScrim"></div>
 <div class="qv" id="qv" role="dialog" aria-modal="true" aria-labelledby="qvTitle" inert>
@@ -769,6 +820,8 @@ const ICON = {
   share:   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M8 11H6.5A1.5 1.5 0 0 0 5 12.5v7A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-7a1.5 1.5 0 0 0-1.5-1.5H16"/></svg>',
   check:   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 10 17.5 19 7"/></svg>',
   plus:    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+  bookmark:   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
+  bookmarkOn: '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -883,7 +936,10 @@ const clearBtn = $('#clearBtn'), refineEl = $('#refine'), grid = $('#grid'), sen
 const srStatus = $('#srStatus');
 const qv = $('#qv'), qvScrim = $('#qvScrim'), qvScroll = $('#qvScroll'), qvBody = $('#qvBody');
 const qvClose = $('#qvClose'), qvBack = $('#qvBack'), qvHandle = $('#qvHandle');
+const wlBtn = $('#wlBtn'), wlCount = $('#wlCount'), clearLabel = $('#clearLabel'), toastEl = $('#toast');
 
+// Shared with Classic (/assets/watchlist.js). If that script is blocked the buttons stay inert (toggle → null) instead of taking the page down.
+const WL = window.FFWatchlist || { has: () => false, toggle: () => null, list: () => [], count: () => 0, onChange: () => () => {} };
 const store = new Map();     // "movie:27205" → item, for every card on screen
 const announce = msg => { srStatus.textContent = ''; setTimeout(() => { srStatus.textContent = msg; }, 40); };
 
@@ -931,6 +987,7 @@ function cardHTML(it, i = 0, { mini = false } = {}) {
         </span>
       </span>
     </button>
+    ${wlTogHTML(it)}
   </div>`;
 }
 const skelTiles = n => '<div class="tile skel-tile" aria-hidden="true"><div class="card skel"></div></div>'.repeat(n);
@@ -957,6 +1014,8 @@ function startView(kind, extra = {}) {
   setBusy(false);
   setRefine(null);
   clearBtn.hidden = kind === 'home';
+  clearLabel.textContent = kind === 'watchlist' ? 'Close' : 'Clear';   // "Clear" there would read as emptying the list
+  wlBtn.setAttribute('aria-pressed', String(kind === 'watchlist'));
   return view;
 }
 
@@ -1172,6 +1231,7 @@ async function runTitle(q) {
 
 resultsSub.addEventListener('click', e => {
   if (e.target.closest('[data-ask-ai]') && view?.q) runAI(view.q, { label: view.label });
+  if (e.target.closest('[data-wl-retry]')) showWatchlist();
 });
 
 /* ── Follow-up refinements from the AI ── */
@@ -1380,7 +1440,9 @@ function shellHTML(it) {
 
 function actionsHTML(it, d) {
   const tr = pickTrailer(d);
+  const saved = WL.has(it.id, it.type);
   return `${tr ? `<button class="btn-primary" type="button" data-trailer="${esc(tr.key)}">${ICON.play}<span>Play Trailer</span></button>` : ''}
+    <button class="btn-glass" type="button" data-wl aria-label="${wlBtnLabel(saved)}">${wlBtnInner(saved)}</button>
     <button class="btn-glass" type="button" data-share>${ICON.share}<span>Share</span></button>`;
 }
 
@@ -1605,11 +1667,16 @@ qvScrim.addEventListener('click', requestCloseQV);
 qvBack.addEventListener('click', () => { if (QV.stack.length > 1) history.back(); });
 
 grid.addEventListener('click', e => {
+  const tog = e.target.closest('.wl-tog');
+  if (tog) { toggleWL(store.get(tog.dataset.wlKey)); return; }
   const card = e.target.closest('.card[data-key]');
   const it = card && store.get(card.dataset.key);
   if (it) openQuickView(it, card);
 });
 qvBody.addEventListener('click', e => {
+  const tog = e.target.closest('.wl-tog');
+  if (tog) { toggleWL(store.get(tog.dataset.wlKey)); return; }
+  if (e.target.closest('[data-wl]')) { toggleWL(QV.stack[QV.stack.length - 1]); return; }
   const trailer = e.target.closest('[data-trailer]');
   if (trailer) { toggleTrailer(trailer); return; }
   if (e.target.closest('[data-qv-retry]')) { renderQV(QV.stack[QV.stack.length - 1]); return; }
@@ -1679,6 +1746,121 @@ qvHandle.addEventListener('pointerup', endDrag);
 qvHandle.addEventListener('pointercancel', endDrag);
 
 /* ═══════════════════════════════════════════════════════════════
+   WATCHLIST
+   The list itself lives in /assets/watchlist.js (rk_watchlist_v2), shared
+   with Classic, so a title saved in either layout shows up in both. Every
+   control here is a view of that one list: toggling calls WL.toggle() and the
+   onChange listener repaints them all — also after a change made in another tab.
+═══════════════════════════════════════════════════════════════ */
+const wlTogLabel = (it, on) => `${on ? 'Remove' : 'Add'} ${it.title} ${on ? 'from' : 'to'} Watchlist`;
+const wlBtnLabel = on => (on ? 'Saved — remove from Watchlist' : 'Add to Watchlist');
+const wlBtnInner = on => `${on ? ICON.bookmarkOn : ICON.bookmark}<span>${on ? 'Saved' : 'Watchlist'}</span>`;
+const isWatchlistView = () => !!view && view.kind === 'watchlist';
+
+function wlTogHTML(it) {
+  const on = WL.has(it.id, it.type);
+  return `<button class="wl-tog${on ? ' is-on' : ''}" type="button" data-wl-key="${keyOf(it)}" aria-label="${esc(wlTogLabel(it, on))}">${ICON.bookmark}</button>`;
+}
+
+let toastTimer = 0;
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
+}
+
+function toggleWL(it) {
+  if (!it) return;
+  const on = WL.toggle(it.id, it.type);        // onChange → syncWL() repaints every control
+  if (on === null) return;
+  announce(`${on ? 'Added to' : 'Removed from'} your Watchlist: ${it.title}`);
+  toast(on ? 'Added to Watchlist' : 'Removed from Watchlist');
+}
+
+function syncWL() {
+  const n = WL.count();
+  wlCount.textContent = n > 99 ? '99+' : String(n);
+  wlCount.hidden = n === 0;
+  wlBtn.setAttribute('aria-label', n ? `Watchlist, ${n} title${n === 1 ? '' : 's'}` : 'Watchlist');
+  const inView = isWatchlistView();
+  document.querySelectorAll('.wl-tog').forEach(b => {
+    const it = store.get(b.dataset.wlKey);
+    if (!it) return;
+    const on = WL.has(it.id, it.type);
+    b.classList.toggle('is-on', on);
+    b.setAttribute('aria-label', wlTogLabel(it, on));
+    if (inView) b.closest('.tile')?.classList.toggle('wl-gone', !on);   // dimmed, not removed: a stray tap can be undone
+  });
+  const qvBtn = qvBody.querySelector('[data-wl]');
+  const cur = QV.stack[QV.stack.length - 1];
+  if (qvBtn && cur) {
+    const on = WL.has(cur.id, cur.type);
+    qvBtn.setAttribute('aria-label', wlBtnLabel(on));
+    qvBtn.innerHTML = wlBtnInner(on);          // updated in place, so keyboard focus stays on the button
+  }
+  if (inView) watchlistHeader();
+}
+WL.onChange(syncWL);
+
+async function mapPool(list, size, fn) {
+  const out = new Array(list.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(size, list.length) }, async () => {
+    while (next < list.length) { const i = next++; out[i] = await fn(list[i], i); }
+  }));
+  return out;
+}
+
+const wlSub = n => `${fmtInt(n)} title${n === 1 ? '' : 's'}<span class="muted">·</span>Saved on this device`;
+function watchlistHeader() {
+  const retry = view.unloaded
+    ? `<span class="muted">·</span><button class="link-btn" type="button" data-wl-retry>${view.unloaded} couldn’t load · Try again</button>`
+    : '';
+  setHeader('Watchlist', wlSub(WL.count()) + retry);
+}
+
+async function showWatchlist() {
+  setChip(null);
+  setInputs('');
+  const v = startView('watchlist', { unloaded: 0 });
+  const entries = WL.list();
+  watchlistHeader();
+  if (!entries.length) {
+    showState('Your Watchlist is empty', 'Tap the bookmark on any title to save it here. Your list stays on this device.', { label: 'Browse trending', run: showHome });
+    announce('Your Watchlist is empty');
+    return;
+  }
+  showSkeletons(Math.min(entries.length, gridCols() * 3));
+  const items = await mapPool(entries, 6, async e => {
+    const hit = store.get(`${e.type}:${e.id}`);
+    if (hit) { const { reason, vibe, ...plain } = hit; return plain; }   // an earlier search's AI blurb doesn't belong here
+    try {
+      return fromTMDB(await tmdb(`/${e.type}/${e.id}`, {}, { signal: v.signal }), e.type);
+    } catch (err) {
+      if (!isAbort(err) && !/\b404\b/.test(err.message)) v.unloaded += 1;   // a delisted title is skipped quietly; a network failure is reported
+      return null;
+    }
+  });
+  if (stale(v)) return;
+  const found = items.filter(Boolean);
+  if (!found.length) {
+    if (v.unloaded) { watchlistHeader(); showError(showWatchlist); }
+    else showState('Nothing to show', 'The titles you saved are no longer available.');
+    return;
+  }
+  renderItems(v, found);
+  watchlistHeader();
+  announce(`${found.length} title${found.length === 1 ? '' : 's'} in your Watchlist`);
+}
+
+wlBtn.addEventListener('click', () => {
+  if (isWatchlistView()) { setInputs(''); showHome(); return; }   // pressed again: back to trending
+  showWatchlist();
+  revealResults();
+});
+
+/* ═══════════════════════════════════════════════════════════════
    KEYBOARD
 ═══════════════════════════════════════════════════════════════ */
 const isApple = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
@@ -1716,6 +1898,7 @@ async function openDeepLink() {
    BOOT
 ═══════════════════════════════════════════════════════════════ */
 renderChips();
+syncWL();
 showSkeletons(18);
 openDeepLink();
 apiReady.then(showHome);

@@ -5407,6 +5407,8 @@ if ('serviceWorker' in navigator) {
      fixed logo width and the phone-only wordmark hide). -->
 <link rel="stylesheet" href="/assets/layout-switch.css?v=8b45db4c">
 <script src="/assets/layout-switch.js?v=8b45db4c" defer></script>
+<!-- Watchlist storage, shared with /cinematic/: one typed list (rk_watchlist_v2). Synchronous on purpose: initWatchlist() below reads it at once. -->
+<script src="/assets/watchlist.js?v=64c31e42"></script>
 </head>
 <body>
 
@@ -11352,7 +11354,7 @@ function renderCardHTML(m) {
     <div class="movie-poster">
       ${poster}
       ${matchBadge}
-      <button class="card-wl-btn${isWatchlisted(m.id) ? ' saved' : ''}" data-id="${m.id}" onclick="event.stopPropagation();toggleWatchlist(${m.id},this)" aria-label="Add to Watchlist">
+      <button class="card-wl-btn${isWatchlisted(m.id, mediaTypeOf(m)) ? ' saved' : ''}" data-id="${m.id}" data-type="${mediaTypeOf(m)}" onclick="event.stopPropagation();toggleWatchlist(${m.id},this,'${mediaTypeOf(m)}')" aria-label="Add to Watchlist">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
       </button>
       <div class="poster-ratings">${tvBadge}${avgBadgeHTML(m)}</div>
@@ -13299,34 +13301,41 @@ let WATCHLIST = [];
 // ── Install prompt (Android/Desktop beforeinstallprompt) ─────────────────────
 let _deferredInstallPrompt = null;
 
+/* The list itself lives in /assets/watchlist.js (rk_watchlist_v2), shared with the
+   Cinematic layout. WATCHLIST mirrors it as typed entries [{ id, type }] — TMDB
+   numbers movies and TV shows separately, so an id alone can name the wrong title. */
 function initWatchlist() {
-  try { WATCHLIST = JSON.parse(localStorage.getItem('rk_watchlist') || '[]'); } catch { WATCHLIST = []; }
+  WATCHLIST = FFWatchlist.list();
   _updateWLBadge();
+  // Any change — here, in the Cinematic layout, or in another tab — repaints the
+  // badge, the card and modal buttons, and an open drawer.
+  FFWatchlist.onChange(() => {
+    WATCHLIST = FFWatchlist.list();
+    _updateWLBadge();
+    _syncWLButtons();
+    if (document.getElementById('wlDrawer')?.classList.contains('open')) renderWatchlistDrawer();
+  });
 }
 
-function isWatchlisted(id) { return WATCHLIST.includes(id); }
+// Callers that only have an id (the AI-match save buttons) take the type from the title on screen.
+function _wlType(id, type) {
+  if (type) return type;
+  const m = MOVIES.find(x => x.id === id);
+  return m ? mediaTypeOf(m) : (CONTENT_TYPE === 'tv' ? 'tv' : 'movie');
+}
 
-function toggleWatchlist(id, btnEl) {
-  const idx = WATCHLIST.indexOf(id);
-  const added = idx === -1;
-  if (added) {
-    WATCHLIST.push(id);
-    if (btnEl) { btnEl.classList.add('saved', 'pulse'); setTimeout(() => btnEl && btnEl.classList.remove('pulse'), 500); }
-  } else {
-    WATCHLIST.splice(idx, 1);
-    if (btnEl) btnEl.classList.remove('saved', 'pulse');
-  }
-  try { localStorage.setItem('rk_watchlist', JSON.stringify(WATCHLIST)); } catch {}
-  _updateWLBadge();
-  _updateCardWLBtn(id, added);
-  _updateModalWLBtn();
+function isWatchlisted(id, type) { return FFWatchlist.has(id, _wlType(id, type)); }
+
+function toggleWatchlist(id, btnEl, type) {
+  type = _wlType(id, type);
+  const added = FFWatchlist.toggle(id, type);   // the listener in initWatchlist() repaints every control
+  if (added && btnEl) { btnEl.classList.add('pulse'); setTimeout(() => btnEl && btnEl.classList.remove('pulse'), 500); }
   // The modal button doesn't always receive btnEl (see toggleWatchlistModal),
-  // so pulse it directly here when it's showing the movie that just changed.
-  if (added && ACTIVE_MOVIE?.id === id) {
+  // so pulse it directly here when it's showing the title that just changed.
+  if (added && ACTIVE_MOVIE?.id === id && mediaTypeOf(ACTIVE_MOVIE) === type) {
     const modalBtn = document.getElementById('btnWatchlist');
     if (modalBtn) { modalBtn.classList.add('pulse'); setTimeout(() => modalBtn.classList.remove('pulse'), 500); }
   }
-  if (document.getElementById('wlDrawer')?.classList.contains('open')) renderWatchlistDrawer();
   showWLToast(added);
 }
 
@@ -13342,8 +13351,9 @@ function showWLToast(added) {
 
 function toggleWatchlistModal() {
   if (!ACTIVE_MOVIE) return;
-  const cardBtn = document.querySelector(`.card-wl-btn[data-id="${ACTIVE_MOVIE.id}"]`);
-  toggleWatchlist(ACTIVE_MOVIE.id, cardBtn);
+  const type = mediaTypeOf(ACTIVE_MOVIE);
+  const cardBtn = document.querySelector(`.card-wl-btn[data-id="${ACTIVE_MOVIE.id}"][data-type="${type}"]`);
+  toggleWatchlist(ACTIVE_MOVIE.id, cardBtn, type);
 }
 
 function _updateWLBadge() {
@@ -13354,15 +13364,18 @@ function _updateWLBadge() {
   badge.classList.toggle('has-items', n > 0);
 }
 
-function _updateCardWLBtn(id, saved) {
-  document.querySelectorAll(`.card-wl-btn[data-id="${id}"]`).forEach(btn => btn.classList.toggle('saved', saved));
+function _syncWLButtons() {
+  document.querySelectorAll('.card-wl-btn').forEach(btn => {
+    btn.classList.toggle('saved', FFWatchlist.has(Number(btn.dataset.id), btn.dataset.type));
+  });
+  _updateModalWLBtn();
 }
 
 function _updateModalWLBtn() {
   const btn = document.getElementById('btnWatchlist');
   const txt = document.getElementById('btnWatchlistText');
   if (!btn || !ACTIVE_MOVIE) return;
-  const saved = isWatchlisted(ACTIVE_MOVIE.id);
+  const saved = isWatchlisted(ACTIVE_MOVIE.id, mediaTypeOf(ACTIVE_MOVIE));
   btn.classList.toggle('saved', saved);
   const label = saved ? t('wl.saved') : t('modal.watchlist');
   if (txt) txt.textContent = label;
@@ -13556,33 +13569,66 @@ function renderWatchlistDrawer() {
     </div>`;
     return;
   }
-  body.innerHTML = WATCHLIST.map(id => {
-    const m = MOVIES.find(x => x.id === id);
+  body.innerHTML = WATCHLIST.map(e => {
+    const { id, type } = e;
+    const m = _wlFind(e);
     if (!m) return '';
     const posterSrc = m.poster ? `${TIMG_W500}${m.poster}` : '';
     const poster = posterSrc
       ? `<img src="${posterSrc}" alt="${esc(m.title)}" style="width:44px;height:66px;object-fit:cover;border-radius:6px" onerror="this.outerHTML='<div style=\\'width:44px;height:66px;background:${m.grad};display:flex;align-items:center;justify-content:center;font-size:1.4rem;border-radius:6px\\'>${m.emoji}</div>'">`
       : `<div style="width:44px;height:66px;background:${m.grad};display:flex;align-items:center;justify-content:center;font-size:1.4rem;border-radius:6px">${m.emoji}</div>`;
-    return `<div class="wl-item" data-id="${id}" onclick="closeWatchlist();openMovie(${id})">
+    return `<div class="wl-item" data-id="${id}" data-type="${type}" onclick="closeWatchlist();_openWatchlisted(${id},'${type}')">
       <div class="wl-poster">${poster}</div>
       <div class="wl-item-info">
         <div class="wl-item-title">${esc(m.title)}</div>
         <div class="wl-item-meta">${m.year || ''} · ${esc(m.genre)}</div>
       </div>
-      <button class="wl-item-remove" onclick="event.stopPropagation();toggleWatchlist(${id},null)" aria-label="Remove">
+      <button class="wl-item-remove" onclick="event.stopPropagation();toggleWatchlist(${id},null,'${type}')" aria-label="Remove">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>`;
   }).filter(Boolean).join('');
+  // Titles saved from the Cinematic layout, or in an earlier visit, may not be in MOVIES: fetch those once.
+  if (WATCHLIST.some(e => !_wlFind(e))) {
+    _hydrateWatchlist().then(fetched => {
+      if (fetched && document.getElementById('wlDrawer')?.classList.contains('open')) renderWatchlistDrawer();
+    });
+  }
+}
+
+const _wlCache = new Map();   // "movie:27205" → normalised title fetched for the drawer
+const _wlTried = new Set();   // keys already fetched (or failed): not retried within a visit
+const _wlFind = e => MOVIES.find(x => x.id === e.id && mediaTypeOf(x) === e.type) || _wlCache.get(`${e.type}:${e.id}`);
+
+// Same endpoint and normaliser as the ?movie= / ?TVShows= deep link in init().
+async function _hydrateWatchlist() {
+  const missing = WATCHLIST.filter(e => !_wlFind(e) && !_wlTried.has(`${e.type}:${e.id}`));
+  if (!missing.length) return false;
+  missing.forEach(e => _wlTried.add(`${e.type}:${e.id}`));
+  await Promise.all(missing.map(async e => {
+    try {
+      const res = await fetch(`/api/tmdb/${e.type}/${e.id}?language=en-US`);
+      if (!res.ok) return;
+      const raw = await res.json();
+      raw.genre_ids = (raw.genres || []).map(g => g.id);   // the detail endpoint returns genres:[{id,name}]
+      _wlCache.set(`${e.type}:${e.id}`, fromTMDbAs(raw, e.type));
+    } catch (err) { console.warn('[watchlist] fetch failed:', err.message); }
+  }));
+  return true;
+}
+
+function _openWatchlisted(id, type) {
+  let m = MOVIES.find(x => x.id === id && mediaTypeOf(x) === type);
+  if (!m) {
+    m = _wlCache.get(`${type}:${id}`);
+    if (!m) return;
+    MOVIES = [m, ...MOVIES];   // openMovie() looks titles up in MOVIES; the deep link registers its title the same way
+  }
+  openMovie(id);
 }
 
 function clearWatchlist() {
-  WATCHLIST.forEach(id => _updateCardWLBtn(id, false));
-  WATCHLIST = [];
-  try { localStorage.setItem('rk_watchlist', '[]'); } catch {}
-  _updateWLBadge();
-  _updateModalWLBtn();
-  renderWatchlistDrawer();
+  FFWatchlist.clear();   // the listener in initWatchlist() repaints the badge, buttons and drawer
 }
 
 // Backward compat for AIM "save" buttons
