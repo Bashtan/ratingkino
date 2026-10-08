@@ -220,7 +220,8 @@ export async function onRequest({ request, env, params, waitUntil }) {
  * Strict rendering order returned to the client:
  *
  *   Tier 1 — Title match
- *     query (lowercased) is a substring of title OR original_title.
+ *     query (lowercased) is a substring of title OR original_title
+ *     (TV shows: name OR original_name).
  *     Within Tier 1 a fine-grained score sub-sorts: exact > prefix >
  *     all-words > any-word, so "Batman" ranks above "Batman v Superman"
  *     for query "batman".
@@ -447,12 +448,20 @@ const _VALID_LANGS = new Set([
 // m2m100 source codes for the site's non-English languages
 const _M2M_LANG = { uk:'uk', es:'es', fr:'fr', zh:'zh', ar:'ar' };
 
+/* Lower-cased [title, original title] of a TMDB search result. Movies carry
+ * title / original_title; TV shows (/search/tv) carry name / original_name. */
+function _resultTitles(m) {
+  return [
+    (m.title          || m.name          || '').toLowerCase(),
+    (m.original_title || m.original_name || '').toLowerCase(),
+  ];
+}
+
 /* Fine-grained title score used for within-Tier-1 sub-sorting only.
  * 8 = exact title, 7 = prefix, 6 = all words in title, 5 = all in either,
  * 4 = any word in either. 0 = no title match. */
 function _serverTitleScore(movie, q, words) {
-  const t1 = (movie.title          || '').toLowerCase();
-  const t2 = (movie.original_title || '').toLowerCase();
+  const [t1, t2] = _resultTitles(movie);
   if (t1 === q || t2 === q)                                return 8;
   if (t1.startsWith(q) || t2.startsWith(q))               return 7;
   if (words.every(w => t1.includes(w)))                    return 6;
@@ -514,7 +523,8 @@ async function handleSearch(request, env, cors, waitUntil) {
   //
   // seenIds grows as each movie is placed — strict dedup across all tiers.
   //
-  // Tier 1:  effectiveQuery ⊂ title or original_title (case-insensitive).
+  // Tier 1:  effectiveQuery ⊂ title or original_title (case-insensitive);
+  //          TV results use name / original_name (see _resultTitles).
   //          Sub-sorted by _serverTitleScore: exact > prefix > all-words > any-word.
   // Tier 2:  effectiveQuery ⊂ overview/description.
   // Tier 2b: TMDB cast/crew/keyword match — no text hit in title or overview.
@@ -527,9 +537,8 @@ async function handleSearch(request, env, cors, waitUntil) {
     if (seenIds.has(m.id)) continue;
     seenIds.add(m.id);
 
-    const t1 = (m.title          || '').toLowerCase();
-    const t2 = (m.original_title || '').toLowerCase();
-    const ov = (m.overview       || '').toLowerCase();
+    const [t1, t2] = _resultTitles(m);
+    const ov = (m.overview || '').toLowerCase();
 
     if (t1.includes(q) || t2.includes(q)) {
       tier1.push(m);
