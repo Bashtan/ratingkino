@@ -240,6 +240,24 @@ img.fade.loaded { opacity: 1; }
 }
 .hero-sub { margin: 18px 0 0; max-width: 560px; font-size: clamp(1rem, 1.6vw, 1.2rem); line-height: 1.5; color: var(--text-2); text-wrap: pretty; }
 
+/* Movies | TV Shows: two equal options on a pill; one white thumb slides between them. */
+.seg {
+  position: relative; display: grid; grid-template-columns: 1fr 1fr; width: 240px; margin-top: 28px; padding: 3px;
+  border-radius: 999px; background: var(--fill-1); box-shadow: var(--edge);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+}
+.seg::before {
+  content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); border-radius: 999px;
+  background: #fff; transition: transform .35s var(--ease-out);
+}
+.seg[data-ctype="tv"]::before { transform: translateX(100%); }
+.seg-opt {
+  position: relative; z-index: 1; height: 36px; border-radius: 999px;
+  font-size: 14px; font-weight: 600; letter-spacing: -.005em; color: #d4d4d8; transition: color .25s var(--ease-out);
+}
+.seg-opt:hover { color: #fff; }
+.seg-opt[aria-pressed="true"] { color: #050505; }
+.seg + .cmd { margin-top: 22px; }
 .cmd { position: relative; width: 100%; max-width: 780px; margin-top: 40px; }
 /* Soft aura on focus: a slowly turning, heavily blurred colour field behind the
    field — present, never neon. */
@@ -267,6 +285,7 @@ img.fade.loaded { opacity: 1; }
   box-shadow: var(--edge), 0 0 0 5px rgba(255, 255, 255, .03), 0 28px 70px -20px rgba(0, 0, 0, .9);
 }
 .cmd-icon { flex-shrink: 0; color: var(--text-2); transition: color .3s; }
+.cmd-icon.off { display: none; }                                    /* spark = AI search (Movies); magnifier = title search (TV Shows) */
 .cmd:focus-within .cmd-icon { color: #fff; }
 .cmd-input-wrap { position: relative; flex: 1; min-width: 0; height: 100%; }
 .cmd-input {
@@ -407,6 +426,15 @@ img.fade.loaded { opacity: 1; }
 @media (hover: none) { .card:active { transform: scale(.97); } }
 .card:focus-visible .ov { opacity: 1; }
 .card:focus-visible .ov-row { transform: none; }
+
+/* A TV show shown outside the TV Shows tab (Watchlist, a film's recommendations) carries a "TV" tag. */
+.tv-badge {
+  position: absolute; top: 8px; left: 8px; z-index: 2; padding: 3px 6px; border-radius: 5px; pointer-events: none;
+  background: rgba(10, 10, 12, .62); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: var(--edge);
+  font-size: 10.5px; font-weight: 700; letter-spacing: .07em; line-height: 1; color: #e4e4e7;
+}
+@media (hover: none) { .tv-badge { top: 6px; left: 6px; } }
+.more .tv-badge { top: 6px; left: 6px; }
 
 /* ── Watchlist bookmark: a sibling of .card (a button can't nest in a button) ── */
 .wl-tog {
@@ -593,6 +621,8 @@ img.fade.loaded { opacity: 1; }
   .hero { min-height: auto; padding-top: calc(var(--header-h) + env(safe-area-inset-top) + 44px); padding-bottom: 36px; }
   .mosaic { grid-template-columns: repeat(5, 1fr); gap: 10px; }
   .hero-sub { margin-top: 14px; }
+  .seg { margin-top: 22px; }
+  .seg-opt { height: 40px; }
   .cmd { margin-top: 30px; }
   .cmd-field { height: 58px; padding: 0 7px 0 18px; gap: 10px; }
   .cmd-input, .cmd-ph { font-size: 17px; }
@@ -703,12 +733,18 @@ img.fade.loaded { opacity: 1; }
         FindFilm AI · Beta
       </p>
       <h1 class="hero-title" id="heroTitle">What are you in the mood for?</h1>
-      <p class="hero-sub">Describe a feeling, a plot, or a vibe. We’ll find the film.</p>
+      <p class="hero-sub" id="heroSub">Describe a feeling, a plot, or a vibe. We’ll find the film.</p>
+
+      <div class="seg" id="seg" data-ctype="movie" role="group" aria-label="Browse movies or TV shows">
+        <button class="seg-opt" type="button" data-ctype="movie" aria-pressed="true">Movies</button>
+        <button class="seg-opt" type="button" data-ctype="tv" aria-pressed="false">TV Shows</button>
+      </div>
 
       <form class="cmd" id="cmdForm" role="search" aria-label="AI film search">
         <div class="cmd-glow" aria-hidden="true"></div>
         <div class="cmd-field">
-          <svg class="cmd-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>
+          <svg class="cmd-icon" id="cmdIconAI" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>
+          <svg class="cmd-icon off" id="cmdIconSearch" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           <div class="cmd-input-wrap">
             <input class="cmd-input" id="cmdInput" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false" maxlength="300" aria-label="Describe what you want to watch">
             <div class="cmd-ph" id="cmdPh" aria-hidden="true"><span class="cmd-ph-text" id="cmdPhText"></span><span class="cmd-caret"></span></div>
@@ -810,6 +846,61 @@ const CHIPS = [
 ];
 
 const THINKING = ['Reading the vibe…', 'Searching 240,000 films…', 'Weighing critics and audiences…', 'Picking the best matches…'];
+
+/* ── TV Shows ──
+   TV has its own genre ids (10765 = Sci-Fi & Fantasy, not 878) and date fields (first_air_date),
+   so the film chips can't be reused. AI search exists for films only (as in Classic), so every
+   TV chip is a plain /discover/tv query and the TV search box is a title search. */
+const TV_PROMPTS = [
+  'Search a show by title…',
+  'Try “Severance”…',
+  'Try “The Bear”…',
+  'Try “Slow Horses”…',
+  'Try “Chernobyl”…',
+  'Try “Succession”…',
+];
+const TV_CHIPS = [
+  { id: 'tv-limited', label: 'Limited series',        sub: 'One story, start to finish',
+    discover: { with_type: '2', sort_by: 'popularity.desc', 'vote_count.gte': '300' } },
+  { id: 'tv-crime',   label: 'Crime & mystery',       sub: 'Whodunits, procedurals and slow-burn cases',
+    discover: { with_genres: '80|9648', sort_by: 'popularity.desc', 'vote_count.gte': '500' } },
+  { id: 'tv-top2026', label: 'Top Rated 2026',        sub: 'This year’s best-reviewed new series so far',
+    discover: { first_air_date_year: '2026', sort_by: 'vote_average.desc', 'vote_count.gte': '100', without_genres: '99,10767,10763,10764' } },
+  { id: 'tv-netflix', label: 'Netflix',               sub: 'Series from Netflix',
+    discover: { with_networks: '213', sort_by: 'popularity.desc', 'vote_count.gte': '300' } },
+  { id: 'tv-hbo',     label: 'HBO',                   sub: 'Series from HBO',
+    discover: { with_networks: '49', sort_by: 'popularity.desc', 'vote_count.gte': '300' } },
+  { id: 'tv-apple',   label: 'Apple TV+',             sub: 'Series from Apple TV+',
+    discover: { with_networks: '2552', sort_by: 'popularity.desc', 'vote_count.gte': '100' } },
+  { id: 'tv-prime',   label: 'Prime Video',           sub: 'Series from Prime Video',
+    discover: { with_networks: '1024', sort_by: 'popularity.desc', 'vote_count.gte': '300' } },
+  { id: 'tv-anime',   label: 'Anime',                 sub: 'Japanese animated series',
+    discover: { with_genres: '16', with_original_language: 'ja', sort_by: 'popularity.desc', 'vote_count.gte': '200' } },
+  { id: 'tv-adultan', label: 'Animation for adults',  sub: 'Animated series made for grown-ups',
+    discover: { with_genres: '16', without_genres: '10762,10751', sort_by: 'popularity.desc', 'vote_count.gte': '300' } },
+  { id: 'tv-scifi90', label: '90s Sci-Fi & Fantasy',  sub: 'The decade’s most-loved genre TV',
+    discover: { with_genres: '10765', 'first_air_date.gte': '1990-01-01', 'first_air_date.lte': '1999-12-31', sort_by: 'vote_count.desc', 'vote_count.gte': '100' } },
+  { id: 'tv-true',    label: 'Based on a true story', sub: 'Real events, dramatized',
+    discover: { with_keywords: '9672', sort_by: 'popularity.desc', 'vote_count.gte': '300' } },
+  { id: 'tv-a24',     label: 'A24',                   sub: 'From the indie studio behind Euphoria and BEEF',
+    discover: { with_companies: '41077', sort_by: 'popularity.desc', 'vote_count.gte': '50' } },
+];
+
+// Everything that differs between the two tabs, in one place.
+const TYPES = {
+  movie: {
+    trending: '/trending/movie/week', discover: '/discover/movie', chips: CHIPS, prompts: PROMPTS, ai: true, noun: 'titles',
+    homeTitle: 'Trending this week', homeSub: 'What everyone’s watching right now',
+    heroSub: 'Describe a feeling, a plot, or a vibe. We’ll find the film.',
+    placeholder: 'Ask FindFilm AI…', miniLabel: 'Search films', formLabel: 'AI film search', inputLabel: 'Describe what you want to watch',
+  },
+  tv: {
+    trending: '/trending/tv/week', discover: '/discover/tv', chips: TV_CHIPS, prompts: TV_PROMPTS, ai: false, noun: 'shows',
+    homeTitle: 'Trending shows this week', homeSub: 'The series everyone’s watching right now',
+    heroSub: 'Search any show by title, or pick a category below.',
+    placeholder: 'Search TV shows…', miniLabel: 'Search TV shows', formLabel: 'TV show search', inputLabel: 'Search TV shows by title',
+  },
+};
 
 const ICON = {
   spark:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>',
@@ -937,6 +1028,7 @@ const srStatus = $('#srStatus');
 const qv = $('#qv'), qvScrim = $('#qvScrim'), qvScroll = $('#qvScroll'), qvBody = $('#qvBody');
 const qvClose = $('#qvClose'), qvBack = $('#qvBack'), qvHandle = $('#qvHandle');
 const wlBtn = $('#wlBtn'), wlCount = $('#wlCount'), clearLabel = $('#clearLabel'), toastEl = $('#toast');
+const seg = $('#seg'), heroSub = $('#heroSub'), cmdIconAI = $('#cmdIconAI'), cmdIconSearch = $('#cmdIconSearch');
 
 // Shared with Classic (/assets/watchlist.js). If that script is blocked the buttons stay inert (toggle → null) instead of taking the page down.
 const WL = window.FFWatchlist || { has: () => false, toggle: () => null, list: () => [], count: () => 0, onChange: () => () => {} };
@@ -966,6 +1058,7 @@ document.addEventListener('error', e => { const t = e.target; if (t.tagName === 
 ═══════════════════════════════════════════════════════════════ */
 function cardHTML(it, i = 0, { mini = false } = {}) {
   const meta = [it.year, it.rating ? `★ ${it.rating.toFixed(1)}` : ''].filter(Boolean).join(' · ');
+  const tvTag = it.type === 'tv' && (ctype !== 'tv' || isWatchlistView());   // a show among films (Watchlist, recommendations) is marked
   const sizes = mini ? '(max-width: 767px) 30vw, 160px' : '(max-width: 599px) 31vw, (max-width: 1023px) 22vw, 240px';
   let poster = `<span class="noposter">${esc(it.title)}</span>`;
   if (it.poster) {
@@ -974,7 +1067,7 @@ function cardHTML(it, i = 0, { mini = false } = {}) {
       : `<img class="poster fade" src="${IMG}w342${esc(it.poster)}" srcset="${IMG}w185${esc(it.poster)} 185w, ${IMG}w342${esc(it.poster)} 342w, ${IMG}w500${esc(it.poster)} 500w" sizes="${sizes}" data-title="${esc(it.title)}" alt="" loading="lazy" decoding="async">`;
   }
   return `<div class="tile" style="--d:${Math.min(i, 14) * 28}">
-    <button class="card${it.poster ? ' skel' : ''}" type="button" data-key="${keyOf(it)}" aria-label="${esc(it.title)}${it.year ? `, ${it.year}` : ''}">
+    <button class="card${it.poster ? ' skel' : ''}" type="button" data-key="${keyOf(it)}" aria-label="${esc(it.title)}${it.year ? `, ${it.year}` : ''}${tvTag ? ', TV show' : ''}">
       ${poster}
       <span class="ov" aria-hidden="true">
         <span class="ov-row">
@@ -987,6 +1080,7 @@ function cardHTML(it, i = 0, { mini = false } = {}) {
         </span>
       </span>
     </button>
+    ${tvTag ? '<span class="tv-badge" aria-hidden="true">TV</span>' : ''}
     ${wlTogHTML(it)}
   </div>`;
 }
@@ -1000,15 +1094,18 @@ const gridCols = () => getComputedStyle(grid).gridTemplateColumns.split(' ').fil
 ═══════════════════════════════════════════════════════════════ */
 let view = null;
 let inflight = null;
-let homeSnap = null;         // trending grid kept in memory, so "Clear" is instant
+let ctype = 'movie';         // 'movie' | 'tv' — the active tab (see MOVIES | TV SHOWS below)
+const homeSnaps = { movie: null, tv: null };   // each tab's trending grid kept in memory, so "Clear" and tab switches are instant
 let activeChip = null;
 let thinkTimer = 0;
 const stale = v => v !== view;
+const typeCfg = type => TYPES[type || ctype];
 
 function startView(kind, extra = {}) {
   if (inflight) inflight.abort();
   inflight = new AbortController();
-  view = { kind, page: 0, totalPages: 1, loading: false, failed: false, shown: new Set(), items: [], signal: inflight.signal, ...extra };
+  // `ctype` is captured here: a late response for the other tab must never be read as this view's type.
+  view = { kind, ctype, page: 0, totalPages: 1, loading: false, failed: false, shown: new Set(), items: [], signal: inflight.signal, ...extra };
   // A superseded search returns early and never clears its own busy state, so
   // every new view starts from not-busy; searches switch it back on themselves.
   setBusy(false);
@@ -1084,23 +1181,24 @@ async function loadPage(v) {
   let ok = false;
   try {
     const page = v.page + 1;
+    const cfg = typeCfg(v.ctype);
     const d = v.kind === 'home'
-      ? await tmdb('/trending/movie/week', { page }, { signal: v.signal })
-      : await tmdb('/discover/movie', { ...v.chip.discover, include_adult: 'false', page }, { signal: v.signal });
+      ? await tmdb(cfg.trending, { page }, { signal: v.signal })
+      : await tmdb(cfg.discover, { ...v.chip.discover, include_adult: 'false', page }, { signal: v.signal });
     if (stale(v)) return;
     v.page = d.page || page;
     v.totalPages = d.total_pages || v.page;
-    const items = (d.results || []).filter(r => r.poster_path).map(r => fromTMDB(r, 'movie'));
+    const items = (d.results || []).filter(r => r.poster_path).map(r => fromTMDB(r, v.ctype));
     renderItems(v, items, { append: !first });
     if (first) {
-      if (v.kind === 'home') buildMosaic(items);
+      if (v.kind === 'home') buildMosaic(items, v.ctype);
       if (v.kind === 'discover') {
-        setHeader(v.chip.label, `${fmtInt(d.total_results)} titles<span class="muted">·</span>${esc(v.chip.sub)}`);
-        announce(`${v.chip.label}: ${fmtInt(d.total_results)} titles`);
+        setHeader(v.chip.label, `${fmtInt(d.total_results)} ${cfg.noun}<span class="muted">·</span>${esc(v.chip.sub)}`);
+        announce(`${v.chip.label}: ${fmtInt(d.total_results)} ${cfg.noun}`);
       }
       if (!v.items.length) showEmpty();
     }
-    if (v.kind === 'home') homeSnap = { items: v.items.slice(), page: v.page, totalPages: v.totalPages };
+    if (v.kind === 'home') homeSnaps[v.ctype] = { items: v.items.slice(), page: v.page, totalPages: v.totalPages };
     ok = true;
   } catch (e) {
     if (stale(v) || isAbort(e)) return;
@@ -1120,11 +1218,18 @@ async function loadPage(v) {
 function showHome() {
   setChip(null);
   const v = startView('home');
-  setHeader('Trending this week', 'What everyone’s watching right now');
-  if (homeSnap) {
-    v.page = homeSnap.page;
-    v.totalPages = homeSnap.totalPages;
-    renderItems(v, homeSnap.items);
+  const cfg = typeCfg(v.ctype);
+  setHeader(cfg.homeTitle, cfg.homeSub);
+  const snap = homeSnaps[v.ctype];
+  if (snap) {
+    v.page = snap.page;
+    v.totalPages = snap.totalPages;
+    renderItems(v, snap.items);
+    buildMosaic(snap.items, v.ctype);
+    // The scroll observer only reports changes: if the restored grid is short of the viewport (say the window grew since it was cached), ask for more here.
+    requestAnimationFrame(() => {
+      if (!stale(v) && sentinel.getBoundingClientRect().top < innerHeight + 900) loadPage(v);
+    });
     return;
   }
   loadPage(v);
@@ -1204,14 +1309,32 @@ const looksLikeTitle = q => q.split(/\s+/).filter(Boolean).length <= 4 && !/[,?!
 
 async function runTitle(q) {
   const v = startView('title', { q });
+  const type = v.ctype;
   const title = `“${q}”`;
   setHeader(title, '');
   showSkeletons();
   setBusy(true);
   try {
-    const d = await call(`/api/search?${new URLSearchParams({ q, page: '1', type: 'movie', lang: 'en-US' })}`, { signal: v.signal });
+    // Shows go straight to TMDB's own title search. /api/search buckets results by `title`/`original_title`,
+    // which TV results don't have (they use `name`), so there it demotes real title matches below overview matches.
+    const d = type === 'tv'
+      ? await tmdb('/search/tv', { query: q, include_adult: 'false' }, { signal: v.signal })
+      : await call(`/api/search?${new URLSearchParams({ q, page: '1', type, lang: 'en-US' })}`, { signal: v.signal });
     if (stale(v)) return;
-    const items = (d.results || []).filter(r => r.poster_path).map(r => fromTMDB(r, 'movie'));
+    const items = (d.results || []).filter(r => r.poster_path).map(r => fromTMDB(r, type));
+    if (type === 'tv') {
+      // There is no AI tier for shows: what matched by title is the answer, and a miss says so.
+      if (!items.length) {
+        showState(`No shows match “${q}”`, 'TV search works by title. To search by mood or plot, ask AI on the Movies tab.', { label: 'Ask AI in Movies', run: () => askAIInMovies(q) });
+        announce(`No shows match ${q}`);
+        return;
+      }
+      renderItems(v, items);
+      const n = v.items.length, shows = `${fmtInt(n)} show${n === 1 ? '' : 's'}`;
+      setHeader(title, `<span>${shows}</span>`);
+      announce(`${shows} for ${q}`);
+      return;
+    }
     const nq = normTitle(q);
     const hit = nq && items.some(it => {
       const t = normTitle(it.title);
@@ -1223,6 +1346,7 @@ async function runTitle(q) {
     announce(`${v.items.length} titles for ${q}`);
   } catch (e) {
     if (stale(v) || isAbort(e)) return;
+    if (type === 'tv') { setHeader(title, ''); showError(() => runTitle(q)); return; }
     runAI(q);
   } finally {
     if (!stale(v)) setBusy(false);
@@ -1274,7 +1398,7 @@ function submitQuery(raw) {
   setChip(null);
   setInputs(q);
   if (matchMedia('(hover: none)').matches) document.activeElement?.blur();   // drop the phone keyboard
-  (looksLikeTitle(q) ? runTitle : runAI)(q);
+  (typeCfg().ai && !looksLikeTitle(q) ? runAI : runTitle)(q);   // shows have no AI search: everything is a title search
   revealResults();
 }
 cmd.addEventListener('submit', e => { e.preventDefault(); submitQuery(cmdInput.value); });
@@ -1294,13 +1418,15 @@ clearBtn.addEventListener('click', () => { setInputs(''); showHome(); });
 
 /* ── Typing placeholder ── */
 (function typewriter() {
-  let p = 0, c = 0, deleting = false;
+  let p = 0, c = 0, deleting = false, forType = ctype;
   const step = () => {
     if (document.hidden || cmdInput.value) { setTimeout(step, 600); return; }
-    const full = PROMPTS[p];
+    if (forType !== ctype) { forType = ctype; p = 0; c = 0; deleting = false; }   // the other tab's prompts start from the top
+    const prompts = typeCfg().prompts;
+    const full = prompts[p];
     if (reduceMotion.matches) {                     // no typing: swap whole prompts
       cmdPhText.textContent = full;
-      p = (p + 1) % PROMPTS.length;
+      p = (p + 1) % prompts.length;
       setTimeout(step, 3800);
       return;
     }
@@ -1311,7 +1437,7 @@ clearBtn.addEventListener('click', () => { setInputs(''); showHome(); });
       else wait = 34 + Math.random() * 46;
     } else {
       c = Math.max(0, c - 3);
-      if (c === 0) { deleting = false; p = (p + 1) % PROMPTS.length; wait = 380; }
+      if (c === 0) { deleting = false; p = (p + 1) % prompts.length; wait = 380; }
       else wait = 14;
     }
     cmdPhText.textContent = full.slice(0, c);
@@ -1323,7 +1449,7 @@ clearBtn.addEventListener('click', () => { setInputs(''); showHome(); });
 
 /* ── Quick chips ── */
 function renderChips() {
-  chipsTrack.innerHTML = CHIPS.map(c =>
+  chipsTrack.innerHTML = typeCfg().chips.map(c =>
     `<button class="chip" type="button" data-chip="${c.id}" aria-pressed="false">${c.ai ? ICON.sparkSm : ''}${esc(c.label)}</button>`
   ).join('');
 }
@@ -1334,7 +1460,7 @@ function setChip(id) {
 chipsTrack.addEventListener('click', e => {
   const b = e.target.closest('[data-chip]');
   if (!b) return;
-  const chip = CHIPS.find(c => c.id === b.dataset.chip);
+  const chip = typeCfg().chips.find(c => c.id === b.dataset.chip);
   if (!chip) return;
   if (activeChip === chip.id) { setInputs(''); showHome(); return; }   // tap again to clear
   setChip(chip.id);
@@ -1343,11 +1469,61 @@ chipsTrack.addEventListener('click', e => {
   revealResults();
 });
 
+/* ═══════════════════════════════════════════════════════════════
+   MOVIES | TV SHOWS
+   One switch for the page: it picks the feed (trending + chips), the search and the
+   copy. AI search exists for films only — as in Classic — so on the TV tab the search
+   box is a plain title search and every chip is an instant discover query.
+═══════════════════════════════════════════════════════════════ */
+function applyTypeCopy() {
+  const cfg = typeCfg();
+  seg.dataset.ctype = ctype;
+  seg.querySelectorAll('.seg-opt').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.ctype === ctype)));
+  heroSub.textContent = cfg.heroSub;
+  cmd.setAttribute('aria-label', cfg.formLabel);
+  cmdInput.setAttribute('aria-label', cfg.inputLabel);
+  miniForm.setAttribute('aria-label', cfg.miniLabel);
+  miniInput.setAttribute('aria-label', cfg.inputLabel);
+  miniInput.placeholder = cfg.placeholder;
+  cmdIconAI.classList.toggle('off', !cfg.ai);
+  cmdIconSearch.classList.toggle('off', cfg.ai);
+  cmdPhText.textContent = '';                     // the typewriter restarts with this tab's prompts
+  setChip(null);
+  renderChips();
+  $('#chips').scrollLeft = 0;
+}
+
+function setCtype(next, { reload = true } = {}) {
+  if (next === ctype || !TYPES[next]) return;
+  ctype = next;
+  try { sessionStorage.setItem('ff_ctype', ctype); } catch { /* storage blocked: the tab just isn't remembered */ }
+  applyTypeCopy();
+  if (!reload) return;
+  setInputs('');
+  showHome();
+  announce(ctype === 'tv' ? 'Showing TV shows' : 'Showing movies');
+}
+
+seg.addEventListener('click', e => {
+  const b = e.target.closest('.seg-opt');
+  if (b) setCtype(b.dataset.ctype);
+});
+
+// The only way to describe a show by mood or plot: hand the words to the film AI.
+function askAIInMovies(q) {
+  setCtype('movie', { reload: false });
+  setInputs(q);
+  runAI(q);
+}
+
 /* ── Hero poster wall ── */
-function buildMosaic(items) {
-  if (mosaic.childElementCount) return;
+let mosaicType = null;
+function buildMosaic(items, type = 'movie') {
+  if (mosaicType === type) return;              // this tab's wall is already up
   const posters = items.map(it => it.poster).filter(p => p && !/^https?:/.test(p));
   if (posters.length < 8) return;
+  mosaicType = type;
+  mosaic.classList.remove('ready');             // the old wall fades out while the new posters load
   const cells = (isSheet() ? 5 : 9) * 5;
   mosaic.innerHTML = Array.from({ length: cells }, (_, i) =>
     `<img src="${IMG}w185${esc(posters[(i * 7) % posters.length])}" alt="" decoding="async" fetchpriority="low">`).join('');
@@ -1884,6 +2060,7 @@ async function openDeepLink() {
     if ((k === 'movie' || k === 'tvshows') && n > 0) { type = k === 'movie' ? 'movie' : 'tv'; id = n; break; }
   }
   if (!type) return;
+  setCtype(type, { reload: false });   // the link opens on its own tab, so closing the Quick View lands on a matching grid
   // The link has done its job: closing the Quick View should leave a clean URL.
   history.replaceState(null, '', location.pathname + location.hash);
   try {
@@ -1897,7 +2074,8 @@ async function openDeepLink() {
 /* ═══════════════════════════════════════════════════════════════
    BOOT
 ═══════════════════════════════════════════════════════════════ */
-renderChips();
+try { if (sessionStorage.getItem('ff_ctype') === 'tv') ctype = 'tv'; } catch { /* not remembered */ }
+applyTypeCopy();
 syncWL();
 showSkeletons(18);
 openDeepLink();
