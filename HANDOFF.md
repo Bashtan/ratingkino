@@ -4,7 +4,7 @@
 
 ## ⚡ Most Recent Session (2026-10-16) — Touch: Native-Feeling Taps, Swipes and Sheets on Phones
 
-Committed on `main` and pushed — **not deployed yet** (needs `./deploy.sh`). Both layouts; no backend change.
+All commits on `main`, **deployed live on https://findfilm.ai** (Pages production `7155501b` from `72542fa`, 2026-10-16; `./deploy.sh`: 16/16 sensitive paths unpublished, custom domains clean; `/`, `/cinematic/`, `touch.css` and `touch.js?v=fc8fd233` byte-identical to the repo on findfilm.ai and ratingkino.com; `/cinematic/` on production loads 20 cards with `FFSheet` defined and a clean console). Both layouts; no backend change.
 
 | Commit | Feature |
 |--------|---------|
@@ -2700,7 +2700,8 @@ The site is fully installable as a PWA on all platforms.
 
 ## Pending / Next Steps
 
-- [ ] **Deploy the touch pass** (`7c8bcb1`) — `./deploy.sh`, then try it on a real iPhone and Android phone (sheet swipe, carousels, search focus, rating badge)
+- [x] **Deploy the touch pass** (`7c8bcb1`) — live 2026-10-16 (production `7155501b`)
+- [ ] **Owner's on-phone check of the touch pass** — real iPhone + Android: sheet swipe, carousels, search focus (no zoom), rating badge tap, press states
 - [ ] **Swipe-to-dismiss for Classic's other sheets** (actor profile, Tonight wizard, AI results) — needs a transform transition on each before `FFSheet` can spring them back
 - [ ] **Old preview deployments can still write to production** — ~18 full-site previews from 2026-08 (branches `fix-*`, `feat*`, `feature-*`) remain live (e.g. `https://9f183e16.ratingkino.pages.dev`) and are bound to the production KV (`/api/cache/new-releases` returns the 119 live items) and the production D1 (Pitch API active). Pages previews inherit wrangler.toml's bindings. Delete them (`npx wrangler pages deployment delete <id> --project-name ratingkino --force`; **without `--force` wrangler's non-interactive prompt defaults to "no" and deletes nothing**), and/or give previews their own KV/D1 via `[env.preview]` in wrangler.toml. `beta-ui` is a static page with no Functions of its own
 - [ ] **Preview-environment secrets** — the Pages preview env has none, so real full-stack previews (branch deploys running their own Functions) can't work. Either set TMDB_KEY/OMDB_KEY/WATCHMODE_API_KEY for `--env preview`, or keep using the pass-through recipe in the 2026-09-28 session block
