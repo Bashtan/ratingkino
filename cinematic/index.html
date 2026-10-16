@@ -189,7 +189,7 @@ img.fade.loaded { opacity: 1; }
   width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center;
   color: #fff; background: var(--fill-1); transition: background-color .2s;
 }
-.icon-btn:hover { background: var(--fill-2); }
+@media (hover: hover) and (pointer: fine) { .icon-btn:hover { background: var(--fill-2); } }
 .mob-search { display: none; }
 .wl-btn { position: relative; }
 .wl-btn[aria-pressed="true"] { background: var(--fill-3); }          /* the Watchlist view is open */
@@ -219,6 +219,7 @@ img.fade.loaded { opacity: 1; }
   -webkit-mask-image: radial-gradient(ellipse 72% 62% at 50% 46%, #000 25%, transparent 78%);
           mask-image: radial-gradient(ellipse 72% 62% at 50% 46%, #000 25%, transparent 78%);
   opacity: 0; transition: opacity 1.6s var(--ease-out);
+  pointer-events: none;
 }
 .mosaic.ready { opacity: .3; }
 .mosaic img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 8px; filter: saturate(.9) brightness(.8); }
@@ -255,7 +256,7 @@ img.fade.loaded { opacity: 1; }
   position: relative; z-index: 1; height: 36px; border-radius: 999px;
   font-size: 14px; font-weight: 600; letter-spacing: -.005em; color: #d4d4d8; transition: color .25s var(--ease-out);
 }
-.seg-opt:hover { color: #fff; }
+@media (hover: hover) and (pointer: fine) { .seg-opt:hover { color: #fff; } }
 .seg-opt[aria-pressed="true"] { color: #050505; }
 .seg + .cmd { margin-top: 22px; }
 .cmd { position: relative; width: 100%; max-width: 780px; margin-top: 40px; }
@@ -279,7 +280,7 @@ img.fade.loaded { opacity: 1; }
   box-shadow: var(--edge), 0 24px 60px -24px rgba(0, 0, 0, .85);
   transition: background-color .35s var(--ease-out), box-shadow .35s var(--ease-out);
 }
-.cmd-field:hover { background: rgba(36, 36, 41, .64); }
+@media (hover: hover) and (pointer: fine) { .cmd-field:hover { background: rgba(36, 36, 41, .64); } }
 .cmd:focus-within .cmd-field {
   background: rgba(20, 20, 24, .88);
   box-shadow: var(--edge), 0 0 0 5px rgba(255, 255, 255, .03), 0 28px 70px -20px rgba(0, 0, 0, .9);
@@ -308,13 +309,13 @@ img.fade.loaded { opacity: 1; }
   display: none; flex-shrink: 0; width: 32px; height: 32px; border-radius: 999px;
   place-items: center; color: var(--text-2); background: var(--fill-1); transition: background-color .2s, color .2s;
 }
-.cmd-clear:hover { background: var(--fill-2); color: #fff; }
+@media (hover: hover) and (pointer: fine) { .cmd-clear:hover { background: var(--fill-2); color: #fff; } }
 .cmd.has-value .cmd-clear { display: grid; }
 .cmd-go {
   flex-shrink: 0; width: 48px; height: 48px; border-radius: 999px; display: grid; place-items: center;
   background: #fff; color: #050505; transition: transform .2s var(--ease-out), background-color .25s, color .25s;
 }
-.cmd-go:hover { transform: scale(1.06); }
+@media (hover: hover) and (pointer: fine) { .cmd-go:hover { transform: scale(1.06); } }
 .cmd:not(.has-value) .cmd-go { background: var(--fill-2); color: var(--text-3); }
 .cmd-progress { position: absolute; left: 32px; right: 32px; bottom: 0; height: 2px; overflow: hidden; border-radius: 2px; pointer-events: none; }
 
@@ -335,7 +336,7 @@ img.fade.loaded { opacity: 1; }
   font-size: 14px; font-weight: 500; letter-spacing: -.005em;
   transition: background-color .25s var(--ease-out), color .25s var(--ease-out), transform .2s var(--ease-out);
 }
-.chip:hover { background: rgba(255, 255, 255, .15); color: #fff; }
+@media (hover: hover) and (pointer: fine) { .chip:hover { background: rgba(255, 255, 255, .15); color: #fff; } }
 .chip:active { transform: scale(.97); }
 .chip[aria-pressed="true"] { background: #fff; color: #050505; }
 .chip svg { flex-shrink: 0; opacity: .75; }
@@ -365,13 +366,13 @@ img.fade.loaded { opacity: 1; }
 }
 @keyframes text-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
 .link-btn { color: #fff; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; border-radius: 6px; }
-.link-btn:hover { text-decoration: underline; text-underline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) { .link-btn:hover { text-decoration: underline; text-underline-offset: 3px; } }
 .pill-btn {
   flex-shrink: 0; height: 38px; padding: 0 16px; border-radius: 999px;
   display: inline-flex; align-items: center; gap: 8px;
   background: var(--fill-1); color: #fff; font-size: 14px; font-weight: 500; transition: background-color .2s;
 }
-.pill-btn:hover { background: var(--fill-2); }
+@media (hover: hover) and (pointer: fine) { .pill-btn:hover { background: var(--fill-2); } }
 .refine { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: -8px 0 24px; }
 .refine-label { font-size: 13px; color: var(--text-3); margin-right: 2px; }
 
@@ -480,7 +481,7 @@ img.fade.loaded { opacity: 1; }
    QUICK VIEW — floating glass drawer (desktop) / bottom sheet (phone)
 ═══════════════════════════════════════════════════════════════ */
 .qv-scrim {
-  position: fixed; inset: 0; z-index: 80; background: rgba(0, 0, 0, .42);
+  position: fixed; inset: 0; z-index: 80; background: rgba(0, 0, 0, .42); touch-action: none;
   opacity: 0; visibility: hidden; transition: opacity .45s var(--ease-out), visibility 0s linear .45s;
 }
 .qv-scrim.open { opacity: 1; visibility: visible; transition: opacity .45s var(--ease-out), visibility 0s; }
@@ -510,7 +511,7 @@ img.fade.loaded { opacity: 1; }
 }
 .qv-close { right: 14px; }
 .qv-back { left: 14px; }
-.qv-close:hover, .qv-back:hover { background: rgba(48, 48, 54, .8); transform: scale(1.06); }
+@media (hover: hover) and (pointer: fine) { .qv-close:hover, .qv-back:hover { background: rgba(48, 48, 54, .8); transform: scale(1.06); } }
 .qv-handle { display: none; }
 
 .qv-hero { position: relative; aspect-ratio: 16 / 9; background: #0c0c0e; overflow: hidden; }
@@ -547,9 +548,9 @@ img.fade.loaded { opacity: 1; }
   display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600;
 }
 .btn-primary { background: #fff; color: #050505; transition: transform .2s var(--ease-out), background-color .2s; }
-.btn-primary:hover { transform: scale(1.03); }
+@media (hover: hover) and (pointer: fine) { .btn-primary:hover { transform: scale(1.03); } }
 .btn-glass { background: var(--fill-2); color: #fff; transition: background-color .2s; }
-.btn-glass:hover { background: var(--fill-3); }
+@media (hover: hover) and (pointer: fine) { .btn-glass:hover { background: var(--fill-3); } }
 
 .qv-content { display: flex; flex-direction: column; gap: 26px; padding: 26px 28px 44px; }
 .qv-body { display: flex; flex-direction: column; gap: 26px; }
@@ -573,7 +574,7 @@ img.fade.loaded { opacity: 1; }
 .qv-sec h3 span { color: var(--text-3); font-weight: 500; }
 .cast {
   display: flex; gap: 14px; margin: 0 -28px; padding: 2px 28px 6px;
-  overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none;
+  overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; overscroll-behavior-x: contain;
 }
 .cast::-webkit-scrollbar { display: none; }
 .cast-item { flex: 0 0 84px; scroll-snap-align: start; text-align: center; }
@@ -590,7 +591,7 @@ img.fade.loaded { opacity: 1; }
   display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px;
   border-radius: 12px; background: var(--fill-1); font-size: 13.5px; font-weight: 500; transition: background-color .2s;
 }
-.prov:hover { background: var(--fill-2); }
+@media (hover: hover) and (pointer: fine) { .prov:hover { background: var(--fill-2); } }
 .prov img { width: 32px; height: 32px; border-radius: 8px; }
 .more { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .more .ov { padding: 10px; }
@@ -656,6 +657,32 @@ img.fade.loaded { opacity: 1; }
   .btn-glass[data-wl] { width: 44px; padding: 0; justify-content: center; }
   .btn-glass[data-wl] span { display: none; }
 }
+/* ── Touch screens ──────────────────────────────────────────────────────────
+   Press states that answer the finger at once (in ~60ms; the release eases
+   back on each element's own transition), and no backdrop blur on the
+   small glass pieces that repeat down the grid or slide with a scroll: each
+   one is re-blurred every frame it moves, which is what makes scrolling a
+   phone feel heavy. Near-opaque fills keep the same look. */
+@media (hover: none) {
+  .icon-btn, .pill-btn, .btn-glass, .prov { transition: background-color .2s, transform .25s var(--ease-out); }
+  .cmd-clear { transition: background-color .2s, color .2s, transform .25s var(--ease-out); }
+  .icon-btn:active, .pill-btn:active, .btn-glass:active, .prov:active, .cmd-clear:active { background: var(--fill-3); }
+  .icon-btn:active, .pill-btn:active, .btn-glass:active, .prov:active, .cmd-clear:active,
+  .cmd-go:active, .btn-primary:active, .qv-close:active, .qv-back:active { transform: scale(.94); transition-duration: .06s; }
+  .card:active, .chip:active { transition-duration: .08s; }
+  .wl-tog:active { transform: scale(.88); transition-duration: .06s; }
+  .seg-opt:active:not([aria-pressed="true"]) { color: #fff; }
+  .wl-tog { background: rgba(10, 10, 12, .72); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .tv-badge { background: rgba(10, 10, 12, .76); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  /* The glow stays; it just stops turning while the keyboard is up. */
+  .cmd:focus-within .cmd-glow { animation-play-state: paused; }
+}
+@media (max-width: 767px) {
+  .chip { background: rgba(255, 255, 255, .09); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  /* The sheet covers the page: blurring what is behind it bought nothing but
+     a full-screen re-blur on every frame of its slide and of a drag. */
+  .qv { background: rgb(18, 18, 21); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
   .card:hover, .more .card:hover { transform: none; }
@@ -664,6 +691,9 @@ img.fade.loaded { opacity: 1; }
 <!-- Logo + layout toggle, shared with Classic (index.html) — see the comment above. -->
 <link rel="stylesheet" href="/assets/layout-switch.css?v=8b45db4c">
 <script src="/assets/layout-switch.js?v=8b45db4c" defer></script>
+<!-- Touch baseline + bottom-sheet drag, shared with Classic. -->
+<link rel="stylesheet" href="/assets/touch.css?v=fc8fd233">
+<script src="/assets/touch.js?v=fc8fd233" defer></script>
 <!-- Watchlist storage, shared with Classic: one typed list (rk_watchlist_v2). Synchronous on purpose: the page script below reads it at once. -->
 <script src="/assets/watchlist.js?v=64c31e42"></script>
 </head>
@@ -1884,6 +1914,7 @@ function toggleTrailer(btn) {
 // usually opens already filled in.
 let hoverTimer = 0, hoverKey = '';
 function prefetchOnHover(e) {
+  if (e.pointerType !== 'mouse') return;
   const card = e.target.closest && e.target.closest('.card[data-key]');
   const k = card ? card.dataset.key : '';
   if (k === hoverKey) return;
@@ -1895,31 +1926,13 @@ function prefetchOnHover(e) {
 grid.addEventListener('pointerover', prefetchOnHover);
 qvBody.addEventListener('pointerover', prefetchOnHover);
 
-// Phone: drag the sheet down by its handle to dismiss.
-let drag = null;
-qvHandle.addEventListener('pointerdown', e => {
-  if (!isSheet() || !QV.open) return;
-  drag = { id: e.pointerId, y: e.clientY, t: performance.now(), dy: 0 };
-  try { qvHandle.setPointerCapture(e.pointerId); } catch { /* keep dragging without capture */ }
-  qv.style.transition = 'none';
+// Phone: drag the sheet down to dismiss it — by the handle, or anywhere on it
+// while it is scrolled to the top (FFSheet, /assets/touch.js; deferred, so it
+// is attached once the document has parsed).
+addEventListener('DOMContentLoaded', () => {
+  if (!window.FFSheet) return;
+  FFSheet.attach({ sheet: qv, scroller: qvScroll, handle: qvHandle, isActive: () => QV.open && isSheet(), onDismiss: requestCloseQV });
 });
-qvHandle.addEventListener('pointermove', e => {
-  if (!drag || e.pointerId !== drag.id) return;
-  drag.dy = Math.max(0, e.clientY - drag.y);
-  qv.style.transform = `translateY(${drag.dy}px)`;
-});
-function endDrag() {
-  if (!drag) return;
-  const { dy, t } = drag;
-  drag = null;
-  qv.style.transition = '';
-  const velocity = dy / Math.max(1, performance.now() - t);
-  // A long pull, or a real flick — a few pixels of jitter on a tap must not dismiss.
-  if (dy > 120 || (dy > 48 && velocity > 0.6)) requestCloseQV();   // hideQV clears the inline transform in the same frame
-  else qv.style.transform = '';
-}
-qvHandle.addEventListener('pointerup', endDrag);
-qvHandle.addEventListener('pointercancel', endDrag);
 
 /* ═══════════════════════════════════════════════════════════════
    WATCHLIST

@@ -1,0 +1,37 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Touch baseline — SHARED by / (Classic, index.html) and /cinematic/.
+   Element-level rules only (no component classes): each page tunes its own
+   components in its own stylesheet. Behaviour lives in /assets/touch.js.
+
+   Both pages link this file as ?v=<hash> (the service worker serves /assets/*
+   stale-while-revalidate): after editing it, bump ?v= in BOTH pages.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* No grey flash on tap; each page draws its own :active press states instead
+   (touch.js makes :active fire on iOS). manipulation = no double-tap-to-zoom,
+   so rapid taps on chips and buttons are never swallowed as a zoom gesture;
+   pinch zoom still works. */
+html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+
+/* A long press on a control or a poster should do nothing: no text selection
+   with its magnifier, no "Save image" callout, no image drag ghost. Text in
+   content (overviews, reviews) stays selectable. Never put this on <label>:
+   on iOS, user-select:none on an ancestor can stop an <input> taking text. */
+button, [role="button"], img, svg { -webkit-user-select: none; user-select: none; }
+button, img { -webkit-touch-callout: none; }
+img { -webkit-user-drag: none; }
+
+/* Touch screens: no rubber-band bounce or pull-to-refresh on the page itself.
+   Inner scrollers set overscroll-behavior: contain in each page, so reaching
+   the end of a carousel or a sheet never scrolls or bounces what is behind it. */
+@media (hover: none) {
+  html { overscroll-behavior-y: none; }
+}
+
+/* iOS zooms the page in on any focused field under 16px and leaves it zoomed.
+   @supports (-webkit-touch-callout) matches iOS/iPadOS WebKit only, so other
+   platforms keep each field's own size. */
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  textarea, select { font-size: 16px !important; }
+}

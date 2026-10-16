@@ -3622,6 +3622,16 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
   to   { opacity: 1; transform: scale(1);    }
 }
 
+/* ─── SCROLL CONTAINMENT ─────────────────────── */
+/* Reaching the end of a carousel or a sheet stops there: it never hands the
+   rest of the swipe to the page behind (which scrolled the feed under an open
+   modal, or bounced it) nor to the browser's swipe-back gesture. */
+.feed-scroll, .rq-row, .m-starring, .vibe-chips, .mob-mood-scroll, .genre-pills-wrap,
+.voice-lang-menu { overscroll-behavior-x: contain; }
+.overlay, .actor-overlay, .wiz-overlay, .vibe-overlay, .m-body, .actor-modal, .wiz-modal,
+.airx-body, .fd-body, .wl-body, .reviews-list, .cselect-options, .voice-lang-menu,
+.mob-search-overlay, .review-text { overscroll-behavior: contain; }
+
 /* ─── TOUCH: strip hover states ──────────────── */
 @media (hover: none) {
   .movie-card:hover { transform: none; box-shadow: none; border-color: rgba(255,255,255,0.06); }
@@ -3669,7 +3679,17 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
   .rev-star:hover,
   .review-submit:not(:disabled):hover,
   .share-native:hover,
-  .fv-cta:hover { transform: none; }
+  .fv-cta:hover,
+  .gpill:hover,
+  .src-btn:hover,
+  .wiz-broaden:hover,
+  .m-hero-mute:hover,
+  a.rq-card:hover { transform: none; }
+
+  /* A long press on a card opens nothing: no text selection, no callout. */
+  .movie-card, .mini-card, a.rq-card {
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
 
   /* Hero search bar: the :focus-within state swaps in a four-layer box-shadow with 40px
      and 80px blur radii across the full bar width, transitioned over 0.25s. On a phone
@@ -3818,6 +3838,11 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
        (the visual tearing on mid/low-end phones). */
     will-change: transform;
     backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    /* Opaque instead of 95% + blur(40px): the blur was re-rendered across the
+       whole sheet on every frame of its slide and of a swipe-down, and showed
+       nothing through 95% black. */
+    background: rgb(13,13,20);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
   }
   .overlay.open .modal { transform: translateY(0) scale(1); opacity: 1; }
   /* Cinematic hero collapses to a short static image strip on mobile — no
@@ -4404,6 +4429,16 @@ main.browse-collapsed > .load-wrap { display: none !important; }
     opacity: 1;
     transform: none;
   }
+}
+/* Touch: a tap latched .mini-card:hover's spring (scale 1.06, with overshoot)
+   — the card bounced up just as its modal opened, and stayed swollen in the
+   row afterwards. A quick press-in instead, and a plain ease back. (Here, not
+   in the TOUCH block above: these must come after the .mini-card rules.) */
+@media (hover: none) {
+  .mini-card { transition: transform 0.22s ease-out, box-shadow 0.22s ease; }
+  .mini-card:hover,
+  .feed-row.for-you .mini-card:hover { transform: none; box-shadow: none; }
+  .mini-card:active { transform: scale(0.96); transition-duration: 0.06s; }
 }
 /* Skeleton mini cards */
 .mini-card-skeleton {
@@ -5407,6 +5442,9 @@ if ('serviceWorker' in navigator) {
      fixed logo width and the phone-only wordmark hide). -->
 <link rel="stylesheet" href="/assets/layout-switch.css?v=8b45db4c">
 <script src="/assets/layout-switch.js?v=8b45db4c" defer></script>
+<!-- Touch baseline + bottom-sheet drag, shared with /cinematic/. -->
+<link rel="stylesheet" href="/assets/touch.css?v=fc8fd233">
+<script src="/assets/touch.js?v=fc8fd233" defer></script>
 <!-- Watchlist storage, shared with /cinematic/: one typed list (rk_watchlist_v2). Synchronous on purpose: initWatchlist() below reads it at once. -->
 <script src="/assets/watchlist.js?v=64c31e42"></script>
 </head>
@@ -11313,10 +11351,13 @@ function confidenceBadgeHTML(m) {
 
 function avgBadgeHTML(m) {
   const hasCritic = (parseFloat(m.imdb) > 0) || (parseInt(m.rt) > 0) || (parseInt(m.mc) > 0);
+  // Mouse: hover shows the breakdown. Touch: a tap toggles it (and does not
+  // also open the movie). Not on touchstart — that fired for every finger
+  // that landed on a badge to scroll the grid, and left the tooltip floating.
   const handlers = `data-mid="${m.id}"
-    onmouseenter="showRatingTooltip(${m.id},this)"
-    onmouseleave="hideRatingTooltip()"
-    ontouchstart="event.stopPropagation();toggleRatingTooltip(${m.id},this)"`;
+    onpointerenter="if(event.pointerType==='mouse')showRatingTooltip(${m.id},this)"
+    onpointerleave="if(event.pointerType==='mouse')hideRatingTooltip()"
+    onclick="if(IS_TOUCH){event.stopPropagation();toggleRatingTooltip(${m.id},this)}"`;
   if (hasCritic) {
     return `<span class="rb avg unified" ${handlers}
       title="Unified score from IMDb, Rotten Tomatoes &amp; Metacritic">★ ${calcAvg(m)}</span>`;
@@ -16663,8 +16704,29 @@ if (window.navigator.standalone) {
   }, { capture: true });
 }
 
-// Dismiss rating tooltip on outside tap (mobile)
+// Dismiss rating tooltip on outside tap (mobile), and on any scroll: it is
+// position:fixed, so it would otherwise float away from its badge.
 document.addEventListener('click', e => { if (!e.target.closest('.rb.avg')) hideRatingTooltip(); });
+document.addEventListener('scroll', () => {
+  const tip = document.getElementById('rtip');
+  if (tip && tip.classList.contains('show')) hideRatingTooltip();
+}, { capture: true, passive: true });
+
+// Phone: swipe the movie sheet down to dismiss it, from anywhere on it while
+// it is scrolled to the top (FFSheet, /assets/touch.js — deferred, hence
+// attached once the document has parsed). The ≤768px query is the one that
+// turns .modal into a bottom sheet.
+addEventListener('DOMContentLoaded', () => {
+  if (!window.FFSheet) return;
+  const overlay = document.getElementById('overlay');
+  const sheetMQ = window.matchMedia('(max-width: 768px)');
+  FFSheet.attach({
+    sheet: document.getElementById('modal'),
+    scroller: document.querySelector('#modal .m-body'),
+    isActive: () => sheetMQ.matches && overlay.classList.contains('open'),
+    onDismiss: closeModal,
+  });
+});
 
 /* ── Sync filters-bar top to actual header height ───────────────────────── */
 function syncFiltersTop() {
