@@ -2,7 +2,25 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-27) — No Sideways Scroll on Phones (Arabic/RTL + 320px Header)
+## ⚡ Most Recent Session (2026-10-27b) — TikTok + YouTube Shorts Links and the FindFilm Mascot
+
+All commits on `main`, **deployed live on https://findfilm.ai**: Pages production `3efde451` from `168b9cd`, 2026-10-27. `./deploy.sh --branch main`: 16/16 sensitive paths unpublished, custom domains clean, 7 files uploaded (the two pages, `social.css`/`.js`, three mascot images). `/`, `/cinematic/`, `social.css?v=5b50435d`, `social.js?v=5b50435d`, `ff-bot.webp`, `ff-bot-sm.webp` and `ff-bot.png` are byte-identical to the repo on findfilm.ai and ratingkino.com. Both layouts; no backend change. The deploy was made after pulling `e3754be`, so it also carries the other session's RTL/320px fixes (`615bb8f`, `31a26d5`).
+
+| Commit | Feature |
+|--------|---------|
+| `168b9cd` | **Social links + mascot, Classic and Cinematic.** New **shared `assets/social.css` + `assets/social.js`**, linked by BOTH documents as `?v=<hash>` (`cat assets/social.css assets/social.js \| shasum -a 256 \| cut -c1-8`; currently `5b50435d`; same SW bump rule as `touch.*` / `layout-switch.*`). Both pages carry an inline `<svg class="ffs-sprite">` right after `<body>` with the official logos: **`#ffs-i-tt`** (TikTok's note `#ffs-tt-note` drawn three times: `#25F4EE` at −.9/−.9, `#FE2C55` at +.9/+.9, white on top) and **`#ffs-i-yt`** (YouTube Shorts red mark + white play triangle). Links: `https://www.tiktok.com/@findfilmai` and **`https://www.youtube.com/@FindfilmAI/shorts`** (the Shorts tab), `target="_blank" rel="noopener"`, each `a.ffs-btn.ffs-tt` / `a.ffs-btn.ffs-yt` with `data-ffs="tiktok\|youtube"`. **Three placements:** (1) **`.ffs` strip** "Watch FindFilm on [TikTok] [YouTube Shorts]": `.ffs--hero` under the mood chips (Classic: after `#vibeChips` in `#heroSearch`, class `ffs--desk` so it hides ≤768px; Cinematic: after `.chips-wrap` in `.hero-inner`, shown on phones too). On Classic phones its twin **`#ffsFeed.ffs--feed`** sits right after `#rowBest` (search + first picks stay on the opening screen): a card with the small mascot `.ffs-bot` (34×58) beside the label and pills. (2) **`#ffm.ffm` corner mascot**, computers only (`min-width: 1024px` and `hover: hover`), `z-index: 60` (under every modal): 132px tall, peeks 70px (head + 3D glasses) from the bottom-right once the hero strip (`[data-ffm-after]`) has scrolled out above; hover / focus / click raises it and opens `.ffm-bubble` (label + both links stacked); goes back down while the footer band is on screen (IntersectionObserver, `rootMargin: 0 0 -120px 0`); Escape and outside clicks close the bubble; **`.ffm-close` (×) hides it for good: localStorage `ff_mascot_off = '1'`**. Bob animation `ffm-bob` (off under `prefers-reduced-motion`). (3) **`.ffs-band` footer band** before the site footer in both pages: full mascot `.ffs-band-bot` (180px; 140px on phones, stacked above the heading) rising from the band's bottom edge, `h2.ffs-band-title`, 46px buttons. **i18n:** new key **`social.watchOn`** in all 9 Classic locales (en "Watch FindFilm on", uk "Дивись FindFilm у", es "Mira FindFilm en", fr "Regardez FindFilm sur", de "Schau FindFilm auf", sv/no "Se FindFilm på", zh "观看 FindFilm：", ar "شاهد FindFilm على"); every label uses `data-i18n="social.watchOn"`, the × uses `data-i18n-aria="results.close"`. Cinematic has no i18n yet, so its copies are English (the attributes are inert there). **Analytics:** a delegated click handler sends GA `social_click` `{network, placement}`; placement comes from the nearest `[data-ffs-place]` (`hero`, `feed`, `footer`, `mascot`). Every container has class **`noskim`** so Skimlinks doesn't rewrite the links. **Mascot images:** `assets/ff-bot.png` (624×750, 342 KB, the transparent source; originally in `~/Projects/Wrangler for Tik-Tok/assets/`) trimmed into **`assets/ff-bot.webp`** (186×320, 11 KB: corner + footer) and **`assets/ff-bot-sm.webp`** (70×120, 3.6 KB: strip avatar) with `magick -trim +repage -resize x320` + `cwebp -q 84 -alpha_q 90 -m 6`. The pages only load the WebPs; strip and footer images are `loading="lazy"`. |
+
+**Verified on findfilm.ai** (headless Chrome, throwaway profile, analytics/affiliate scripts blocked; no console errors or exceptions): Classic desktop 1440 — hero strip shown, 139 cards, `#ffm` stays down at the top, gets `is-in` at scroll 1100, hover opens the bubble (opacity 1), drops again with the band on screen; Cinematic desktop — 20 cards, hero strip shown, `is-in` at scroll 900. **Phones, Classic at 375 and 320, en and ar:** `#ffsFeed` is `display: grid` directly after `#rowBest` (6 cards), Arabic label translated, `#ffm` and the desk strip hidden, **`scrollWidth === clientWidth === innerWidth`** (375/375, 320/320), also after scrolling to the band. Cinematic phones 375/320: hero strip shown as the card, no overflow. Before deploy (local `findfilm-full`): tablet 820 shows the hero strip without the mascot; all 9 locales switch live; the logic was also checked against a fake IntersectionObserver.
+
+**Known limits / gotchas**
+- **Local dev shows the Classic phone card above "All-Time Classics"**: local KV is empty, so `#rowBest` renders nothing; on production it follows "Best Available Now".
+- The corner mascot only exists at ≥1024px with a hovering pointer, so iPads and touch laptops never see it (they get the hero strip and the footer band).
+- `ff_mascot_off` is per browser; there's no UI to bring the mascot back except clearing that key.
+- `assets/ff-bot.png` is published too (deploy.sh copies `assets/` wholesale) but nothing links it.
+
+---
+
+## Session (2026-10-27) — No Sideways Scroll on Phones (Arabic/RTL + 320px Header)
 
 All commits on `main` (fast-forwarded from branch `claude/exciting-neumann-cecde6`), **deployed live on https://findfilm.ai**: Pages production `db17c4dd` from `3026fac`, 2026-10-27. `./deploy.sh --branch main`: 16/16 sensitive paths unpublished, custom domains clean, only `index.html` changed (1 of 29 files uploaded). `/` is byte-identical to the repo on findfilm.ai, ratingkino.com and the deployment URL, with and without a cache-buster. Classic only (`index.html`), CSS only, no backend change.
 
@@ -2386,6 +2404,11 @@ ratingkino/
 ├── assets/touch.css / .js ← shared by index.html + cinematic/index.html: touch baseline
 │                           (tap highlight, double-tap zoom, long-press, overscroll, iOS
 │                           16px fields), iOS :active, FFSheet drag-to-dismiss. ?v=<hash>.
+├── assets/social.css / .js ← shared by index.html + cinematic/index.html: TikTok +
+│                           YouTube Shorts strip (.ffs), corner mascot (#ffm), footer
+│                           band (.ffs-band), GA social_click. ?v=<hash>.
+├── assets/ff-bot.png     ← mascot source (transparent, 624×750). Pages load the WebPs:
+│                           ff-bot.webp (186×320) and ff-bot-sm.webp (70×120).
 ├── assets/watchlist.js   ← shared by index.html + cinematic/index.html: window.FFWatchlist,
 │                           the one typed watchlist (localStorage rk_watchlist_v2). Loaded
 │                           synchronously in <head> as ?v=<hash>.
@@ -2676,6 +2699,7 @@ Taste profile stored in `localStorage['rk_taste_v1']`: `{ genres: {}, directors:
 | `rk_watchlist_v2` | Watchlist shared by Classic + Cinematic (`assets/watchlist.js`): `[{id, type:'movie'\|'tv'}]`, oldest first |
 | `rk_watchlist` | Legacy Classic watchlist: bare TMDB ids. Imported once into v2 when v2 is missing; never written again |
 | `ff_layout` | `classic` \| `cinematic` — read by the layout router at the top of `index.html` |
+| `ff_mascot_off` | `'1'` once the corner mascot's × was clicked (`assets/social.js`); `#ffm` is removed on load in both layouts |
 | `rk_ios_pwa_dismissed` | Timestamp of last iOS PWA bottom-sheet dismiss (15-day cooldown) |
 | `rk_install_banner_dismissed` | Timestamp of last mobile install banner dismiss (7-day cooldown) |
 
@@ -2728,7 +2752,9 @@ The site is fully installable as a PWA on all platforms.
 ## Pending / Next Steps
 
 - [x] **Merge and deploy the phone overflow fixes** (`615bb8f` RTL popovers + `31a26d5` 320px header): on `main` and live 2026-10-27 (production `db17c4dd` from `3026fac`); verified on findfilm.ai at 320/375 in en and ar
-- [ ] **Main checkout must pull `main` before its next deploy**: `/Users/bashtan/Projects/ratingkino` was at `ae9384c` with uncommitted `index.html` edits (social strip). Commit or set them aside, then `git pull --ff-only`. Otherwise `./deploy.sh` from there reverts the fixes above
+- [x] **Social links + mascot** (`168b9cd`) — TikTok + YouTube Shorts strip, corner mascot, footer band in both layouts; live 2026-10-27 (production `3efde451`)
+- [ ] **Cinematic i18n** would also translate its social strip / band / mascot copies (they already carry `data-i18n="social.watchOn"`)
+- [x] **Main checkout must pull `main` before its next deploy**: pulled `e3754be` (stash → `pull --ff-only` → pop, clean) before the `3efde451` deploy, which therefore keeps the RTL/320px fixes
 - [x] **Header overflows at 320px (both languages)**: fixed in `31a26d5` (`@media (max-width: 340px)`: `.header-btns` 213 → 181px)
 - [ ] **Header right padding at 341–350px**: no overflow, but only 2–11px of padding on the right. Optional: widen the 340px block to 350px
 - [ ] **Missing i18n keys (fall back to English)**: `search.modeTitle` ("By Title") in es/fr/zh/ar; `ratings.*` (the "How ratings work" modal) in es/fr/zh/ar/uk
