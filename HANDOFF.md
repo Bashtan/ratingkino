@@ -2,22 +2,23 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-27) — Arabic/RTL: No Sideways Scroll on Phones
+## ⚡ Most Recent Session (2026-10-27) — No Sideways Scroll on Phones (Arabic/RTL + 320px Header)
 
 Committed on branch **`claude/exciting-neumann-cecde6`** (worktree), **not merged to `main` and NOT deployed**. Deploy waits for the owner's go-ahead. Classic only (`index.html`), CSS only, no backend change.
 
 | Commit | Feature |
 |--------|---------|
 | `615bb8f` | **RTL anchoring for the two search-bar popovers.** In Arabic at 375px the page was 446px wide (`scrollWidth` 446, the phone's layout viewport zoomed out to 446, `scrollX` −71), so it scrolled sideways. **Real cause: `#voiceLangMenuBox.voice-lang-menu`** (`right: 0`). In RTL its trigger (`.voice-lang-trigger`, 🌐) lands in the bar's left half, so the 200px popover hung 71px off the **left** edge. `opacity: 0` still lays out a box, so it did this while closed too. Fix: `[dir="rtl"] .voice-lang-menu { right: auto; left: 0; }`. **`#smMenu.sw-mode-menu`** (`left: 0`; options `#smTitle` / `#smPlot`) was the element in the original report. Its trigger `#smTrigger` sits at the bar's right edge in RTL, so the menu sat past the **right** edge (376→568). In RTL that side is clipped, not scrollable, so it added no width. It did mean the *open* menu was cut off on phones. Fix: `[dir="rtl"] .sw-mode-menu { left: auto; right: 0; transform-origin: top right; }`. Both overrides sit right after each menu's `.open` rule. Every LTR rule is untouched. **`.ri-modal` ("How ratings work", `.ri-head` / `.ri-body`): no change.** It is `position: fixed`, which never adds scroll width. It measured at left −14 only because of the 71px viewport shift; after the fix it sits at 15→360 open and 20→355 closed. |
+| `31a26d5` | **Header row fits at 320px: new `@media (max-width: 340px)` block** (right after the 375px block). At 320 the row needed 351px: 12px padding each side, `.logo` 28, `.ffl` 66, `.header-btns` 213, 10px gaps. English `scrollWidth` was 339; in Arabic the outermost `.hdr-feat` was clipped. The rule trims **only `.header-btns`** (213 → 181px): `.header-btns, .hdr-feats { gap: 5px }` (was 6), `.hdr-feat, .header-btns .btn-watchlist { 32×32 }` (was 34, now the desktop base size), `.header-btns .lang-btn { padding: 0 9px }` + `.header-btns .lang-chevron { display: none }` (globe only, 33px wide; the name is already hidden ≤430px). It doesn't touch the side padding, the row gap or the 52px row height. Those are shared with Cinematic (`assets/layout-switch.css`), so the toggle stays at x50 y10 in both layouts. The `.header-btns` prefixes are needed because the base `.btn-watchlist` / `.lang-btn` rules come later in source. |
 
 **Verified locally** (`findfilm-full` on port 8285, because another session held 8283; Browser pane with mobile emulation; offenders = in-flow boxes outside the `<html>` box, fixed subtrees excluded):
 - **375px:** `scrollWidth === innerWidth === clientWidth === 375`, `scrollX` 0, no offenders. Checked on a fresh Arabic load, a fresh English load, live `switchLang` ar→en→ar, and with each popover open.
 - **Open menus in Arabic at 375px:** `#smMenu` at 155→351, under its trigger. The voice popover at 103→303, under 🌐. Both checked in screenshots.
 - **Desktop (1280):** RTL `#smMenu` at 844→1040 (trigger 986→1040), voice popover at 343→563 (trigger 343→383). In LTR both are unchanged: `#smMenu` 233→494, voice popover 710→930.
-- **Arabic at 320px:** `scrollWidth` 320.
+- **After `31a26d5`, at 320 / 340 / 341 / 375px, en and ar** (fresh loads plus live `switchLang`): `scrollWidth === clientWidth === innerWidth`, no offenders. In every case `.ffl` is at x50 y10 w66 and the header is 52px tall. **Right padding after `.header-btns`:** 12px at 320, 340 and 375. At 341 it is 2px, the same as before this change. At 320 the language menu opens on-screen (en 158→306, ar 129→277). At 375 nothing changed: icons 34px, the language button 53px with its chevron.
 
 **Known limits / gotchas**
-- **320px still overflows, but not because of this bug: the header row is 19px too wide in both languages.** In English, `scrollWidth` is **339** at 320. In Arabic the same overflow lands on the clipped right side, so `scrollWidth` reads 320 but the outermost header icon is cut off (`.hdr-feat` at 305→339). The row needs about 339px: 12px padding on each side, `.logo` 28, `.ffl` layout toggle 66, `.header-btns` 213 (three `.hdr-feat` 34px each, `.btn-watchlist` 34, `#langSwitch` 53), plus 10px and 6px gaps. This predates this session (see Pending).
+- **Widths 341–350px:** nothing overflows, but the header's right padding is squeezed (2px at 341, back to 12px at 351). This was already the case before. Moving the new block to `max-width: 350px` would cover that range too; it was kept at 340 as asked.
 - **RTL rule of thumb:** in an RTL document only overflow past the **left** edge scrolls; overflow past the right edge is clipped. A check like `rect.right > innerWidth` therefore finds the wrong culprit. On a phone, `innerWidth` also grows to the overflowing width, so measure against `document.documentElement.clientWidth` or the `<html>` rect.
 - Any popover anchored to one physical side needs a `[dir="rtl"]` flip, like `.lang-menu`, `.sw-mode-menu` and `.voice-lang-menu`. A closed popover with opacity 0 still takes up layout space.
 
@@ -2722,8 +2723,9 @@ The site is fully installable as a PWA on all platforms.
 
 ## Pending / Next Steps
 
-- [ ] **Merge and deploy the RTL popover fix** (`615bb8f`, branch `claude/exciting-neumann-cecde6`): merge to `main`, push, `./deploy.sh`. Waiting on the owner's go-ahead
-- [ ] **Header overflows at 320px (both languages)**: `.header-inner` needs about 339px (logo + `.ffl` toggle + 3 × `.hdr-feat` + `.btn-watchlist` + `#langSwitch`). English `scrollWidth` is 339; in Arabic the outermost icon is cut off. Needs a ≤340px rule (tighter gaps or 30px icons, or hide one control) — it changes the LTR header at that width, so it needs the owner's call
+- [ ] **Merge and deploy the phone overflow fixes** (`615bb8f` RTL popovers + `31a26d5` 320px header, branch `claude/exciting-neumann-cecde6`): merge to `main`, push, `./deploy.sh`. Waiting on the owner's go-ahead
+- [x] **Header overflows at 320px (both languages)**: fixed in `31a26d5` (`@media (max-width: 340px)`: `.header-btns` 213 → 181px)
+- [ ] **Header right padding at 341–350px**: no overflow, but only 2–11px of padding on the right. Optional: widen the 340px block to 350px
 - [ ] **Missing i18n keys (fall back to English)**: `search.modeTitle` ("By Title") in es/fr/zh/ar; `ratings.*` (the "How ratings work" modal) in es/fr/zh/ar/uk
 - [x] **Deploy the touch pass** (`7c8bcb1`) — live 2026-10-16 (production `7155501b`)
 - [x] **Owner's on-phone check of the touch pass** — confirmed 2026-10-16: swipe-to-close smooth, no sticky hovers, no focus zoom or text highlights; task closed
@@ -2751,7 +2753,7 @@ The site is fully installable as a PWA on all platforms.
 - [ ] **AI description translation quality** — m2m100-1.2b; consider switching to llama-3.3-70b-instruct for translation
 - [ ] **OMDb rate limit** — free tier 1000 req/day; monitor under traffic spike
 - [ ] **For You row threshold** — shows after 3 interactions; consider lowering to 2
-- [x] **Mobile RTL layout**: Arabic at 375px has no horizontal overflow and the filter bar and feed rows render correctly (2026-10-27, `615bb8f`). 320px is tracked above
+- [x] **Mobile RTL layout**: Arabic at 375px and 320px has no horizontal overflow, and the filter bar and feed rows render correctly (2026-10-27, `615bb8f` + `31a26d5`)
 - [ ] **Star hover state bug** — dual CSS + inline colour on review stars; can leave stuck state on rapid mouse exit (pre-existing)
 - [ ] **Admin password on mobile modal** — client-side toggle only, no real auth
 - [ ] **Cross-device watchlist** — currently localStorage only (it is now a single typed key, `rk_watchlist_v2`, behind `FFWatchlist`, so syncing it means changing one file)
