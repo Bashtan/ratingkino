@@ -2,7 +2,26 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-27c) — Cinematic in 9 Languages + Arabic RTL, One Shared Dictionary
+## ⚡ Most Recent Session (2026-10-27d) — The Mascot's AI Moods (Think, Idea, Success, Confused)
+
+All commits on `main`, **deployed live on https://findfilm.ai**: Pages production `545b03b9` from `902d701`, 2026-10-27. `./deploy.sh --branch main`: 16/16 sensitive paths unpublished, custom domains clean, 5 files uploaded. `/`, `/cinematic/`, `social.css?v=c474b48c`, `social.js?v=00593763` and `ff-bot-moods.webp?v=1b892b12` are byte-identical to the repo on findfilm.ai and ratingkino.com; `/raw/…` and `/tools/…` only get the SPA fallback (not published). Both layouts; no backend change.
+
+| Commit | Feature |
+|--------|---------|
+| `902d701` | **The mascot reacts to AI searches.** **`window.FFBot`** (`assets/social.js`, Moods section): `set('think'\|'idea'\|'success'\|'confused'\|'idle')` paints every **`[data-ffb]`** host and sets `#ffm[data-mood]`; **`found(hasSuggestions)`** plays idea → (450ms) success → (2.4s) idle, or an extra idea nudge (1.4s) first when `hasSuggestions()` is true; `warm()` preloads; `mood()`. Internals: `mount(host)` appends one `<i class="ffb-m" data-m="…">` per mood, `paint()`, `warm(then)` (sprite state 0 not asked · 1 loading · 2 ready · 3 failed; a mood asked for before the sprite arrives waits for it; on error the mascot stays idle), `show()`, `later()`. The sprite loads on **first intent**: `focusin` on a search/text field, or the first mood; then `html.ffb-on` turns on the layers' `background-image`. **CSS (`assets/social.css`, Moods block):** `.ffb` host (its `img.ffb-idle` sets the size), `.ffb-m` layers (absolute, bottom-centred via `translate`, `height: calc(100% / 0.85)`, `aspect-ratio: 256/320`, `background-size: 400% 100%`, frame by `[data-m]`), opacity cross-fade 0.28s on a box that never changes size. Keyframes on `transform`/`filter`: **`ffb-think`** (rock ±3°), **`ffb-pop`** + **`ffb-glow`** (idea; brightness only, the bulb's glow is in the art), **`ffb-bounce`** + **`ffb-twinkle`** (success), **`ffb-shrug`** (confused). Sizes: **`.ffb--panel`** 56px (46px ≤768), **`.ffb--empty`** 120px, **`.ffb--head`** 60px (48px ≤768). Corner: `.ffm-bot` is a host too; `.ffm.is-in` with a mood rises to `translateY(calc(var(--ffm-h) - 104px))` (shows 104px instead of 70) and stops bobbing. `prefers-reduced-motion`: no keyframes, cross-fade only. **Classic (`index.html`):** a `.ffb--panel` mascot before `.airx-head-main` in the AI results panel header; the empty screen's `.airx-empty-icon` holds a `.ffb--empty` mascot instead of 🍿, and `.airx-modal:has(.airx-empty.show) .airx-head .ffb { visibility: hidden }`. Hooks: `showAiLoader()` → think, end of `renderAiResults()` → `found(() => !!document.querySelector('#aiResultsFollowups .ai-sug-chip'))`, `showAiResultsError()` → confused, `closeAiResults()` → idle. **Cinematic (`cinematic/index.html`):** `.results-lead` (flex) wraps a `.ffb--head` mascot + `.results-text` (the old `<div>` with `#resultsTitle` / `#resultsSub`). Hooks: `startView(kind)` → think for `ai`/`title`, else idle; `runAI` success → `found(() => !refineEl.hidden)`; `titleFallback()` and `runTitle()` → `found(false)` on a hit, confused on none or an error. **Sprite `assets/ff-bot-moods.webp`** (1024×320, 74 KB): 4 frames of 256×320 in the order think · idea · success · confused; each robot stands on the frame's bottom edge, centred on its helmet, helmet-to-feet 238/320 (matches the idle `ff-bot.webp` inside the 1/0.85 box); props use the room above and beside it. Cut from the owner's pose sheet **`raw/ff-bot-emotions.jpg`** (852×1024, 2×2: think TL, success TR, confused BL, idea BR; a JPEG with a checkerboard painted in where the transparency should be). **`tools/mascot/`**: `checker.py` (fits the checker's cell size + phase from the sheet's border: `fit_grid()`, `lightness()`), `matte.py` (rebuilds the checker per pixel and separates the robots from it: big solid components grown into grey fingers that nearly match a light cell, holes judged see-through vs part of the robot, glows matted as additive light with `GLOW_FALLOFF = 1.8`, the magnifying glass `LENS` as tinted glass; passes a truly transparent PNG straight through), `slice.py` (cells → frames, one common scale), **`cut.sh`** (runs all three, `cwebp -q 84 -alpha_q 95`, then bumps the sprite's `?v=` in `social.css` + `social.js` and `social.*`'s in both pages). |
+
+**Verified locally** (`findfilm-full`, headless Chrome, `/api/ai-search` answered after 2.6s by the test): Cinematic and Classic go think (+1.3s) → idea (+2.75s) → success (+3.55s) → idle (+7.3s), Classic with the idea nudge for its 3 refine chips; misses → confused (Cinematic "No matches…", Classic's empty/error screen with the header mascot hidden). **No layout shift:** every element around the mascot keeps its rect through all 5 moods in the Cinematic heading and Classic panel header, desktop 1440 and phone 375. Phones 375: `scrollWidth === innerWidth`. Corner (Trending, scrolled): top 830 → 796 with a mood, hover still opens the bubble while thinking. Reduced motion: `animation: none`, 0.28s transitions. Sprite not requested before intent. **On findfilm.ai** (real AI, throwaway profile, analytics blocked, no console errors): Cinematic desktop think → idea 9.4s → success → idea → idle 13.7s ("6 AI picks"); Classic (same query, KV-cached) idea at 0.2s … idle 4.4s, 6 cards, 3 refine chips; Cinematic phone 375 idea at 8.0s … idle 12.3s, no overflow; focusing the search field loads the sprite (`ffb-on`), one 200 request for it.
+
+**Known limits / gotchas**
+- **The pose sheet has no real transparency** (a painted checkerboard). Re-cutting is `tools/mascot/cut.sh` (needs python3 + numpy + Pillow, and cwebp); look at the printed work dir's `regions.png` / `strip.png` before committing. A new sheet needs `LENS` in `matte.py` re-measured (or `None`); a real transparent PNG skips the matte.
+- **A repeated AI query is answered from KV in ~0.2s**, so "think" barely shows; that is expected.
+- The corner mascot only exists at ≥1024px with a hovering pointer; phones see the Cinematic heading / Classic panel mascots.
+- Headless tests of the focus-triggered preload need `Emulation.setFocusEmulationEnabled` (an unfocused headless page fires no `focusin`).
+- `raw/` and `tools/` are not in `PUBLIC`, so neither ships.
+
+---
+
+## Session (2026-10-27c) — Cinematic in 9 Languages + Arabic RTL, One Shared Dictionary
 
 All commits on `main`, **deployed live on https://findfilm.ai**: Pages production `f1121318` from `cec4746`, 2026-10-27. `./deploy.sh --branch main`: 16/16 sensitive paths unpublished, custom domains clean, 4 files uploaded (`index.html`, `cinematic/index.html`, `assets/i18n.js`, `assets/social.css`). `/`, `/cinematic/`, `i18n.js?v=12774706`, `social.css?v=73a9f7d6` and `social.js?v=73a9f7d6` are byte-identical to the repo on findfilm.ai and ratingkino.com. No backend change.
 
@@ -2431,6 +2450,12 @@ ratingkino/
 │                           band (.ffs-band), GA social_click. ?v=<hash>.
 ├── assets/ff-bot.png     ← mascot source (transparent, 624×750). Pages load the WebPs:
 │                           ff-bot.webp (186×320) and ff-bot-sm.webp (70×120).
+├── assets/ff-bot-moods.webp ← the mascot's AI moods (window.FFBot): 4 × 256×320 frames,
+│                           think · idea · success · confused. Built by tools/mascot/cut.sh.
+├── raw/ff-bot-emotions.jpg ← the 2×2 pose sheet the moods are cut from (checkerboard
+│                           painted in, no real alpha). raw/ is not published.
+├── tools/mascot/         ← cut.sh + checker.py / matte.py / slice.py: pose sheet →
+│                           ff-bot-moods.webp, and the ?v= bumps. Not published.
 ├── assets/watchlist.js   ← shared by index.html + cinematic/index.html: window.FFWatchlist,
 │                           the one typed watchlist (localStorage rk_watchlist_v2). Loaded
 │                           synchronously in <head> as ?v=<hash>.
@@ -2574,6 +2599,7 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 |----------|---------|
 | `setCtype(next, {reload})` / `applyTypeCopy()` / `typeCfg(type)` + `TYPES` (Cinematic) | The Movies \| TV Shows tab: state `ctype`, persisted in `sessionStorage.ff_ctype`; `TYPES` holds the per-tab endpoints, chips (`CHIPS` / `TV_CHIPS`), prompts, `ai` flag and copy; views capture `ctype` in `view.ctype` |
 | `askAIInMovies(q)` (Cinematic) | TV search miss → switch to Movies without reloading and run the film AI on the same words |
+| `FFBot.set(mood)` / `FFBot.found(hasSuggestions)` / `FFBot.warm()` / `FFBot.mood()` (`assets/social.js`) | The mascot's AI moods on every `[data-ffb]` host + `#ffm`: `think` while the AI works, `found()` = idea → success → idle (+ an idea nudge when refinements are offered), `confused` on no results / errors. Sprite `ff-bot-moods.webp` loads on first intent; called as `window.FFBot?.…` from Classic's `showAiLoader()` / `renderAiResults()` / `showAiResultsError()` / `closeAiResults()` and Cinematic's `startView()` / `runAI()` / `titleFallback()` / `runTitle()` |
 | `FFWatchlist.*` (`assets/watchlist.js`) | The one watchlist, typed `{id, type}`; `toggle(id, type)` returns whether the title is saved afterwards; `onChange(fn)` also fires for other tabs |
 | `toggleWatchlist(id, btn, type)` / `isWatchlisted(id, type)` (Classic) | Wrappers over `FFWatchlist`; `_wlType(id, type)` resolves the type for id-only callers; the listener in `initWatchlist()` repaints badge, `.card-wl-btn`, modal button and drawer |
 | `renderWatchlistDrawer()` + `_hydrateWatchlist()` + `_openWatchlisted(id, type)` (Classic) | Drawer lookup by id+type; fetches saved titles missing from `MOVIES`; opens one (prepends it to `MOVIES`, like the deep link) |
@@ -2653,6 +2679,15 @@ Backend (`functions/api/[[path]].js`): `_actorMovies(actorName, env)` resolves a
   .m-body  { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .m-close { width: 44px; height: 44px; }
 }
+
+/* Mascot moods (assets/social.css, shared): a fixed box per spot, layers cross-fade */
+.ffb                { position: relative; }            /* host [data-ffb]; img.ffb-idle sets the size */
+.ffb-m              { position: absolute; bottom: 0; left: 50%; translate: -50% 0;
+                      height: calc(100% / 0.85); aspect-ratio: 256 / 320; opacity: 0;
+                      background: no-repeat 0 0 / 400% 100%; }   /* frame per [data-m] */
+html.ffb-on .ffb-m  { background-image: url("/assets/ff-bot-moods.webp?v=…"); }
+.ffb[data-mood="think"] > [data-m="think"] { opacity: 1; animation: ffb-think …; }  /* idea, success, confused alike */
+.ffb--panel 56px · .ffb--empty 120px · .ffb--head 60px   (panel 46 / head 48 at ≤768px)
 ```
 
 ---
@@ -2778,6 +2813,7 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Social links + mascot** (`168b9cd`) — TikTok + YouTube Shorts strip, corner mascot, footer band in both layouts; live 2026-10-27 (production `3efde451`)
 - [x] **Cinematic i18n** — done in `cec4746` (shared `assets/i18n.js`, 9 languages, Arabic RTL); live 2026-10-27 (production `f1121318`)
 - [ ] **Native-speaker review of the `cin.*` translations** (Arabic and Ukrainian first) — written in-session, see the 2026-10-27c block
+- [x] **Mascot AI moods** (`902d701`) — think / idea / success / confused in both layouts + the corner, sprite cut from the owner's pose sheet by `tools/mascot/cut.sh`; live 2026-10-27 (production `545b03b9`)
 - [x] **Main checkout must pull `main` before its next deploy**: pulled `e3754be` (stash → `pull --ff-only` → pop, clean) before the `3efde451` deploy, which therefore keeps the RTL/320px fixes
 - [x] **Header overflows at 320px (both languages)**: fixed in `31a26d5` (`@media (max-width: 340px)`: `.header-btns` 213 → 181px)
 - [ ] **Header right padding at 341–350px**: no overflow, but only 2–11px of padding on the right. Optional: widen the 340px block to 350px
