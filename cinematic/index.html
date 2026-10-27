@@ -115,7 +115,7 @@ input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; appe
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 .skip {
-  position: fixed; left: 16px; top: -64px; z-index: 200;
+  position: fixed; inset-inline-start: 16px; top: -64px; z-index: 200;
   background: #fff; color: #000; font-weight: 600; font-size: 14px;
   padding: 10px 16px; border-radius: 999px; transition: top .2s var(--ease-out);
 }
@@ -162,7 +162,7 @@ img.fade.loaded { opacity: 1; }
 }
 .mini-search {
   position: relative; flex: 1; max-width: 520px; height: 40px; margin: 0 auto;
-  display: flex; align-items: center; gap: 10px; padding: 0 8px 0 14px;
+  display: flex; align-items: center; gap: 10px; padding: 0; padding-inline: 14px 8px;
   border-radius: 999px; background: var(--fill-2); overflow: hidden;
   opacity: 0; transform: translateY(-6px); pointer-events: none;
   transition: opacity .3s var(--ease-out), transform .3s var(--ease-out), background-color .2s;
@@ -199,6 +199,34 @@ img.fade.loaded { opacity: 1; }
   box-shadow: 0 0 0 2px var(--bg);                                     /* a ring in the page colour lifts it off the button */
 }
 .wl-count[hidden] { display: none; }
+
+/* Language menu: the 9 languages in their own names, the current one ticked. */
+.lang { position: relative; }
+.lang-btn[aria-expanded="true"] { background: var(--fill-3); }
+.lang-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 1;
+  min-width: 188px; padding: 6px; border-radius: 16px;
+  background: rgba(24, 24, 28, .92); backdrop-filter: var(--glass); -webkit-backdrop-filter: var(--glass);
+  box-shadow: var(--edge), 0 24px 60px -12px rgba(0, 0, 0, .8);
+  transform-origin: top right; animation: menu-in .22s var(--ease-out);
+}
+@keyframes menu-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
+.lang-opt {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  width: 100%; height: 40px; padding: 0 12px; border-radius: 10px;
+  font-size: 15px; font-weight: 500; color: #d4d4d8; text-align: start;
+}
+.lang-opt svg { flex-shrink: 0; visibility: hidden; }
+.lang-opt[aria-checked="true"] { color: #fff; font-weight: 600; }
+.lang-opt[aria-checked="true"] svg { visibility: visible; }
+.lang-opt:focus-visible { outline-offset: -2px; }
+@media (hover: hover) and (pointer: fine) { .lang-opt:hover { background: var(--fill-2); color: #fff; } }
+
+/* Right-to-left (Arabic): the header row keeps Classic's order — logo and
+   layout toggle on the left, on the same pixels in both layouts — while the
+   items inside it (search field, buttons) read right to left, as in Classic
+   (index.html: [dir="rtl"] .header-inner). */
+[dir="rtl"] .topbar-inner { flex-direction: row-reverse; }
 
 /* ═══════════════════════════════════════════════════════════════
    HERO — the AI command center
@@ -252,6 +280,9 @@ img.fade.loaded { opacity: 1; }
   background: #fff; transition: transform .35s var(--ease-out);
 }
 .seg[data-ctype="tv"]::before { transform: translateX(100%); }
+/* RTL: Movies is the right-hand option, so the thumb starts there. */
+[dir="rtl"] .seg::before { left: auto; right: 3px; }
+[dir="rtl"] .seg[data-ctype="tv"]::before { transform: translateX(-100%); }
 .seg-opt {
   position: relative; z-index: 1; height: 36px; border-radius: 999px;
   font-size: 14px; font-weight: 600; letter-spacing: -.005em; color: #d4d4d8; transition: color .25s var(--ease-out);
@@ -274,7 +305,7 @@ img.fade.loaded { opacity: 1; }
 @keyframes glow-spin { to { --glow-a: 360deg; } }
 .cmd-field {
   position: relative; display: flex; align-items: center; gap: 14px;
-  height: 68px; padding: 0 10px 0 24px; border-radius: 999px;
+  height: 68px; padding: 0; padding-inline: 24px 10px; border-radius: 999px;
   background: rgba(30, 30, 34, .6);
   backdrop-filter: var(--glass); -webkit-backdrop-filter: var(--glass);
   box-shadow: var(--edge), 0 24px 60px -24px rgba(0, 0, 0, .85);
@@ -301,7 +332,7 @@ img.fade.loaded { opacity: 1; }
   color: var(--text-3); font-size: 20px; font-weight: 500; letter-spacing: -.012em;
 }
 .cmd-ph-text { flex-shrink: 0; }
-.cmd-caret { flex-shrink: 0; width: 2px; height: 1.15em; margin-left: 2px; border-radius: 1px; background: rgba(255, 255, 255, .55); animation: caret 1.05s steps(1) infinite; }
+.cmd-caret { flex-shrink: 0; width: 2px; height: 1.15em; margin-inline-start: 2px; border-radius: 1px; background: rgba(255, 255, 255, .55); animation: caret 1.05s steps(1) infinite; }
 @keyframes caret { 50% { opacity: 0; } }
 .cmd:focus-within .cmd-caret { display: none; }
 .cmd.has-value .cmd-ph { visibility: hidden; }
@@ -374,7 +405,7 @@ img.fade.loaded { opacity: 1; }
 }
 @media (hover: hover) and (pointer: fine) { .pill-btn:hover { background: var(--fill-2); } }
 .refine { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: -8px 0 24px; }
-.refine-label { font-size: 13px; color: var(--text-3); margin-right: 2px; }
+.refine-label { font-size: 13px; color: var(--text-3); margin-inline-end: 2px; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: 28px 18px; }
 .tile { position: relative; animation: rise .55s var(--ease-out) backwards; animation-delay: calc(var(--d, 0) * 1ms); }
@@ -386,7 +417,7 @@ img.fade.loaded { opacity: 1; }
 .card {
   position: relative; display: block; width: 100%; aspect-ratio: 2 / 3;
   border-radius: var(--r-card); overflow: hidden; isolation: isolate;
-  background-color: #101012; text-align: left;
+  background-color: #101012; text-align: start;
   transition: transform .3s ease-out, box-shadow .3s ease-out;
 }
 .card:focus-visible { outline-offset: 4px; }
@@ -414,6 +445,7 @@ img.fade.loaded { opacity: 1; }
   flex-shrink: 0; width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center;
   background: #fff; color: #050505; box-shadow: 0 4px 14px rgba(0, 0, 0, .45);
 }
+[dir="rtl"] .ov-view svg, [dir="rtl"] .qv-back svg { transform: scaleX(-1); }   /* arrows point the way the page reads */
 @media (hover: hover) and (pointer: fine) {
   .card:hover {
     transform: scale(1.05);
@@ -430,16 +462,16 @@ img.fade.loaded { opacity: 1; }
 
 /* A TV show shown outside the TV Shows tab (Watchlist, a film's recommendations) carries a "TV" tag. */
 .tv-badge {
-  position: absolute; top: 8px; left: 8px; z-index: 2; padding: 3px 6px; border-radius: 5px; pointer-events: none;
+  position: absolute; top: 8px; inset-inline-start: 8px; z-index: 2; padding: 3px 6px; border-radius: 5px; pointer-events: none;
   background: rgba(10, 10, 12, .62); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: var(--edge);
   font-size: 10.5px; font-weight: 700; letter-spacing: .07em; line-height: 1; color: #e4e4e7;
 }
-@media (hover: none) { .tv-badge { top: 6px; left: 6px; } }
-.more .tv-badge { top: 6px; left: 6px; }
+@media (hover: none) { .tv-badge { top: 6px; inset-inline-start: 6px; } }
+.more .tv-badge { top: 6px; inset-inline-start: 6px; }
 
 /* ── Watchlist bookmark: a sibling of .card (a button can't nest in a button) ── */
 .wl-tog {
-  position: absolute; top: 8px; right: 8px; z-index: 4; width: 34px; height: 34px; border-radius: 999px;
+  position: absolute; top: 8px; inset-inline-end: 8px; z-index: 4; width: 34px; height: 34px; border-radius: 999px;
   display: grid; place-items: center; color: #fff;
   background: rgba(10, 10, 12, .58); -webkit-backdrop-filter: var(--glass); backdrop-filter: var(--glass); box-shadow: var(--edge);
   opacity: 0; transform: scale(.88);
@@ -453,8 +485,8 @@ img.fade.loaded { opacity: 1; }
   .tile:hover .wl-tog { opacity: 1; transform: none; }
   .wl-tog:hover { transform: scale(1.08); }
 }
-@media (hover: none) { .wl-tog { opacity: 1; transform: none; width: 30px; height: 30px; top: 6px; right: 6px; } }
-.more .wl-tog { width: 28px; height: 28px; top: 6px; right: 6px; }
+@media (hover: none) { .wl-tog { opacity: 1; transform: none; width: 30px; height: 30px; top: 6px; inset-inline-end: 6px; } }
+.more .wl-tog { width: 28px; height: 28px; top: 6px; inset-inline-end: 6px; }
 /* In the Watchlist view a removed title stays put, dimmed, so a stray tap can be undone. */
 .tile.wl-gone .card { opacity: .38; filter: saturate(.4); }
 .tile.wl-gone .wl-tog { opacity: 1; transform: none; }
@@ -496,6 +528,11 @@ img.fade.loaded { opacity: 1; }
   transition: transform .55s var(--ease-sheet), visibility 0s linear .55s;
 }
 .qv.open { transform: none; visibility: visible; transition: transform .55s var(--ease-sheet), visibility 0s; }
+/* RTL: the drawer slides in from the left, the trailing side there (phones keep the bottom sheet). */
+@media (min-width: 768px) {
+  [dir="rtl"] .qv { right: auto; left: 12px; transform: translateX(calc(-100% - 24px)); }
+  [dir="rtl"] .qv.open { transform: none; }
+}
 .qv-scroll {
   flex: 1; overflow-y: auto; overscroll-behavior: contain;
   scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .18) transparent;
@@ -509,8 +546,8 @@ img.fade.loaded { opacity: 1; }
   backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
   transition: background-color .2s, transform .2s var(--ease-out);
 }
-.qv-close { right: 14px; }
-.qv-back { left: 14px; }
+.qv-close { inset-inline-end: 14px; }
+.qv-back { inset-inline-start: 14px; }
 @media (hover: hover) and (pointer: fine) { .qv-close:hover, .qv-back:hover { background: rgba(48, 48, 54, .8); transform: scale(1.06); } }
 .qv-handle { display: none; }
 
@@ -531,10 +568,11 @@ img.fade.loaded { opacity: 1; }
 /* Title art (Apple TV–style). The <h2> stays in place underneath at opacity 0,
    so the dialog keeps its accessible name and nothing shifts when art loads. */
 .qv-logo {
-  position: absolute; left: 0; bottom: 0; max-width: min(80%, 340px); max-height: 96px;
+  position: absolute; inset-inline-start: 0; bottom: 0; max-width: min(80%, 340px); max-height: 96px;
   object-fit: contain; object-position: left bottom; opacity: 0;
   filter: drop-shadow(0 6px 22px rgba(0, 0, 0, .6)); transition: opacity .45s var(--ease-out);
 }
+[dir="rtl"] .qv-logo { object-position: right bottom; }
 .qv-logo.invert { filter: brightness(0) invert(1) drop-shadow(0 6px 22px rgba(0, 0, 0, .6)); }
 .qv-titlebox.has-logo .qv-logo { opacity: 1; }
 .qv-titlebox.has-logo .qv-title { opacity: 0; }
@@ -588,7 +626,7 @@ img.fade.loaded { opacity: 1; }
 .cast-role { margin-top: 2px; font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .providers { display: flex; flex-wrap: wrap; gap: 10px; }
 .prov {
-  display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px;
+  display: inline-flex; align-items: center; gap: 10px; padding: 6px; padding-inline-end: 14px;
   border-radius: 12px; background: var(--fill-1); font-size: 13.5px; font-weight: 500; transition: background-color .2s;
 }
 @media (hover: hover) and (pointer: fine) { .prov:hover { background: var(--fill-2); } }
@@ -625,7 +663,7 @@ img.fade.loaded { opacity: 1; }
   .seg { margin-top: 22px; }
   .seg-opt { height: 40px; }
   .cmd { margin-top: 30px; }
-  .cmd-field { height: 58px; padding: 0 7px 0 18px; gap: 10px; }
+  .cmd-field { height: 58px; padding-inline: 18px 7px; gap: 10px; }
   .cmd-input, .cmd-ph { font-size: 17px; }
   .cmd-go { width: 44px; height: 44px; }
   .chips-wrap { margin-top: 16px; width: calc(100% + 2 * var(--gutter)); }
@@ -683,6 +721,10 @@ img.fade.loaded { opacity: 1; }
      a full-screen re-blur on every frame of its slide and of a drag. */
   .qv { background: rgb(18, 18, 21); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
+/* Arabic is a joined script: tracking (the negative letter-spacing on titles,
+   the wide caps of labels) would break the letters apart. The header is left
+   alone: its logo and toggle must match Classic's pixels. */
+:root[lang="ar"] main *, :root[lang="ar"] .qv * { letter-spacing: 0 !important; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
   .card:hover, .more .card:hover { transform: none; }
@@ -694,11 +736,26 @@ img.fade.loaded { opacity: 1; }
 <!-- Touch baseline + bottom-sheet drag, shared with Classic. -->
 <link rel="stylesheet" href="/assets/touch.css?v=fc8fd233">
 <!-- Social links + corner mascot, shared with Classic (index.html). -->
-<link rel="stylesheet" href="/assets/social.css?v=5b50435d">
-<script src="/assets/social.js?v=5b50435d" defer></script>
+<link rel="stylesheet" href="/assets/social.css?v=73a9f7d6">
+<script src="/assets/social.js?v=73a9f7d6" defer></script>
 <script src="/assets/touch.js?v=fc8fd233" defer></script>
 <!-- Watchlist storage, shared with Classic: one typed list (rk_watchlist_v2). Synchronous on purpose: the page script below reads it at once. -->
 <script src="/assets/watchlist.js?v=64c31e42"></script>
+<!-- UI strings in 9 languages, shared with Classic (window.FF_I18N). Synchronous on purpose: the page script translates the page before it first paints. -->
+<script src="/assets/i18n.js?v=12774706"></script>
+<script>
+/* The saved language (rk_lang, shared with Classic) sets <html lang dir> now,
+   so an Arabic page is right-to-left from its first paint. */
+(function () {
+  try {
+    var l = localStorage.getItem('rk_lang');
+    if (l && window.FF_I18N && window.FF_I18N[l]) {
+      document.documentElement.lang = l === 'zh' ? 'zh-CN' : l === 'no' ? 'nb' : l;
+      document.documentElement.dir = l === 'ar' ? 'rtl' : 'ltr';
+    }
+  } catch (e) {}
+})();
+</script>
 </head>
 <body>
 <!-- Social brand icons for the .ffs / .ffm / .ffs-band blocks (/assets/social.css),
@@ -716,14 +773,14 @@ img.fade.loaded { opacity: 1; }
     <path fill="#fff" d="M9.597 15.19V8.824l6.007 3.184z"/>
   </symbol>
 </svg>
-<a class="skip" href="#results">Skip to results</a>
+<a class="skip" href="#results" data-i18n="cin.skip">Skip to results</a>
 
 <header class="topbar" id="topbar">
   <div class="topbar-inner">
     <!-- Logo + layout toggle: the same markup as Classic's header (index.html);
          styles and behaviour come from /assets/layout-switch.css + .js, so both
          land on the same pixels in either layout. -->
-    <a class="logo" href="/cinematic/" aria-label="FindFilm.ai — home">
+    <a class="logo" href="/cinematic/" aria-label="FindFilm.ai — home" data-i18n-aria="cin.home">
       <svg class="logo-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <defs>
           <linearGradient id="ffG" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
@@ -744,13 +801,13 @@ img.fade.loaded { opacity: 1; }
         <div class="logo-name">FindFilm<span class="logo-ai">.ai</span></div>
       </div>
     </a>
-    <div class="ffl" role="group" aria-label="Layout">
+    <div class="ffl" role="group" aria-label="Layout" data-i18n-aria="nav.layout">
       <span class="ffl-thumb" aria-hidden="true"></span>
-      <button class="ffl-opt" type="button" data-layout="classic" aria-pressed="false" aria-label="Classic layout">
+      <button class="ffl-opt" type="button" data-layout="classic" aria-pressed="false" aria-label="Classic layout" data-i18n-aria="nav.layoutClassic">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></svg>
         <span>Classic</span>
       </button>
-      <button class="ffl-opt" type="button" data-layout="cinematic" aria-pressed="true" aria-label="Cinematic layout">
+      <button class="ffl-opt" type="button" data-layout="cinematic" aria-pressed="true" aria-label="Cinematic layout" data-i18n-aria="nav.layoutCinematic">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>
         <span>Cinematic</span>
       </button>
@@ -761,13 +818,20 @@ img.fade.loaded { opacity: 1; }
       <kbd class="kbd" id="kbdHint">⌘K</kbd>
     </form>
     <div class="topbar-right">
-      <button class="icon-btn mob-search" id="mobSearchBtn" type="button" aria-label="Search">
+      <button class="icon-btn mob-search" id="mobSearchBtn" type="button" aria-label="Search" data-i18n-aria="cin.search">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       </button>
       <button class="icon-btn wl-btn" id="wlBtn" type="button" aria-label="Watchlist" aria-pressed="false">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         <span class="wl-count" id="wlCount" aria-hidden="true" hidden></span>
       </button>
+      <!-- Language: the site's 9 UI languages; the choice (rk_lang) is shared with Classic. -->
+      <div class="lang" id="lang">
+        <button class="icon-btn lang-btn" id="langBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="langMenu" aria-label="Change language" data-i18n-aria="cin.langBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.25"/><path d="M2.75 12h18.5M12 2.75c2.4 2.6 3.7 5.8 3.7 9.25S14.4 18.65 12 21.25C9.6 18.65 8.3 15.45 8.3 12S9.6 5.35 12 2.75z"/></svg>
+        </button>
+        <div class="lang-menu" id="langMenu" role="menu" aria-label="Language" data-i18n-aria="cin.langMenu" hidden></div>
+      </div>
     </div>
   </div>
 </header>
@@ -780,12 +844,12 @@ img.fade.loaded { opacity: 1; }
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>
         FindFilm AI · Beta
       </p>
-      <h1 class="hero-title" id="heroTitle">What are you in the mood for?</h1>
+      <h1 class="hero-title" id="heroTitle" data-i18n="cin.heroTitle">What are you in the mood for?</h1>
       <p class="hero-sub" id="heroSub">Describe a feeling, a plot, or a vibe. We’ll find the film.</p>
 
-      <div class="seg" id="seg" data-ctype="movie" role="group" aria-label="Browse movies or TV shows">
-        <button class="seg-opt" type="button" data-ctype="movie" aria-pressed="true">Movies</button>
-        <button class="seg-opt" type="button" data-ctype="tv" aria-pressed="false">TV Shows</button>
+      <div class="seg" id="seg" data-ctype="movie" role="group" aria-label="Browse movies or TV shows" data-i18n-aria="cin.segLabel">
+        <button class="seg-opt" type="button" data-ctype="movie" aria-pressed="true" data-i18n="nav.movies">Movies</button>
+        <button class="seg-opt" type="button" data-ctype="tv" aria-pressed="false" data-i18n="nav.tvShows">TV Shows</button>
       </div>
 
       <form class="cmd" id="cmdForm" role="search" aria-label="AI film search">
@@ -797,10 +861,10 @@ img.fade.loaded { opacity: 1; }
             <input class="cmd-input" id="cmdInput" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false" maxlength="300" aria-label="Describe what you want to watch">
             <div class="cmd-ph" id="cmdPh" aria-hidden="true"><span class="cmd-ph-text" id="cmdPhText"></span><span class="cmd-caret"></span></div>
           </div>
-          <button class="cmd-clear" id="cmdClear" type="button" aria-label="Clear search">
+          <button class="cmd-clear" id="cmdClear" type="button" aria-label="Clear search" data-i18n-aria="cin.clearSearch">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>
-          <button class="cmd-go" id="cmdGo" type="submit" aria-label="Search">
+          <button class="cmd-go" id="cmdGo" type="submit" aria-label="Search" data-i18n-aria="cin.search">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
           </button>
         </div>
@@ -809,10 +873,10 @@ img.fade.loaded { opacity: 1; }
 
       <div class="chips-wrap">
         <div class="chips" id="chips">
-          <div class="chips-track" id="chipsTrack" role="group" aria-label="Quick picks"></div>
+          <div class="chips-track" id="chipsTrack" role="group" aria-label="Quick picks" data-i18n-aria="cin.quickPicks"></div>
         </div>
       </div>
-      <!-- Social strip. data-i18n is inert here (this page is English-only for now); Classic translates it. -->
+      <!-- Social strip, the same markup as Classic's. -->
       <div class="ffs ffs--hero noskim" role="group" aria-labelledby="ffsHeroLabel" data-ffs-place="hero" data-ffm-after>
     <img class="ffs-bot" src="/assets/ff-bot-sm.webp" alt="" width="34" height="58" loading="lazy" decoding="async">
     <span class="ffs-label" id="ffsHeroLabel" data-i18n="social.watchOn">Watch FindFilm on</span>
@@ -851,7 +915,8 @@ img.fade.loaded { opacity: 1; }
       </span>
     </div>
   </section>
-  <footer class="foot">
+  <!-- Text: cin.foot, with {tmdb} standing for the link (translateStatic). -->
+  <footer class="foot" id="foot">
     FindFilm.ai Beta — a design prototype for feedback. Film data from
     <a href="https://www.themoviedb.org" target="_blank" rel="noopener">TMDB</a>; this product uses the TMDB API but is not endorsed or certified by TMDB.
   </footer>
@@ -861,7 +926,7 @@ img.fade.loaded { opacity: 1; }
      for good. /assets/social.css + social.js. -->
 <aside class="ffm noskim" id="ffm" data-ffs-place="mascot" aria-labelledby="ffmLabel">
   <div class="ffm-bubble" id="ffmBubble">
-    <button class="ffm-close" type="button" aria-label="Close">
+    <button class="ffm-close" type="button" aria-label="Close" data-i18n-aria="results.close">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
     <span class="ffs-label" id="ffmLabel" data-i18n="social.watchOn">Watch FindFilm on</span>
@@ -881,10 +946,10 @@ img.fade.loaded { opacity: 1; }
 <div class="qv-scrim" id="qvScrim"></div>
 <div class="qv" id="qv" role="dialog" aria-modal="true" aria-labelledby="qvTitle" inert>
   <div class="qv-handle" id="qvHandle" aria-hidden="true"></div>
-  <button class="qv-back" id="qvBack" type="button" aria-label="Back" hidden>
+  <button class="qv-back" id="qvBack" type="button" aria-label="Back" data-i18n-aria="cin.back" hidden>
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
   </button>
-  <button class="qv-close" id="qvClose" type="button" aria-label="Close">
+  <button class="qv-close" id="qvClose" type="button" aria-label="Close" data-i18n-aria="results.close">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
   </button>
   <div class="qv-scroll" id="qvScroll">
@@ -903,88 +968,78 @@ const PROD = 'https://findfilm.ai';
 const IMG = 'https://image.tmdb.org/t/p/';
 const MAX_PAGES = 8;                     // infinite scroll stops at ~160 titles
 
-const PROMPTS = [
-  'Find a cyberpunk movie with philosophical themes…',
-  'A thriller for a rainy evening…',
-  'Something like Arrival, but more hopeful…',
-  'A heist movie with a clever twist…',
-  'A slow-burn mystery set in a small town…',
-  'Visually stunning sci-fi with a great soundtrack…',
-  'A feel-good comedy for family movie night…',
-];
+// Every word on the page comes from /assets/i18n.js through t() (see LANGUAGE
+// below); the config holds dictionary keys, never the words themselves.
 
-// `ai` chips go through /api/ai-search; `discover` chips are instant TMDB queries.
+// `ai` chips send their English query to /api/ai-search (the same words in every
+// language, so the answer is stable and served from its cache) and show it in the
+// field translated (cin.chip.<label>.q); `discover` chips are instant TMDB queries.
+// Labels: cin.chip.<label>, or `brand` as is; subtitles: cin.chip.<sub || label>.sub.
 const CHIPS = [
-  { id: 'mind',   label: 'Mind-bending',          ai: 'Mind-bending movies that twist reality, memory or time' },
-  { id: 'scifi90',label: '90s Sci-Fi',            sub: 'The decade’s most-loved science fiction',
+  { id: 'mind',   label: 'mind',    ai: 'Mind-bending movies that twist reality, memory or time' },
+  { id: 'scifi90',label: 'scifi90',
     discover: { with_genres: '878', 'primary_release_date.gte': '1990-01-01', 'primary_release_date.lte': '1999-12-31', sort_by: 'vote_count.desc', 'vote_count.gte': '200' } },
-  { id: 'top2026',label: 'Top Rated 2026',        sub: 'This year’s best-reviewed releases so far',
+  { id: 'top2026',label: 'top2026',
     discover: { primary_release_year: '2026', sort_by: 'vote_average.desc', 'vote_count.gte': '200', without_genres: '99,10770' } },
-  { id: 'rainy',  label: 'Rainy-night thrillers', ai: 'A gripping thriller for a rainy evening' },
-  { id: 'cozy',   label: 'Cozy & feel-good',      ai: 'Cozy, feel-good movies for a quiet night in' },
-  { id: 'true',   label: 'Based on a true story', sub: 'Real events, dramatized',
+  { id: 'rainy',  label: 'rainy',   ai: 'A gripping thriller for a rainy evening' },
+  { id: 'cozy',   label: 'cozy',    ai: 'Cozy, feel-good movies for a quiet night in' },
+  { id: 'true',   label: 'true',
     discover: { with_keywords: '9672', sort_by: 'popularity.desc', 'vote_count.gte': '300' } },
-  { id: 'a24',    label: 'A24',                   sub: 'From the indie studio behind Everything Everywhere All at Once',
+  { id: 'a24',    brand: 'A24',     sub: 'a24',
     discover: { with_companies: '41077', sort_by: 'popularity.desc', 'vote_count.gte': '150' } },
-  { id: 'anim',   label: 'Animation for adults',  ai: 'Animated films made for adults, not kids' },
-  { id: 'heist',  label: 'Clever heists',         ai: 'Clever heist movies with a satisfying twist' },
-  { id: 'epic',   label: 'Epic worlds',           ai: 'Epic sci-fi and fantasy with incredible world-building' },
+  { id: 'anim',   label: 'anim',    ai: 'Animated films made for adults, not kids' },
+  { id: 'heist',  label: 'heist',   ai: 'Clever heist movies with a satisfying twist' },
+  { id: 'epic',   label: 'epic',    ai: 'Epic sci-fi and fantasy with incredible world-building' },
 ];
-
-const THINKING = ['Reading the vibe…', 'Searching 240,000 films…', 'Weighing critics and audiences…', 'Picking the best matches…'];
 
 /* ── TV Shows ──
    TV has its own genre ids (10765 = Sci-Fi & Fantasy, not 878) and date fields (first_air_date),
    so the film chips can't be reused. AI search exists for films only (as in Classic), so every
    TV chip is a plain /discover/tv query and the TV search box is a title search. */
-const TV_PROMPTS = [
-  'Search a show by title…',
-  'Try “Severance”…',
-  'Try “The Bear”…',
-  'Try “Slow Horses”…',
-  'Try “Chernobyl”…',
-  'Try “Succession”…',
-];
+const TV_TRY = ['Severance', 'The Bear', 'Slow Horses', 'Chernobyl', 'Succession'];   // "Try “…”" prompts
 const TV_CHIPS = [
-  { id: 'tv-limited', label: 'Limited series',        sub: 'One story, start to finish',
+  { id: 'tv-limited', label: 'tvLimited',
     discover: { with_type: '2', sort_by: 'popularity.desc', 'vote_count.gte': '300' } },
-  { id: 'tv-crime',   label: 'Crime & mystery',       sub: 'Whodunits, procedurals and slow-burn cases',
+  { id: 'tv-crime',   label: 'tvCrime',
     discover: { with_genres: '80|9648', sort_by: 'popularity.desc', 'vote_count.gte': '500' } },
-  { id: 'tv-top2026', label: 'Top Rated 2026',        sub: 'This year’s best-reviewed new series so far',
+  { id: 'tv-top2026', label: 'top2026',  sub: 'tvTop2026',
     discover: { first_air_date_year: '2026', sort_by: 'vote_average.desc', 'vote_count.gte': '200', without_genres: '99,10767,10763,10764' } },
-  { id: 'tv-netflix', label: 'Netflix',               sub: 'Series from Netflix',
+  { id: 'tv-netflix', brand: 'Netflix',  net: true,
     discover: { with_networks: '213', sort_by: 'popularity.desc', 'vote_count.gte': '300' } },
-  { id: 'tv-hbo',     label: 'HBO',                   sub: 'Series from HBO',
+  { id: 'tv-hbo',     brand: 'HBO',      net: true,
     discover: { with_networks: '49', sort_by: 'popularity.desc', 'vote_count.gte': '300' } },
-  { id: 'tv-apple',   label: 'Apple TV+',             sub: 'Series from Apple TV+',
+  { id: 'tv-apple',   brand: 'Apple TV+', net: true,
     discover: { with_networks: '2552', sort_by: 'popularity.desc', 'vote_count.gte': '100' } },
-  { id: 'tv-prime',   label: 'Prime Video',           sub: 'Series from Prime Video',
+  { id: 'tv-prime',   brand: 'Prime Video', net: true,
     discover: { with_networks: '1024', sort_by: 'popularity.desc', 'vote_count.gte': '300' } },
-  { id: 'tv-anime',   label: 'Anime',                 sub: 'Japanese animated series',
+  { id: 'tv-anime',   label: 'tvAnime',
     discover: { with_genres: '16', with_original_language: 'ja', sort_by: 'popularity.desc', 'vote_count.gte': '200' } },
-  { id: 'tv-adultan', label: 'Animation for adults',  sub: 'Animated series made for grown-ups',
+  { id: 'tv-adultan', label: 'anim',     sub: 'tvAdult',
     discover: { with_genres: '16', without_genres: '10762,10751', sort_by: 'popularity.desc', 'vote_count.gte': '300' } },
-  { id: 'tv-scifi90', label: '90s Sci-Fi & Fantasy',  sub: 'The decade’s most-loved genre TV',
+  { id: 'tv-scifi90', label: 'tvScifi90',
     discover: { with_genres: '10765', 'first_air_date.gte': '1990-01-01', 'first_air_date.lte': '1999-12-31', sort_by: 'vote_count.desc', 'vote_count.gte': '100' } },
-  { id: 'tv-true',    label: 'Based on a true story', sub: 'Real events, dramatized',
+  { id: 'tv-true',    label: 'true',
     discover: { with_keywords: '9672', sort_by: 'popularity.desc', 'vote_count.gte': '300' } },
-  { id: 'tv-a24',     label: 'A24',                   sub: 'From the indie studio behind Euphoria and BEEF',
+  { id: 'tv-a24',     brand: 'A24',      sub: 'tvA24',
     discover: { with_companies: '41077', sort_by: 'popularity.desc', 'vote_count.gte': '50' } },
 ];
+const chipLabel = c => c.brand || t(`cin.chip.${c.label}`);
+const chipSub = c => (c.net ? t('cin.tvFrom', { name: c.brand }) : t(`cin.chip.${c.sub || c.label}.sub`));
+const chipQuery = c => t(`cin.chip.${c.label}.q`);
 
-// Everything that differs between the two tabs, in one place.
+// Everything that differs between the two tabs, in one place (strings are dictionary keys).
 const TYPES = {
   movie: {
-    trending: '/trending/movie/week', discover: '/discover/movie', chips: CHIPS, prompts: PROMPTS, ai: true, noun: 'titles',
-    homeTitle: 'Trending this week', homeSub: 'What everyone’s watching right now',
-    heroSub: 'Describe a feeling, a plot, or a vibe. We’ll find the film.',
-    placeholder: 'Ask FindFilm AI…', miniLabel: 'Search films', formLabel: 'AI film search', inputLabel: 'Describe what you want to watch',
+    trending: '/trending/movie/week', discover: '/discover/movie', chips: CHIPS, ai: true, count: 'cin.n.titles',
+    prompts: () => [1, 2, 3, 4, 5, 6, 7].map(i => t(`cin.prompt.${i}`)),
+    homeTitle: 'cin.home.movie', homeSub: 'cin.homeSub.movie', heroSub: 'cin.heroSub.movie',
+    placeholder: 'cin.ph.movie', miniLabel: 'cin.mini.movie', formLabel: 'cin.form.movie', inputLabel: 'cin.input.movie',
   },
   tv: {
-    trending: '/trending/tv/week', discover: '/discover/tv', chips: TV_CHIPS, prompts: TV_PROMPTS, ai: false, noun: 'shows',
-    homeTitle: 'Trending shows this week', homeSub: 'The series everyone’s watching right now',
-    heroSub: 'Search any show by title, or pick a category below.',
-    placeholder: 'Search TV shows…', miniLabel: 'Search TV shows', formLabel: 'TV show search', inputLabel: 'Search TV shows by title',
+    trending: '/trending/tv/week', discover: '/discover/tv', chips: TV_CHIPS, ai: false, count: 'cin.n.shows',
+    prompts: () => [t('cin.tvPrompt'), ...TV_TRY.map(title => t('cin.tvTry', { title }))],
+    homeTitle: 'cin.home.tv', homeSub: 'cin.homeSub.tv', heroSub: 'cin.heroSub.tv',
+    placeholder: 'cin.ph.tv', miniLabel: 'cin.mini.tv', formLabel: 'cin.form.tv', inputLabel: 'cin.input.tv',
   },
 };
 
@@ -1006,21 +1061,111 @@ const ICON = {
 ═══════════════════════════════════════════════════════════════ */
 const $ = (sel, root = document) => root.querySelector(sel);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const normTitle = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+// Unicode letters and digits, so a Cyrillic or Arabic title can match too.
+const normTitle = s => String(s || '').toLowerCase().normalize('NFD').replace(/\p{M}+/gu, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 const keyOf = it => `${it.type}:${it.id}`;
-const fmtInt = n => Number(n || 0).toLocaleString('en-US');
 const isAbort = e => e && e.name === 'AbortError';
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const isSheet = () => matchMedia('(max-width: 767px)').matches;
 const scrollBehavior = () => (reduceMotion.matches ? 'auto' : 'smooth');
 const imgURL = (path, size) => (!path ? null : /^https?:/.test(path) ? path : IMG + size + path);
-const fmtRuntime = m => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ''}` : `${m}m`);
-const fmtDate = s => {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s || '')) return '';
-  return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${s}T00:00:00Z`));
+// Numbers, dates and names in the page's language (fmt: see LANGUAGE).
+const fmtInt = n => fmt.int.format(Number(n || 0));
+const fmtRating = r => fmt.one.format(Number(r));
+const fmtRuntime = m => {
+  const h = Math.floor(m / 60), r = m % 60;
+  return h ? (r ? t('cin.dur.hm', { h, m: r }) : t('cin.dur.h', { h })) : t('cin.dur.m', { m });
 };
-const regionName = cc => { try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(cc) || cc; } catch { return cc; } };
+const fmtDate = s => (/^\d{4}-\d{2}-\d{2}$/.test(s || '') ? fmt.date.format(new Date(`${s}T00:00:00Z`)) : '');
+const fmtList = arr => (fmt.list ? fmt.list.format(arr) : arr.join(', '));   // "A and B", "A و B", "A і B"
+const regionName = cc => { try { return fmt.region?.of(cc) || cc; } catch { return cc; } };
+const languageName = (code, fallback) => {
+  let name = '';
+  try { name = (code && fmt.language?.of(code)) || ''; } catch { /* not a language code */ }
+  if (!name || name === code) return fallback || '';
+  return name.charAt(0).toLocaleUpperCase(fmt.loc) + name.slice(1);   // "anglais" → "Anglais" on its own line
+};
 const initials = name => String(name || '').split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+
+/* ═══════════════════════════════════════════════════════════════
+   LANGUAGE
+   The site's 9 UI languages, from /assets/i18n.js — the dictionaries Classic
+   uses too (this page's strings are its 'cin.*' keys). The choice is shared
+   with Classic as well (localStorage rk_lang); a first visit picks the
+   visitor's language the way Classic does: country (/api/geo-lang), then the
+   browser. Film data comes from TMDB in the same language; AI search answers
+   in English, as it does in Classic.
+═══════════════════════════════════════════════════════════════ */
+const DICT = window.FF_I18N || { en: {} };
+const LANGS = ['en', 'es', 'fr', 'zh', 'ar', 'uk', 'de', 'sv', 'no'];
+const LANG_NATIVE = { en: 'English', es: 'Español', fr: 'Français', zh: '中文', ar: 'العربية', uk: 'Українська', de: 'Deutsch', sv: 'Svenska', no: 'Norsk' };
+const TMDB_LANG = { en: 'en-US', es: 'es-ES', fr: 'fr-FR', zh: 'zh-CN', ar: 'ar-SA', uk: 'uk-UA', de: 'de-DE', sv: 'sv-SE', no: 'nb-NO' };   // = Classic's
+const HTML_LANG = { zh: 'zh-CN', no: 'nb' };   // <html lang> (also set before first paint by the script in <head>)
+let lang = 'en';
+let fmt = null;
+let savedLang = null;
+try { savedLang = localStorage.getItem('rk_lang'); } catch { /* storage blocked */ }
+if (!DICT[savedLang]) savedLang = null;
+
+function t(key, vars) {
+  let s = DICT[lang]?.[key] ?? DICT.en?.[key] ?? key;
+  if (vars) for (const k in vars) s = s.split(`{${k}}`).join(vars[k]);
+  return s;
+}
+// A counted phrase: cin.n.<thing>.<category>, the category being the one this
+// language's plural rules give n (uk: one/few/many, ar: zero…many), else .other.
+function tn(key, n) {
+  const d = DICT[lang] || {};
+  const cat = fmt.plural.select(n);
+  const k = d[`${key}.${cat}`] != null ? `${key}.${cat}` : d[`${key}.other`] != null ? `${key}.other` : `${key}.${n === 1 ? 'one' : 'other'}`;
+  return t(k, { n: fmtInt(n) });
+}
+
+function makeFormatters(code) {
+  // Arabic keeps Latin digits, like the years and ratings around them.
+  const loc = code === 'ar' ? 'ar-u-nu-latn' : TMDB_LANG[code] || 'en-US';
+  const names = type => { try { return new Intl.DisplayNames([loc], { type }); } catch { return null; } };
+  return {
+    loc,
+    int: new Intl.NumberFormat(loc),
+    one: new Intl.NumberFormat(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+    date: new Intl.DateTimeFormat(loc, { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }),
+    plural: new Intl.PluralRules(loc),
+    region: names('region'),
+    language: names('language'),
+    list: (() => { try { return new Intl.ListFormat(loc, { type: 'conjunction' }); } catch { return null; } })(),
+  };
+}
+
+// Text that sits in the markup: [data-i18n] → text, [data-i18n-aria] → aria-label.
+function translateStatic() {
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
+  $('#foot').innerHTML = esc(t('cin.foot')).replace('{tmdb}', '<a href="https://www.themoviedb.org" target="_blank" rel="noopener">TMDB</a>');
+}
+
+// Sets the language and everything in the markup; returns whether it changed.
+// Text rendered by script is redrawn by relabel() (see SWITCHING LANGUAGE).
+function setLang(code, { save = true } = {}) {
+  if (!DICT[code]) return false;
+  const changed = code !== lang || !fmt;
+  lang = code;
+  fmt = makeFormatters(code);
+  document.documentElement.lang = HTML_LANG[code] || code;
+  document.documentElement.dir = code === 'ar' ? 'rtl' : 'ltr';
+  if (save) { try { localStorage.setItem('rk_lang', code); } catch { /* not remembered */ } }
+  translateStatic();
+  return changed;
+}
+setLang(savedLang || 'en', { save: false });
+
+// First visit only (nothing saved): the country's language, else the browser's — and remember it, as Classic does.
+function detectLang(geoLang) {
+  if (savedLang) return;
+  const nav = (navigator.language || 'en').split('-')[0].toLowerCase();
+  savedLang = DICT[geoLang] ? geoLang : DICT[nav] ? nav : 'en';
+  if (setLang(savedLang)) relabel();
+}
 
 /* ═══════════════════════════════════════════════════════════════
    API — same origin when available, else the live findfilm.ai API
@@ -1050,12 +1195,16 @@ async function resolveApi() {
       const d = await res.json();
       api.base = '';
       api.country = d.country || 'US';
+      detectLang(d.lang);
       return;
     }
   } catch { /* file:// or no network — fall through */ }
   console.info('[beta] No /api on this origin; using the live findfilm.ai API.');
   api.base = PROD;
-  try { api.country = (await getJSON(`${PROD}/api/geo-lang`, { timeout: 5000 })).country || 'US'; } catch {}
+  let geo = {};
+  try { geo = await getJSON(`${PROD}/api/geo-lang`, { timeout: 5000 }); } catch {}
+  api.country = geo.country || 'US';
+  detectLang(geo.lang);
 }
 const apiReady = resolveApi();
 
@@ -1063,8 +1212,10 @@ async function call(path, opts) {
   await apiReady;
   return getJSON(api.base + path, opts);
 }
-function tmdb(path, params = {}, opts) {
-  const qs = new URLSearchParams({ language: 'en-US', ...params });
+// TMDB in the page's language. Built after apiReady, which settles a first visit's language.
+async function tmdb(path, params = {}, opts) {
+  await apiReady;
+  const qs = new URLSearchParams({ language: TMDB_LANG[lang], ...params });
   if (api.country) qs.set('client_region', api.country);
   return call(`/api/tmdb${path}?${qs}`, opts);
 }
@@ -1143,7 +1294,7 @@ document.addEventListener('error', e => { const t = e.target; if (t.tagName === 
    CARDS
 ═══════════════════════════════════════════════════════════════ */
 function cardHTML(it, i = 0, { mini = false } = {}) {
-  const meta = [it.year, it.rating ? `★ ${it.rating.toFixed(1)}` : ''].filter(Boolean).join(' · ');
+  const meta = [it.year, it.rating ? `★ ${fmtRating(it.rating)}` : ''].filter(Boolean).join(' · ');
   const tvTag = it.type === 'tv' && (ctype !== 'tv' || isWatchlistView());   // a show among films (Watchlist, recommendations) is marked
   const sizes = mini ? '(max-width: 767px) 30vw, 160px' : '(max-width: 599px) 31vw, (max-width: 1023px) 22vw, 240px';
   let poster = `<span class="noposter">${esc(it.title)}</span>`;
@@ -1153,7 +1304,7 @@ function cardHTML(it, i = 0, { mini = false } = {}) {
       : `<img class="poster fade" src="${IMG}w342${esc(it.poster)}" srcset="${IMG}w185${esc(it.poster)} 185w, ${IMG}w342${esc(it.poster)} 342w, ${IMG}w500${esc(it.poster)} 500w" sizes="${sizes}" data-title="${esc(it.title)}" alt="" loading="lazy" decoding="async">`;
   }
   return `<div class="tile" style="--d:${Math.min(i, 14) * 28}">
-    <button class="card${it.poster ? ' skel' : ''}" type="button" data-key="${keyOf(it)}" aria-label="${esc(it.title)}${it.year ? `, ${it.year}` : ''}${tvTag ? ', TV show' : ''}">
+    <button class="card${it.poster ? ' skel' : ''}" type="button" data-key="${keyOf(it)}" aria-label="${esc(it.title)}${it.year ? `, ${it.year}` : ''}${tvTag ? `, ${esc(t('cin.tvShow'))}` : ''}">
       ${poster}
       <span class="ov" aria-hidden="true">
         <span class="ov-row">
@@ -1197,7 +1348,7 @@ function startView(kind, extra = {}) {
   setBusy(false);
   setRefine(null);
   clearBtn.hidden = kind === 'home';
-  clearLabel.textContent = kind === 'watchlist' ? 'Close' : 'Clear';   // "Clear" there would read as emptying the list
+  clearLabel.textContent = t(kind === 'watchlist' ? 'results.close' : 'cin.clear');   // "Clear" there would read as emptying the list
   wlBtn.setAttribute('aria-pressed', String(kind === 'watchlist'));
   return view;
 }
@@ -1208,8 +1359,9 @@ function setHeader(title, subHTML = '', { thinking = false } = {}) {
   resultsSub.classList.toggle('thinking', thinking);
   if (thinking) {
     let i = 0;
-    resultsSub.textContent = THINKING[0];
-    thinkTimer = setInterval(() => { i = (i + 1) % THINKING.length; resultsSub.textContent = THINKING[i]; }, 1700);
+    const line = () => t(`cin.think.${(i % 4) + 1}`);   // read each time: a language switch carries on in the new language
+    resultsSub.textContent = line();
+    thinkTimer = setInterval(() => { i += 1; resultsSub.textContent = line(); }, 1700);
   } else {
     resultsSub.innerHTML = subHTML;
   }
@@ -1254,8 +1406,9 @@ function showState(title, sub, action) {
   grid.setAttribute('aria-busy', 'false');
   if (action) grid.querySelector('[data-state-action]').addEventListener('click', action.run, { once: true });
 }
-const showEmpty = q => showState(q ? `No matches for “${q}”` : 'Nothing here yet', 'Try describing a mood, a plot, or a film you loved.');
-const showError = retry => showState('Couldn’t reach FindFilm', 'Check your connection and try again.', { label: 'Try again', run: retry });
+const showEmpty = q => showState(q ? t('cin.noMatchesFor', { q }) : t('cin.nothingYet'), t('cin.emptyHint'));
+const showError = retry => showState(t('cin.errTitle'), t('cin.errSub'), { label: t('cin.tryAgain'), run: retry });
+const quoted = q => t('cin.quoted', { q });
 
 /* ── Paged views: trending + discover chips (infinite scroll) ── */
 async function loadPage(v) {
@@ -1279,8 +1432,9 @@ async function loadPage(v) {
     if (first) {
       if (v.kind === 'home') buildMosaic(items, v.ctype);
       if (v.kind === 'discover') {
-        setHeader(v.chip.label, `${fmtInt(d.total_results)} ${cfg.noun}<span class="muted">·</span>${esc(v.chip.sub)}`);
-        announce(`${v.chip.label}: ${fmtInt(d.total_results)} ${cfg.noun}`);
+        const count = tn(cfg.count, d.total_results || 0);
+        setHeader(chipLabel(v.chip), `${esc(count)}<span class="muted">·</span>${esc(chipSub(v.chip))}`);
+        announce(`${chipLabel(v.chip)}: ${count}`);
       }
       if (!v.items.length) showEmpty();
     }
@@ -1305,7 +1459,7 @@ function showHome() {
   setChip(null);
   const v = startView('home');
   const cfg = typeCfg(v.ctype);
-  setHeader(cfg.homeTitle, cfg.homeSub);
+  setHeader(t(cfg.homeTitle), esc(t(cfg.homeSub)));
   const snap = homeSnaps[v.ctype];
   if (snap) {
     v.page = snap.page;
@@ -1323,18 +1477,19 @@ function showHome() {
 
 function runDiscover(chip) {
   const v = startView('discover', { chip });
-  setHeader(chip.label, esc(chip.sub));
+  setHeader(chipLabel(chip), esc(chipSub(chip)));
   loadPage(v);
 }
 
 /* ── AI search ── */
-async function runAI(q, { label = null } = {}) {
-  const v = startView('ai', { q, label });
-  const title = label || `“${q}”`;
+// `chip`: the quick pick that asked, whose label then heads the results.
+async function runAI(q, { chip = null } = {}) {
+  const v = startView('ai', { q, chip });
+  const title = chip ? chipLabel(chip) : quoted(q);
   setHeader(title, '', { thinking: true });
   showSkeletons(Math.max(6, gridCols()));
   setBusy(true);
-  announce(`Searching for ${q}`);
+  announce(t('cin.searchingFor', { q: chip ? title : q }));
   try {
     const d = await call('/api/ai-search', {
       method: 'POST',
@@ -1360,10 +1515,10 @@ async function runAI(q, { label = null } = {}) {
     }
     renderItems(v, items);
     const n = v.items.length;
-    const who = d.actorQuery && d.personName ? ` with ${esc(d.personName)}` : '';
-    setHeader(title, `${ICON.sparkSm}<span>${n} AI pick${n === 1 ? '' : 's'}${who}</span>${d.message ? `<span class="muted">· ${esc(d.message)}</span>` : ''}`);
+    const who = d.actorQuery && d.personName ? ` ${esc(t('cin.withPerson', { name: d.personName }))}` : '';
+    setHeader(title, `${ICON.sparkSm}<span>${esc(tn('cin.n.aiPicks', n))}${who}</span>${d.message ? `<span class="muted">· ${esc(d.message)}</span>` : ''}`);
     setRefine(q, d.suggestedRefinements);
-    announce(`${n} picks for ${q}`);
+    announce(t('cin.resultsFor', { count: tn('cin.n.aiPicks', n), q: chip ? title : q }));
   } catch (e) {
     if (stale(v) || isAbort(e)) return;
     await titleFallback(v, q, title);
@@ -1375,17 +1530,18 @@ async function runAI(q, { label = null } = {}) {
 // AI down or too slow → the title + semantic search endpoint, labelled honestly.
 async function titleFallback(v, q, title) {
   try {
-    const d = await call(`/api/search?${new URLSearchParams({ q, page: '1', type: 'movie', lang: 'en-US' })}`, { signal: v.signal });
+    const d = await call(`/api/search?${new URLSearchParams({ q, page: '1', type: 'movie', lang: TMDB_LANG[lang] })}`, { signal: v.signal });
     if (stale(v)) return;
     const items = (d.results || []).filter(r => r.poster_path).map(r => fromTMDB(r, 'movie'));
     if (!items.length) { setHeader(title, ''); showEmpty(q); return; }
     renderItems(v, items);
-    setHeader(title, `<span>${fmtInt(v.items.length)} matches</span><span class="muted">· AI is busy, so these are title matches ·</span><button class="link-btn" type="button" data-ask-ai>Try AI again</button>`);
-    announce(`${v.items.length} title matches for ${q}`);
+    const count = tn('cin.n.matches', v.items.length);
+    setHeader(title, `<span>${esc(count)}</span><span class="muted">· ${esc(t('cin.aiBusy'))} ·</span><button class="link-btn" type="button" data-ask-ai>${esc(t('cin.tryAI'))}</button>`);
+    announce(t('cin.resultsFor', { count, q }));
   } catch (e) {
     if (stale(v) || isAbort(e)) return;
     setHeader(title, '');
-    showError(() => runAI(q, { label: v.label }));
+    showError(() => runAI(q, { chip: v.chip }));
   }
 }
 
@@ -1396,7 +1552,7 @@ const looksLikeTitle = q => q.split(/\s+/).filter(Boolean).length <= 4 && !/[,?!
 async function runTitle(q) {
   const v = startView('title', { q });
   const type = v.ctype;
-  const title = `“${q}”`;
+  const title = quoted(q);
   setHeader(title, '');
   showSkeletons();
   setBusy(true);
@@ -1405,31 +1561,32 @@ async function runTitle(q) {
     // which TV results don't have (they use `name`), so there it demotes real title matches below overview matches.
     const d = type === 'tv'
       ? await tmdb('/search/tv', { query: q, include_adult: 'false' }, { signal: v.signal })
-      : await call(`/api/search?${new URLSearchParams({ q, page: '1', type, lang: 'en-US' })}`, { signal: v.signal });
+      : await call(`/api/search?${new URLSearchParams({ q, page: '1', type, lang: TMDB_LANG[lang] })}`, { signal: v.signal });
     if (stale(v)) return;
     const items = (d.results || []).filter(r => r.poster_path).map(r => fromTMDB(r, type));
     if (type === 'tv') {
       // There is no AI tier for shows: what matched by title is the answer, and a miss says so.
       if (!items.length) {
-        showState(`No shows match “${q}”`, 'TV search works by title. To search by mood or plot, ask AI on the Movies tab.', { label: 'Ask AI in Movies', run: () => askAIInMovies(q) });
-        announce(`No shows match ${q}`);
+        showState(t('cin.noShows', { q }), t('cin.tvHint'), { label: t('cin.askAIMovies'), run: () => askAIInMovies(q) });
+        announce(t('cin.noShows', { q }));
         return;
       }
       renderItems(v, items);
-      const n = v.items.length, shows = `${fmtInt(n)} show${n === 1 ? '' : 's'}`;
-      setHeader(title, `<span>${shows}</span>`);
-      announce(`${shows} for ${q}`);
+      const shows = tn('cin.n.shows', v.items.length);
+      setHeader(title, `<span>${esc(shows)}</span>`);
+      announce(t('cin.resultsFor', { count: shows, q }));
       return;
     }
     const nq = normTitle(q);
     const hit = nq && items.some(it => {
-      const t = normTitle(it.title);
-      return t === nq || t.startsWith(nq) || (nq.length > 3 && t.includes(nq));
+      const n = normTitle(it.title);
+      return n === nq || n.startsWith(nq) || (nq.length > 3 && n.includes(nq));
     });
     if (!hit) { runAI(q); return; }      // not a title after all — let the AI read it
     renderItems(v, items);
-    setHeader(title, `<span>${fmtInt(v.items.length)} titles</span><span class="muted">·</span><button class="link-btn" type="button" data-ask-ai>${ICON.sparkSm}Ask AI instead</button>`);
-    announce(`${v.items.length} titles for ${q}`);
+    const count = tn('cin.n.titles', v.items.length);
+    setHeader(title, `<span>${esc(count)}</span><span class="muted">·</span><button class="link-btn" type="button" data-ask-ai>${ICON.sparkSm}${esc(t('cin.askAIInstead'))}</button>`);
+    announce(t('cin.resultsFor', { count, q }));
   } catch (e) {
     if (stale(v) || isAbort(e)) return;
     if (type === 'tv') { setHeader(title, ''); showError(() => runTitle(q)); return; }
@@ -1440,7 +1597,7 @@ async function runTitle(q) {
 }
 
 resultsSub.addEventListener('click', e => {
-  if (e.target.closest('[data-ask-ai]') && view?.q) runAI(view.q, { label: view.label });
+  if (e.target.closest('[data-ask-ai]') && view?.q) runAI(view.q, { chip: view.chip });
   if (e.target.closest('[data-wl-retry]')) showWatchlist();
 });
 
@@ -1452,7 +1609,7 @@ function setRefine(base, list) {
   refineEl.hidden = !items.length;
   refineEl.dataset.base = base || '';
   refineEl.innerHTML = items.length
-    ? `<span class="refine-label">Refine</span>${items.map(s => `<button class="chip chip-sm" type="button" data-refine="${esc(s)}">${ICON.plus}${esc(s)}</button>`).join('')}`
+    ? `<span class="refine-label">${esc(t('cin.refine'))}</span>${items.map(s => `<button class="chip chip-sm" type="button" data-refine="${esc(s)}">${ICON.plus}${esc(s)}</button>`).join('')}`
     : '';
 }
 refineEl.addEventListener('click', e => {
@@ -1504,11 +1661,12 @@ clearBtn.addEventListener('click', () => { setInputs(''); showHome(); });
 
 /* ── Typing placeholder ── */
 (function typewriter() {
-  let p = 0, c = 0, deleting = false, forType = ctype;
+  let p = 0, c = 0, deleting = false, forType = ctype, forLang = lang;
   const step = () => {
     if (document.hidden || cmdInput.value) { setTimeout(step, 600); return; }
-    if (forType !== ctype) { forType = ctype; p = 0; c = 0; deleting = false; }   // the other tab's prompts start from the top
-    const prompts = typeCfg().prompts;
+    // The other tab's prompts, or a new language's, start from the top.
+    if (forType !== ctype || forLang !== lang) { forType = ctype; forLang = lang; p = 0; c = 0; deleting = false; }
+    const prompts = typeCfg().prompts();
     const full = prompts[p];
     if (reduceMotion.matches) {                     // no typing: swap whole prompts
       cmdPhText.textContent = full;
@@ -1527,7 +1685,8 @@ clearBtn.addEventListener('click', () => { setInputs(''); showHome(); });
       else wait = 14;
     }
     cmdPhText.textContent = full.slice(0, c);
-    cmdPh.scrollLeft = cmdPh.scrollWidth;           // long prompts scroll like real typing
+    // Long prompts scroll like real typing (right to left, the end is at scrollLeft −max).
+    cmdPh.scrollLeft = document.documentElement.dir === 'rtl' ? -cmdPh.scrollWidth : cmdPh.scrollWidth;
     setTimeout(step, wait);
   };
   step();
@@ -1536,7 +1695,7 @@ clearBtn.addEventListener('click', () => { setInputs(''); showHome(); });
 /* ── Quick chips ── */
 function renderChips() {
   chipsTrack.innerHTML = typeCfg().chips.map(c =>
-    `<button class="chip" type="button" data-chip="${c.id}" aria-pressed="false">${c.ai ? ICON.sparkSm : ''}${esc(c.label)}</button>`
+    `<button class="chip" type="button" data-chip="${c.id}" aria-pressed="${c.id === activeChip}">${c.ai ? ICON.sparkSm : ''}${esc(chipLabel(c))}</button>`
   ).join('');
 }
 function setChip(id) {
@@ -1550,7 +1709,7 @@ chipsTrack.addEventListener('click', e => {
   if (!chip) return;
   if (activeChip === chip.id) { setInputs(''); showHome(); return; }   // tap again to clear
   setChip(chip.id);
-  if (chip.ai) { setInputs(chip.ai); runAI(chip.ai, { label: chip.label }); }
+  if (chip.ai) { setInputs(chipQuery(chip)); runAI(chip.ai, { chip }); }
   else { setInputs(''); runDiscover(chip); }
   revealResults();
 });
@@ -1561,33 +1720,34 @@ chipsTrack.addEventListener('click', e => {
    copy. AI search exists for films only — as in Classic — so on the TV tab the search
    box is a plain title search and every chip is an instant discover query.
 ═══════════════════════════════════════════════════════════════ */
+// The active tab's copy, in the current language (also redrawn by a language switch).
 function applyTypeCopy() {
   const cfg = typeCfg();
   seg.dataset.ctype = ctype;
   seg.querySelectorAll('.seg-opt').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.ctype === ctype)));
-  heroSub.textContent = cfg.heroSub;
-  cmd.setAttribute('aria-label', cfg.formLabel);
-  cmdInput.setAttribute('aria-label', cfg.inputLabel);
-  miniForm.setAttribute('aria-label', cfg.miniLabel);
-  miniInput.setAttribute('aria-label', cfg.inputLabel);
-  miniInput.placeholder = cfg.placeholder;
+  heroSub.textContent = t(cfg.heroSub);
+  cmd.setAttribute('aria-label', t(cfg.formLabel));
+  cmdInput.setAttribute('aria-label', t(cfg.inputLabel));
+  miniForm.setAttribute('aria-label', t(cfg.miniLabel));
+  miniInput.setAttribute('aria-label', t(cfg.inputLabel));
+  miniInput.placeholder = t(cfg.placeholder);
   cmdIconAI.classList.toggle('off', !cfg.ai);
   cmdIconSearch.classList.toggle('off', cfg.ai);
   cmdPhText.textContent = '';                     // the typewriter restarts with this tab's prompts
-  setChip(null);
   renderChips();
-  $('#chips').scrollLeft = 0;
 }
 
 function setCtype(next, { reload = true } = {}) {
   if (next === ctype || !TYPES[next]) return;
   ctype = next;
   try { sessionStorage.setItem('ff_ctype', ctype); } catch { /* storage blocked: the tab just isn't remembered */ }
+  activeChip = null;
   applyTypeCopy();
+  $('#chips').scrollLeft = 0;
   if (!reload) return;
   setInputs('');
   showHome();
-  announce(ctype === 'tv' ? 'Showing TV shows' : 'Showing movies');
+  announce(t(ctype === 'tv' ? 'cin.showingTV' : 'cin.showingMovies'));
 }
 
 seg.addEventListener('click', e => {
@@ -1650,7 +1810,15 @@ function getDetails(it) {
     const append = it.type === 'tv'
       ? 'credits,videos,images,content_ratings,watch/providers,recommendations'
       : 'credits,videos,images,release_dates,watch/providers,recommendations';
-    QV.cache.set(k, tmdb(`/${it.type}/${it.id}`, { append_to_response: append, include_image_language: 'en,null' })
+    // In the page's language, with English art and trailers as the fallback (pickLogo, pickTrailer).
+    QV.cache.set(k, tmdb(`/${it.type}/${it.id}`, { append_to_response: append, include_image_language: `${lang},en,null`, include_video_language: `${lang},en` })
+      .then(async d => {
+        // TMDB sends an empty overview when a title has no translation in this language: show the English one.
+        if (!d.overview && lang !== 'en') {
+          try { d.overview = (await tmdb(`/${it.type}/${it.id}`, { language: 'en-US' })).overview || ''; } catch { /* the card's text stands */ }
+        }
+        return d;
+      })
       .catch(e => { QV.cache.delete(k); throw e; }));
   }
   return QV.cache.get(k);
@@ -1666,13 +1834,17 @@ function certOf(it, d) {
   const pick = cc => r.find(x => x.iso_3166_1 === cc)?.release_dates?.find(x => x.certification)?.certification;
   return pick('US') || pick(api.country) || '';
 }
+// A trailer in the page's language first, else any (English, by the request above).
 function pickTrailer(d) {
-  const v = (d.videos?.results || []).filter(x => x.site === 'YouTube' && x.key);
-  return v.find(x => x.type === 'Trailer' && x.official) || v.find(x => x.type === 'Trailer') || v.find(x => x.type === 'Teaser') || null;
+  const all = (d.videos?.results || []).filter(x => x.site === 'YouTube' && x.key);
+  const pick = v => v.find(x => x.type === 'Trailer' && x.official) || v.find(x => x.type === 'Trailer') || v.find(x => x.type === 'Teaser');
+  return pick(all.filter(x => x.iso_639_1 === lang)) || pick(all) || null;
 }
+// Title art in the page's language, else English: it stands in for the (translated) title.
 function pickLogo(d) {
   const logos = d.images?.logos || [];
-  const pool = logos.filter(l => l.iso_639_1 === 'en');
+  let pool = logos.filter(l => l.iso_639_1 === lang);
+  if (!pool.length) pool = logos.filter(l => l.iso_639_1 === 'en');
   if (!pool.length) return null;
   const best = pool.slice().sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0))[0];
   return best.file_path.endsWith('.svg') ? `${IMG}original${best.file_path}` : `${IMG}w500${best.file_path}`;
@@ -1680,7 +1852,7 @@ function pickLogo(d) {
 
 function shellHTML(it) {
   const bd = it.backdrop ? imgURL(it.backdrop, 'w1280') : it.poster ? imgURL(it.poster, 'w500') : null;
-  const metaLite = metaHTML([it.year && `<span>${esc(it.year)}</span>`, it.rating && `<span class="rating">★ ${it.rating.toFixed(1)}</span>`]);
+  const metaLite = metaHTML([it.year && `<span>${esc(it.year)}</span>`, it.rating && `<span class="rating">★ ${fmtRating(it.rating)}</span>`]);
   return `
     <div class="qv-hero${bd ? ' skel' : ''}">
       <div class="qv-media">${bd ? `<img class="qv-backdrop fade${it.backdrop ? '' : ' is-poster'}" src="${esc(bd)}" alt="" decoding="async">` : ''}</div>
@@ -1691,11 +1863,11 @@ function shellHTML(it) {
       <div class="qv-actions" data-slot="actions"><span class="skel sk-pill"></span><span class="skel sk-pill sk-pill-w"></span></div>
     </div>
     <div class="qv-content">
-      ${it.reason ? `<div class="qv-why">${ICON.spark}<div><b>Why it’s a match</b>${esc(it.reason)}</div></div>` : ''}
+      ${it.reason ? `<div class="qv-why">${ICON.spark}<div><b>${esc(t('cin.why'))}</b>${esc(it.reason)}</div></div>` : ''}
       <div class="qv-body" data-slot="body">
         <div class="qv-genres"><span class="skel sk-chip"></span><span class="skel sk-chip"></span><span class="skel sk-chip"></span></div>
         ${it.overview ? `<p class="qv-overview">${esc(it.overview)}</p>` : `<div class="sk-lines">${'<span class="skel sk-line"></span>'.repeat(4)}</div>`}
-        <section class="qv-sec"><h3>Cast</h3><div class="cast">${'<div class="cast-item"><div class="cast-img skel"></div><span class="skel sk-line sk-short"></span></div>'.repeat(6)}</div></section>
+        <section class="qv-sec"><h3>${esc(t('cin.cast'))}</h3><div class="cast">${'<div class="cast-item"><div class="cast-img skel"></div><span class="skel sk-line sk-short"></span></div>'.repeat(6)}</div></section>
       </div>
     </div>`;
 }
@@ -1703,9 +1875,9 @@ function shellHTML(it) {
 function actionsHTML(it, d) {
   const tr = pickTrailer(d);
   const saved = WL.has(it.id, it.type);
-  return `${tr ? `<button class="btn-primary" type="button" data-trailer="${esc(tr.key)}">${ICON.play}<span>Play Trailer</span></button>` : ''}
-    <button class="btn-glass" type="button" data-wl aria-label="${wlBtnLabel(saved)}">${wlBtnInner(saved)}</button>
-    <button class="btn-glass" type="button" data-share>${ICON.share}<span>Share</span></button>`;
+  return `${tr ? `<button class="btn-primary" type="button" data-trailer="${esc(tr.key)}">${ICON.play}<span>${esc(t('cin.playTrailer'))}</span></button>` : ''}
+    <button class="btn-glass" type="button" data-wl aria-label="${esc(wlBtnLabel(saved))}">${wlBtnInner(saved)}</button>
+    <button class="btn-glass" type="button" data-share>${ICON.share}<span>${esc(t('cin.share'))}</span></button>`;
 }
 
 // Shares the site's own deep link (/?movie= · /?TVShows=), not this page's URL:
@@ -1726,9 +1898,9 @@ async function shareItem(it, btn) {
     try { document.execCommand('copy'); } catch {}
     ta.remove();
   }
-  btn.innerHTML = `${ICON.check}<span>Link copied</span>`;
-  announce('Link copied');
-  setTimeout(() => { if (btn.isConnected) btn.innerHTML = `${ICON.share}<span>Share</span>`; }, 2000);
+  btn.innerHTML = `${ICON.check}<span>${esc(t('cin.linkCopied'))}</span>`;
+  announce(t('cin.linkCopied'));
+  setTimeout(() => { if (btn.isConnected) btn.innerHTML = `${ICON.share}<span>${esc(t('cin.share'))}</span>`; }, 2000);
 }
 
 function providersHTML(d) {
@@ -1736,15 +1908,15 @@ function providersHTML(d) {
   const cc = all[api.country] ? api.country : all.US ? 'US' : null;
   if (!cc) return '';
   const r = all[cc];
-  let label = 'Stream', list = r.flatrate || [];
-  if (!list.length && r.free?.length) { label = 'Free'; list = r.free; }
+  let label = t('cin.stream'), list = r.flatrate || [];
+  if (!list.length && r.free?.length) { label = t('cin.free'); list = r.free; }
   if (!list.length) {
-    label = 'Rent or buy';
+    label = t('cin.rentBuy');
     const seen = new Set();
     list = [...(r.rent || []), ...(r.buy || [])].filter(p => !seen.has(p.provider_id) && seen.add(p.provider_id));
   }
   if (!list.length) return '';
-  return `<section class="qv-sec"><h3>Where to watch <span>· ${esc(label)} in ${esc(regionName(cc))}</span></h3>
+  return `<section class="qv-sec"><h3>${esc(t('cin.whereToWatch'))} <span>· ${esc(t('cin.inRegion', { how: label, region: regionName(cc) }))}</span></h3>
     <div class="providers">${list.slice(0, 6).map(p => `<a class="prov" href="${esc(r.link || '#')}" target="_blank" rel="noopener">
       ${p.logo_path ? `<img src="${IMG}w92${esc(p.logo_path)}" alt="" loading="lazy">` : ''}${esc(p.provider_name)}</a>`).join('')}</div></section>`;
 }
@@ -1755,11 +1927,12 @@ function bodyHTML(it, d) {
   const people = it.type === 'tv'
     ? (d.created_by || []).map(p => p.name)
     : (d.credits?.crew || []).filter(c => c.job === 'Director').map(c => c.name);
+  const spoken = d.spoken_languages?.[0];
   const facts = [
-    [it.type === 'tv' ? 'Created by' : people.length > 1 ? 'Directors' : 'Director', people.slice(0, 2).join(', ')],
-    [it.type === 'tv' ? 'First aired' : 'Released', fmtDate(d.release_date || d.first_air_date)],
-    ['Language', d.spoken_languages?.[0]?.english_name || ''],
-    ['Studio', (d.production_companies || []).slice(0, 2).map(c => c.name).join(', ')],
+    [t(it.type === 'tv' ? 'cin.createdBy' : people.length > 1 ? 'cin.directors' : 'cin.director'), fmtList(people.slice(0, 2))],
+    [t(it.type === 'tv' ? 'cin.firstAired' : 'cin.released'), fmtDate(d.release_date || d.first_air_date)],
+    [t('cin.language'), languageName(spoken?.iso_639_1 || d.original_language, spoken?.english_name)],
+    [t('cin.studio'), fmtList((d.production_companies || []).slice(0, 2).map(c => c.name))],
   ].filter(([, val]) => val);
   const cast = (d.credits?.cast || []).slice(0, 16);
   const recs = (d.recommendations?.results || []).filter(r => r.poster_path).slice(0, 9).map(r => fromTMDB(r, it.type));
@@ -1768,7 +1941,7 @@ function bodyHTML(it, d) {
     ${genres ? `<div class="qv-genres">${genres}</div>` : ''}
     ${d.tagline || overview ? `<div class="qv-copy">${d.tagline ? `<p class="qv-tagline">${esc(d.tagline)}</p>` : ''}${overview ? `<p class="qv-overview">${esc(overview)}</p>` : ''}</div>` : ''}
     ${facts.length ? `<dl class="facts">${facts.map(([k, val]) => `<dt>${esc(k)}</dt><dd>${esc(val)}</dd>`).join('')}</dl>` : ''}
-    ${cast.length ? `<section class="qv-sec"><h3>Cast</h3><div class="cast">${cast.map(c => `
+    ${cast.length ? `<section class="qv-sec"><h3>${esc(t('cin.cast'))}</h3><div class="cast">${cast.map(c => `
       <div class="cast-item">
         <div class="cast-img${c.profile_path ? ' skel' : ''}">${c.profile_path
           ? `<img class="fade" src="${IMG}w185${esc(c.profile_path)}" alt="" loading="lazy" decoding="async">`
@@ -1777,7 +1950,7 @@ function bodyHTML(it, d) {
         ${c.character ? `<div class="cast-role">${esc(c.character)}</div>` : ''}
       </div>`).join('')}</div></section>` : ''}
     ${providersHTML(d)}
-    ${recs.length ? `<section class="qv-sec"><h3>More like this</h3><div class="more">${recs.map((r, i) => cardHTML(r, i, { mini: true })).join('')}</div></section>` : ''}`;
+    ${recs.length ? `<section class="qv-sec"><h3>${esc(t('cin.moreLike'))}</h3><div class="more">${recs.map((r, i) => cardHTML(r, i, { mini: true })).join('')}</div></section>` : ''}`;
 }
 
 // Title art: pick the English logo; if it is dark ink (many are), flip it to
@@ -1824,6 +1997,10 @@ function fillQV(it, d) {
     media.innerHTML = `<img class="qv-backdrop fade" src="${esc(imgURL(d.backdrop_path, 'w1280'))}" alt="" decoding="async">`;
     hero.classList.add('skel');
   }
+  // The title in the page's language (AI picks arrive with their English one).
+  const name = it.type === 'tv' ? d.name : d.title;
+  const h2 = qvBody.querySelector('.qv-title');
+  if (name && h2) h2.textContent = name;
   const logo = pickLogo(d);
   if (logo) mountLogo(logo);
   const year = String(d.release_date || d.first_air_date || '').slice(0, 4) || it.year;
@@ -1832,10 +2009,10 @@ function fillQV(it, d) {
   const rating = d.vote_count >= 5 && d.vote_average ? d.vote_average : it.rating;
   slot('meta').innerHTML = metaHTML([
     year && `<span>${esc(year)}</span>`,
-    runtime && `<span>${fmtRuntime(runtime)}</span>`,
-    it.type === 'tv' && d.number_of_seasons && `<span>${d.number_of_seasons} season${d.number_of_seasons > 1 ? 's' : ''}</span>`,
+    runtime && `<span>${esc(fmtRuntime(runtime))}</span>`,
+    it.type === 'tv' && d.number_of_seasons && `<span>${esc(tn('cin.n.seasons', d.number_of_seasons))}</span>`,
     cert && `<span class="badge">${esc(cert)}</span>`,
-    rating && `<span class="rating">★ ${Number(rating).toFixed(1)}</span>`,
+    rating && `<span class="rating">★ ${fmtRating(rating)}</span>`,
   ]);
   slot('actions').innerHTML = actionsHTML(it, d);
   slot('body').innerHTML = bodyHTML(it, d);
@@ -1857,8 +2034,8 @@ async function renderQV(it) {
     fillQV(it, d);
   } catch (e) {
     if (token !== QV.token) return;
-    slot('actions').innerHTML = '<button class="btn-glass" type="button" data-qv-retry>Try again</button>';
-    slot('body').innerHTML = `${it.overview ? `<p class="qv-overview">${esc(it.overview)}</p>` : ''}<p class="qv-note">Couldn’t load the cast and details just now.</p>`;
+    slot('actions').innerHTML = `<button class="btn-glass" type="button" data-qv-retry>${esc(t('cin.tryAgain'))}</button>`;
+    slot('body').innerHTML = `${it.overview ? `<p class="qv-overview">${esc(it.overview)}</p>` : ''}<p class="qv-note">${esc(t('cin.qvErr'))}</p>`;
   }
 }
 
@@ -1956,13 +2133,13 @@ function toggleTrailer(btn) {
   if (hero.classList.contains('playing')) {
     media.querySelector('.qv-trailer')?.remove();
     hero.classList.remove('playing');
-    btn.innerHTML = `${ICON.play}<span>Play Trailer</span>`;
+    btn.innerHTML = `${ICON.play}<span>${esc(t('cin.playTrailer'))}</span>`;
     return;
   }
   media.insertAdjacentHTML('beforeend',
-    `<iframe class="qv-trailer" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(btn.dataset.trailer)}?autoplay=1&amp;rel=0&amp;modestbranding=1&amp;playsinline=1" title="Trailer" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`);
+    `<iframe class="qv-trailer" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(btn.dataset.trailer)}?autoplay=1&amp;rel=0&amp;modestbranding=1&amp;playsinline=1&amp;hl=${lang}" title="${esc(t('cin.trailer'))}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`);
   hero.classList.add('playing');
-  btn.innerHTML = `${ICON.stop}<span>Stop Trailer</span>`;
+  btn.innerHTML = `${ICON.stop}<span>${esc(t('cin.stopTrailer'))}</span>`;
   qvScroll.scrollTo({ top: 0, behavior: scrollBehavior() });
 }
 
@@ -1997,9 +2174,9 @@ addEventListener('DOMContentLoaded', () => {
    control here is a view of that one list: toggling calls WL.toggle() and the
    onChange listener repaints them all — also after a change made in another tab.
 ═══════════════════════════════════════════════════════════════ */
-const wlTogLabel = (it, on) => `${on ? 'Remove' : 'Add'} ${it.title} ${on ? 'from' : 'to'} Watchlist`;
-const wlBtnLabel = on => (on ? 'Saved — remove from Watchlist' : 'Add to Watchlist');
-const wlBtnInner = on => `${on ? ICON.bookmarkOn : ICON.bookmark}<span>${on ? 'Saved' : 'Watchlist'}</span>`;
+const wlTogLabel = (it, on) => t(on ? 'cin.wlRemoveTitle' : 'cin.wlAddTitle', { title: it.title });
+const wlBtnLabel = on => t(on ? 'cin.wlSavedRemove' : 'cin.wlAdd');
+const wlBtnInner = on => `${on ? ICON.bookmarkOn : ICON.bookmark}<span>${esc(t(on ? 'cin.saved' : 'cin.watchlist'))}</span>`;
 const isWatchlistView = () => !!view && view.kind === 'watchlist';
 
 function wlTogHTML(it) {
@@ -2019,15 +2196,15 @@ function toggleWL(it) {
   if (!it) return;
   const on = WL.toggle(it.id, it.type);        // onChange → syncWL() repaints every control
   if (on === null) return;
-  announce(`${on ? 'Added to' : 'Removed from'} your Watchlist: ${it.title}`);
-  toast(on ? 'Added to Watchlist' : 'Removed from Watchlist');
+  announce(t(on ? 'cin.wlAdded' : 'cin.wlRemoved', { title: it.title }));
+  toast(t(on ? 'wl.toastAdded' : 'wl.toastRemoved'));
 }
 
 function syncWL() {
   const n = WL.count();
   wlCount.textContent = n > 99 ? '99+' : String(n);
   wlCount.hidden = n === 0;
-  wlBtn.setAttribute('aria-label', n ? `Watchlist, ${n} title${n === 1 ? '' : 's'}` : 'Watchlist');
+  wlBtn.setAttribute('aria-label', n ? `${t('cin.watchlist')}, ${tn('cin.n.titles', n)}` : t('cin.watchlist'));
   const inView = isWatchlistView();
   document.querySelectorAll('.wl-tog').forEach(b => {
     const it = store.get(b.dataset.wlKey);
@@ -2057,12 +2234,12 @@ async function mapPool(list, size, fn) {
   return out;
 }
 
-const wlSub = n => `${fmtInt(n)} title${n === 1 ? '' : 's'}<span class="muted">·</span>Saved on this device`;
+const wlSub = n => `${esc(tn('cin.n.titles', n))}<span class="muted">·</span>${esc(t('cin.savedDevice'))}`;
 function watchlistHeader() {
   const retry = view.unloaded
-    ? `<span class="muted">·</span><button class="link-btn" type="button" data-wl-retry>${view.unloaded} couldn’t load · Try again</button>`
+    ? `<span class="muted">·</span><button class="link-btn" type="button" data-wl-retry>${esc(t('cin.wlUnloaded', { n: fmtInt(view.unloaded) }))}</button>`
     : '';
-  setHeader('Watchlist', wlSub(WL.count()) + retry);
+  setHeader(t('cin.watchlist'), wlSub(WL.count()) + retry);
 }
 
 async function showWatchlist() {
@@ -2072,8 +2249,8 @@ async function showWatchlist() {
   const entries = WL.list();
   watchlistHeader();
   if (!entries.length) {
-    showState('Your Watchlist is empty', 'Tap the bookmark on any title to save it here. Your list stays on this device.', { label: 'Browse trending', run: showHome });
-    announce('Your Watchlist is empty');
+    showState(t('cin.wlEmpty'), t('cin.wlEmptyHint'), { label: t('cin.browseTrending'), run: showHome });
+    announce(t('cin.wlEmpty'));
     return;
   }
   showSkeletons(Math.min(entries.length, gridCols() * 3));
@@ -2091,12 +2268,12 @@ async function showWatchlist() {
   const found = items.filter(Boolean);
   if (!found.length) {
     if (v.unloaded) { watchlistHeader(); showError(showWatchlist); }
-    else showState('Nothing to show', 'The titles you saved are no longer available.');
+    else showState(t('cin.nothingToShow'), t('cin.wlGone'));
     return;
   }
   renderItems(v, found);
   watchlistHeader();
-  announce(`${found.length} title${found.length === 1 ? '' : 's'} in your Watchlist`);
+  announce(t('cin.inWatchlist', { count: tn('cin.n.titles', found.length) }));
 }
 
 wlBtn.addEventListener('click', () => {
@@ -2106,11 +2283,79 @@ wlBtn.addEventListener('click', () => {
 });
 
 /* ═══════════════════════════════════════════════════════════════
+   SWITCHING LANGUAGE
+   setLang() (see LANGUAGE) redoes the markup; relabel() redoes what script
+   drew and runs the current view again, so its films come back from TMDB in
+   the new language (AI search answers from its cache: same picks).
+═══════════════════════════════════════════════════════════════ */
+const langBtn = $('#langBtn'), langMenu = $('#langMenu');
+langMenu.innerHTML = LANGS.map(c =>
+  // Rows follow the page's direction; each name keeps its own script's (lang/dir on the name only).
+  `<button class="lang-opt" type="button" role="menuitemradio" aria-checked="false" data-lang="${c}"><span lang="${HTML_LANG[c] || c}" dir="${c === 'ar' ? 'rtl' : 'ltr'}">${LANG_NATIVE[c]}</span>${ICON.check}</button>`
+).join('');
+const langOpts = () => [...langMenu.querySelectorAll('.lang-opt')];
+function syncLangMenu() { langOpts().forEach(b => b.setAttribute('aria-checked', String(b.dataset.lang === lang))); }
+
+function openLangMenu() {
+  syncLangMenu();
+  langMenu.hidden = false;
+  langBtn.setAttribute('aria-expanded', 'true');
+  (langMenu.querySelector('[aria-checked="true"]') || langOpts()[0]).focus({ preventScroll: true });
+}
+function closeLangMenu(refocus = false) {
+  if (langMenu.hidden) return;
+  langMenu.hidden = true;
+  langBtn.setAttribute('aria-expanded', 'false');
+  if (refocus) langBtn.focus({ preventScroll: true });
+}
+langBtn.addEventListener('click', () => (langMenu.hidden ? openLangMenu() : closeLangMenu()));
+langMenu.addEventListener('click', e => {
+  const b = e.target.closest('[data-lang]');
+  if (!b) return;
+  closeLangMenu(true);
+  switchLang(b.dataset.lang);
+});
+langMenu.addEventListener('keydown', e => {
+  const opts = langOpts(), i = opts.indexOf(document.activeElement);
+  const to = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: opts.length - 1 }[e.key];
+  if (to !== undefined) { e.preventDefault(); opts[(to + opts.length) % opts.length].focus(); }
+  else if (e.key === 'Tab') closeLangMenu();
+});
+document.addEventListener('click', e => { if (!e.target.closest('#lang')) closeLangMenu(); });
+
+function switchLang(code) {
+  if (!setLang(code)) return;
+  savedLang = code;
+  relabel();
+  announce(LANG_NATIVE[code]);
+}
+
+// Everything script drew, in the current language.
+function relabel() {
+  syncLangMenu();
+  applyTypeCopy();
+  syncWL();
+  homeSnaps.movie = homeSnaps.tv = null;      // both tabs' trending, and every detail, refetch in the new language
+  QV.cache.clear();
+  if (!view) return;                           // still booting: showHome() comes next
+  clearLabel.textContent = t(view.kind === 'watchlist' ? 'results.close' : 'cin.clear');
+  if (view.kind === 'home') showHome();
+  else if (view.kind === 'discover') runDiscover(view.chip);
+  else if (view.kind === 'title') runTitle(view.q);
+  else if (view.kind === 'watchlist') showWatchlist();
+  else if (view.kind === 'ai') {
+    if (view.chip && cmdInput.value) setInputs(chipQuery(view.chip));   // the chip's words in the field, now translated
+    runAI(view.q, { chip: view.chip });
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    KEYBOARD
 ═══════════════════════════════════════════════════════════════ */
 const isApple = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
 $('#kbdHint').textContent = isApple ? '⌘K' : 'Ctrl K';
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !langMenu.hidden) { e.preventDefault(); closeLangMenu(true); return; }
   if (e.key === 'Escape' && QV.open) { e.preventDefault(); requestCloseQV(); return; }
   if (QV.open) return;
   const el = document.activeElement;

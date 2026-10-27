@@ -2,7 +2,7 @@
    Social links + mascot — SHARED by / (Classic, index.html) and /cinematic/.
    Behaviour: /assets/social.js. Both pages carry the same markup (and the
    same <svg> sprite: #ffs-i-tt, #ffs-i-yt); text uses the page's own i18n
-   (data-i18n="social.watchOn"; Classic translates it, Cinematic is English).
+   (data-i18n="social.watchOn", from the shared /assets/i18n.js).
 
      .ffs          "Watch FindFilm on [TikTok] [YouTube Shorts]" strip
        --hero        in the hero, under the search (both layouts)
