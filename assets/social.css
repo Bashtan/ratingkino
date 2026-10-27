@@ -11,6 +11,9 @@
      .ffm          the mascot peeking from the bottom-right corner
                    (computers only, once the hero strip has scrolled away)
      .ffs-band     footer band: the mascot, full size, and large buttons
+     .ffb          the mascot's moods during AI searches (think, idea,
+                   success, confused): Classic's AI panel, Cinematic's
+                   results heading, and the corner mascot
 
    Fonts and colours are inherited, so the strip reads as part of each layout.
    Both pages link this file as ?v=<hash> (the service worker serves /assets/*
@@ -154,7 +157,69 @@
   .ffs-band .ffs-links { justify-content: center; }
 }
 
+/* ── Moods: the mascot reacts to the AI (FFBot in social.js) ───────────────
+   A host [data-ffb] holds the standing pose (<img class="ffb-idle">, whose
+   height sets the size) and, mounted by script, one layer per mood. The
+   layers are frames of ONE sprite, so a switch never waits on a download;
+   it is fetched on first intent (a search field focused, or the first mood),
+   which adds html.ffb-on. Moods cross-fade in place on a box that never
+   changes size, so nothing around a mascot moves.
+     think → idea → success → idle      a search that found something
+     confused (stays)                   no results, or an error
+   Sprite: ff-bot-moods.webp, 4 frames of 256×320 in a row (think, idea,
+   success, confused), cut from the pose sheet ff-bot-emotions.png. Each robot
+   stands on the frame's bottom edge, centred on its helmet, helmet-to-feet
+   238 of 320 — the same size as the idle pose inside a box 1/0.85 its
+   height, so a cross-fade lines up; the props (?, bulb, sparks) use the room
+   above and beside it. Its ?v= below is the sprite's own hash; changing it
+   changes this file, so bump ?v= of social.* in both pages as usual. */
+.ffb { position: relative; display: block; flex-shrink: 0; }
+.ffb-idle { display: block; height: 100%; width: auto; transition: opacity 0.28s ease; }
+.ffb-m {
+  position: absolute; bottom: 0; left: 50%; translate: -50% 0;
+  height: calc(100% / 0.85); aspect-ratio: 256 / 320;          /* frame box: props (?, bulb, sparks) overflow the host */
+  opacity: 0; pointer-events: none; transform-origin: 50% 100%;
+  background: no-repeat 0 0 / 400% 100%;
+  transition: opacity 0.28s ease;
+}
+html.ffb-on .ffb-m { background-image: url("/assets/ff-bot-moods.webp?v=1b892b12"); }
+.ffb-m[data-m="think"]    { background-position: 0 0; }
+.ffb-m[data-m="idea"]     { background-position: 33.3333% 0; }
+.ffb-m[data-m="success"]  { background-position: 66.6667% 0; }
+.ffb-m[data-m="confused"] { background-position: 100% 0; }
+.ffb[data-mood]:not([data-mood="idle"]) > .ffb-idle { opacity: 0; }
+.ffb[data-mood="think"]    > [data-m="think"]    { opacity: 1; animation: ffb-think 1.8s ease-in-out infinite; }
+.ffb[data-mood="idea"]     > [data-m="idea"]     { opacity: 1; animation: ffb-pop 0.45s cubic-bezier(.34,1.56,.64,1) both, ffb-glow 1.4s ease-in-out 0.45s infinite; }
+.ffb[data-mood="success"]  > [data-m="success"]  { opacity: 1; animation: ffb-bounce 0.7s cubic-bezier(.22,1,.36,1) both, ffb-twinkle 1.2s ease-in-out 0.7s infinite; }
+.ffb[data-mood="confused"] > [data-m="confused"] { opacity: 1; animation: ffb-shrug 3.2s ease-in-out 0.15s infinite; }
+/* Thinking: a gentle rock on the feet. Idea: a pop, then the bulb glows.
+   Success: a bounce-in, then sparkle. Confused: a slow shrug-and-dip, then a pause. */
+@keyframes ffb-think   { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg) translateY(-3%); } }
+@keyframes ffb-pop     { 0% { transform: scale(0.86); } 55% { transform: scale(1.07); } 100% { transform: none; } }
+@keyframes ffb-glow    { 50% { filter: brightness(1.12); } }   /* the bulb's own glow is in the art */
+@keyframes ffb-bounce  { 0% { transform: translateY(14%) scale(0.9); } 45% { transform: translateY(-9%) scale(1.04); } 70% { transform: translateY(2%) scale(0.99); } 100% { transform: none; } }
+@keyframes ffb-twinkle { 50% { filter: brightness(1.16) saturate(1.2); } }
+@keyframes ffb-shrug   { 0%, 60%, 100% { transform: none; } 18% { transform: translateY(3%) rotate(-4deg); } 36% { transform: translateY(1%) rotate(3deg); } }
+
+/* Sizes per spot. The corner's host is its button (.ffm-bot, 132px). */
+.ffb--panel { height: 56px; }             /* Classic: the AI results panel's header */
+.ffb--empty { height: 120px; }            /* Classic: the panel's "nothing found" screen (was 🍿) */
+.ffb--head  { height: 60px; }             /* Cinematic: beside the results heading */
+@media (max-width: 768px) {
+  .ffb--panel { height: 46px; }
+  .ffb--head  { height: 48px; }
+}
+/* The corner mascot shows more of itself while it has something to say. */
+@media (min-width: 1024px) and (hover: hover) {
+  .ffm-bot.ffb { position: relative; }
+  .ffm.is-in:where([data-mood]:not([data-mood="idle"])) { transform: translateY(calc(var(--ffm-h) - 104px)); }
+  .ffm-bot[data-mood]:not([data-mood="idle"]) > .ffb-idle { animation: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ffm-bot img { animation: none; }
   .ffm, .ffm-bubble, .ffs-btn { transition-duration: 0.01s !important; }
+  /* Moods only cross-fade (beats a page's blanket "*" reduced-motion rule by specificity). */
+  .ffb-m { animation: none !important; }
+  .ffb-m, .ffb-idle { transition-duration: 0.28s !important; }
 }

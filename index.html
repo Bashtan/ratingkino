@@ -1337,6 +1337,8 @@ header {
   gap: 10px; padding: 48px 20px; text-align: center; }
 .airx-empty.show { display: flex; }
 .airx-empty-icon { font-size: 40px; }
+/* The empty screen has its own (big) mascot; the header one steps aside meanwhile, keeping its space. */
+.airx-modal:has(.airx-empty.show) .airx-head .ffb { visibility: hidden; }
 .airx-empty-title { font-family: 'Montserrat', sans-serif; font-size: 17px; font-weight: 700; color: #fff; }
 .airx-empty-sub { font-size: 13px; color: #9ca3af; max-width: 340px; }
 .airx-followups { padding: 0 26px; }
@@ -5466,8 +5468,8 @@ if ('serviceWorker' in navigator) {
 <!-- Touch baseline + bottom-sheet drag, shared with /cinematic/. -->
 <link rel="stylesheet" href="/assets/touch.css?v=fc8fd233">
 <!-- Social links + corner mascot, shared with /cinematic/. -->
-<link rel="stylesheet" href="/assets/social.css?v=73a9f7d6">
-<script src="/assets/social.js?v=73a9f7d6" defer></script>
+<link rel="stylesheet" href="/assets/social.css?v=c474b48c">
+<script src="/assets/social.js?v=00593763" defer></script>
 <script src="/assets/touch.js?v=fc8fd233" defer></script>
 <!-- Watchlist storage, shared with /cinematic/: one typed list (rk_watchlist_v2). Synchronous on purpose: initWatchlist() below reads it at once. -->
 <script src="/assets/watchlist.js?v=64c31e42"></script>
@@ -9207,6 +9209,7 @@ function showAiLoader() {
   clearInterval(_ailPhraseTimer);
   // Start on a random phrase so back-to-back searches don't feel scripted.
   _ailPhraseIdx = Math.floor(Math.random() * AIL_PHRASE_KEYS.length);
+  window.FFBot?.set('think');      // the panel's mascot (and the corner one) think along
   ph.classList.remove('ail-fade');
   ph.textContent = t(AIL_PHRASE_KEYS[_ailPhraseIdx]);
   el.classList.add('show');
@@ -9244,6 +9247,7 @@ function openAiResults(query) {
 
 function closeAiResults() {
   hideAiLoader();   // stop the phrase interval if the user bails mid-search
+  window.FFBot?.set('idle');
   document.getElementById('aiResultsModal').classList.remove('open');
   document.getElementById('aiResultsBackdrop').classList.remove('open');
   document.body.classList.remove('airx-open');
@@ -9277,6 +9281,8 @@ function renderAiResults(results) {
   grid.innerHTML = results.map(renderCardHTML).join('');
   void grid.offsetWidth;
   grid.classList.add('airx-grid-in');
+  // idea → success → idle; the refine chips (rendered right after this) earn an extra "idea" nudge.
+  window.FFBot?.found(() => !!document.querySelector('#aiResultsFollowups .ai-sug-chip'));
 }
 
 function renderAiFollowUps(query, dynamicChips) {
@@ -9295,6 +9301,7 @@ function renderAiFollowUps(query, dynamicChips) {
 
 function showAiResultsError() {
   hideAiLoader();
+  window.FFBot?.set('confused');   // no results, or the AI failed: the shrug (also the empty screen's mascot)
   document.getElementById('aiResultsGrid').innerHTML = '';
   document.getElementById('aiResultsSummary').textContent = '';
   document.getElementById('aiResultsEmpty').classList.add('show');
@@ -13559,8 +13566,8 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
       <a class="ffs-btn ffs-yt" href="https://www.youtube.com/@FindfilmAI/shorts" target="_blank" rel="noopener" data-ffs="youtube"><svg aria-hidden="true" focusable="false"><use href="#ffs-i-yt"/></svg><span>YouTube Shorts</span></a>
     </span>
   </div>
-  <button class="ffm-bot" type="button" aria-labelledby="ffmLabel" aria-expanded="false" aria-controls="ffmBubble">
-    <img src="/assets/ff-bot.webp" alt="" width="77" height="132" decoding="async">
+  <button class="ffm-bot ffb" type="button" aria-labelledby="ffmLabel" aria-expanded="false" aria-controls="ffmBubble" data-ffb>
+    <img class="ffb-idle" src="/assets/ff-bot.webp" alt="" width="77" height="132" decoding="async">
   </button>
 </aside>
 <footer class="site-footer">
@@ -13641,6 +13648,8 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
 <div class="airx-backdrop" id="aiResultsBackdrop" onclick="aiResultsBackdropClick(event)"></div>
 <div class="airx-modal" id="aiResultsModal" role="dialog" aria-modal="true" aria-labelledby="aiResultsTitle">
   <div class="airx-head">
+    <!-- The mascot's mood follows the search (FFBot, /assets/social.js): think → idea → success, or confused. -->
+    <span class="ffb ffb--panel" data-ffb aria-hidden="true"><img class="ffb-idle" src="/assets/ff-bot.webp" alt="" width="33" height="56" decoding="async"></span>
     <div class="airx-head-main">
       <span class="airx-eyebrow" id="aiResultsEyebrow" data-i18n="results.eyebrow">✦ AI Results for</span>
       <span class="airx-title" id="aiResultsTitle"></span>
@@ -13683,7 +13692,7 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
     </div>
     <div class="movie-grid airx-grid" id="aiResultsGrid"></div>
     <div class="airx-empty" id="aiResultsEmpty">
-      <div class="airx-empty-icon">🍿</div>
+      <div class="airx-empty-icon"><span class="ffb ffb--empty" data-ffb aria-hidden="true"><img class="ffb-idle" src="/assets/ff-bot.webp" alt="" width="70" height="120" loading="lazy" decoding="async"></span></div>
       <div class="airx-empty-title" data-i18n="results.errorTitle">Something went sideways</div>
       <div class="airx-empty-sub" data-i18n="results.errorSub">We couldn't reach the AI just now. Give it another try.</div>
       <button class="state-btn state-btn-retry" id="aiResultsRetry" data-i18n="results.retry">Try Again</button>

@@ -385,6 +385,8 @@ img.fade.loaded { opacity: 1; }
   min-height: calc(100dvh - var(--header-h));
 }
 .results-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; min-height: 58px; margin-bottom: 22px; }
+.results-lead { display: flex; align-items: flex-end; gap: 14px; min-width: 0; }
+.results-text { min-width: 0; }
 .results-title { margin: 0; font-size: clamp(1.4rem, 2.4vw, 1.9rem); line-height: 1.15; font-weight: 700; letter-spacing: -.028em; overflow-wrap: anywhere; }
 .results-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 6px 0 0; min-height: 22px; font-size: 15px; color: var(--text-2); }
 .results-sub svg { flex-shrink: 0; }
@@ -736,8 +738,8 @@ img.fade.loaded { opacity: 1; }
 <!-- Touch baseline + bottom-sheet drag, shared with Classic. -->
 <link rel="stylesheet" href="/assets/touch.css?v=fc8fd233">
 <!-- Social links + corner mascot, shared with Classic (index.html). -->
-<link rel="stylesheet" href="/assets/social.css?v=73a9f7d6">
-<script src="/assets/social.js?v=73a9f7d6" defer></script>
+<link rel="stylesheet" href="/assets/social.css?v=c474b48c">
+<script src="/assets/social.js?v=00593763" defer></script>
 <script src="/assets/touch.js?v=fc8fd233" defer></script>
 <!-- Watchlist storage, shared with Classic: one typed list (rk_watchlist_v2). Synchronous on purpose: the page script below reads it at once. -->
 <script src="/assets/watchlist.js?v=64c31e42"></script>
@@ -890,9 +892,13 @@ img.fade.loaded { opacity: 1; }
 
   <section class="results" id="results" aria-labelledby="resultsTitle">
     <div class="results-head">
-      <div>
-        <h2 class="results-title" id="resultsTitle">Trending this week</h2>
-        <p class="results-sub" id="resultsSub">What everyone’s watching right now</p>
+      <div class="results-lead">
+        <!-- The mascot's mood follows the search (FFBot, /assets/social.js): think → idea → success, or confused. -->
+        <span class="ffb ffb--head" data-ffb aria-hidden="true"><img class="ffb-idle" src="/assets/ff-bot.webp" alt="" width="35" height="60" decoding="async"></span>
+        <div class="results-text">
+          <h2 class="results-title" id="resultsTitle">Trending this week</h2>
+          <p class="results-sub" id="resultsSub">What everyone’s watching right now</p>
+        </div>
       </div>
       <button class="pill-btn" id="clearBtn" type="button" hidden>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -935,8 +941,8 @@ img.fade.loaded { opacity: 1; }
       <a class="ffs-btn ffs-yt" href="https://www.youtube.com/@FindfilmAI/shorts" target="_blank" rel="noopener" data-ffs="youtube"><svg aria-hidden="true" focusable="false"><use href="#ffs-i-yt"/></svg><span>YouTube Shorts</span></a>
     </span>
   </div>
-  <button class="ffm-bot" type="button" aria-labelledby="ffmLabel" aria-expanded="false" aria-controls="ffmBubble">
-    <img src="/assets/ff-bot.webp" alt="" width="77" height="132" decoding="async">
+  <button class="ffm-bot ffb" type="button" aria-labelledby="ffmLabel" aria-expanded="false" aria-controls="ffmBubble" data-ffb>
+    <img class="ffb-idle" src="/assets/ff-bot.webp" alt="" width="77" height="132" decoding="async">
   </button>
 </aside>
 
@@ -1350,6 +1356,7 @@ function startView(kind, extra = {}) {
   clearBtn.hidden = kind === 'home';
   clearLabel.textContent = t(kind === 'watchlist' ? 'results.close' : 'cin.clear');   // "Clear" there would read as emptying the list
   wlBtn.setAttribute('aria-pressed', String(kind === 'watchlist'));
+  window.FFBot?.set(kind === 'ai' || kind === 'title' ? 'think' : 'idle');   // the mascot thinks through a search
   return view;
 }
 
@@ -1518,6 +1525,7 @@ async function runAI(q, { chip = null } = {}) {
     const who = d.actorQuery && d.personName ? ` ${esc(t('cin.withPerson', { name: d.personName }))}` : '';
     setHeader(title, `${ICON.sparkSm}<span>${esc(tn('cin.n.aiPicks', n))}${who}</span>${d.message ? `<span class="muted">· ${esc(d.message)}</span>` : ''}`);
     setRefine(q, d.suggestedRefinements);
+    window.FFBot?.found(() => !refineEl.hidden);
     announce(t('cin.resultsFor', { count: tn('cin.n.aiPicks', n), q: chip ? title : q }));
   } catch (e) {
     if (stale(v) || isAbort(e)) return;
@@ -1533,8 +1541,9 @@ async function titleFallback(v, q, title) {
     const d = await call(`/api/search?${new URLSearchParams({ q, page: '1', type: 'movie', lang: TMDB_LANG[lang] })}`, { signal: v.signal });
     if (stale(v)) return;
     const items = (d.results || []).filter(r => r.poster_path).map(r => fromTMDB(r, 'movie'));
-    if (!items.length) { setHeader(title, ''); showEmpty(q); return; }
+    if (!items.length) { setHeader(title, ''); showEmpty(q); window.FFBot?.set('confused'); return; }
     renderItems(v, items);
+    window.FFBot?.found(false);
     const count = tn('cin.n.matches', v.items.length);
     setHeader(title, `<span>${esc(count)}</span><span class="muted">· ${esc(t('cin.aiBusy'))} ·</span><button class="link-btn" type="button" data-ask-ai>${esc(t('cin.tryAI'))}</button>`);
     announce(t('cin.resultsFor', { count, q }));
@@ -1542,6 +1551,7 @@ async function titleFallback(v, q, title) {
     if (stale(v) || isAbort(e)) return;
     setHeader(title, '');
     showError(() => runAI(q, { chip: v.chip }));
+    window.FFBot?.set('confused');
   }
 }
 
@@ -1568,12 +1578,14 @@ async function runTitle(q) {
       // There is no AI tier for shows: what matched by title is the answer, and a miss says so.
       if (!items.length) {
         showState(t('cin.noShows', { q }), t('cin.tvHint'), { label: t('cin.askAIMovies'), run: () => askAIInMovies(q) });
+        window.FFBot?.set('confused');
         announce(t('cin.noShows', { q }));
         return;
       }
       renderItems(v, items);
       const shows = tn('cin.n.shows', v.items.length);
       setHeader(title, `<span>${esc(shows)}</span>`);
+      window.FFBot?.found(false);
       announce(t('cin.resultsFor', { count: shows, q }));
       return;
     }
@@ -1585,11 +1597,12 @@ async function runTitle(q) {
     if (!hit) { runAI(q); return; }      // not a title after all — let the AI read it
     renderItems(v, items);
     const count = tn('cin.n.titles', v.items.length);
+    window.FFBot?.found(false);
     setHeader(title, `<span>${esc(count)}</span><span class="muted">·</span><button class="link-btn" type="button" data-ask-ai>${ICON.sparkSm}${esc(t('cin.askAIInstead'))}</button>`);
     announce(t('cin.resultsFor', { count, q }));
   } catch (e) {
     if (stale(v) || isAbort(e)) return;
-    if (type === 'tv') { setHeader(title, ''); showError(() => runTitle(q)); return; }
+    if (type === 'tv') { setHeader(title, ''); showError(() => runTitle(q)); window.FFBot?.set('confused'); return; }
     runAI(q);
   } finally {
     if (!stale(v)) setBusy(false);
