@@ -1,0 +1,160 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Social links + mascot — SHARED by / (Classic, index.html) and /cinematic/.
+   Behaviour: /assets/social.js. Both pages carry the same markup (and the
+   same <svg> sprite: #ffs-i-tt, #ffs-i-yt); text uses the page's own i18n
+   (data-i18n="social.watchOn"; Classic translates it, Cinematic is English).
+
+     .ffs          "Watch FindFilm on [TikTok] [YouTube Shorts]" strip
+       --hero        in the hero, under the search (both layouts)
+       --feed        Classic phones only: after the first feed row
+       --desk        hidden on phones (Classic's hero strip, whose twin is --feed)
+     .ffm          the mascot peeking from the bottom-right corner
+                   (computers only, once the hero strip has scrolled away)
+     .ffs-band     footer band: the mascot, full size, and large buttons
+
+   Fonts and colours are inherited, so the strip reads as part of each layout.
+   Both pages link this file as ?v=<hash> (the service worker serves /assets/*
+   stale-while-revalidate): after editing it or social.js, bump ?v= in BOTH.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Brand buttons ───────────────────────────────────────────────────────── */
+.ffs-links { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ffs-btn {
+  position: relative; display: inline-flex; align-items: center; gap: 8px;
+  box-sizing: border-box; height: 36px; margin: 0; padding: 0 14px 0 11px;
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 999px;
+  background: rgba(255,255,255,0.06); color: #fff;
+  font-size: 13.5px; font-weight: 600; line-height: 1; letter-spacing: -0.005em;
+  white-space: nowrap; text-decoration: none;
+  transition: transform 0.25s cubic-bezier(.22,1,.36,1), background-color 0.2s, border-color 0.2s, box-shadow 0.25s;
+}
+.ffs-btn svg { display: block; flex-shrink: 0; width: 18px; height: 18px; }
+.ffs-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .ffs-btn:hover { transform: translateY(-2px); background: rgba(255,255,255,0.1); text-decoration: none; }
+  /* Each brand glows in its own colours: TikTok's cyan + red, YouTube's red. */
+  .ffs-tt:hover { border-color: rgba(255,255,255,0.28); box-shadow: -4px 6px 22px -8px rgba(37,244,238,0.65), 4px 6px 22px -8px rgba(254,44,85,0.65); }
+  .ffs-yt:hover { border-color: rgba(255,60,60,0.55); box-shadow: 0 6px 22px -6px rgba(255,0,0,0.55); }
+}
+@media (hover: none) {
+  .ffs-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.12); transition-duration: 0.06s; }
+}
+
+/* ── Strip ───────────────────────────────────────────────────────────────── */
+.ffs {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 12px;
+  box-sizing: border-box; margin: 0;
+}
+.ffs-label { font-size: 13.5px; font-weight: 500; color: rgba(255,255,255,0.62); }
+.ffs-bot { display: none; width: 34px; height: 58px; object-fit: contain; object-position: center bottom; }
+.ffs--hero { width: 100%; margin-top: 18px; }
+.ffs--feed { display: none; }
+
+/* Phones: a small card — the mascot, then the label over the two buttons. */
+@media (max-width: 768px) {
+  .ffs {
+    display: grid; grid-template-columns: 34px auto; grid-template-areas: "bot label" "bot links";
+    justify-content: start; align-items: center; gap: 6px 12px;
+  }
+  .ffs--desk { display: none; }      /* a strip that has a phone-placed twin (Classic's hero) */
+  .ffs-bot { display: block; grid-area: bot; }
+  .ffs-label { grid-area: label; font-size: 13px; text-align: start; }   /* Cinematic's hero centres its text */
+  .ffs-links { grid-area: links; }
+  .ffs-btn { height: 34px; font-size: 13px; padding: 0 12px 0 10px; }
+  .ffs-btn svg { width: 17px; height: 17px; }
+  .ffs--hero { width: max-content; max-width: 100%; margin: 16px auto 0; }
+  .ffs--feed {
+    margin: 2px 18px 22px; padding: 12px 14px;
+    border: 1px solid rgba(255,255,255,0.07); border-radius: 16px;
+    background: linear-gradient(135deg, rgba(139,92,246,0.10), rgba(6,182,212,0.06));
+  }
+}
+
+/* ── Corner mascot (computers) ───────────────────────────────────────────── */
+.ffm { display: none; }
+@media (min-width: 1024px) and (hover: hover) {
+  .ffm {
+    --ffm-h: 132px;      /* the mascot's height (ff-bot.webp is 186×320: 77px wide here) */
+    --ffm-peek: 70px;    /* how much shows while peeking: the head and its 3D glasses */
+    display: block; position: fixed; right: 28px; bottom: 0; z-index: 60;
+    transform: translateY(calc(var(--ffm-h) + 24px)); visibility: hidden;
+    transition: transform 0.55s cubic-bezier(.22,1,.36,1), visibility 0s linear 0.55s;
+  }
+  .ffm.is-in {
+    transform: translateY(calc(var(--ffm-h) - var(--ffm-peek))); visibility: visible;
+    transition: transform 0.55s cubic-bezier(.22,1,.36,1), visibility 0s;
+  }
+  .ffm.is-in:hover, .ffm.is-in.is-open, .ffm.is-in:focus-within { transform: none; }
+  .ffm-bot {
+    display: block; height: var(--ffm-h); margin: 0; padding: 0; border: 0; background: none;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .ffm-bot img {
+    display: block; height: 100%; width: auto; max-width: 150px; object-fit: contain;
+    filter: drop-shadow(0 10px 24px rgba(0,0,0,0.55));
+    animation: ffm-bob 3.4s ease-in-out infinite;
+  }
+  .ffm-bot:focus-visible { outline: 2px solid #fff; outline-offset: 4px; border-radius: 12px; }
+  @keyframes ffm-bob { 50% { transform: translateY(-5px) rotate(-1.5deg); } }
+
+  /* Speech bubble, above the mascot; it overlaps the mascot's top a little so
+     moving the pointer from one to the other never drops the hover. */
+  .ffm-bubble {
+    position: absolute; right: 0; bottom: calc(100% - 10px); width: 236px; box-sizing: border-box;
+    padding: 14px 14px 14px; border-radius: 18px;
+    background: rgba(18,18,22,0.94); border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 20px 50px -12px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.06);
+    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    opacity: 0; transform: translateY(8px) scale(0.96); transform-origin: 85% 100%;
+    visibility: hidden; pointer-events: none;
+    transition: opacity 0.2s, transform 0.3s cubic-bezier(.22,1,.36,1), visibility 0s linear 0.3s;
+  }
+  .ffm-bubble::after {   /* tail, pointing down at the mascot */
+    content: ""; position: absolute; right: 31px; bottom: -7px; width: 14px; height: 14px;   /* over the mascot's head */
+    background: rgb(18,18,22); border: solid rgba(255,255,255,0.1); border-width: 0 1px 1px 0;
+    transform: rotate(45deg);
+  }
+  .ffm.is-in:hover .ffm-bubble, .ffm.is-in.is-open .ffm-bubble, .ffm.is-in:focus-within .ffm-bubble {
+    opacity: 1; transform: none; visibility: visible; pointer-events: auto;
+    transition: opacity 0.2s, transform 0.3s cubic-bezier(.22,1,.36,1), visibility 0s;
+  }
+  .ffm-bubble .ffs-label { display: block; margin: 0 30px 12px 2px; font-size: 13.5px; font-weight: 600; color: #fff; }
+  .ffm-bubble .ffs-links { flex-direction: column; align-items: stretch; }
+  .ffm-bubble .ffs-btn { height: 40px; }
+  .ffm-close {
+    position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; margin: 0; padding: 0;
+    display: grid; place-items: center; border: 0; border-radius: 999px;
+    background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  .ffm-close:hover { background: rgba(255,255,255,0.14); color: #fff; }
+  .ffm-close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .ffm.is-gone { transform: translateY(calc(var(--ffm-h) + 24px)) !important; }
+  .ffm.is-gone .ffm-bubble { opacity: 0 !important; visibility: hidden !important; }
+}
+
+/* ── Footer band ─────────────────────────────────────────────────────────── */
+.ffs-band {
+  position: relative; display: flex; align-items: center; justify-content: center; gap: 28px;
+  box-sizing: border-box; max-width: 1160px; margin: 48px auto 0; padding: 28px 32px;
+  border: 1px solid rgba(255,255,255,0.07); border-radius: 24px; overflow: hidden;
+  background:
+    radial-gradient(ellipse 60% 120% at 12% 100%, rgba(139,92,246,0.20), transparent 70%),
+    radial-gradient(ellipse 50% 120% at 90% 0%, rgba(6,182,212,0.12), transparent 70%),
+    rgba(255,255,255,0.02);
+}
+/* Taller than the band's content box: it rises from the band's bottom edge (overflow: hidden cuts its base). */
+.ffs-band-bot { display: block; flex-shrink: 0; height: 180px; width: auto; object-fit: contain; margin: -10px 0 -36px; }
+.ffs-band-title { margin: 0 0 14px; font-size: clamp(1.25rem, 2.2vw, 1.6rem); font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; color: #fff; }
+.ffs-band .ffs-btn { height: 46px; padding: 0 20px 0 16px; gap: 10px; font-size: 15px; }
+.ffs-band .ffs-btn svg { width: 22px; height: 22px; }
+@media (max-width: 768px) {
+  .ffs-band { flex-direction: column; gap: 6px; margin: 36px 14px 0; padding: 22px 18px 24px; text-align: center; }
+  .ffs-band-bot { height: 140px; margin: -6px 0 0; }
+  .ffs-band .ffs-links { justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ffm-bot img { animation: none; }
+  .ffm, .ffm-bubble, .ffs-btn { transition-duration: 0.01s !important; }
+}
