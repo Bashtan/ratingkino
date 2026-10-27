@@ -2,7 +2,26 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-27b) — TikTok + YouTube Shorts Links and the FindFilm Mascot
+## ⚡ Most Recent Session (2026-10-27c) — Cinematic in 9 Languages + Arabic RTL, One Shared Dictionary
+
+All commits on `main`, **deployed live on https://findfilm.ai**: Pages production `f1121318` from `cec4746`, 2026-10-27. `./deploy.sh --branch main`: 16/16 sensitive paths unpublished, custom domains clean, 4 files uploaded (`index.html`, `cinematic/index.html`, `assets/i18n.js`, `assets/social.css`). `/`, `/cinematic/`, `i18n.js?v=12774706`, `social.css?v=73a9f7d6` and `social.js?v=73a9f7d6` are byte-identical to the repo on findfilm.ai and ratingkino.com. No backend change.
+
+| Commit | Feature |
+|--------|---------|
+| `cec4746` | **One shared dictionary + Cinematic i18n.** **New `assets/i18n.js`** (`window.FF_I18N`, linked by BOTH pages synchronously in `<head>` as `?v=<hash>`; recompute with `shasum -a 256 assets/i18n.js \| cut -c1-8` and bump in both after any edit). Classic's `TRANSLATIONS` block (3 280 lines) moved there **unchanged** (verified key by key against the previous inline object); Classic now has `const TRANSLATIONS = window.FF_I18N \|\| { en: {} };` and its engine (`t()`, `applyTranslations()`, `switchLang()`, `detectLang()`) is untouched. **140 new `cin.*` keys** in all 9 locales (the last section of each language block, `// ── Cinematic layout (/cinematic/) ──`); counted phrases are **`cin.n.<thing>.<CLDR category>`** (`titles`, `shows`, `aiPicks`, `matches`, `seasons`; uk one/few/many/other, ar zero/one/two/few/many/other, zh other). Reused Classic keys: `nav.movies`, `nav.tvShows`, `nav.layout*`, `social.watchOn`, `results.close`, `wl.toastAdded/Removed`. **Cinematic engine** (`cinematic/index.html`, new LANGUAGE + SWITCHING LANGUAGE sections): `DICT`, `LANGS`, `LANG_NATIVE`, `TMDB_LANG` (= Classic's), `HTML_LANG`, `t(key, vars)`, **`tn(key, n)`** (Intl.PluralRules), `makeFormatters()` → `fmt` (`int`, `one` = 1-decimal ratings, `date`, `plural`, `region`, `language`, `list`; Arabic uses `ar-u-nu-latn`, Latin digits), `translateStatic()` (`[data-i18n]` text, `[data-i18n-aria]` aria-label, `#foot` from `cin.foot` with a `{tmdb}` link), **`setLang(code)`**, `detectLang(geoLang)` (first visit only: `/api/geo-lang` lang → browser → en, then saved — Classic's order), **`switchLang(code)`**, **`relabel()`** (menu, `applyTypeCopy()`, `syncWL()`, clears `homeSnaps` + `QV.cache`, reruns the current view: home / discover / title / watchlist / ai). A tiny `<head>` script sets `<html lang dir>` from `rk_lang` before first paint. Config now holds keys, not words: `CHIPS` / `TV_CHIPS` (`label` → `cin.chip.<label>`, `sub` → `.sub`, `brand` literal, `net` → `cin.tvFrom`), `chipLabel()`, `chipSub()`, `chipQuery()`, `TYPES.*.prompts()`, `TV_TRY`. **AI chips still send their English query** (`chip.ai`, stable + KV-cached server side) but show the translated one in the field (`cin.chip.<label>.q`); `runAI(q, { chip })` replaced `{ label }`. **Language menu:** `#lang` / `#langBtn` (globe `.icon-btn`, `aria-haspopup="menu"`) / `#langMenu` (`role="menu"`, `.lang-opt[role=menuitemradio][data-lang]`, native names with `lang`/`dir` on the name only, tick on the current), arrow keys / Home / End / Escape / outside click. **TMDB in the page's language:** `tmdb()` now awaits `apiReady` before reading `lang` (first-visit detection settles first) and sends `language: TMDB_LANG[lang]`; `/api/search` gets `lang` too; Quick View asks for `include_image_language: <lang>,en,null` + `include_video_language: <lang>,en`, `pickLogo()` / `pickTrailer()` prefer the page language, an empty overview is refetched in `en-US`, the `<h2>` takes TMDB's localized title (AI picks arrive English). Facts use `languageName()` and `fmtList()` (Intl.ListFormat), runtime `cin.dur.*`, seasons `tn('cin.n.seasons')`. `normTitle()` is Unicode-aware (`\p{L}\p{N}`), so Cyrillic/Arabic titles can match. **RTL:** logical insets/padding (`.skip`, `.mini-search`, `.cmd-field`, `.cmd-caret`, `.refine-label`, `.tv-badge`, `.wl-tog`, `.qv-close`, `.qv-back`, `.qv-logo`, `.prov`, `.card text-align: start`), `[dir="rtl"] .seg::before` mirrored thumb, desktop `[dir="rtl"] .qv` slides in from the left (phones keep the bottom sheet), `.ov-view` / `.qv-back` arrows flipped, `[dir="rtl"] .topbar-inner { flex-direction: row-reverse }` (Classic's `.header-inner` rule, so logo + toggle stay put), `:root[lang="ar"] main *, .qv * { letter-spacing: 0 }`, typewriter `cmdPh.scrollLeft` negative in RTL. `social.css` comment fixed (`?v=73a9f7d6`). |
+
+**Verified on findfilm.ai** (headless Chrome, throwaway profile, analytics blocked; same checks as locally, no console errors): first visit English; menu → Українська retranslates hero, tabs, chips, placeholder, footer, social strip; trending refetched with `language=uk-UA` (Ukrainian titles and posters); the 90s Sci-Fi chip stays active through a switch ("189 назв"); Quick View fully Ukrainian ("Режисери", "Вихід: 31 березня 1999 р.", "Мова: Англійська", "★ 8,3"). Arabic: `dir=rtl`, `.ffl` at x272 y16 at 1440 (same as English), Quick View at x12 (left), Arabic title art. Classic → Cinematic and back keep the language (ar, de). **Phones (375 and 320; en, uk, ar):** `scrollWidth === clientWidth === innerWidth`, no offenders (also after scrolling to the grid), `.ffl` 50–116 in every case, language menu on screen (320 ar: 72–260). Swedish TV tab: "326 serier · Serier från Netflix", watchlist "1 titel". **Classic regression:** `TRANSLATIONS === window.FF_I18N`, 9 languages switch, 375/320 en + ar no overflow, `.ffl` at 50,10.
+
+**Known limits / gotchas**
+- **AI search is English-only** (server): result titles, "why" blurbs and refine suggestions stay English in every language; opening one shows TMDB details in the page language.
+- **Translations of the `cin.*` keys were written in-session**, matching Classic's register per language (uk informal, de du, fr vous); a native-speaker pass (ar and uk first) is worth doing.
+- `i18n.js` is ~69 KB gzipped (all languages) and render-blocking in both `<head>`s; it is cached by the SW after the first visit, and Classic's HTML shrank by the same strings.
+- Left in English on purpose: the Classic / Cinematic toggle labels, brand chips (Netflix, HBO, Apple TV+, Prime Video, A24), the "FindFilm AI · Beta" eyebrow, the "TV" badge, `Untitled`.
+- Adding a Cinematic string: add the key to all 9 blocks in `i18n.js`, bump `?v=` in both pages.
+
+---
+
+## Session (2026-10-27b) — TikTok + YouTube Shorts Links and the FindFilm Mascot
 
 All commits on `main`, **deployed live on https://findfilm.ai**: Pages production `3efde451` from `168b9cd`, 2026-10-27. `./deploy.sh --branch main`: 16/16 sensitive paths unpublished, custom domains clean, 7 files uploaded (the two pages, `social.css`/`.js`, three mascot images). `/`, `/cinematic/`, `social.css?v=5b50435d`, `social.js?v=5b50435d`, `ff-bot.webp`, `ff-bot-sm.webp` and `ff-bot.png` are byte-identical to the repo on findfilm.ai and ratingkino.com. Both layouts; no backend change. The deploy was made after pulling `e3754be`, so it also carries the other session's RTL/320px fixes (`615bb8f`, `31a26d5`).
 
@@ -2397,7 +2416,10 @@ ratingkino/
 │                           Never run `wrangler pages deploy .` — see the 🔴 section.
 ├── dist/                 ← generated by deploy.sh, gitignored. Never edit or commit.
 ├── .githooks/pre-commit  ← blocks secret filenames + values from entering git
-├── index.html            ← entire site: CSS + JS + HTML (~7500 lines)
+├── index.html            ← entire site: CSS + JS + HTML (~13 800 lines; UI strings are in assets/i18n.js)
+├── assets/i18n.js        ← shared by index.html + cinematic/index.html: window.FF_I18N, the
+│                           UI strings of all 9 languages (Classic's keys + Cinematic's 'cin.*').
+│                           Loaded synchronously in <head> as ?v=<hash>.
 ├── assets/layout-switch.css / .js ← shared by index.html + cinematic/index.html: the
 │                           logo + Classic | Cinematic toggle (.ffl), page scrollbar,
 │                           header centring, switch handler. Linked as ?v=<hash>.
@@ -2640,9 +2662,10 @@ Backend (`functions/api/[[path]].js`): `_actorMovies(actorName, env)` resolves a
 9 languages: **English, Español, Français, 中文, العربية, Українська, Deutsch, Svenska, Norsk**
 
 - Geo-IP auto-detection via `/api/geo-lang` on first load
-- Language stored in `localStorage['rk_lang']`
+- Language stored in `localStorage['rk_lang']` — **shared by Classic and Cinematic**
 - All static strings use `data-i18n="key"` attributes; dynamic strings call `t('key')`
-- `TRANSLATIONS` object embedded in `index.html` — no external JSON files
+- **Dictionaries live in `assets/i18n.js`** (`window.FF_I18N`, loaded synchronously in both `<head>`s, `?v=<hash>`); Classic aliases it as `TRANSLATIONS`. Cinematic's strings are the `cin.*` keys at the end of each language; counted phrases are `cin.n.<thing>.<CLDR category>`
+- Cinematic has its own engine (`t`, `tn`, `setLang`, `switchLang`, `relabel`, `translateStatic`; `[data-i18n]` + `[data-i18n-aria]`) and a globe menu `#langMenu`; RTL via logical properties + a few `[dir="rtl"]` rules (see the 2026-10-27c session)
 - Arabic sets `document.documentElement.dir = 'rtl'`; `[dir="rtl"]` CSS handles layout flip
   - Absolutely-positioned popovers anchored to a physical side need their own `[dir="rtl"]` flip: `.lang-menu`, `.sw-mode-menu`, `.voice-lang-menu` (2026-10-27). In RTL only overflow past the left edge scrolls.
 - Movie description translation: `translateDesc(movieId, text, lang)` calls `/api/translate`
@@ -2692,7 +2715,7 @@ Taste profile stored in `localStorage['rk_taste_v1']`: `{ genres: {}, directors:
 
 | Key | Contents |
 |-----|---------|
-| `rk_lang` | Current language code (`en`, `es`, `fr`, `zh`, `ar`, `uk`) |
+| `rk_lang` | Current language code (`en`, `es`, `fr`, `zh`, `ar`, `uk`, `de`, `sv`, `no`) — shared by Classic and Cinematic |
 | `rk_taste_v1` | Taste profile: `{genres:{}, directors:{}, total:0}` |
 | `rk_filters_v1` | Last-used filter state |
 | `rk_visited` | Set to `'1'` after first-visit overlay is dismissed |
@@ -2753,7 +2776,8 @@ The site is fully installable as a PWA on all platforms.
 
 - [x] **Merge and deploy the phone overflow fixes** (`615bb8f` RTL popovers + `31a26d5` 320px header): on `main` and live 2026-10-27 (production `db17c4dd` from `3026fac`); verified on findfilm.ai at 320/375 in en and ar
 - [x] **Social links + mascot** (`168b9cd`) — TikTok + YouTube Shorts strip, corner mascot, footer band in both layouts; live 2026-10-27 (production `3efde451`)
-- [ ] **Cinematic i18n** would also translate its social strip / band / mascot copies (they already carry `data-i18n="social.watchOn"`)
+- [x] **Cinematic i18n** — done in `cec4746` (shared `assets/i18n.js`, 9 languages, Arabic RTL); live 2026-10-27 (production `f1121318`)
+- [ ] **Native-speaker review of the `cin.*` translations** (Arabic and Ukrainian first) — written in-session, see the 2026-10-27c block
 - [x] **Main checkout must pull `main` before its next deploy**: pulled `e3754be` (stash → `pull --ff-only` → pop, clean) before the `3efde451` deploy, which therefore keeps the RTL/320px fixes
 - [x] **Header overflows at 320px (both languages)**: fixed in `31a26d5` (`@media (max-width: 340px)`: `.header-btns` 213 → 181px)
 - [ ] **Header right padding at 341–350px**: no overflow, but only 2–11px of padding on the right. Optional: widen the 340px block to 350px
@@ -2772,8 +2796,8 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Ship the `/api/search` TV ranking fix** (`ca02d1f`) — merged, pushed and deployed 2026-10-08 (production `6ce11eb0`); verified on findfilm.ai and ratingkino.com
 - [ ] **Diacritic-insensitive title matching in `/api/search`** — fold accents on the query and on `_resultTitles()` output so "shogun" finds *Shōgun* and "amelie" finds *Amélie* in Tier 1; it changes movie ranking too, so it needs the owner's go-ahead
 - [ ] **AI search for TV shows** — `/api/ai-search` is films-only (LLM curation + `search/movie` lookups + movie KV catalog); Cinematic and Classic fall back to title search on the TV tab
-- [ ] **Cinematic gaps vs Classic**: the 9-language UI, voice search (TV browsing, TV deep links and the Watchlist are done)
-- [ ] **Beta UI prototype feedback** (now `cinematic/index.html`; old preview https://beta-ui.ratingkino.pages.dev) — collect the owner's feedback, then decide: ship it at `/beta/` (add `beta` to `PUBLIC`), port pieces into `index.html`, or iterate. Not yet in it: i18n, voice (the watchlist landed in `89d2a3c`, the TV tab in `3a93af7`)
+- [ ] **Cinematic gaps vs Classic**: voice search (the 9-language UI, TV browsing, TV deep links and the Watchlist are done)
+- [ ] **Beta UI prototype feedback** (now `cinematic/index.html`; old preview https://beta-ui.ratingkino.pages.dev) — collect the owner's feedback, then decide: ship it at `/beta/` (add `beta` to `PUBLIC`), port pieces into `index.html`, or iterate. Not yet in it: voice (the watchlist landed in `89d2a3c`, the TV tab in `3a93af7`, i18n in `cec4746`)
 - [x] **Deploy `ffa7e37`** (`?movie=` / `?TVShows=` deep links) — live (deployment `29034af3`)
 - [ ] **Cast-to-TV receiver for TV shows** — `/tv/:id` (`tv/index.html`) only fetches `/movie/{id}`; needs a media-type signal in its URL and a TV-aware fetch
 - [ ] **Media type through id-only lookups** — `MOVIES.find(x => x.id === id)` sites (`openMovie`, `enrichNow`, `updateCardInGrid`, card `onclick`s; the watchlist itself is typed since `89d2a3c`, but `_openWatchlisted()` still ends in `openMovie(id)`) can still collide across movie/TV ids via actor filmographies
