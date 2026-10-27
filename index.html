@@ -4029,6 +4029,19 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
   .gpill         { height: 36px; padding: 0 11px; font-size: 12px; }
 }
 
+/* ─── 340px (iPhone SE 1st gen, 320px phones) ── */
+/* The header row needs 351px (logo + .ffl toggle + 5 buttons), so at 320 it
+   ran 19px off-screen. Trim only .header-btns: the side padding, row gap and
+   52px height are shared with Cinematic (assets/layout-switch.css), so the
+   toggle stays on the same pixels. `.header-btns` prefixes beat the base
+   .btn-watchlist / .lang-btn rules, which come later in source. */
+@media (max-width: 340px) {
+  .header-btns, .hdr-feats { gap: 5px; }
+  .hdr-feat, .header-btns .btn-watchlist { width: 32px; height: 32px; }
+  .header-btns .lang-btn { padding: 0 9px; }               /* globe only */
+  .header-btns .lang-chevron { display: none; }
+}
+
 /* ─── AI BADGES ──────────────────────────────── */
 /* Hero band "✦ AI Powered" chip */
 .ai-powered-chip {
