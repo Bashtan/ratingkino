@@ -740,6 +740,10 @@ header {
   transition: opacity 0.18s ease, transform 0.18s ease;
 }
 .sw-mode.open .sw-mode-menu { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+/* RTL mirrors the bar, so the trigger sits at its RIGHT edge — open the menu
+   from there. Left-anchored, the 196px menu opened past the right edge of a
+   phone screen, where RTL clips it (overflow on the start side never scrolls). */
+[dir="rtl"] .sw-mode-menu { left: auto; right: 0; transform-origin: top right; }
 .sw-mode-opt {
   display: flex; align-items: center; gap: 10px; width: 100%;
   padding: 10px 11px; border: none; border-radius: 9px;
@@ -843,6 +847,10 @@ header {
   pointer-events: none; transition: opacity .18s, transform .18s;
 }
 .voice-lang-wrap.open .voice-lang-menu { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+/* In RTL the trigger lands in the bar's LEFT half, so a right-anchored popover
+   grew leftward off the screen — and since opacity 0 still lays out a box, it
+   did so while closed too, widening the Arabic page (446px at a 375px phone). */
+[dir="rtl"] .voice-lang-menu { right: auto; left: 0; }
 .vl-menu-title {
   font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
   color: #94a3b8; padding: 4px 8px 8px; font-family: 'Montserrat', sans-serif;
