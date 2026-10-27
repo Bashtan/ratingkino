@@ -4,7 +4,11 @@
 
 ## ⚡ Most Recent Session (2026-10-27) — No Sideways Scroll on Phones (Arabic/RTL + 320px Header)
 
-Committed on branch **`claude/exciting-neumann-cecde6`** (worktree), **not merged to `main` and NOT deployed**. Deploy waits for the owner's go-ahead. Classic only (`index.html`), CSS only, no backend change.
+All commits on `main` (fast-forwarded from branch `claude/exciting-neumann-cecde6`), **deployed live on https://findfilm.ai**: Pages production `db17c4dd` from `3026fac`, 2026-10-27. `./deploy.sh --branch main`: 16/16 sensitive paths unpublished, custom domains clean, only `index.html` changed (1 of 29 files uploaded). `/` is byte-identical to the repo on findfilm.ai, ratingkino.com and the deployment URL, with and without a cache-buster. Classic only (`index.html`), CSS only, no backend change.
+
+**Verified on findfilm.ai** (Browser pane, real feed with 119 cards, no console or HTTP errors): at 375 (en fresh, ar fresh, ar live switch) and at 320 (ar fresh, en fresh, en live switch), `scrollWidth === clientWidth === innerWidth` with no offenders. Toggle at x50 y10, 12px right padding. In a fresh Arabic load the closed popovers now sit on-screen: voice 105→301, mode 159→351 (were −71 and 376→568).
+
+**Deploying from a worktree:** `deploy.sh` doesn't pass `--branch`, so wrangler takes the branch from git. From a worktree branch that would make a *preview* deployment. Use `./deploy.sh --branch main` (the script forwards extra args to wrangler). **Heads-up for the main checkout:** at deploy time, `/Users/bashtan/Projects/ratingkino` still had local `main` at `ae9384c` with another session's uncommitted social-strip work (`index.html`, `cinematic/index.html`, `assets/social.*`). `deploy.sh` stages the working tree as it is, so deploying from there before pulling `3026fac` would ship an `index.html` without these fixes.
 
 | Commit | Feature |
 |--------|---------|
@@ -2723,7 +2727,8 @@ The site is fully installable as a PWA on all platforms.
 
 ## Pending / Next Steps
 
-- [ ] **Merge and deploy the phone overflow fixes** (`615bb8f` RTL popovers + `31a26d5` 320px header, branch `claude/exciting-neumann-cecde6`): merge to `main`, push, `./deploy.sh`. Waiting on the owner's go-ahead
+- [x] **Merge and deploy the phone overflow fixes** (`615bb8f` RTL popovers + `31a26d5` 320px header): on `main` and live 2026-10-27 (production `db17c4dd` from `3026fac`); verified on findfilm.ai at 320/375 in en and ar
+- [ ] **Main checkout must pull `main` before its next deploy**: `/Users/bashtan/Projects/ratingkino` was at `ae9384c` with uncommitted `index.html` edits (social strip). Commit or set them aside, then `git pull --ff-only`. Otherwise `./deploy.sh` from there reverts the fixes above
 - [x] **Header overflows at 320px (both languages)**: fixed in `31a26d5` (`@media (max-width: 340px)`: `.header-btns` 213 → 181px)
 - [ ] **Header right padding at 341–350px**: no overflow, but only 2–11px of padding on the right. Optional: widen the 340px block to 350px
 - [ ] **Missing i18n keys (fall back to English)**: `search.modeTitle` ("By Title") in es/fr/zh/ar; `ratings.*` (the "How ratings work" modal) in es/fr/zh/ar/uk
