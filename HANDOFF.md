@@ -2,7 +2,27 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-27d) — The Mascot's AI Moods (Think, Idea, Success, Confused)
+## ⚡ Most Recent Session (2026-10-28) — iOS Voice Duplication, AI Summary Over the Posters, Stale Open Pages
+
+All commits on `main`, **deployed live on https://findfilm.ai**: Pages production `3c0f6647` from `cb8606c`, 2026-10-28. `./deploy.sh --branch main`: 16/16 sensitive paths unpublished, custom domains clean, 6 files uploaded. `/`, `/cinematic/`, `social.css?v=398f3965`, **`fresh.js?v=887c34fa`** and `sw.js` are byte-identical to the repo on findfilm.ai and ratingkino.com; `/build.json` = `{"build":"20261028T084800Z-cb8606c"}` (`application/json`). Reported by the owner from an iPhone (Classic, French, voice search): duplicated transcript, summary text over the posters, no mascot in the AI panel header.
+
+| Commit | Feature |
+|--------|---------|
+| `cb8606c` | **(1) iOS voice duplication** (Classic, `toggleVoiceSearch()` phone + `toggleDesktopVoice()` desktop). iOS Safari (WebKit, so every iPhone browser) sends each `SpeechRecognitionResult` in continuous mode as a **snapshot of the utterance so far** ("I", "I remember", "I remember the" …); `_voiceRead()` joined all results, spelling every prefix ("I I I remember I remember I remember the …", the owner's exact string). New **`_voiceWords(s)`** (lowercased words, punctuation stripped, Unicode-aware) and **`_voiceFold(segs, text)`**: a result that restates the previous segment — all of its words as a prefix, or (both ≥3 words) the same first three words with a revised tail — **replaces** it; anything else is new speech and is appended. **`_voiceRead(e)` now returns one string** (fold over all results, final and interim), and state **`_voiceSession`** replaces `_voiceSessionFinal` (`_voiceCommit()` merges it into `_finalTranscript` as before), so the last words count even if iOS never marks them final. `_voiceMerge()` and the restart logic are unchanged. **(2) AI panel summary over the posters** (Classic `#aiResultsSummary` / `.airx-summary`): it had `min-height: 20px`, which overrides the flex default (`min-height: auto` = never shorter than the text), so in the height-capped sheet (`.airx-modal`, flex column, `max-height: min(90svh, 90%)` on phones) a long query was squeezed to 20px and the text ran over `.airx-body`. Now `flex-shrink: 0; overflow-wrap: anywhere;` and **at most 3 lines** (`display: -webkit-box; -webkit-line-clamp: 3; overflow: hidden`), bottom space moved from padding to `margin-bottom` (6px; 4px ≤768) so the clamped 4th line can't peek; `.airx-title` got `overflow-wrap: anywhere` too. **(3) Pages left open across a deploy now reload themselves.** `deploy.sh` writes **`dist/build.json`** `{"build":"<UTC yyyymmddThhmmssZ>-<short commit>"}` on every staging (new id per deploy; `--stage-only` too); **`sw.js`** treats `/build.json` as network-only (next to `/api/`); new shared **`assets/fresh.js`** (both pages, `defer`, `?v=<hash>`) fetches it on `load` as the baseline, and on `visibilitychange` back to visible after **`AWAY_MS` = 10 min** hidden (or a `pageshow` with `persisted`, i.e. back/forward cache) fetches it again: a different build → `location.reload()`, **at most once per build** (sessionStorage **`ff_fresh_reload`** = that build; no sessionStorage → no reload), no `/build.json` (static dev) → nothing. `social.css` comment now names `raw/ff-bot-emotions.jpg` + `tools/mascot/cut.sh`. |
+
+**The missing mascot was not a bug in the build:** in iOS Safari (iPhone 17 Pro Max simulator, iOS 26.5, booted with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun simctl …` because `xcode-select` points at the Command Line Tools) the current build shows `.ffb--panel` at 27×46 in the header. In the owner's screenshot the eyebrow sat flush left — the element wasn't in that page: a home-screen app / tab opened before the `545b03b9` deploy and never reloaded (`sw.js` is network-first for HTML, but only when the page loads). (3) is the fix for that class of problem; it only protects pages loaded after `3c0f6647`.
+
+**Verified.** *Voice:* a fake `SpeechRecognition` (installed with `Page.addScriptToEvaluateOnNewDocument`, `aiSearch` stubbed) drives the real handlers through 10 patterns × phone/desktop: iOS snapshots (all final; newest interim; with punctuation; a pause starting a new utterance; a revised tail), Chrome interim→final segments, a redelivered final, Android restart replay, restart with reset results, genuine repeats ("very very good movie"). Old code: the 5 iOS patterns fail, reproducing the owner's string word for word; new code: 20/20, locally and on findfilm.ai. *Summary:* iOS Safari with the owner's query (French): before, `.airx-summary` 33px tall with 90px of text; after, 54px (3 lines + "…"), results start below it. Chrome 375 / 320 / 1440 with a long and a short query: summary always ends above `#aiResultsBody`, mascot visible; on findfilm.ai at 375 (real AI search) summary 170→218, results start 222. *Fresh pages* (headless Chrome, service worker on, controllable clock + visibility): both layouts — same build after 11 min → no reload; new build after 3 min → none; after 11 min → reload; after that reload → none; already reloaded for that build → none (no loop); back/forward-cache `pageshow` → reload; `/build.json` through the SW is never cached. On findfilm.ai the page reads `20261028T084800Z-cb8606c` and reloads after an 11-min absence when `/build.json` is stubbed newer. No console errors.
+
+**Known limits / gotchas**
+- **Not yet checked with a real iPhone microphone** (iOS only allows it on https; the simulator has no usable mic): the owner is testing on the live site. If words still double, capture the exact sequence (`e.results` transcripts + `isFinal` per event) before touching `_voiceFold()`.
+- `_voiceFold()` treats a new Chrome segment that repeats the previous segment's first three words as a revision (it replaces it). Saying the same three words twice across a pause is the only way to hit that.
+- The freshness check reloads only after ≥10 min away; a tab kept visible for hours isn't reloaded. Old service workers (before this deploy) answer `/build.json` stale-while-revalidate until they update themselves, which delays the first detection by one check at most.
+- **Classic is 5px too wide at 320px in French** (`scrollWidth` 325) — pre-existing, also on production before this deploy; being investigated in a separate session (no offender outside scroll containers found yet).
+
+---
+
+## Session (2026-10-27d) — The Mascot's AI Moods (Think, Idea, Success, Confused)
 
 All commits on `main`, **deployed live on https://findfilm.ai**: Pages production `545b03b9` from `902d701`, 2026-10-27. `./deploy.sh --branch main`: 16/16 sensitive paths unpublished, custom domains clean, 5 files uploaded. `/`, `/cinematic/`, `social.css?v=c474b48c`, `social.js?v=00593763` and `ff-bot-moods.webp?v=1b892b12` are byte-identical to the repo on findfilm.ai and ratingkino.com; `/raw/…` and `/tools/…` only get the SPA fallback (not published). Both layouts; no backend change.
 
@@ -2462,7 +2482,11 @@ ratingkino/
 ├── cinematic/index.html  ← the Cinematic layout (/cinematic/), a separate document from
 │                           index.html; chosen by the layout router at the top of
 │                           index.html's <head> (localStorage ff_layout). In PUBLIC.
-├── sw.js                 ← Service Worker (PWA offline cache + install prompt trigger)
+├── sw.js                 ← Service Worker (PWA offline cache + install prompt trigger);
+│                           HTML network-first, /api/ and /build.json network-only
+├── assets/fresh.js       ← shared by index.html + cinematic/index.html: reloads a page
+│                           that comes back after 10+ min away when /build.json (written
+│                           by deploy.sh into dist/, a new id per deploy) has changed.
 ├── functions/
 │   └── api/[[path]].js   ← Cloudflare Pages Function (API proxy + KV reader + AI)
 ├── sync-worker.js        ← Cloudflare Worker — nightly data sync (deployed separately)
@@ -2599,6 +2623,7 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 |----------|---------|
 | `setCtype(next, {reload})` / `applyTypeCopy()` / `typeCfg(type)` + `TYPES` (Cinematic) | The Movies \| TV Shows tab: state `ctype`, persisted in `sessionStorage.ff_ctype`; `TYPES` holds the per-tab endpoints, chips (`CHIPS` / `TV_CHIPS`), prompts, `ai` flag and copy; views capture `ctype` in `view.ctype` |
 | `askAIInMovies(q)` (Cinematic) | TV search miss → switch to Movies without reloading and run the film AI on the same words |
+| `_voiceRead(e)` / `_voiceFold(segs, text)` / `_voiceMerge(base, seg)` / `_voiceCommit()` (Classic voice) | Transcript assembly for `toggleVoiceSearch()` (phone) + `toggleDesktopVoice()` (desktop): `_voiceRead` folds ALL results of the session into one string (`_voiceSession`), `_voiceFold` replaces a result that restates the previous one (iOS snapshots) and appends new speech, `_voiceMerge` joins across engine restarts dropping word overlap (Android replays), `_voiceCommit` banks `_voiceSession` into `_finalTranscript` |
 | `FFBot.set(mood)` / `FFBot.found(hasSuggestions)` / `FFBot.warm()` / `FFBot.mood()` (`assets/social.js`) | The mascot's AI moods on every `[data-ffb]` host + `#ffm`: `think` while the AI works, `found()` = idea → success → idle (+ an idea nudge when refinements are offered), `confused` on no results / errors. Sprite `ff-bot-moods.webp` loads on first intent; called as `window.FFBot?.…` from Classic's `showAiLoader()` / `renderAiResults()` / `showAiResultsError()` / `closeAiResults()` and Cinematic's `startView()` / `runAI()` / `titleFallback()` / `runTitle()` |
 | `FFWatchlist.*` (`assets/watchlist.js`) | The one watchlist, typed `{id, type}`; `toggle(id, type)` returns whether the title is saved afterwards; `onChange(fn)` also fires for other tabs |
 | `toggleWatchlist(id, btn, type)` / `isWatchlisted(id, type)` (Classic) | Wrappers over `FFWatchlist`; `_wlType(id, type)` resolves the type for id-only callers; the listener in `initWatchlist()` repaints badge, `.card-wl-btn`, modal button and drawer |
@@ -2758,6 +2783,7 @@ Taste profile stored in `localStorage['rk_taste_v1']`: `{ genres: {}, directors:
 | `rk_watchlist` | Legacy Classic watchlist: bare TMDB ids. Imported once into v2 when v2 is missing; never written again |
 | `ff_layout` | `classic` \| `cinematic` — read by the layout router at the top of `index.html` |
 | `ff_mascot_off` | `'1'` once the corner mascot's × was clicked (`assets/social.js`); `#ffm` is removed on load in both layouts |
+| `ff_fresh_reload` (**sessionStorage**) | The `/build.json` build `assets/fresh.js` last reloaded the page for — it never reloads twice for the same build |
 | `rk_ios_pwa_dismissed` | Timestamp of last iOS PWA bottom-sheet dismiss (15-day cooldown) |
 | `rk_install_banner_dismissed` | Timestamp of last mobile install banner dismiss (7-day cooldown) |
 
@@ -2814,6 +2840,9 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Cinematic i18n** — done in `cec4746` (shared `assets/i18n.js`, 9 languages, Arabic RTL); live 2026-10-27 (production `f1121318`)
 - [ ] **Native-speaker review of the `cin.*` translations** (Arabic and Ukrainian first) — written in-session, see the 2026-10-27c block
 - [x] **Mascot AI moods** (`902d701`) — think / idea / success / confused in both layouts + the corner, sprite cut from the owner's pose sheet by `tools/mascot/cut.sh`; live 2026-10-27 (production `545b03b9`)
+- [x] **iOS voice duplication, AI summary over the posters, stale open pages** (`cb8606c`) — live 2026-10-28 (production `3c0f6647`); see the 2026-10-28 block
+- [ ] **Owner's iPhone check of voice dictation** on the live site (the fix was verified with a replayed iOS result pattern, not a real mic)
+- [ ] **Classic 5px too wide at 320px in French** (`scrollWidth` 325, pre-existing) — being investigated in a separate session
 - [x] **Main checkout must pull `main` before its next deploy**: pulled `e3754be` (stash → `pull --ff-only` → pop, clean) before the `3efde451` deploy, which therefore keeps the RTL/320px fixes
 - [x] **Header overflows at 320px (both languages)**: fixed in `31a26d5` (`@media (max-width: 340px)`: `.header-btns` 213 → 181px)
 - [ ] **Header right padding at 341–350px**: no overflow, but only 2–11px of padding on the right. Optional: widen the 340px block to 350px
