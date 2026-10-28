@@ -26,3 +26,21 @@ database_id   = "261cc44d-36e9-4913-a1c9-b61e1aed949e"
 
 [ai]
 binding = "AI"
+
+# Preview deployments (any --branch other than main) get their own KV and D1.
+# Without this block Pages applies the top-level bindings above to previews too,
+# so every preview URL could write to the production cache and Pitch database.
+# kv_namespaces, d1_databases and ai are non-inheritable: once [env.preview]
+# overrides one, all of them must be restated here or the deploy fails to validate.
+# Preview D1 schema: npx wrangler d1 execute findfilm-pitch-preview --remote --file=schema.sql
+[[env.preview.kv_namespaces]]
+binding = "MOVIES_CACHE"
+id      = "c2367fa6be864a4c9e6e4a4f4d8d66c5"   # ratingkino-preview-cache
+
+[[env.preview.d1_databases]]
+binding       = "DB"
+database_name = "findfilm-pitch-preview"
+database_id   = "ce6003b6-4584-43e0-8d0a-39669f6810ab"
+
+[env.preview.ai]
+binding = "AI"
