@@ -1217,7 +1217,7 @@ header {
 }
 .airx-title {
   font-family: 'Montserrat', sans-serif; font-size: 21px; font-weight: 800;
-  color: #fff; line-height: 1.25;
+  color: #fff; line-height: 1.25; overflow-wrap: anywhere;
   overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
   -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
@@ -1230,8 +1230,15 @@ header {
 }
 .airx-close:hover { background: rgba(239,68,68,0.2); color: #fff; transform: rotate(90deg); }
 .airx-summary {
-  padding: 0 26px 6px; min-height: 20px;
+  padding: 0 26px; margin-bottom: 6px; min-height: 20px;
   font-family: 'Inter', sans-serif; font-size: 13.5px; color: #c7d2fe; font-weight: 500;
+  /* A flex item of the sheet's height-capped column, and min-height overrides the
+     flex default that keeps an item at least as tall as its text: a long query
+     got squeezed to 20px and ran over the posters. Now it keeps its height (the
+     body below scrolls), up to three lines; the title above already shows the
+     query too. Bottom space is a margin so the clamped 4th line can't peek. */
+  flex-shrink: 0; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
 }
 .airx-body { overflow-y: auto; padding: 14px 26px 22px; flex: 1; }
 
@@ -1365,7 +1372,7 @@ body.airx-open { overflow: hidden; }
   .airx-modal.open { transform: translateY(0); }
   .airx-head { padding: 18px 18px 8px; }
   .airx-title { font-size: 18px; }
-  .airx-summary { padding: 0 18px 4px; }
+  .airx-summary { padding: 0 18px; margin-bottom: 4px; }
   .airx-body { padding: 12px 16px 20px; }
   .airx-followups { padding: 0 18px; }
   .airx-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
@@ -5468,8 +5475,10 @@ if ('serviceWorker' in navigator) {
 <!-- Touch baseline + bottom-sheet drag, shared with /cinematic/. -->
 <link rel="stylesheet" href="/assets/touch.css?v=fc8fd233">
 <!-- Social links + corner mascot, shared with /cinematic/. -->
-<link rel="stylesheet" href="/assets/social.css?v=c474b48c">
+<link rel="stylesheet" href="/assets/social.css?v=398f3965">
 <script src="/assets/social.js?v=00593763" defer></script>
+<!-- Reloads a page left open across a deploy, when it comes back after 10+ min away (/build.json). -->
+<script src="/assets/fresh.js?v=887c34fa" defer></script>
 <script src="/assets/touch.js?v=fc8fd233" defer></script>
 <!-- Watchlist storage, shared with /cinematic/: one typed list (rk_watchlist_v2). Synchronous on purpose: initWatchlist() below reads it at once. -->
 <script src="/assets/watchlist.js?v=64c31e42"></script>
@@ -12722,10 +12731,10 @@ function stopMobPlaceholder() {
 // ─── VOICE SEARCH ──────────────────────────────────
 let _recognition = null, _isListening = false;
 // _finalTranscript = speech CARRIED OVER from earlier recognition sessions (see the
-// auto-restart in onend). _voiceSessionFinal = finalised speech of the session that is
-// running right now, rebuilt from scratch on every onresult. Keeping the two apart is
-// what makes onresult idempotent — see _voiceRead() / _voiceMerge() below.
-let _finalTranscript = '', _voiceSessionFinal = '';
+// auto-restart in onend). _voiceSession = what the session running right now has
+// heard (final and still-interim), rebuilt from scratch on every onresult. Keeping the
+// two apart is what makes onresult idempotent — see _voiceRead() / _voiceMerge() below.
+let _finalTranscript = '', _voiceSession = '';
 let _voiceSilenceTimer = null;   // debounce: auto-stop only after N ms of silence (continuous mode)
 const VOICE_SILENCE_MS = 1200;   // wait this long after the user stops talking before auto-submitting.
                                   // History: 8000 → 2000 → 1200. 8000 was a generous ceiling for long
@@ -12875,18 +12884,36 @@ document.addEventListener('click', e => {
    "film about" turned into "film film film about film about film about".
 
    Rebuilding the whole string from index 0 on every event is idempotent: a
-   redelivered result recomputes the identical string instead of growing it. */
+   redelivered result recomputes the identical string instead of growing it.
+
+   iOS Safari (WebKit, so every browser on an iPhone) breaks the other
+   assumption: that each result is a NEW stretch of speech. In continuous mode
+   each result is a SNAPSHOT of the utterance so far — "I", "I remember",
+   "I remember the", … — so joining them spelled out every prefix:
+   "I I remember I remember the I remember the film …". _voiceFold() tells the
+   two apart: a result that restates the stretch before it (all of it, or its
+   opening words with a revised tail) replaces it; anything else is new speech.
+   Interim results take part too, so the field shows what was just said, and
+   the last words count even if the engine never marks them final. */
+function _voiceWords(s) {
+  return s.toLowerCase().replace(/[^\p{L}\p{N}\s']/gu, ' ').split(/\s+/).filter(Boolean);
+}
+function _voiceFold(segs, text) {
+  text = (text || '').replace(/\s+/g, ' ').trim();
+  if (!text) return segs;
+  const prev = segs.length ? _voiceWords(segs[segs.length - 1]) : null;
+  const next = _voiceWords(text);
+  const restates = prev && (
+    prev.every((w, i) => next[i] === w) ||                                  // "I remember" → "I remember the"
+    (prev.length >= 3 && next.length >= 3 && prev.slice(0, 3).join(' ') === next.slice(0, 3).join(' ')));   // same opening, new tail
+  if (restates) segs[segs.length - 1] = text;
+  else segs.push(text);
+  return segs;
+}
 function _voiceRead(e) {
-  let final = '', interim = '';
-  for (let i = 0; i < e.results.length; i++) {
-    const res = e.results[i];
-    if (res.isFinal) final   += res[0].transcript + ' ';
-    else             interim += res[0].transcript + ' ';
-  }
-  return {
-    final:   final.replace(/\s+/g, ' ').trim(),
-    interim: interim.replace(/\s+/g, ' ').trim()
-  };
+  let segs = [];
+  for (let i = 0; i < e.results.length; i++) segs = _voiceFold(segs, e.results[i][0].transcript);
+  return segs.join(' ');
 }
 
 /* Join carried-over speech to the current session's, dropping any word-level
@@ -12910,8 +12937,8 @@ function _voiceMerge(base, seg) {
 // Fold the finished session into the carry-over base. Called at the restart
 // boundary in onend, before `results` is allowed to reset under us.
 function _voiceCommit() {
-  _finalTranscript   = _voiceMerge(_finalTranscript, _voiceSessionFinal);
-  _voiceSessionFinal = '';
+  _finalTranscript = _voiceMerge(_finalTranscript, _voiceSession);
+  _voiceSession    = '';
 }
 
 function _stopListening() {
@@ -12931,7 +12958,7 @@ function toggleVoiceSearch() {
   _recognition.interimResults = true;     // live-update the field as the user speaks
   _recognition.maxAlternatives = 1;
   _recognition.continuous = true;         // stay open through natural pauses while dictating a plot
-  _finalTranscript = _voiceSessionFinal = '';
+  _finalTranscript = _voiceSession = '';
   _voiceStopRequested = false;
   _voiceDebounceFired = false;
   clearTimeout(_voiceSilenceTimer);
@@ -12945,10 +12972,9 @@ function toggleVoiceSearch() {
   };
   _recognition.onresult = e => {
     // Rebuild rather than append — _voiceRead()'s comment explains why.
-    const { final, interim } = _voiceRead(e);
-    _voiceSessionFinal = final;
+    _voiceSession = _voiceRead(e);
     const inp = document.getElementById('mobSearchInput');
-    const display = [_voiceMerge(_finalTranscript, final), interim].filter(Boolean).join(' ');
+    const display = _voiceMerge(_finalTranscript, _voiceSession);
     inp.value = display;
     document.getElementById('mobAiInputWrap').classList.toggle('has-value', !!display);
     // Re-arm the silence debounce on every new word — only auto-stop once the
@@ -13026,7 +13052,7 @@ function toggleDesktopVoice() {
   _recognition.interimResults = true;     // live-update the field as the user speaks
   _recognition.maxAlternatives = 1;
   _recognition.continuous = true;         // stay open through natural pauses while dictating a plot
-  _finalTranscript = _voiceSessionFinal = '';
+  _finalTranscript = _voiceSession = '';
   _voiceStopRequested = false;
   _voiceDebounceFired = false;
   clearTimeout(_voiceSilenceTimer);
@@ -13041,10 +13067,9 @@ function toggleDesktopVoice() {
   };
   _recognition.onresult = e => {
     // Rebuild rather than append — _voiceRead()'s comment explains why.
-    const { final, interim } = _voiceRead(e);
-    _voiceSessionFinal = final;
+    _voiceSession = _voiceRead(e);
     if (inp) {
-      inp.value = [_voiceMerge(_finalTranscript, final), interim].filter(Boolean).join(' ');
+      inp.value = _voiceMerge(_finalTranscript, _voiceSession);
       inp.dispatchEvent(new Event('input', { bubbles: true }));
     }
     // Re-arm the silence debounce on every new word — only auto-stop once the

@@ -167,7 +167,7 @@
      think → idea → success → idle      a search that found something
      confused (stays)                   no results, or an error
    Sprite: ff-bot-moods.webp, 4 frames of 256×320 in a row (think, idea,
-   success, confused), cut from the pose sheet ff-bot-emotions.png. Each robot
+   success, confused), cut from raw/ff-bot-emotions.jpg (tools/mascot/cut.sh). Each robot
    stands on the frame's bottom edge, centred on its helmet, helmet-to-feet
    238 of 320 — the same size as the idle pose inside a box 1/0.85 its
    height, so a cross-fade lines up; the props (?, bulb, sparks) use the room

@@ -6,6 +6,7 @@
      • Shell (index.html)  → Network-first, fallback to cache
      • Static assets       → Cache-first, background revalidate
      • API / external      → Network-only (never cache)
+     • /build.json         → Network-only (assets/fresh.js: has the site been redeployed?)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const CACHE  = 'ff-v2';
@@ -81,6 +82,10 @@ self.addEventListener('fetch', (e) => {
   // pinned in the cache permanently, so movie/rating data would be served
   // stale forever with only a background revalidate that nobody ever read.
   if (url.pathname.startsWith('/api/')) return;
+
+  // /build.json → network-only: it is how an open page learns the site was
+  // redeployed (assets/fresh.js), so a cached copy would hide exactly that.
+  if (url.pathname === '/build.json') return;
 
   // HTML navigation → network-first (always try to get fresh index.html)
   if (request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {

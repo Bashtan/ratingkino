@@ -77,6 +77,10 @@ fi
 
 find "$DIST" -name '.DS_Store' -delete
 
+# A new id per deploy, for pages that stayed open across it: assets/fresh.js
+# compares it with the one that was live when the page loaded, and reloads.
+printf '{"build":"%s-%s"}\n' "$(date -u +%Y%m%dT%H%M%SZ)" "$(git rev-parse --short HEAD 2>/dev/null || echo local)" > "$DIST/build.json"
+
 # ── Guard ──────────────────────────────────────────────────────────────────
 # The allowlist is the real protection; this is the tripwire for the case where
 # someone adds a directory to PUBLIC that happens to contain a secret or a
