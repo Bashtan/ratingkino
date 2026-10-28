@@ -2,7 +2,29 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-28) — iOS Voice Duplication, AI Summary Over the Posters, Stale Open Pages
+## ⚡ Most Recent Session (2026-10-28b) — French Mode Menu Widened the Page at 320px
+
+All commits on `main` (rebased from branch `claude/elated-thompson-83172f` onto `7af97d4`, then fast-forwarded), **deployed live on https://findfilm.ai**: Pages production `7865a70b` from `fa85d62`, 2026-10-28. `./deploy.sh --branch main` from the worktree: 16/16 sensitive paths unpublished, custom domains clean, 2 of 38 files uploaded. All 38 published files are byte-identical to the repo on findfilm.ai and ratingkino.com (`cinematic/index.html` checked at `/cinematic/`, since the `index.html` URL is a 308 there). Classic only (`index.html`), CSS only, no backend change. The bug was on production before this (`545b03b9`, `3c0f6647`), so it predates the recent sessions.
+
+| Commit | Feature |
+|--------|---------|
+| `fa85d62` | **`#smMenu.sw-mode-menu` capped on phones.** At 320px, Classic's `/` in French had `scrollWidth` 325 (English: 320). **Cause:** the search-mode popover hangs from `#swMode` (`left: 0`, x21). Its `.sw-mode-opt` options are `white-space: nowrap`, so the menu is as wide as its longest label. In French that's `#smPlot` "Décrivez ce dont vous vous souvenez", 310px, so the menu ran from x21 to x331. Closed, it's `opacity: 0` + `scale(0.98)`, which still lays out (to x≈325). German (303px) only overflowed when opened (324). **Fix** (≤768px block, right after `.search-wrap--hero .sw-mode-trigger`): `.sw-mode-menu { width: max-content; max-width: calc(100vw - 40px) }` + `.sw-mode-opt { white-space: normal }`. The cap is the bar's width (100vw minus the two 16px hero gutters) minus the bar's 8px end padding. `.search-wrap--hero`'s `padding: 0 8px 0 5px` is physical, so in RTL the trigger sits 8px in. `width: max-content` keeps every menu that already fits at its old width. |
+
+**Why a simple offender search missed it:** `body { overflow-x: hidden }` computes as `hidden` on `body` (the value propagates to the viewport), so "skip anything inside an overflow-x scroller" skips every element on the page. It also doesn't stop a mobile layout viewport from widening. Bisect with `display: none` instead: hide each child in turn, keep the one whose removal lowers `scrollWidth`, and descend into it.
+
+**Verified** with headless Chrome over CDP: `setDeviceMetricsOverride` 320/375 × 640 @2x mobile, `#fvOverlay` and `#mobileInstallBanner` removed, measured 5s after load. Each run checks the mode menu closed, the mode menu open, `#voiceLangWrap` open and `#langMenu` open.
+- **Locally** (`findfilm-full` on :8283, before and after the rebase onto `cb8606c`): en, fr, de, es, uk and ar at 320 and 375, plus sv, no and zh at 320, all with `scrollWidth === innerWidth === clientWidth`. Menu widths were compared with the same page with the rule reverted in-page. They're identical everywhere except fr and de at 320: 310/303 → 280px, `#smPlot` wraps to 2 lines (36 → 52px tall), and the menu opens at x21→301, inside the bar's right edge (304). The Arabic menu is unchanged (100→296 open). A screenshot of the open French menu shows it fits, with a two-line option.
+- **On findfilm.ai after the deploy:** en, fr, de, es, uk and ar at 320 and 375, every state `scrollWidth === innerWidth === clientWidth`, with the same menu geometry as local.
+
+**Known limits / gotchas**
+- `calc(100vw - 40px)` assumes the ≤768px hero gutter (`.hero-search` padding 16px) and the bar's `padding: 0 8px 0 5px`. If either changes, update the cap.
+- Closed popovers here are `opacity: 0`, not `display: none` or `visibility: hidden`, so they always count toward scroll width. Any popover sized to its content needs a phone cap.
+- **Worktree testing:** a worktree has no `.dev.vars`, and the tracked `.claude/launch.json` has no `findfilm-full` entry (the main checkout has it as an uncommitted change). For testing, both were linked/copied in temporarily and then removed/restored. Neither was committed.
+- `mcp__ccd_host__sync_with_base_branch` failed here ("no user.name / user.email" on the host), so the branch was rebased by hand. The main checkout's `main` was fast-forwarded in place (its uncommitted `.claude/launch.json` and untracked `spotify-worker/` were left alone).
+
+---
+
+## Session (2026-10-28) — iOS Voice Duplication, AI Summary Over the Posters, Stale Open Pages
 
 All commits on `main`, **deployed live on https://findfilm.ai**: Pages production `3c0f6647` from `cb8606c`, 2026-10-28. `./deploy.sh --branch main`: 16/16 sensitive paths unpublished, custom domains clean, 6 files uploaded. `/`, `/cinematic/`, `social.css?v=398f3965`, **`fresh.js?v=887c34fa`** and `sw.js` are byte-identical to the repo on findfilm.ai and ratingkino.com; `/build.json` = `{"build":"20261028T084800Z-cb8606c"}` (`application/json`). Reported by the owner from an iPhone (Classic, French, voice search): duplicated transcript, summary text over the posters, no mascot in the AI panel header.
 
@@ -2728,6 +2750,7 @@ html.ffb-on .ffb-m  { background-image: url("/assets/ff-bot-moods.webp?v=…"); 
 - Cinematic has its own engine (`t`, `tn`, `setLang`, `switchLang`, `relabel`, `translateStatic`; `[data-i18n]` + `[data-i18n-aria]`) and a globe menu `#langMenu`; RTL via logical properties + a few `[dir="rtl"]` rules (see the 2026-10-27c session)
 - Arabic sets `document.documentElement.dir = 'rtl'`; `[dir="rtl"]` CSS handles layout flip
   - Absolutely-positioned popovers anchored to a physical side need their own `[dir="rtl"]` flip: `.lang-menu`, `.sw-mode-menu`, `.voice-lang-menu` (2026-10-27). In RTL only overflow past the left edge scrolls.
+  - A popover sized to its label grows with the locale. Closed, it's only `opacity: 0`, so it still widens the page. `.sw-mode-menu` is capped on phones at `calc(100vw - 40px)` and its options wrap (French at 320px, 2026-10-28b).
 - Movie description translation: `translateDesc(movieId, text, lang)` calls `/api/translate`
   - 3-tier cache: `Map` (in-memory) → `sessionStorage` (key: `rk_tr_{id}_{lang}`) → network
 
@@ -2846,6 +2869,7 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Main checkout must pull `main` before its next deploy**: pulled `e3754be` (stash → `pull --ff-only` → pop, clean) before the `3efde451` deploy, which therefore keeps the RTL/320px fixes
 - [x] **Header overflows at 320px (both languages)**: fixed in `31a26d5` (`@media (max-width: 340px)`: `.header-btns` 213 → 181px)
 - [ ] **Header right padding at 341–350px**: no overflow, but only 2–11px of padding on the right. Optional: widen the 340px block to 350px
+- [x] **French page overflow at 320px** (`scrollWidth` 325): `#smMenu` capped on phones in `fa85d62`; live 2026-10-28 (production `7865a70b`), verified on findfilm.ai at 320/375 in en, fr, de, es, uk and ar
 - [ ] **Missing i18n keys (fall back to English)**: `search.modeTitle` ("By Title") in es/fr/zh/ar; `ratings.*` (the "How ratings work" modal) in es/fr/zh/ar/uk
 - [x] **Deploy the touch pass** (`7c8bcb1`) — live 2026-10-16 (production `7155501b`)
 - [x] **Owner's on-phone check of the touch pass** — confirmed 2026-10-16: swipe-to-close smooth, no sticky hovers, no focus zoom or text highlights; task closed
