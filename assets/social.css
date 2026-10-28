@@ -14,6 +14,8 @@
      .ffb          the mascot's moods during AI searches (think, idea,
                    success, confused): Classic's AI panel, Cinematic's
                    results heading, and the corner mascot
+     .ffw          a first visit's welcome tip, under the AI search
+     .ffm.is-egg   the corner mascot's easter egg (five quick clicks)
 
    Fonts and colours are inherited, so the strip reads as part of each layout.
    Both pages link this file as ?v=<hash> (the service worker serves /assets/*
@@ -134,7 +136,63 @@
   .ffm-close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   .ffm.is-gone { transform: translateY(calc(var(--ffm-h) + 24px)) !important; }
   .ffm.is-gone .ffm-bubble { opacity: 0 !important; visibility: hidden !important; }
+
+  /* Easter egg (five quick clicks, social.js): all the way up, the bubble out of
+     the way, then a crouch, a jump with a full spin and a squashed landing. */
+  .ffm.is-in.is-egg { transform: none; }
+  .ffm.is-egg .ffm-bubble { opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }
+  .ffm.is-egg .ffm-bot { animation: ffm-egg 1.1s cubic-bezier(.33,.9,.45,1) both; transform-origin: 50% 60%; }
+  @keyframes ffm-egg {
+    0%   { transform: none; }
+    14%  { transform: translateY(4%) scale(1.07, 0.9); }
+    50%  { transform: translateY(-40%) rotate(220deg); }
+    70%  { transform: translateY(-26%) rotate(360deg); }
+    86%  { transform: translateY(1%) rotate(360deg) scale(1.06, 0.92); }
+    100% { transform: rotate(360deg); }
+  }
 }
+
+/* ── Welcome tip (FFBot.welcome in social.js): a first visit only ─────────
+   Placed by script in page coordinates, just under the AI search, its tail
+   (--ffw-tail from the tip's left edge) at the field's start. On phones that's
+   over Classic's sticky Movies / TV / Filters bar: same z-index (99), later in
+   the document, so the tip is on top — under Classic's header (100). It goes as
+   soon as the page scrolls, so no sticky bar ever slides under it. */
+.ffw {
+  position: absolute; z-index: 99; box-sizing: border-box; width: min(330px, calc(100vw - 32px));
+  display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px 12px;
+  padding-block: 14px; padding-inline: 12px 40px;
+  border-radius: 18px; background: rgba(18,18,22,0.96); border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 20px 50px -12px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.06);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  color: #fff; text-align: start;
+  opacity: 0; transform: translateY(6px) scale(0.97); transform-origin: var(--ffw-tail, 40px) 0;
+  transition: opacity 0.25s, transform 0.35s cubic-bezier(.22,1,.36,1);
+}
+.ffw.is-in { opacity: 1; transform: none; }
+.ffw.is-out { opacity: 0; transform: translateY(4px); transition-duration: 0.2s; }
+.ffw::before {   /* tail, pointing up at the search */
+  content: ""; position: absolute; top: -7px; left: calc(var(--ffw-tail, 40px) - 7px); width: 14px; height: 14px;
+  background: rgb(18,18,22); border: solid rgba(255,255,255,0.1); border-width: 1px 0 0 1px;
+  transform: rotate(45deg);
+}
+.ffw-bot { grid-row: span 2; height: 56px; align-self: end; }
+.ffw-text { margin: 0; font-size: 13.5px; font-weight: 500; line-height: 1.4; color: rgba(255,255,255,0.92); }
+.ffw-try {
+  justify-self: start; height: 32px; margin: 0; padding: 0 14px; border: 0; border-radius: 999px;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1); color: #fff;
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: filter 0.2s, transform 0.2s;
+}
+.ffw-try:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.ffw-close {
+  position: absolute; top: 8px; inset-inline-end: 8px; width: 28px; height: 28px; margin: 0; padding: 0;
+  display: grid; place-items: center; border: 0; border-radius: 999px;
+  background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.ffw-close:hover { background: rgba(255,255,255,0.14); color: #fff; }
+.ffw-try:focus-visible, .ffw-close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
 /* ── Footer band ─────────────────────────────────────────────────────────── */
 .ffs-band {
@@ -222,4 +280,7 @@ html.ffb-on .ffb-m { background-image: url("/assets/ff-bot-moods.webp?v=1b892b12
   /* Moods only cross-fade (beats a page's blanket "*" reduced-motion rule by specificity). */
   .ffb-m { animation: none !important; }
   .ffb-m, .ffb-idle { transition-duration: 0.28s !important; }
+  /* The easter egg keeps its cheer (a cross-fade) without the spin; the tip only fades. */
+  .ffm.is-egg .ffm-bot { animation: none !important; }
+  .ffw, .ffw.is-out { transform: none !important; transition: opacity 0.25s !important; }
 }

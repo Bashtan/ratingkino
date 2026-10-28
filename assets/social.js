@@ -4,12 +4,14 @@
 
    - Every brand link (a[data-ffs]) reports a GA `social_click` with its
      network and its placement (the nearest [data-ffs-place]).
-   - window.FFBot: the mascot's moods during AI searches (see Moods below).
+   - window.FFBot: the mascot's moods during AI searches (see Moods below),
+     and FFBot.welcome(): a first visit's tip pointing at the AI search.
    - The corner mascot (#ffm, computers only) comes up once the hero strip
      ([data-ffm-after]) has scrolled out of view above, and goes back down
      while the footer band (.ffs-band, which has its own mascot) is on screen.
      Hover, focus or a click opens its bubble; its close button hides it for
-     good in this browser (localStorage ff_mascot_off).
+     good in this browser (localStorage ff_mascot_off). Five quick clicks: a
+     spin (the easter egg, below).
    ═══════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -86,7 +88,105 @@
       });
     });
   }
-  window.FFBot = { set: set, found: found, warm: function () { warm(); }, mood: function () { return mood; } };
+  /* ── Welcome tip (FFBot.welcome): a first visit only ───────────────────
+     A speech bubble from the mascot, under the AI search, once per browser
+     (localStorage ff_welcome_seen). The page calls FFBot.welcome(target, onTry)
+     when it knows this is a first visit; the tip then waits (up to
+     WELCOME_WAIT_MS) until the target is on screen and nothing covers it — the
+     first-visit intro, the taste quiz. It goes on ×, Escape, "Try it" (runs
+     onTry, else focuses the target's field), as soon as the search is used, once
+     the page scrolls, or after WELCOME_SHOW_MS. Strings: mascot.welcome / mascot.try / results.close
+     in /assets/i18n.js. Styles: .ffw in social.css. */
+  var WELCOME_KEY = 'ff_welcome_seen', WELCOME_WAIT_MS = 90000, WELCOME_SHOW_MS = 15000;
+  function say(key) {
+    var all = window.FF_I18N || {}, lang;
+    try { lang = localStorage.getItem('rk_lang'); } catch (e) { /* storage blocked */ }
+    lang = lang || document.documentElement.lang || 'en';
+    return (all[lang] && all[lang][key]) || (all.en && all.en[key]) || '';
+  }
+  function uncovered(el) {
+    var b = el.getBoundingClientRect();
+    if (!b.width || b.top < 0 || b.bottom > window.innerHeight) return false;
+    var hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+    return !!hit && (hit === el || el.contains(hit));
+  }
+  function welcome(target, onTry) {
+    if (!target) return;
+    try { if (localStorage.getItem(WELCOME_KEY)) return; } catch (e) { return; }   // can't remember it: don't show it every visit
+    var since = Date.now();
+    (function wait() {
+      if (Date.now() - since > WELCOME_WAIT_MS) return;
+      if (document.visibilityState === 'visible' && uncovered(target)) showWelcome(target, onTry);
+      else setTimeout(wait, 500);
+    })();
+  }
+  function showWelcome(target, onTry) {
+    try { localStorage.setItem(WELCOME_KEY, '1'); } catch (e) { /* shown this once anyway */ }
+    var tip = document.createElement('div');
+    tip.className = 'ffw';
+    tip.setAttribute('role', 'status');
+    tip.innerHTML = '<span class="ffb ffw-bot" aria-hidden="true"><img class="ffb-idle" src="/assets/ff-bot.webp" alt="" width="35" height="60"></span>'
+      + '<p class="ffw-text"></p><button class="ffw-try" type="button"></button>'
+      + '<button class="ffw-close" type="button"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
+    tip.querySelector('.ffw-text').textContent = say('mascot.welcome');
+    tip.querySelector('.ffw-try').textContent = say('mascot.try');
+    tip.querySelector('.ffw-close').setAttribute('aria-label', say('results.close'));
+    document.body.appendChild(tip);
+
+    // Below the target, the tail pointing at where you type (its start edge).
+    function place() {
+      var b = target.getBoundingClientRect(), w = tip.offsetWidth;
+      var vw = document.documentElement.clientWidth;
+      var rtl = getComputedStyle(target).direction === 'rtl';
+      var at = rtl ? Math.max(b.right - 56, b.left + 24) : Math.min(b.left + 56, b.right - 24);
+      var left = Math.min(Math.max(rtl ? at + 40 - w : at - 40, 16), vw - w - 16);
+      tip.style.left = Math.round(left + window.scrollX) + 'px';
+      tip.style.top = Math.round(b.bottom + window.scrollY + 14) + 'px';
+      tip.style.setProperty('--ffw-tail', Math.round(at - left) + 'px');
+    }
+    place();
+    requestAnimationFrame(function () { tip.classList.add('is-in'); });
+    // It holds up the "idea" pose (finger up, bulb on) once the mood sprite is in.
+    var bot = tip.querySelector('.ffw-bot');
+    warm(function () {
+      var layer = document.createElement('i');
+      layer.className = 'ffb-m';
+      layer.setAttribute('data-m', 'idea');
+      bot.appendChild(layer);
+      bot.setAttribute('data-mood', 'idea');
+    });
+
+    var ro = 'ResizeObserver' in window ? new ResizeObserver(place) : null;   // the page grows above it as images load
+    if (ro) ro.observe(document.body);
+    var timer = setTimeout(hide, WELCOME_SHOW_MS);
+    var fromY = window.scrollY;
+    function onKey(e) { if (e.key === 'Escape') hide(); }
+    function onScroll() { if (Math.abs(window.scrollY - fromY) > 120) hide(); }   // moved on: and sticky bars must not slide under it
+    function hide() {
+      if (!tip.parentNode || tip.classList.contains('is-out')) return;
+      clearTimeout(timer);
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', onScroll);
+      document.removeEventListener('keydown', onKey);
+      target.removeEventListener('focusin', hide);
+      tip.classList.remove('is-in');
+      tip.classList.add('is-out');
+      setTimeout(function () { tip.remove(); }, 300);
+    }
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    document.addEventListener('keydown', onKey);
+    target.addEventListener('focusin', hide);          // they found the search on their own
+    tip.querySelector('.ffw-close').addEventListener('click', hide);
+    tip.querySelector('.ffw-try').addEventListener('click', function () {
+      hide();
+      if (onTry) onTry();
+      else { var field = target.querySelector('input, textarea'); if (field) field.focus(); }
+    });
+  }
+
+  window.FFBot = { set: set, found: found, warm: function (then) { warm(then); }, welcome: welcome, mood: function () { return mood; } };
   document.querySelectorAll('[data-ffb]').forEach(mount);
   document.addEventListener('focusin', function (e) {
     var el = e.target;
@@ -138,7 +238,35 @@
   if (desk.addEventListener) desk.addEventListener('change', sync);
   sync();
 
-  if (bot) bot.addEventListener('click', function () { setOpen(!m.classList.contains('is-open')); });
+  /* Easter egg: five quick clicks (each within EGG_GAP_MS of the last) and the
+     mascot crouches, jumps with a full spin and lands — cheering (the success
+     pose) if it wasn't busy with a search. Only the first click of a run
+     toggles the bubble, so the run doesn't flicker it; the spin hides it.
+     Styles: .ffm.is-egg in social.css (reduced motion: the pose only). */
+  var EGG_CLICKS = 5, EGG_GAP_MS = 500, EGG_MS = 1600;
+  var streak = 0, lastClick = 0, egging = false;
+  function egg() {
+    egging = true;
+    setOpen(false);
+    m.classList.add('is-egg');
+    var cheer = mood === 'idle';
+    if (cheer) set('success');
+    if (typeof window.gtag === 'function') window.gtag('event', 'mascot_egg');
+    setTimeout(function () {
+      m.classList.remove('is-egg');
+      egging = false;
+      if (cheer && mood === 'success') set('idle');
+    }, EGG_MS);
+  }
+  if (bot) bot.addEventListener('click', function () {
+    if (egging) return;
+    var now = Date.now();
+    streak = now - lastClick <= EGG_GAP_MS ? streak + 1 : 1;
+    lastClick = now;
+    if (streak === 1) setOpen(!m.classList.contains('is-open'));
+    if (streak === 3) warm();                       // the cheer's pose, ready in time
+    if (streak >= EGG_CLICKS) { streak = 0; egg(); }
+  });
   if (closeBtn) closeBtn.addEventListener('click', function () {
     try { localStorage.setItem(OFF_KEY, '1'); } catch (e) { /* hide for this visit only */ }
     setOpen(false);
