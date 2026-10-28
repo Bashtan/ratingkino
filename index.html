@@ -3768,6 +3768,15 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
   .vibe-chip { flex: 0 0 auto; }
   .search-wrap--hero .search-input { height: 46px; font-size: 15px; }
   .search-wrap--hero .sw-mode-trigger { height: 44px; font-size: 12px; padding: 0 8px 0 9px; gap: 4px; }
+  /* Mode menu (#smMenu) — its nowrap options made it as wide as the longest label.
+     French "Décrivez ce dont vous vous souvenez" is 310px, so at 320px the menu ran
+     from x21 to x331, and because a closed menu is only opacity 0 it widened the page
+     while shut (scrollWidth 325). German (303px) did the same once opened. Cap it at
+     the bar's width (100vw − two 16px hero gutters) minus the bar's 8px end padding
+     (physical, so RTL's trigger sits 8px in) and let a label that doesn't fit wrap.
+     width: max-content keeps every menu that already fits exactly as wide as before. */
+  .sw-mode-menu { width: max-content; max-width: calc(100vw - 40px); }
+  .sw-mode-opt  { white-space: normal; }
   .search-wrap--hero .search-icon { display: none; }  /* drop the decorative magnifier — save room */
   /* Discovery actions live in the header on mobile — hide the sub-nav links */
   .nav-feats { display: none; }
