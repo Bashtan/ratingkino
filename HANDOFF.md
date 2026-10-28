@@ -2,7 +2,36 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-28c) — Mascot Easter Egg + a First Visit's Welcome Tip
+## ⚡ Most Recent Session (2026-10-28d) — Old Deployments Deleted, Previews Isolated from Production Data
+
+All commits on `main`. Infrastructure only: no site code changed and no production redeploy was needed (production still `43639d72` from `bee9a23`; the top-level bindings are unchanged).
+
+| Commit | Feature |
+|--------|---------|
+| `6369bf8` | **`[env.preview]` in `wrangler.toml`.** Preview deployments (any `./deploy.sh --branch <not main>`) now bind **KV `ratingkino-preview-cache`** (`c2367fa6be864a4c9e6e4a4f4d8d66c5`) as `MOVIES_CACHE` and **D1 `findfilm-pitch-preview`** (`ce6003b6-4584-43e0-8d0a-39669f6810ab`, `schema.sql` applied) as `DB`, plus `AI`. Before this, Pages applied the top-level (production) bindings to every preview. `kv_namespaces`, `d1_databases` and `ai` are non-inheritable: any new binding must be added at the top level **and** under `[env.preview]`, or the deploy fails to validate (or, worse, previews get the production one). |
+
+**What the audit found (before the fix)**
+- **Live TMDB and OMDb keys public:** ≥30 old deployments (24 previews from 2026-08 plus 6 older production ones such as `44b962e7`, `fd475636`) served **`/.dev.vars`**. They were built with the old `pages deploy .`. Both keys are identical to the current ones → **must be rotated** (see Pending).
+- **Every deployment with Functions was bound to production data:** previews and old production deployments alike (each stays reachable at `https://<hash>.ratingkino.pages.dev`, running its own old code). Only the static `beta-ui` had no Functions.
+- **`wrangler pages deployment list` shows only the newest 25 per environment.** The real totals were 27 previews and 207 production deployments.
+
+**Cleanup**
+- Production D1 backed up first: `/Users/bashtan/Projects/_backups/ratingkino-2026-10-28-preview-cleanup/findfilm-pitch.sql` (30 pitches, 32 votes, 17 comments). Deployment lists and the deletion logs are in the same folder.
+- **Deleted all 27 preview deployments** (incl. `beta-ui`) and **202 production deployments**, keeping the newest 5 for rollback: `43639d72`, `7865a70b`, `3c0f6647`, `545b03b9`, `f1121318` (all `deploy.sh`-built; none serve `.dev.vars`). Method: list → delete each with `--force` → re-list until nothing is left (the prune only deleted rows listed *after* the oldest keeper, so a newer deployment could never be touched). A re-list right after a delete can still show the deleted rows: 8 IDs came back once more and the API answered "does not exist" (they were already gone).
+- Re-probe: all 229 deleted hash URLs (plus 5 older IDs from this file, already gone) and every deleted branch alias → 404; the 5 keepers serve the site and answer `/.dev.vars` with the SPA fallback (`text/html`). findfilm.ai and ratingkino.com 200.
+
+**Validation of the isolation** (throwaway preview `b0bfa5d9`, branch `sec-isolation-test`, via `./deploy.sh --branch sec-isolation-test`; 16/16 sensitive paths unpublished): `/api/cache/new-releases` → `"Cache empty"` (preview KV; production returns 119 items); `POST /api/pitch` + vote + comment → preview D1 went 0/0/0 → 1/1/1 while production D1 stayed **30/32/17**; the new pitch id → 200 on the preview, 404 on findfilm.ai. Then the test deployment and its rows were deleted. Its branch alias `sec-isolation-test.ratingkino.pages.dev` still answered from the edge minutes after deletion (preview bindings only, no secrets); the older aliases had gone by the time they were probed.
+
+**TikTok bot (`/Users/bashtan/Projects/TikTok/findfilm-tiktok-bot`, separate private repo, not committed there):** `batch-tiktok.js` and `top-imdb.js` hardcoded the same TMDB key. They now read **`TMDB_API_KEY`** from the environment or from the gitignored **`.dev.vars`** next to the scripts (helper `readDevVar()`, resolved via `import.meta.url` because cron runs from another cwd; throws a clear error if missing). `.dev.vars` holds the current key, so the local crontab run (every 3 days at 12:00) keeps working. The bot repo's history (`afd6c45`, private repo) still contains the old key, which becomes harmless once it's rotated.
+
+**Known limits / gotchas**
+- **Deploying a preview from a branch created before `6369bf8`** (e.g. `feat/mobile-ai-hub`, the `claude/*` worktrees) uses that branch's old `wrangler.toml`, which has no `[env.preview]`, so previews would be bound to production again. Rebase onto `main` before any `./deploy.sh --branch …`.
+- The preview KV starts empty (no sync Worker writes to it), so preview Classic/Cinematic feeds are empty; seed it by hand if a preview needs them.
+- The preview env still has no secrets (TMDB/OMDb etc.), so TMDB-backed API routes don't work on previews; that's intentional for now.
+
+---
+
+## Session (2026-10-28c) — Mascot Easter Egg + a First Visit's Welcome Tip
 
 All commits on `main`, **deployed live on https://findfilm.ai**: Pages production `43639d72` from `bee9a23`, 2026-10-28. `./deploy.sh --branch main`: 16/16 sensitive paths unpublished, custom domains clean. `/`, `/cinematic/`, `i18n.js?v=0a73278f`, `social.css?v=fe561c53` and `social.js?v=9e176c48` are byte-identical to the repo on findfilm.ai and ratingkino.com; `/build.json` = `20261028T093357Z-bee9a23`. Both layouts; no backend change.
 
@@ -2625,8 +2654,9 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 
 ### Cloudflare Pages — `ratingkino`
 - Serves `index.html` + runs `functions/api/[[path]].js`
-- Bindings (wrangler.toml): `MOVIES_CACHE` (KV) + `AI` (Workers AI)
-- Secrets: `TMDB_KEY`, `OMDB_KEY`
+- Bindings (wrangler.toml), production: `MOVIES_CACHE` (KV `9b1ddd3f…`) + `DB` (D1 `findfilm-pitch`) + `AI` (Workers AI)
+- Bindings, **preview** (`[env.preview]`, since `6369bf8`): `MOVIES_CACHE` → KV `ratingkino-preview-cache` (`c2367fa6…`), `DB` → D1 `findfilm-pitch-preview`, `AI`. A new binding must be added in both places
+- Secrets (production env only; preview has none): `TMDB_KEY`, `OMDB_KEY`, `WATCHMODE_API_KEY`, `FIRECRAWL_API_KEY`, `SPOTIFY_CLIENT_SECRET`, `AXIOM_API_TOKEN`
 
 ### Cloudflare Worker — `ratingkino-sync`
 - Deployed separately: `npx wrangler deploy --config sync-worker.toml`
@@ -2896,7 +2926,10 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Deploy the touch pass** (`7c8bcb1`) — live 2026-10-16 (production `7155501b`)
 - [x] **Owner's on-phone check of the touch pass** — confirmed 2026-10-16: swipe-to-close smooth, no sticky hovers, no focus zoom or text highlights; task closed
 - [ ] **Swipe-to-dismiss for Classic's other sheets** (actor profile, Tonight wizard, AI results) — needs a transform transition on each before `FFSheet` can spring them back
-- [ ] **Old preview deployments can still write to production** — ~18 full-site previews from 2026-08 (branches `fix-*`, `feat*`, `feature-*`) remain live (e.g. `https://9f183e16.ratingkino.pages.dev`) and are bound to the production KV (`/api/cache/new-releases` returns the 119 live items) and the production D1 (Pitch API active). Pages previews inherit wrangler.toml's bindings. Delete them (`npx wrangler pages deployment delete <id> --project-name ratingkino --force`; **without `--force` wrangler's non-interactive prompt defaults to "no" and deletes nothing**), and/or give previews their own KV/D1 via `[env.preview]` in wrangler.toml. `beta-ui` is a static page with no Functions of its own
+- [x] **Old preview deployments can still write to production** — done 2026-10-28 (see the 2026-10-28d block): all 27 previews and 202 old production deployments deleted (newest 5 kept), previews bound to their own KV/D1 via `[env.preview]` (`6369bf8`), isolation verified with a throwaway preview. Delete command: `npx wrangler pages deployment delete <id> --project-name ratingkino --force` (**without `--force` it deletes nothing**); the list command only shows the newest 25, so re-list until empty
+- [ ] **Rotate the leaked TMDB and OMDb keys (owner)** — they were publicly downloadable from old deployments' `/.dev.vars` for ~2 months. New keys from the TMDB and OMDb account pages, then: `npx wrangler pages secret put TMDB_KEY --project-name ratingkino` and the same for `OMDB_KEY`; `npx wrangler secret put TMDB_KEY --name ratingkino-sync` (and `OMDB_KEY` if set there); the repo's `.dev.vars`; `TMDB_API_KEY` in the TikTok bot's `.dev.vars`. Then revoke the old keys and redeploy (`./deploy.sh`) so the Functions pick up the new secrets
+- [ ] **Prune old production deployments now and then** — each one stays reachable at its hash URL with production bindings; keep the newest ~5
+- [ ] **Optional: Cloudflare Access on preview deployments** (Pages project → Settings → "Enable access policy"), so preview URLs need a login
 - [ ] **Preview-environment secrets** — the Pages preview env has none, so real full-stack previews (branch deploys running their own Functions) can't work. Either set TMDB_KEY/OMDB_KEY/WATCHMODE_API_KEY for `--env preview`, or keep using the pass-through recipe in the 2026-09-28 session block
 - [x] **Deploy the layout switch** (`e9e186e` + `181aaab`) — live since 2026-09-28 (production `f7503b66`) Classic stays the default; to make Cinematic the default instead, change `DEFAULT_LAYOUT` in the router at the top of `index.html`
 - [x] **Ship the Watchlist** (`89d2a3c`) — pushed and deployed 2026-10-08 (production `643bc588`); verified on findfilm.ai, including a Cinematic → Classic round trip
