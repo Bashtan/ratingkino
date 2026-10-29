@@ -2,7 +2,27 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-28d) — Old Deployments Deleted, Previews Isolated from Production Data
+## ⚡ Most Recent Session (2026-10-29) — Translations That Fell Back to English, Header at 341–350px, www Check
+
+All commits on `main`, **deployed live on https://findfilm.ai**: Pages production `85582d88` from `5436f7c` (before it `cb5095e1` from `ed90300`), 2026-10-29. Deployed with `./deploy.sh --branch main` **from a clean temporary `git worktree` of the commit**, because another session had uncommitted work in the main checkout (see gotchas). 16/16 sensitive paths unpublished, custom domains clean; `/`, `/cinematic/` and `i18n.js?v=833b2799` byte-identical to the commit on findfilm.ai and ratingkino.com; `/build.json` = `20261029T070706Z-5436f7c`.
+
+| Commit | Feature |
+|--------|---------|
+| `ed90300` | **(1) 28 keys translated in `assets/i18n.js`.** es/fr/zh/ar were missing 28 keys and uk 23 (the old Pending item listed only 2): `ratings.title/body1/tierFull/tierEarly/updated/updatedMins/updatedHrs/updatedDays` (the "How ratings work" modal `#ratingsInfoModal`), `filter.filters/genre/reset/showResults` (filter drawer `.fd-title`, `.fd-reset`, `.fd-apply`), `feed.best`, `feed.bestBadge`, `best.exploreTitle/Sub/Cta`, `feed.seeMore`, `feed.seeMoreAria`, `rating.unified/tmdb/unifiedTip/tmdbTip`, `search.modeTitle`, `search.modeTitlePh`, `search.modePlotPh`, `util.voice`, `util.watchlist`. **All 9 languages now match `en` key for key** (plural `cin.n.*` categories excepted by design), every `{placeholder}` and `<strong>` kept. `util.voice`, `util.watchlist`, `rating.unifiedTip`, `rating.tmdbTip` are not referenced by either page yet; translated for parity. Written in-session — add them to the native-speaker pass. **(2) Header 341–350px:** Classic's trimmed-header block `@media (max-width: 340px)` → **`350px`** (the row needs 351px). Right padding at 345px: 6px → 12px, same as ≥351. |
+| `5436f7c` | **Catalog freshness stamp follows a language switch.** `loadCatalogFreshness()` wrote `#heroUpdated` ("↻ 6 h ago") and `#riUpdated` ("Catalog refreshed {when}.") once, in the load-time language. Now it stores **`var CATALOG_SYNCED_AT`** (a `var` so `applyTranslations()` can't hit the TDZ) and calls new **`renderCatalogFreshness()`**, which `applyTranslations()` also calls. **German** `ratings.updated` lost its trailing period: every `{when}` already ends in "Min." / "Std." / "T.", so it printed "vor 6 Std..". |
+
+**Verified.** Locally (static server) and on findfilm.ai at 345px with phone emulation, in en/fr/es/zh/uk/ar: filter drawer, Best Available row, search mode label and placeholder, and the ratings modal (5 `<strong>`s) all translated; `dir="rtl"` in Arabic; no English left in the Ukrainian page; `scrollWidth === clientWidth` (345) in every language; header right padding 12px. Live language switch fr → de → ar → uk re-words the stamp with the real sync time.
+
+**www check (Pending item):** `www.findfilm.ai` has **no DNS record**, so it doesn't load at all ("site can't be reached"). `http://findfilm.ai` → 301 to https. `www.ratingkino.com` and `ratingkino.com` serve the site (200, no redirect). The old `redirect-worker/` (`ratingkino-redirect`, which would send all of ratingkino.com to findfilm.ai) was never deployed.
+
+**Known limits / gotchas**
+- **Another session (FindFilm.ai) was editing the same checkout** with uncommitted work: desktop hero mascots `#ffh` / `.ffp` in `index.html`, `assets/social.css`, `assets/social.js`, and `mascot.hello` in `i18n.js`. So only this session's lines were committed: each file was rebuilt from `git show HEAD:<file>` plus these edits and staged with `git hash-object -w` + `git update-index --cacheinfo`, and deploys ran from `git worktree add --detach <tmp> <commit>`. `deploy.sh` publishes the *working tree*, so deploying from a checkout with someone's WIP ships it. The other session was told by message to recompute `i18n.js?v=` before its own commit (its working tree has `?v=7c58b5f9`, which no longer matches).
+- Local static server (no API): `#ffh`'s bubble overflowed phones by ~23px because its CSS was still unwritten in that WIP. Not live; worth checking once the WIP lands.
+- The ≥7-day fallback in `relativeUpdated()` uses `toLocaleDateString(undefined, …)`, i.e. the browser's locale, not the app language.
+
+---
+
+## Session (2026-10-28d) — Old Deployments Deleted, Previews Isolated from Production Data
 
 All commits on `main`. Infrastructure only: no site code changed and no production redeploy was needed (production still `43639d72` from `bee9a23`; the top-level bindings are unchanged).
 
@@ -2920,9 +2940,10 @@ The site is fully installable as a PWA on all platforms.
 - [ ] **Native-speaker pass on `mascot.welcome` / `mascot.try`** (written in-session, 9 languages) — together with the `cin.*` review
 - [x] **Main checkout must pull `main` before its next deploy**: pulled `e3754be` (stash → `pull --ff-only` → pop, clean) before the `3efde451` deploy, which therefore keeps the RTL/320px fixes
 - [x] **Header overflows at 320px (both languages)**: fixed in `31a26d5` (`@media (max-width: 340px)`: `.header-btns` 213 → 181px)
-- [ ] **Header right padding at 341–350px**: no overflow, but only 2–11px of padding on the right. Optional: widen the 340px block to 350px
+- [x] **Header right padding at 341–350px**: the trimmed-header block now applies up to 350px (`ed90300`); 12px of right padding at 345, live 2026-10-29
 - [x] **French page overflow at 320px** (`scrollWidth` 325): `#smMenu` capped on phones in `fa85d62`; live 2026-10-28 (production `7865a70b`), verified on findfilm.ai at 320/375 in en, fr, de, es, uk and ar
-- [ ] **Missing i18n keys (fall back to English)**: `search.modeTitle` ("By Title") in es/fr/zh/ar; `ratings.*` (the "How ratings work" modal) in es/fr/zh/ar/uk
+- [x] **Missing i18n keys (fall back to English)**: really 28 keys in es/fr/zh/ar and 23 in uk; all translated in `ed90300`, live 2026-10-29. All 9 languages now match `en` key for key
+- [ ] **Native-speaker pass on the 2026-10-29 translations** (the 28 keys above, es/fr/zh/ar/uk) — together with the `cin.*` review
 - [x] **Deploy the touch pass** (`7c8bcb1`) — live 2026-10-16 (production `7155501b`)
 - [x] **Owner's on-phone check of the touch pass** — confirmed 2026-10-16: swipe-to-close smooth, no sticky hovers, no focus zoom or text highlights; task closed
 - [ ] **Swipe-to-dismiss for Classic's other sheets** (actor profile, Tonight wizard, AI results) — needs a transform transition on each before `FFSheet` can spring them back
@@ -2947,7 +2968,7 @@ The site is fully installable as a PWA on all platforms.
 - [ ] **Media type through id-only lookups** — `MOVIES.find(x => x.id === id)` sites (`openMovie`, `enrichNow`, `updateCardInGrid`, card `onclick`s; the watchlist itself is typed since `89d2a3c`, but `_openWatchlisted()` still ends in `openMovie(id)`) can still collide across movie/TV ids via actor filmographies
 - [ ] **Product Hunt listing** — confirm title, tagline, description, and gallery screenshots are ready
 - [ ] **SEO** — `<meta name="description">`, Open Graph tags, `<link rel="canonical">` minimal — expand before marketing push
-- [ ] **`www.findfilm.ai` redirect** — verify Cloudflare Redirect Rule for `www` → apex is active
+- [ ] **`www.findfilm.ai` redirect** — checked 2026-10-29: **no DNS record, the address doesn't load at all**. Needs either a proxied DNS record + a Redirect Rule (dashboard), or a tiny Worker on the custom domain `www.findfilm.ai` (wrangler creates the DNS record) that 301s to `https://findfilm.ai` + path + query
 - [ ] **Sync Worker monitoring** — no alerting if nightly cron fails; consider health-check script against `/api/cache/status`
 - [ ] **AI description translation quality** — m2m100-1.2b; consider switching to llama-3.3-70b-instruct for translation
 - [ ] **OMDb rate limit** — free tier 1000 req/day; monitor under traffic spike
