@@ -1,0 +1,17 @@
+# FindFilm.ai — www.findfilm.ai → https://findfilm.ai (301, path + query kept)
+# Deployed separately from the Pages project.
+# Deploy with: npx wrangler deploy --config www-redirect/wrangler.toml
+#
+# The Custom Domain below makes Cloudflare create the www DNS record and its
+# certificate on deploy. wrangler resolves `main` relative to THIS file's
+# directory (redirect-worker/wrangler.toml gets that wrong).
+
+name               = "findfilm-www-redirect"
+main               = "worker.js"
+compatibility_date = "2026-10-01"
+workers_dev        = false   # no *.workers.dev URL; www.findfilm.ai is the only way in
+preview_urls       = false
+
+[[routes]]
+pattern       = "www.findfilm.ai"
+custom_domain = true

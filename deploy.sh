@@ -140,6 +140,7 @@ MUST_NOT_PUBLISH=(
   CLAUDE.md  HANDOFF.md  deploy.sh
   spotify-worker/index.js  spotify-worker/wrangler.toml
   redirect-worker/worker.js  redirect-worker/wrangler.toml
+  www-redirect/worker.js  www-redirect/wrangler.toml
 )
 
 leaked=()
