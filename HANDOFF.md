@@ -4,7 +4,13 @@
 
 ## ⚡ Most Recent Session (2026-10-29b) — Classic Desktop Mascots: Beside the Hero Search, Peeking Over "Your Taste DNA"
 
-Committed on `main` and pushed. **Not deployed yet** (production is still `85582d88` from `5436f7c`): waiting for the owner's go-ahead.
+All commits on `main`, **deployed live on https://findfilm.ai**: Pages production **`c131bc9a`** from `2ec4256`, 2026-10-29, with `./deploy.sh --branch main` from the main checkout (published paths identical to HEAD; only `.claude/launch.json` and `spotify-worker/` uncommitted). 18/18 sensitive paths unpublished, custom domains clean. `/`, `/cinematic/`, `social.css?v=19b57600`, `social.js?v=6fe1df4d` and `i18n.js?v=97aeda61` are byte-identical to the commit on findfilm.ai and ratingkino.com; `/build.json` = `20261029T073009Z-2ec4256`.
+
+**Verified on findfilm.ai** (headless Chrome at DPR 2, real feed; 24 checks, all pass, no page errors):
+- **1280 and 1440:** the hello shows by itself (wave + bubble), sits 8px from the search bar, with the bubble clear of every text box and the header, then fades after 6s. Hover brings back the bubble and the wave.
+- **"Start here tonight"** was rendered by the real feed, not forced. The peek rises 78px and hops, sits over the bar's empty end (z 99), lifts +14px on hover, ducks (z 98) when the row is under the sticky bar, and comes back up at the top.
+- **No layout shift:** boxes are identical with the mascots hidden.
+- **Phones and tablet:** iPhone 375 and 390 and the 768 tablet show neither mascot, have no sideways scroll, and never download the sprite.
 
 | Commit | Feature |
 |--------|---------|
@@ -2990,8 +2996,8 @@ The site is fully installable as a PWA on all platforms.
 - [ ] **Owner's iPhone check of voice dictation** on the live site (the fix was verified with a replayed iOS result pattern, not a real mic)
 - [x] **Mascot easter egg + first-visit welcome tip** (`bee9a23`) — both layouts; live 2026-10-28 (production `43639d72`); GA event `mascot_egg`
 - [ ] **Native-speaker pass on `mascot.welcome` / `mascot.try` / `mascot.hello`** (written in-session, 9 languages) — together with the `cin.*` review
-- [x] **Classic desktop mascots** (`dfe397a`): `#ffh` beside the hero search (≥1200px) and `.ffp` peeking over "Your Taste DNA" (≥1024px); GA `mascot_click`
-- [ ] **Deploy `dfe397a`** (owner's go-ahead pending) — then check on findfilm.ai at 1280 / 1440 and on a phone (both hidden)
+- [x] **Classic desktop mascots** (`dfe397a`): `#ffh` beside the hero search (≥1200px) and `.ffp` peeking over "Your Taste DNA" (≥1024px); GA `mascot_click`; live 2026-10-29 (production `c131bc9a`)
+- [x] **Deploy `dfe397a`** — live 2026-10-29 (production `c131bc9a` from `2ec4256`); checked on findfilm.ai at 1280 / 1440 and at 375 / 390 / 768 (hidden)
 - [x] **Main checkout must pull `main` before its next deploy**: pulled `e3754be` (stash → `pull --ff-only` → pop, clean) before the `3efde451` deploy, which therefore keeps the RTL/320px fixes
 - [x] **Header overflows at 320px (both languages)**: fixed in `31a26d5` (`@media (max-width: 340px)`: `.header-btns` 213 → 181px)
 - [x] **Header right padding at 341–350px**: the trimmed-header block now applies up to 350px (`ed90300`); 12px of right padding at 345, live 2026-10-29
