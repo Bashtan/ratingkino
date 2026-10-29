@@ -2,7 +2,41 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-29) — Translations That Fell Back to English, Header at 341–350px, www Redirect
+## ⚡ Most Recent Session (2026-10-29b) — Classic Desktop Mascots: Beside the Hero Search, Peeking Over "Your Taste DNA"
+
+Committed on `main` and pushed. **Not deployed yet** (production is still `85582d88` from `5436f7c`): waiting for the owner's go-ahead.
+
+| Commit | Feature |
+|--------|---------|
+| `dfe397a` | **(1) Hero mascot `#ffh`** (`<button class="ffh">` at the end of `#heroSearchAnchor` in `index.html`; computers only, **`(min-width: 1200px) and (hover: hover)`**). The `idea` frame of `ff-bot-moods.webp` as two pseudo-elements of **`.ffh-bot`**: `::before` = the robot with the bulb cut off (`clip-path: inset(24% 0 0 0)`), `::after` = the bulb alone (`inset(0 0 76% 0)`). Frame `--ffh-h: 152px` (122×152, robot 113px). Placed `position: absolute; bottom: -40px; inset-inline-end: calc(50% + 418px)` in `.hero-search-anchor` (made `position: relative`): the gutter 8px beside the 820px search bar (left; **right in Arabic**), feet level with the vibe chips' bottom, so nothing moves. Fades in (`.is-ready`) once `warm()` has the sprite, then bobs (`ffh-bob`). Hover / `:focus-visible` / **`.is-hi`**: waves (`ffh-wave`, a rock on its feet) and shows **`.ffh-bubble`** ("Need a recommendation?", **`mascot.hello`** in 9 languages) **centred over its head**, `max-width: 204px`, `text-wrap: balance`. The bubble sits there, not beside the bot, because where the headline starts depends on the language (Spanish starts 50px from the bar's edge at 1200px). While a welcome tip `.ffw.is-in` is up, the bot waves with its bulb lit (`html:has(.ffw.is-in)`), and the tip drops its own `.ffw-bot` (`html:has(.ffh.is-ready)`, single column). Click → new **`tryAISearch()`** (`setSearchMode('ai')` + focus `#searchInput`; `welcomeToAISearch()` now passes it as `onTry`). **(2) Peeking mascot `.ffp`** (a `<span class="ffp" aria-hidden data-ffp-under=".filters-bar" data-ffp-edge="#rowForYou">` inside `.dna-trigger`; computers ≥1024px). The `success` frame on **`.ffp-bot`** in an `overflow: hidden` box above the button (`bottom: calc(100% + 1px)`: cut at the button's outer edge, under its border), frame `--ffp-h: 120px`, **`--ffp-peek: 78px`** shows antenna → popcorn rim, positioned with the `translate` property. **`.is-in`** rises it (overshoot easing) the first time the button is on screen (IntersectionObserver, after `warm()`); **`.is-hop`** two hops the first time it's actually up; `.dna-trigger:hover` +14px. The row's card meets the sticky `.filters-bar` (z 99) with no gap, so at rest the mascot is drawn over that bar's empty right end (**z 99, later in the DOM**). **`.is-ducked`** (z 98 + sinks) when `#rowForYou`'s top < the bar's bottom (scroll/resize, one rAF). Click = the button's (Taste DNA). **social.js:** `welcoming` / `welcomed` flags in `welcome()` / `showWelcome()`; hero section **`heroUp()` / `hello()` / `sayHello(out)`**, with `HELLO_KEY = 'ff_hello_seen'` and `HELLO_SHOW_MS = 6000`; peek section `duck()` / `soon()`; **`track(placement)`** → **GA `mascot_click {placement: 'hero' \| 'dna'}`**. The corner's `var desk` now lives above the peek section. |
+
+**The hello rule.** `hello()` polls every 500ms, up to 90s. It shows the bubble (`.is-hi`, 6s, gone sooner on `focusin` in the search row) once per browser, when the bot is on screen and uncovered. It **never shows on a page view that had the welcome tip** (`welcomed`), and waits while one is pending (`welcoming`), so a visit gets one greeting: a first-time visitor gets the tip (the bot waves for it), and the hello comes on their next visit. If the search field is focused or filled, it's marked seen without showing.
+
+**Verified locally** (`findfilm-full`, headless Chrome at DPR 2, service worker blocked, 52 checks × 2 runs, all pass, no page errors):
+- **Hello:** shows by itself at 1280 (waving, bubble clear of the headline, subtitle, ratings link, search bar and header), fades after 6s, absent on the next visit.
+- **Hero hover and click:** hover = bubble + wave. Click = `#smPlot` selected, focus in `#searchInput`, `mascot_click hero` in `dataLayer`. Accessible name = the bubble text.
+- **Peek:** none while `#rowForYou` is hidden; rises, hops, rests 78px over the button; `elementFromPoint` over the bar's right end hits `.ffp-bot` (z 99); +14px on hover. Scrolled 300 → `is-ducked`, z 98, 0px showing, and the bar's own `.filter-row-1` is hit again. Back at the top → up again. Click opens Taste DNA (`mascot_click dna`), and the panel covers the mascot.
+- **Layout shift:** every hero / bar / row box identical with the mascots removed, and no `layout-shift` entries from them.
+- **Overlays:** at 1024 the search-suggestions panel doesn't meet the peek; the mode menu lifts `#searchWrap` to z 130; the Filters drawer covers the peek.
+- **Widths:** 1199 → hero hidden; 1200/1366/1440/1920 → 8px from the bar and the bubble clear of the text.
+- **Languages at 1200:** de, fr, uk, es, sv, zh; Arabic at 1440 in the right-hand gutter.
+- **First visit:** tip up → the bot waves with its bulb lit, no bubble, the tip without its own small mascot; after the tip, no second greeting, and `ff_hello_seen` is still unset; the next visit gets the hello.
+- **Reduced motion:** no bob, wave, rise or hops; fades only; the duck is instant.
+- **Phones and tablets:** 375 and 768 → both `display: none`, no sideways scroll, **the sprite is not fetched**.
+
+The hero/strip bug below was caught by these checks before the commit.
+
+**Known limits / gotchas**
+- **`var` clash in social.js:** the corner section declares `var hero` (the `[data-ffm-after]` strip). A first draft named the hero mascot `hero` too, and the async `warm()` callback then put `.is-ready` on the strip. Hence `heroBot`. Every section shares one function scope, so check for name collisions there.
+- **Sprite `url()` is now shared:** `html.ffb-on .ffb-m, … .ffh-bot::before, … .ffh-bot::after, … .ffp-bot` on **one line**. `tools/mascot/cut.sh`'s sed has no `g` flag (one replacement per line), and pseudo-elements can't go inside `:is()`.
+- **New visitors don't see `.ffp`:** `#rowForYou` only renders after 3 taste interactions (`TASTE_THRESHOLD`).
+- **The service worker serves `/assets/*` stale-while-revalidate:** while testing locally, a re-staged file under an already-cached `?v=` is served old. Bump `?v=`, or unregister the service worker and clear its caches.
+- **The other session's note** (2026-10-29 block: `#ffh`'s bubble overflowing phones by ~23px) was from the CSS-less WIP. Resolved: `.ffh` is `display: none` below 1200px, and 375/768 were verified with no sideways scroll.
+- **Bubble strings** (`mascot.hello`) were written in-session. The Spanish "¿Te recomiendo algo?" is looser than the others ("Shall I recommend something?").
+
+---
+
+## Session (2026-10-29) — Translations That Fell Back to English, Header at 341–350px, www Redirect
 
 All commits on `main`, **deployed live on https://findfilm.ai**: Pages production `85582d88` from `5436f7c` (before it `cb5095e1` from `ed90300`), 2026-10-29. Deployed with `./deploy.sh --branch main` **from a clean temporary `git worktree` of the commit**, because another session had uncommitted work in the main checkout (see gotchas). 16/16 sensitive paths unpublished, custom domains clean; `/`, `/cinematic/` and `i18n.js?v=833b2799` byte-identical to the commit on findfilm.ai and ratingkino.com; `/build.json` = `20261029T070706Z-5436f7c`.
 
@@ -2723,6 +2757,8 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 | `askAIInMovies(q)` (Cinematic) | TV search miss → switch to Movies without reloading and run the film AI on the same words |
 | `FFBot.welcome(target, onTry)` (`assets/social.js`) + `welcomeToAISearch()` (Classic) | A first visit's tip (`.ffw`) under the AI search, once per browser (`ff_welcome_seen`), shown when the target is on screen and uncovered; Classic calls it from `dismissFirstVisit()` / `startOnboardFromIntro()`, Cinematic on `DOMContentLoaded` when `firstVisit` (no `rk_lang` at boot) |
 | `egg()` (corner mascot, `assets/social.js`) | Five quick clicks on `.ffm-bot` (≤500ms apart): `.ffm.is-egg` spin + the `success` pose, GA `mascot_egg` |
+| `heroUp()` / `hello()` / `sayHello(out)` (hero mascot `#ffh`, `assets/social.js`) + `tryAISearch()` (Classic) | Classic's desktop hero mascot (≥1200px): `.is-ready` once the sprite is in; the one-off hello `.is-hi` (6s, `ff_hello_seen`), never on a page view that had the welcome tip; its click (and the tip's "Try it") → AI mode + focus; GA `mascot_click` `hero` |
+| `duck()` / `soon()` (peeking mascot `.ffp`, `assets/social.js`) | The mascot over "Your Taste DNA" (≥1024px): `.is-in` / `.is-hop` the first time the button is on screen, `.is-ducked` while `data-ffp-edge` (`#rowForYou`) is under `data-ffp-under` (`.filters-bar`); GA `mascot_click` `dna` |
 | `_voiceRead(e)` / `_voiceFold(segs, text)` / `_voiceMerge(base, seg)` / `_voiceCommit()` (Classic voice) | Transcript assembly for `toggleVoiceSearch()` (phone) + `toggleDesktopVoice()` (desktop): `_voiceRead` folds ALL results of the session into one string (`_voiceSession`), `_voiceFold` replaces a result that restates the previous one (iOS snapshots) and appends new speech, `_voiceMerge` joins across engine restarts dropping word overlap (Android replays), `_voiceCommit` banks `_voiceSession` into `_finalTranscript` |
 | `FFBot.set(mood)` / `FFBot.found(hasSuggestions)` / `FFBot.warm(then)` / `FFBot.mood()` (`assets/social.js`) | The mascot's AI moods on every `[data-ffb]` host + `#ffm`: `think` while the AI works, `found()` = idea → success → idle (+ an idea nudge when refinements are offered), `confused` on no results / errors. Sprite `ff-bot-moods.webp` loads on first intent; called as `window.FFBot?.…` from Classic's `showAiLoader()` / `renderAiResults()` / `showAiResultsError()` / `closeAiResults()` and Cinematic's `startView()` / `runAI()` / `titleFallback()` / `runTitle()` |
 | `FFWatchlist.*` (`assets/watchlist.js`) | The one watchlist, typed `{id, type}`; `toggle(id, type)` returns whether the title is saved afterwards; `onChange(fn)` also fires for other tabs |
@@ -2813,6 +2849,13 @@ Backend (`functions/api/[[path]].js`): `_actorMovies(actorName, env)` resolves a
 html.ffb-on .ffb-m  { background-image: url("/assets/ff-bot-moods.webp?v=…"); }
 .ffb[data-mood="think"] > [data-m="think"] { opacity: 1; animation: ffb-think …; }  /* idea, success, confused alike */
 .ffb--panel 56px · .ffb--empty 120px · .ffb--head 60px   (panel 46 / head 48 at ≤768px)
+
+/* Classic desktop mascots (assets/social.css): absolute, nothing moves */
+.ffh  (≥1200px + hover)  absolute in .hero-search-anchor, inset-inline-end: calc(50% + 418px); bottom: -40px
+      .ffh-bot::before = idea frame minus bulb · ::after = the bulb · .ffh-bubble centred over the head
+      .is-ready fade-in · :hover / :focus-visible / .is-hi → bubble + ffh-wave · html:has(.ffw.is-in) → wave + bulb
+.ffp  (≥1024px + hover)  inside .dna-trigger, overflow:hidden box above it, z 99 (over .filters-bar) / .is-ducked z 98
+      .ffp-bot success frame, translate 100% → (--ffp-h − --ffp-peek) on .is-in · .is-hop · .dna-trigger:hover −14px
 ```
 
 ---
@@ -2885,6 +2928,7 @@ Taste profile stored in `localStorage['rk_taste_v1']`: `{ genres: {}, directors:
 | `ff_layout` | `classic` \| `cinematic` — read by the layout router at the top of `index.html` |
 | `ff_mascot_off` | `'1'` once the corner mascot's × was clicked (`assets/social.js`); `#ffm` is removed on load in both layouts |
 | `ff_welcome_seen` | `'1'` once the mascot's first-visit tip has been shown (`FFBot.welcome`, `assets/social.js`) |
+| `ff_hello_seen` | `'1'` once Classic's hero mascot has said "Need a recommendation?" by itself, or the search was already in use (`hello()`, `assets/social.js`) |
 | `ff_fresh_reload` (**sessionStorage**) | The `/build.json` build `assets/fresh.js` last reloaded the page for — it never reloads twice for the same build |
 | `rk_ios_pwa_dismissed` | Timestamp of last iOS PWA bottom-sheet dismiss (15-day cooldown) |
 | `rk_install_banner_dismissed` | Timestamp of last mobile install banner dismiss (7-day cooldown) |
@@ -2945,7 +2989,9 @@ The site is fully installable as a PWA on all platforms.
 - [x] **iOS voice duplication, AI summary over the posters, stale open pages** (`cb8606c`) — live 2026-10-28 (production `3c0f6647`); see the 2026-10-28 block
 - [ ] **Owner's iPhone check of voice dictation** on the live site (the fix was verified with a replayed iOS result pattern, not a real mic)
 - [x] **Mascot easter egg + first-visit welcome tip** (`bee9a23`) — both layouts; live 2026-10-28 (production `43639d72`); GA event `mascot_egg`
-- [ ] **Native-speaker pass on `mascot.welcome` / `mascot.try`** (written in-session, 9 languages) — together with the `cin.*` review
+- [ ] **Native-speaker pass on `mascot.welcome` / `mascot.try` / `mascot.hello`** (written in-session, 9 languages) — together with the `cin.*` review
+- [x] **Classic desktop mascots** (`dfe397a`): `#ffh` beside the hero search (≥1200px) and `.ffp` peeking over "Your Taste DNA" (≥1024px); GA `mascot_click`
+- [ ] **Deploy `dfe397a`** (owner's go-ahead pending) — then check on findfilm.ai at 1280 / 1440 and on a phone (both hidden)
 - [x] **Main checkout must pull `main` before its next deploy**: pulled `e3754be` (stash → `pull --ff-only` → pop, clean) before the `3efde451` deploy, which therefore keeps the RTL/320px fixes
 - [x] **Header overflows at 320px (both languages)**: fixed in `31a26d5` (`@media (max-width: 340px)`: `.header-btns` 213 → 181px)
 - [x] **Header right padding at 341–350px**: the trimmed-header block now applies up to 350px (`ed90300`); 12px of right padding at 345, live 2026-10-29
