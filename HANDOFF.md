@@ -2,18 +2,19 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-29) — Translations That Fell Back to English, Header at 341–350px, www Check
+## ⚡ Most Recent Session (2026-10-29) — Translations That Fell Back to English, Header at 341–350px, www Redirect
 
 All commits on `main`, **deployed live on https://findfilm.ai**: Pages production `85582d88` from `5436f7c` (before it `cb5095e1` from `ed90300`), 2026-10-29. Deployed with `./deploy.sh --branch main` **from a clean temporary `git worktree` of the commit**, because another session had uncommitted work in the main checkout (see gotchas). 16/16 sensitive paths unpublished, custom domains clean; `/`, `/cinematic/` and `i18n.js?v=833b2799` byte-identical to the commit on findfilm.ai and ratingkino.com; `/build.json` = `20261029T070706Z-5436f7c`.
 
 | Commit | Feature |
 |--------|---------|
 | `ed90300` | **(1) 28 keys translated in `assets/i18n.js`.** es/fr/zh/ar were missing 28 keys and uk 23 (the old Pending item listed only 2): `ratings.title/body1/tierFull/tierEarly/updated/updatedMins/updatedHrs/updatedDays` (the "How ratings work" modal `#ratingsInfoModal`), `filter.filters/genre/reset/showResults` (filter drawer `.fd-title`, `.fd-reset`, `.fd-apply`), `feed.best`, `feed.bestBadge`, `best.exploreTitle/Sub/Cta`, `feed.seeMore`, `feed.seeMoreAria`, `rating.unified/tmdb/unifiedTip/tmdbTip`, `search.modeTitle`, `search.modeTitlePh`, `search.modePlotPh`, `util.voice`, `util.watchlist`. **All 9 languages now match `en` key for key** (plural `cin.n.*` categories excepted by design), every `{placeholder}` and `<strong>` kept. `util.voice`, `util.watchlist`, `rating.unifiedTip`, `rating.tmdbTip` are not referenced by either page yet; translated for parity. Written in-session — add them to the native-speaker pass. **(2) Header 341–350px:** Classic's trimmed-header block `@media (max-width: 340px)` → **`350px`** (the row needs 351px). Right padding at 345px: 6px → 12px, same as ≥351. |
+| `d834fe8` | **`www.findfilm.ai` → `https://findfilm.ai` (301).** New Worker **`findfilm-www-redirect`** in **`www-redirect/`** (`worker.js` + `wrangler.toml`; `main = "worker.js"` relative to the config file, `workers_dev = false`, `preview_urls = false`) on the **Custom Domain `www.findfilm.ai`**, so Cloudflare created the proxied DNS record and the certificate on deploy. Keeps path and query (`/?movie=603`, `/cinematic/?TVShows=1396`); `http://www…` redirects too. Deploy: `npx wrangler deploy --config www-redirect/wrangler.toml` (version `dd7b8247`). `deploy.sh`'s `MUST_NOT_PUBLISH` now also probes `www-redirect/worker.js` and `www-redirect/wrangler.toml` (18 paths). Verified: DNS resolves via 1.1.1.1, valid certificate, 301s with path + query, final `200 https://findfilm.ai/?movie=603` after 1 redirect. A machine that looked up www before the fix may keep a cached "no such host" for a while (this Mac did). |
 | `5436f7c` | **Catalog freshness stamp follows a language switch.** `loadCatalogFreshness()` wrote `#heroUpdated` ("↻ 6 h ago") and `#riUpdated` ("Catalog refreshed {when}.") once, in the load-time language. Now it stores **`var CATALOG_SYNCED_AT`** (a `var` so `applyTranslations()` can't hit the TDZ) and calls new **`renderCatalogFreshness()`**, which `applyTranslations()` also calls. **German** `ratings.updated` lost its trailing period: every `{when}` already ends in "Min." / "Std." / "T.", so it printed "vor 6 Std..". |
 
 **Verified.** Locally (static server) and on findfilm.ai at 345px with phone emulation, in en/fr/es/zh/uk/ar: filter drawer, Best Available row, search mode label and placeholder, and the ratings modal (5 `<strong>`s) all translated; `dir="rtl"` in Arabic; no English left in the Ukrainian page; `scrollWidth === clientWidth` (345) in every language; header right padding 12px. Live language switch fr → de → ar → uk re-words the stamp with the real sync time.
 
-**www check (Pending item):** `www.findfilm.ai` has **no DNS record**, so it doesn't load at all ("site can't be reached"). `http://findfilm.ai` → 301 to https. `www.ratingkino.com` and `ratingkino.com` serve the site (200, no redirect). The old `redirect-worker/` (`ratingkino-redirect`, which would send all of ratingkino.com to findfilm.ai) was never deployed.
+**www check (Pending item):** `www.findfilm.ai` had **no DNS record**, so it didn't load at all ("site can't be reached"); fixed by `d834fe8` above. `http://findfilm.ai` → 301 to https. `www.ratingkino.com` and `ratingkino.com` serve the site (200, no redirect). The old `redirect-worker/` (`ratingkino-redirect`, which would send all of ratingkino.com to findfilm.ai) was never deployed.
 
 **Known limits / gotchas**
 - **Another session (FindFilm.ai) was editing the same checkout** with uncommitted work: desktop hero mascots `#ffh` / `.ffp` in `index.html`, `assets/social.css`, `assets/social.js`, and `mascot.hello` in `i18n.js`. So only this session's lines were committed: each file was rebuilt from `git show HEAD:<file>` plus these edits and staged with `git hash-object -w` + `git update-index --cacheinfo`, and deploys ran from `git worktree add --detach <tmp> <commit>`. `deploy.sh` publishes the *working tree*, so deploying from a checkout with someone's WIP ships it. The other session was told by message to recompute `i18n.js?v=` before its own commit (its working tree has `?v=7c58b5f9`, which no longer matches).
@@ -2580,9 +2581,11 @@ ratingkino/
 │   └── api/[[path]].js   ← Cloudflare Pages Function (API proxy + KV reader + AI)
 ├── sync-worker.js        ← Cloudflare Worker — nightly data sync (deployed separately)
 ├── sync-worker.toml      ← wrangler config for sync Worker
-├── wrangler.toml         ← wrangler config for Pages (KV + AI bindings)
+├── wrangler.toml         ← wrangler config for Pages (KV + D1 + AI; [env.preview] = preview KV/D1)
 ├── .dev.vars             ← TMDB_KEY / OMDB_KEY. Gitignored, hook-blocked, not in PUBLIC.
 ├── spotify-worker/       ← Spotify Client-Credentials Worker (+ its own .dev.vars)
+├── www-redirect/         ← Worker findfilm-www-redirect: www.findfilm.ai → https://findfilm.ai (301)
+├── redirect-worker/      ← ratingkino.com → findfilm.ai Worker, never deployed (latent `main` path bug)
 ├── assets/               ← static assets (icons, webmanifest, og-image)
 │   ├── site.webmanifest  ← PWA manifest (display: standalone, start_url: /)
 │   ├── icon-192.png      ← PWA icon 192×192
@@ -2634,6 +2637,11 @@ OMDB keys. `deploy.sh` refuses to ship if anything sensitive is staged and, afte
 deploying, fetches the live URL to prove the sensitive paths are unpublished. If it
 prints `deploy: FAILED`, the deployment is already live — fix and redeploy immediately,
 do not assume it rolled back.
+
+**Deploy / update the www → apex redirect Worker** (`findfilm-www-redirect`, Custom Domain `www.findfilm.ai`):
+```bash
+npx wrangler deploy --config www-redirect/wrangler.toml
+```
 
 **Deploy / update sync Worker:**
 ```bash
@@ -2968,7 +2976,7 @@ The site is fully installable as a PWA on all platforms.
 - [ ] **Media type through id-only lookups** — `MOVIES.find(x => x.id === id)` sites (`openMovie`, `enrichNow`, `updateCardInGrid`, card `onclick`s; the watchlist itself is typed since `89d2a3c`, but `_openWatchlisted()` still ends in `openMovie(id)`) can still collide across movie/TV ids via actor filmographies
 - [ ] **Product Hunt listing** — confirm title, tagline, description, and gallery screenshots are ready
 - [ ] **SEO** — `<meta name="description">`, Open Graph tags, `<link rel="canonical">` minimal — expand before marketing push
-- [ ] **`www.findfilm.ai` redirect** — checked 2026-10-29: **no DNS record, the address doesn't load at all**. Needs either a proxied DNS record + a Redirect Rule (dashboard), or a tiny Worker on the custom domain `www.findfilm.ai` (wrangler creates the DNS record) that 301s to `https://findfilm.ai` + path + query
+- [x] **`www.findfilm.ai` redirect** — it had no DNS record at all; now the Worker `findfilm-www-redirect` (`www-redirect/`, `d834fe8`) on the Custom Domain 301s to `https://findfilm.ai` + path + query, live 2026-10-29
 - [ ] **Sync Worker monitoring** — no alerting if nightly cron fails; consider health-check script against `/api/cache/status`
 - [ ] **AI description translation quality** — m2m100-1.2b; consider switching to llama-3.3-70b-instruct for translation
 - [ ] **OMDb rate limit** — free tier 1000 req/day; monitor under traffic spike
