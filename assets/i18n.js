@@ -3221,7 +3221,7 @@ window.FF_I18N = {
     'ratings.body1':        'Jede Wertung vereint <strong>IMDb</strong>, <strong>Rotten Tomatoes</strong> und <strong>Metacritic</strong> zu einem gewichteten Urteil – so bekommst du das komplette Kritikerbild auf einen Blick.',
     'ratings.tierFull':     '<strong>Vollständige Kritikerdaten</strong> – aus allen drei Quellen vereint, sobald Rezensionen vorliegen.',
     'ratings.tierEarly':    '<strong>Frühe Metadaten</strong> – neuere Titel zeigen ggf. vorübergehend nur TMDB-Wertungen, bis alle Rezensionen da sind.',
-    'ratings.updated':      'Katalog aktualisiert {when}.',
+    'ratings.updated':      'Katalog aktualisiert {when}',
     'ratings.updatedMins':  'vor {n} Min.',
     'ratings.updatedHrs':   'vor {n} Std.',
     'ratings.updatedDays':  'vor {n} T.',

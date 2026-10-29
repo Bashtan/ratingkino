@@ -5493,7 +5493,7 @@ if ('serviceWorker' in navigator) {
 <!-- Watchlist storage, shared with /cinematic/: one typed list (rk_watchlist_v2). Synchronous on purpose: initWatchlist() below reads it at once. -->
 <script src="/assets/watchlist.js?v=64c31e42"></script>
 <!-- UI strings in 9 languages, shared with Cinematic (window.FF_I18N → TRANSLATIONS). Synchronous on purpose: the page script reads it at once. -->
-<script src="/assets/i18n.js?v=c175efa3"></script>
+<script src="/assets/i18n.js?v=833b2799"></script>
 </head>
 <body>
 <!-- Social brand icons for the .ffs / .ffm / .ffs-band blocks (/assets/social.css),
@@ -6508,6 +6508,8 @@ function applyTranslations() {
     document.getElementById('emptySub').textContent   = _isError ? t('grid.errorBody')  : t('grid.noResultsSub');
     if (_isError) document.getElementById('emptyIcon').textContent = '⚠️';
   }
+  // "Catalog refreshed {when}" (hero band + ratings modal)
+  renderCatalogFreshness();
   // Re-render suggestion pills in the new language if the panel is open
   if (document.getElementById('searchSuggestions')?.classList.contains('ss-visible')) {
     renderSuggestionPills();
@@ -10388,6 +10390,8 @@ function closeRatingsInfo() {
 
 // Fetch the nightly-sync timestamp and render a friendly "updated" stamp
 // in the hero band + the ratings modal. Silent no-op if the cache is empty.
+// `var`, not `let`: applyTranslations() reads it and must not hit the TDZ.
+var CATALOG_SYNCED_AT = null;
 async function loadCatalogFreshness() {
   try {
     const r = await fetch('/api/cache/status');
@@ -10397,12 +10401,18 @@ async function loadCatalogFreshness() {
     if (!iso) return;
     const d = new Date(iso);
     if (isNaN(d)) return;
-    const stamp = relativeUpdated(d);
-    const heroEl = document.getElementById('heroUpdated');
-    if (heroEl) heroEl.textContent = '↻ ' + stamp;
-    const riEl = document.getElementById('riUpdated');
-    if (riEl) riEl.textContent = t('ratings.updated').replace('{when}', stamp);
+    CATALOG_SYNCED_AT = d;
+    renderCatalogFreshness();
   } catch { /* freshness is best-effort */ }
+}
+// Also called by applyTranslations(), so a language switch re-words the stamp.
+function renderCatalogFreshness() {
+  if (!CATALOG_SYNCED_AT) return;
+  const stamp = relativeUpdated(CATALOG_SYNCED_AT);
+  const heroEl = document.getElementById('heroUpdated');
+  if (heroEl) heroEl.textContent = '↻ ' + stamp;
+  const riEl = document.getElementById('riUpdated');
+  if (riEl) riEl.textContent = t('ratings.updated').replace('{when}', stamp);
 }
 function relativeUpdated(d) {
   const mins = Math.floor((Date.now() - d.getTime()) / 60000);
