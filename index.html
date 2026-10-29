@@ -5485,15 +5485,15 @@ if ('serviceWorker' in navigator) {
 <!-- Touch baseline + bottom-sheet drag, shared with /cinematic/. -->
 <link rel="stylesheet" href="/assets/touch.css?v=fc8fd233">
 <!-- Social links + corner mascot, shared with /cinematic/. -->
-<link rel="stylesheet" href="/assets/social.css?v=fe561c53">
-<script src="/assets/social.js?v=9e176c48" defer></script>
+<link rel="stylesheet" href="/assets/social.css?v=19b57600">
+<script src="/assets/social.js?v=6fe1df4d" defer></script>
 <!-- Reloads a page left open across a deploy, when it comes back after 10+ min away (/build.json). -->
 <script src="/assets/fresh.js?v=887c34fa" defer></script>
 <script src="/assets/touch.js?v=fc8fd233" defer></script>
 <!-- Watchlist storage, shared with /cinematic/: one typed list (rk_watchlist_v2). Synchronous on purpose: initWatchlist() below reads it at once. -->
 <script src="/assets/watchlist.js?v=64c31e42"></script>
 <!-- UI strings in 9 languages, shared with Cinematic (window.FF_I18N → TRANSLATIONS). Synchronous on purpose: the page script reads it at once. -->
-<script src="/assets/i18n.js?v=833b2799"></script>
+<script src="/assets/i18n.js?v=97aeda61"></script>
 </head>
 <body>
 <!-- Social brand icons for the .ffs / .ffm / .ffs-band blocks (/assets/social.css),
@@ -5755,6 +5755,12 @@ if ('serviceWorker' in navigator) {
       <div class="ss-pills" id="ssPills"></div>
     </div>
   </div>
+  <!-- The mascot beside the search (computers ≥1200px only): waves on hover and says
+       hello once per browser; a click opens the AI search. .ffh in /assets/social.css. -->
+  <button class="ffh noskim" id="ffh" type="button" onclick="tryAISearch()">
+    <span class="ffh-bubble" data-i18n="mascot.hello">Need a recommendation?</span>
+    <span class="ffh-bot" aria-hidden="true"></span>
+  </button>
   </div><!-- /#heroSearchAnchor -->
   <!-- ════ Vibe Chips — emotion-first quick prompts (auto-fill + AI search) ════ -->
   <div class="vibe-chips hide-scrollbar" id="vibeChips" role="group" aria-label="Search by vibe">
@@ -5944,6 +5950,9 @@ if ('serviceWorker' in navigator) {
         <svg class="foryou-refine-spark" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 3c0 4 8 6 8 10s-8 4-8 8"/><path d="M16 3c0 4-8 6-8 10s8 4 8 8"/><path d="M8.5 7h7M8.5 17h7M7 12h10"/></svg>
         <span class="refine-full" data-i18n="dna.entry">Your Taste DNA</span>
         <span class="refine-short" data-i18n="dna.entryShort">DNA</span>
+        <!-- The mascot peeking over this button (computers only); ducks while the row
+             slides under the sticky Movies / TV bar. .ffp in /assets/social.css. -->
+        <span class="ffp" aria-hidden="true" data-ffp-under=".filters-bar" data-ffp-edge="#rowForYou"><i class="ffp-bot"></i></span>
       </button>
     </div>
     <p class="foryou-hint" id="forYouHint">
@@ -13473,10 +13482,12 @@ function dismissFirstVisit() {
 // and uncovered — so after the taste quiz, if the intro led there. "Try it" switches
 // the bar to "Describe what you remember" and puts the cursor in it.
 function welcomeToAISearch() {
-  window.FFBot?.welcome(document.getElementById('searchWrap'), () => {
-    setSearchMode('ai');
-    document.getElementById('searchInput').focus();
-  });
+  window.FFBot?.welcome(document.getElementById('searchWrap'), tryAISearch);
+}
+// Also the hero mascot's click (#ffh, "Need a recommendation?").
+function tryAISearch() {
+  setSearchMode('ai');
+  document.getElementById('searchInput').focus();
 }
 
 /* ═══════════════════════════════════

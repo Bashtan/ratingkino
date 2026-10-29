@@ -16,6 +16,8 @@
                    results heading, and the corner mascot
      .ffw          a first visit's welcome tip, under the AI search
      .ffm.is-egg   the corner mascot's easter egg (five quick clicks)
+     .ffh          Classic: the mascot beside the hero search (computers ≥1200px)
+     .ffp          Classic: the mascot peeking over "Your Taste DNA" (computers)
 
    Fonts and colours are inherited, so the strip reads as part of each layout.
    Both pages link this file as ?v=<hash> (the service worker serves /assets/*
@@ -240,7 +242,7 @@
   background: no-repeat 0 0 / 400% 100%;
   transition: opacity 0.28s ease;
 }
-html.ffb-on .ffb-m { background-image: url("/assets/ff-bot-moods.webp?v=1b892b12"); }
+html.ffb-on .ffb-m, html.ffb-on .ffh-bot::before, html.ffb-on .ffh-bot::after, html.ffb-on .ffp-bot { background-image: url("/assets/ff-bot-moods.webp?v=1b892b12"); }
 .ffb-m[data-m="think"]    { background-position: 0 0; }
 .ffb-m[data-m="idea"]     { background-position: 33.3333% 0; }
 .ffb-m[data-m="success"]  { background-position: 66.6667% 0; }
@@ -274,7 +276,127 @@ html.ffb-on .ffb-m { background-image: url("/assets/ff-bot-moods.webp?v=1b892b12
   .ffm-bot[data-mood]:not([data-mood="idle"]) > .ffb-idle { animation: none; }
 }
 
+/* ── Hero mascot (Classic, #ffh): beside the search, computers ≥1200px ─────
+   Stands in the gutter beside the 820px search bar (left; right in Arabic),
+   its feet level with the vibe chips' bottom edge (40px under the search
+   row), so it never covers the bar, its menus or the headline; absolute in
+   .hero-search-anchor, so it pushes nothing. The idea pose with its bulb cut
+   off (::before); the bulb is ::after. It fades in once the sprite is in
+   (.is-ready, social.js), then bobs. Hover, focus, and its one-off hello
+   (.is-hi): it waves and its bubble shows, centred over its head, where the
+   bulb would be. The bubble stays inside the gutter column and under the
+   header even in two lines, so it can't reach the headline in any language
+   (Spanish starts 50px from the bar's edge at 1200px). A first visit's
+   welcome tip: it waves with its bulb lit for the tip, which drops its own
+   little mascot. Below 1200px the gutter is too narrow for it. */
+.ffh { display: none; }
+@media (min-width: 1200px) and (hover: hover) {
+  .hero-search-anchor { position: relative; }
+  .ffh {
+    --ffh-h: 152px;   /* the frame (122×152); the robot is 113px of it */
+    display: block; position: absolute; bottom: -40px; inset-inline-end: calc(50% + 418px);
+    width: calc(var(--ffh-h) * 0.8); height: var(--ffh-h);
+    margin: 0; padding: 0; border: 0; border-radius: 14px; background: none;
+    color: inherit; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    opacity: 0; visibility: hidden; transform: translateY(10px) scale(0.94); transform-origin: 50% 100%;
+    transition: opacity 0.5s ease, transform 0.6s cubic-bezier(.22,1,.36,1), visibility 0s linear 0.6s;
+  }
+  .ffh.is-ready {
+    opacity: 1; visibility: visible; transform: none;
+    transition: opacity 0.5s ease, transform 0.6s cubic-bezier(.22,1,.36,1), visibility 0s;
+  }
+  .ffh:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .ffh-bot {
+    position: absolute; inset: 0; transform-origin: 50% 100%;
+    filter: drop-shadow(0 10px 22px rgba(0,0,0,0.5));
+    animation: ffh-bob 3.6s ease-in-out infinite;
+  }
+  .ffh-bot::before, .ffh-bot::after {
+    content: ""; position: absolute; inset: 0;
+    background: no-repeat 33.3333% 0 / 400% 100%;    /* the idea frame */
+  }
+  .ffh-bot::before { clip-path: inset(24% 0 0 0); }  /* the robot: rows 77–320 */
+  .ffh-bot::after {                                  /* its bulb: rows 0–76 */
+    clip-path: inset(0 0 76% 0);
+    opacity: 0; transform: translateY(6px) scale(0.6); transform-origin: 50% 18%;
+    transition: opacity 0.25s ease, transform 0.4s cubic-bezier(.34,1.56,.64,1);
+  }
+  .ffh-bubble {   /* its tail's tip at 24% of the frame: the helmet's antenna */
+    position: absolute; bottom: 78%; left: 50%; translate: -50% 0; z-index: 1;
+    width: max-content; max-width: 204px; box-sizing: border-box; padding: 9px 14px;   /* English in one line */
+    border-radius: 16px;
+    background: rgba(18,18,22,0.94); border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 16px 40px -12px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.06);
+    font-size: 13px; font-weight: 600; line-height: 1.35; color: #fff; white-space: normal;
+    text-align: center; text-wrap: balance;
+    opacity: 0; transform: translateY(6px) scale(0.92); transform-origin: 50% 100%; pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.35s cubic-bezier(.22,1,.36,1);
+  }
+  .ffh-bubble::after {   /* tail, pointing down at the helmet */
+    content: ""; position: absolute; bottom: -6px; left: calc(50% - 6px); width: 11px; height: 11px;
+    background: rgb(18,18,22); border: solid rgba(255,255,255,0.12); border-width: 0 1px 1px 0;
+    transform: rotate(45deg);
+  }
+  .ffh.is-ready:is(:hover, :focus-visible, .is-hi) .ffh-bubble { opacity: 1; transform: none; pointer-events: auto; }
+  .ffh.is-ready:is(:hover, :focus-visible, .is-hi) .ffh-bot,
+  html:has(.ffw.is-in) .ffh.is-ready .ffh-bot { animation: ffh-wave 2.4s ease-in-out infinite; }
+  html:has(.ffw.is-in) .ffh.is-ready .ffh-bot::after { opacity: 1; transform: none; animation: ffb-glow 1.4s ease-in-out 0.4s infinite; }
+  html:has(.ffh.is-ready) .ffw { grid-template-columns: 1fr; }
+  html:has(.ffh.is-ready) .ffw-bot { display: none; }
+  @keyframes ffh-bob  { 50% { transform: translateY(-4px); } }
+  @keyframes ffh-wave {   /* a rock on its feet, then a rest */
+    0%, 58%, 100% { transform: none; }
+    10% { transform: rotate(-5deg); }
+    22% { transform: rotate(4deg); }
+    34% { transform: rotate(-3deg); }
+    46% { transform: rotate(1.5deg); }
+  }
+}
+
+/* ── Peeking mascot (Classic, .ffp): over "Your Taste DNA", computers ──────
+   Inside the button (hovering it lights the button; a click opens Taste DNA),
+   absolute above it in a box that clips at the button's top edge: the success
+   pose rises from behind the button and shows its head and raised hands
+   (--ffp-peek), a little more on hover. It rises the first time the button
+   is on screen (.is-in, social.js) and hops twice (.is-hop). The row's card
+   meets the sticky Movies / TV bar (z-index 99), so at rest the mascot is
+   drawn over that bar's empty right end (same z-index, later in the page);
+   once the row starts sliding under the bar it ducks (.is-ducked: z-index 98,
+   under the bar at once, and it sinks back behind the button). */
+.ffp { display: none; }
+@media (min-width: 1024px) and (hover: hover) {
+  .dna-trigger { position: relative; }
+  .ffp {
+    --ffp-h: 120px;    /* the frame (96×120) */
+    --ffp-peek: 78px;  /* how much shows over the button: rows 0–205 of 320, antenna to popcorn rim */
+    display: block; position: absolute; left: 50%; bottom: calc(100% + 1px); z-index: 99;   /* + the button's border: cut at its outer edge */
+    width: calc(var(--ffp-h) * 0.8); height: var(--ffp-h); translate: -50% 0;
+    overflow: hidden; pointer-events: none;
+  }
+  .ffp.is-ducked { z-index: 98; }
+  .ffp-bot {
+    position: absolute; inset: 0; pointer-events: auto; cursor: pointer;
+    background: no-repeat 66.6667% 0 / 400% 100%;    /* the success frame */
+    translate: 0 100%;
+    transition: translate 0.55s cubic-bezier(.34,1.5,.64,1);
+  }
+  .ffp.is-in .ffp-bot { translate: 0 calc(var(--ffp-h) - var(--ffp-peek)); }
+  .dna-trigger:hover .ffp.is-in .ffp-bot { translate: 0 calc(var(--ffp-h) - var(--ffp-peek) - 14px); }
+  .ffp.is-in.is-ducked .ffp-bot { translate: 0 100%; transition: translate 0.3s cubic-bezier(.4,0,1,1); }
+  .ffp.is-hop .ffp-bot { animation: ffp-hop 0.9s ease-out 0.5s; }
+  @keyframes ffp-hop {
+    0%, 44%, 80%, 100% { transform: none; }
+    22% { transform: translateY(-8px); }
+    62% { transform: translateY(-4px); }
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  /* Classic's slots: fades only (no bob, wave, pop, rise or hops). */
+  .ffh, .ffh.is-ready, .ffh-bubble, .ffh-bot::after { transform: none !important; transition: opacity 0.3s ease, visibility 0s !important; }
+  .ffh-bot, .ffh-bot::after, .ffp-bot { animation: none !important; }
+  .ffp-bot { transition: opacity 0.3s ease !important; }
+  .ffp:not(.is-in) .ffp-bot, .ffp.is-ducked .ffp-bot { opacity: 0; }
   .ffm-bot img { animation: none; }
   .ffm, .ffm-bubble, .ffs-btn { transition-duration: 0.01s !important; }
   /* Moods only cross-fade (beats a page's blanket "*" reduced-motion rule by specificity). */
