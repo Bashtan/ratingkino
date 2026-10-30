@@ -2,7 +2,30 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-29b) — Classic Desktop Mascots: Beside the Hero Search, Peeking Over "Your Taste DNA"
+## ⚡ Most Recent Session (2026-10-30) — Icon + Social-Preview Generator; Tags on Every Page (new mascot art pending)
+
+Committed on `main`. **Not deployed:** the deploy waits for the new art (the mascot holding a clapperboard). Then the owner runs the Facebook and LinkedIn sharing debuggers once. Production is still `c131bc9a`.
+
+| Commit | Feature |
+|--------|---------|
+| `4a3c315` | **`tools/icons/make.py`**: one transparent PNG of the mascot → every icon + the OG image, then `?v=` everywhere. Usage: `python3 tools/icons/make.py [source] [--head X,Y,SIZE] [--out DIR] [--bump]`; default source **`raw/ff-bot-clapper.png`** (not yet supplied). Outputs: **`favicon.ico`** (16+32+48 PNG frames, hand-written ICO via `ico()`), `assets/favicon-16x16.png`, `-32x32`, `favicon.png` (64): **head only** on a rounded `#0d0020` tile with a violet glow (`head_tile()`; head found by `find_head()`, or `--head`); **`apple-touch-icon.png`** 180 opaque; **`icon-192/512.png`** rounded tile, manifest `purpose: any`; **new `icon-maskable-192/512.png`** full-bleed, the mascot inside a 38%-radius circle (manifest `purpose: maskable`; the old icons were `"any maskable"`, one icon doing both badly); **`og-image.jpg`** 1200×630, drawn by headless Chrome from **`tools/icons/og.html`**: the mascot centred on a violet glow, "FindFilm**.ai**" in Montserrat 900 like the header (turns red if the font failed to load). Mascot + wordmark stay inside the middle 630px for WhatsApp/iMessage square crops. Resampling is premultiplied (`resize()`); refuses a source without real alpha (points at `tools/mascot/matte.py`); warns if it is under 1024px or touches its edges; writes a contact sheet to a temp dir. Then **`manifest()`** rewrites `site.webmanifest`'s `icons` from `MANIFEST_ICONS`, and **`bump()`** puts each file's sha256[:8] as `?v=` on every reference in the 4 pages, the manifest and `sw.js` (only after a quote or `https://findfilm.ai`, up to the closing quote; a first draft also stamped a URL inside a `sw.js` comment), and then the manifest's own `?v=`. `--out DIR` = a dry run; `--bump` = re-hash only. **Tags:** Cinematic gets the full icon set + a `meta description` + OG/Twitter tags (Classic's text, `og:url` = `/` like its canonical). **No manifest link on Cinematic**: it doesn't catch `beforeinstallprompt`, so Chrome on Android would show its own install bar. **`/pitch/`** gets icons + OG/Twitter ("Movie Pitch · Vote with your friends", no `og:url`: each pitch has its own). **`/tv/`** gets icons + a plain preview. `og:image:alt` / `twitter:image:alt` = "The FindFilm.ai robot mascot" everywhere. **`sw.js`**: `CACHE` `ff-v2` → **`ff-v3`** (drops the bare-URL copies), `SHELL` entries versioned. `--bump` run on the **current (old) files**, so every reference is versioned already. |
+
+**Verified.**
+- **Dry run** with the popcorn mascot (`assets/ff-bot.png`) as a stand-in, written only to the scratchpad: all 10 outputs at the right sizes. The OG wordmark rendered in Montserrat, and the head reads at 16px.
+- **Full run on a scratch copy of the repo:** 42 versioned references, none left bare, the manifest's other keys kept, and a re-run is idempotent.
+- **Staged `dist/`:** 40 versioned references, each pointing at an existing image with a matching hash. Every page has 5 icon links and OG + Twitter tags; only Classic links the manifest.
+
+**When the art arrives:**
+1. Save it as `raw/ff-bot-clapper.png` (a real transparent PNG, ≥1024px).
+2. Run `python3 tools/icons/make.py`.
+3. Check the printed contact sheet. If the clapperboard pulls the auto head crop off-centre, set `--head`.
+4. Commit, deploy, then use the sharing debuggers.
+
+`og:image` changes URL with its content (`?v=`), so platforms re-fetch it. The old `og-image.jpg`'s "·" separators rendered as empty boxes (a missing glyph); the new one has no such text.
+
+---
+
+## Session (2026-10-29b) — Classic Desktop Mascots: Beside the Hero Search, Peeking Over "Your Taste DNA"
 
 All commits on `main`, **deployed live on https://findfilm.ai**: Pages production **`c131bc9a`** from `2ec4256`, 2026-10-29, with `./deploy.sh --branch main` from the main checkout (published paths identical to HEAD; only `.claude/launch.json` and `spotify-worker/` uncommitted). 18/18 sensitive paths unpublished, custom domains clean. `/`, `/cinematic/`, `social.css?v=19b57600`, `social.js?v=6fe1df4d` and `i18n.js?v=97aeda61` are byte-identical to the commit on findfilm.ai and ratingkino.com; `/build.json` = `20261029T073009Z-2ec4256`.
 
@@ -2606,6 +2629,9 @@ ratingkino/
 │                           painted in, no real alpha). raw/ is not published.
 ├── tools/mascot/         ← cut.sh + checker.py / matte.py / slice.py: pose sheet →
 │                           ff-bot-moods.webp, and the ?v= bumps. Not published.
+├── tools/icons/          ← make.py + og.html: raw/ff-bot-clapper.png → favicon.ico, all
+│                           assets/ icons (incl. icon-maskable-*), og-image.jpg, the manifest's
+│                           icons list, and every ?v= on them. Not published.
 ├── assets/watchlist.js   ← shared by index.html + cinematic/index.html: window.FFWatchlist,
 │                           the one typed watchlist (localStorage rk_watchlist_v2). Loaded
 │                           synchronously in <head> as ?v=<hash>.
@@ -2996,6 +3022,8 @@ The site is fully installable as a PWA on all platforms.
 - [ ] **Owner's iPhone check of voice dictation** on the live site (the fix was verified with a replayed iOS result pattern, not a real mic)
 - [x] **Mascot easter egg + first-visit welcome tip** (`bee9a23`) — both layouts; live 2026-10-28 (production `43639d72`); GA event `mascot_egg`
 - [ ] **Native-speaker pass on `mascot.welcome` / `mascot.try` / `mascot.hello`** (written in-session, 9 languages) — together with the `cin.*` review
+- [ ] **New mascot art for icons + previews**: the owner sends `raw/ff-bot-clapper.png` (clapperboard pose) → `python3 tools/icons/make.py` → review the contact sheet → commit → deploy → Facebook Sharing Debugger + LinkedIn Post Inspector (X refreshes within ~7 days)
+- [ ] **Optional: per-pitch previews**: `/pitch/:id` links could show the pitched film's poster and title (the Function would rewrite the static OG tags for that route); today every pitch shares the generic preview
 - [x] **Classic desktop mascots** (`dfe397a`): `#ffh` beside the hero search (≥1200px) and `.ffp` peeking over "Your Taste DNA" (≥1024px); GA `mascot_click`; live 2026-10-29 (production `c131bc9a`)
 - [x] **Deploy `dfe397a`** — live 2026-10-29 (production `c131bc9a` from `2ec4256`); checked on findfilm.ai at 1280 / 1440 and at 375 / 390 / 768 (hidden)
 - [x] **Main checkout must pull `main` before its next deploy**: pulled `e3754be` (stash → `pull --ff-only` → pop, clean) before the `3efde451` deploy, which therefore keeps the RTL/320px fixes
