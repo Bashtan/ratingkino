@@ -9,7 +9,9 @@
      • /build.json         → Network-only (assets/fresh.js: has the site been redeployed?)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const CACHE  = 'ff-v2';
+/* ff-v3: the icons and og-image.jpg moved to ?v= URLs (tools/icons/make.py
+   keeps the SHELL entries below in step), so the old bare-URL copies go. */
+const CACHE  = 'ff-v3';
 
 /* Every entry here must actually exist. Removed from the original list:
      • /assets/favicon.ico — never existed in the repo (only favicon.png /
@@ -21,11 +23,11 @@ const CACHE  = 'ff-v2';
        '/' entry fetched via a redirect. '/' alone is the shell. */
 const SHELL  = [
   '/',
-  '/assets/site.webmanifest',
-  '/assets/apple-touch-icon.png',
-  '/assets/icon-192.png',
-  '/assets/icon-512.png',
-  '/assets/og-image.jpg',
+  '/assets/site.webmanifest?v=84bc4ea6',
+  '/assets/apple-touch-icon.png?v=5948ada3',
+  '/assets/icon-192.png?v=9832b405',
+  '/assets/icon-512.png?v=35fad035',
+  '/assets/og-image.jpg?v=16a40cba',
 ];
 
 /* ── Install: pre-cache the app shell ─────────────────────────────────────── */

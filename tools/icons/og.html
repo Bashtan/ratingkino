@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- The social preview (assets/og-image.jpg), 1200×630, drawn by make.py in
+     headless Chrome next to bot.png (the trimmed mascot). The mascot and the
+     wordmark stay inside the middle 630px, so a square crop (WhatsApp,
+     iMessage) keeps them both. Wordmark: the header's (Montserrat 900, white,
+     ".ai" cyan). If the font fails to load, the wordmark turns red, so a bad
+     render is impossible to miss on the contact sheet. -->
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=block">
+<style>
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    position: relative;
+    background:
+      radial-gradient(ellipse 34% 62% at 50% 44%, rgba(124,58,237,0.55), rgba(124,58,237,0) 72%),
+      radial-gradient(ellipse 60% 90% at 50% 40%, rgba(91,33,182,0.35), rgba(91,33,182,0) 75%),
+      radial-gradient(ellipse 45% 55% at 88% 96%, rgba(6,182,212,0.14), rgba(6,182,212,0) 70%),
+      radial-gradient(ellipse 45% 55% at 10% 4%, rgba(139,92,246,0.16), rgba(139,92,246,0) 70%),
+      linear-gradient(180deg, #14002e 0%, #0d0020 55%, #07000f 100%);
+  }
+  /* a soft floor under the mascot */
+  body::before {
+    content: ""; position: absolute; left: 50%; top: 452px; width: 360px; height: 44px; translate: -50% 0;
+    background: radial-gradient(closest-side, rgba(0,0,0,0.55), rgba(0,0,0,0));
+  }
+  .bot {
+    position: absolute; left: 50%; bottom: 168px; translate: -50% 0;
+    max-height: 420px; max-width: 560px;
+    filter: drop-shadow(0 18px 34px rgba(0,0,0,0.5));
+  }
+  .mark {
+    position: absolute; left: 0; right: 0; bottom: 64px; text-align: center;
+    font: 900 64px/1 Montserrat, sans-serif; letter-spacing: -0.035em; color: #fff;
+  }
+  .mark span { color: #06B6D4; }
+  .nofont .mark, .nofont .mark span { color: #ff2d2d; }
+</style>
+</head>
+<body>
+<img class="bot" src="bot.png" alt="">
+<div class="mark">FindFilm<span>.ai</span></div>
+<script>
+  document.fonts.load('900 64px Montserrat').then(function (f) {
+    if (!f.length) document.documentElement.classList.add('nofont');
+  }, function () { document.documentElement.classList.add('nofont'); });
+</script>
+</body>
+</html>
