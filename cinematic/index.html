@@ -1136,6 +1136,12 @@ let savedLang = null;
 try { savedLang = localStorage.getItem('rk_lang'); } catch { /* storage blocked */ }
 if (!DICT[savedLang]) savedLang = null;
 const firstVisit = !savedLang;   // nothing saved by either layout yet: the mascot's welcome tip (see the search)
+// ?vibe=0 opts this browser out of vibe search, ?vibe=1 back in (localStorage ff_flag_vibe, shared with Classic; see runAI).
+try {
+  const vibeParam = new URLSearchParams(location.search).get('vibe');
+  if (vibeParam === '0') localStorage.setItem('ff_flag_vibe', '0');
+  if (vibeParam === '1') localStorage.removeItem('ff_flag_vibe');
+} catch { /* storage blocked: the default (on) stands */ }
 
 function t(key, vars) {
   let s = DICT[lang]?.[key] ?? DICT.en?.[key] ?? key;
@@ -1527,7 +1533,11 @@ async function runAI(q, { chip = null } = {}) {
   setBusy(true);
   announce(t('cin.searchingFor', { q: chip ? title : q }));
   try {
-    const d = await call('/api/ai-search', {
+    // Vibe search (Vectorize + Workers AI) for everyone, as JSON here (Classic streams it); the same
+    // answer shape as /api/ai-search, which it falls back to. ?vibe=0 in either layout opts out.
+    let vibe = true;
+    try { vibe = localStorage.getItem('ff_flag_vibe') !== '0'; } catch { /* storage blocked: on */ }
+    const d = await call(vibe ? '/api/vibe-search' : '/api/ai-search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: q }),

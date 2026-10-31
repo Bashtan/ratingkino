@@ -2130,7 +2130,7 @@ const _VIBE_PICK_PROMPT =
 
 const _VIBE_REPLY_PROMPT =
   'You are FF Bot, the movie-loving robot of FindFilm.ai. A user described the film they want; our search engine found the ' +
-  'candidates below (id|title (year)|vibe|overview), best first. For EVERY candidate give: fit, 0-3 (3 = exactly what they ' +
+  'candidates below (n|title (year)|vibe|overview), best first. For EVERY candidate give its n as id, and fit, 0-3 (3 = exactly what they ' +
   'asked for, 2 = a good fit, 1 = loosely related, 0 = does not fit; a film that only shares a word with the request, like ' +
   '"darker" in its title, is 0); a reason, one full sentence of 8-15 words on how it matches the request, never a bare ' +
   'label (good: "A grumpy weatherman relives one day until he learns to be kind, exactly your story."; bad: "time loop"); ' +
@@ -2138,7 +2138,7 @@ const _VIBE_REPLY_PROMPT =
   'match: "exact" if the films are what was asked for, "close" if they only come near, "none" if nothing fits. ' +
   'message: one friendly sentence (max 25 words) in FF Bot\'s voice, following the "Message" line of the request. ' +
   'refinements: 3-4 short (1-3 word) follow-up ideas. ' +
-  'Write everything in English. Use only ids from the list.';
+  'Write everything in English. Use only the n numbers from the list.';
 
 // TMDB's own codes where they differ from ISO 639-1: cn = Cantonese, sh = Serbo-Croatian.
 const _TMDB_LANG = { zh: ['zh', 'cn'], cn: ['zh', 'cn'], sr: ['sr', 'sh'], hr: ['hr', 'sh'], bs: ['bs', 'sh'] };
@@ -2158,6 +2158,18 @@ function _vibeExcludeGenres(phrase) {
   }
   // Two genres side by side are one idea ("family drama"): only "x or y" / "x, y" lists split.
   return ids.length > 1 && !/\b(or|and|nor)\b|[,&/]/.test(String(phrase).toLowerCase()) ? [] : ids;
+}
+
+// Is there a film person (actor, director…) of exactly this name on TMDB? Accents and case aside.
+async function _vibeIsPerson(name, env) {
+  try {
+    const u = new URL('https://api.themoviedb.org/3/search/person');
+    u.searchParams.set('api_key', env.TMDB_KEY);
+    u.searchParams.set('query', name);
+    const r = await fetch(u.toString(), { headers: { 'User-Agent': 'FindFilm.ai/1.0' } });
+    const d = r.ok ? await r.json() : null;
+    return (d?.results || []).slice(0, 3).some(p => _vibeTitleKey(p.name) === _vibeTitleKey(name));
+  } catch { return true; }   // TMDB unreachable: trust the read, as before
 }
 
 // "WALL·E", "Wall-E" and "wall e" are one title.
@@ -2297,16 +2309,21 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
   }).then(_vibeJSON).catch(e => { console.error('[vibe-search] model call failed:', model, e.message); return null; });
 
   // 1. Two reads at once: the 8B's quick one starts the search; the 70B is still naming films.
-  const pickP = ask(models.pick, _VIBE_PICK_PROMPT, _VIBE_PICK_SCHEMA, 260).then(r => { ms.pick = Date.now() - t0; return r || {}; });
-  const read = (await ask(models.read, _vibeReadPrompt(year), _VIBE_READ_SCHEMA, 450)) || {};
+  // Token limits leave room for JSON mode's pretty-printing: a reply cut off mid-array was the
+  // usual "reply failed" (and a cut-off pick silently loses the 70B's picks).
+  const pickP = ask(models.pick, _VIBE_PICK_PROMPT, _VIBE_PICK_SCHEMA, 500).then(r => { ms.pick = Date.now() - t0; return r || {}; });
+  const read = (await ask(models.read, _vibeReadPrompt(year), _VIBE_READ_SCHEMA, 700)) || {};
   ms.read = Date.now() - t0;
   // Only a name that is really in the query (the 8B now and then calls a vibe query a "person" one):
   // one of its words, accents stripped ("Tarantino movies" → Quentin Tarantino, "Penelope Cruz" →
   // Penélope Cruz). A query in a non-Latin script can't be checked that way, so the route is trusted.
+  // And TMDB must know a person by exactly that name (the 8B once made "New York" the person in
+  // "a gritty 70s new york crime film").
   const person = String(read.person || '').trim();
   const qKey = _vibeTitleKey(query), qWordSet = new Set(qKey.split(' '));
   const named = person.length > 2 && (!qKey || _vibeTitleKey(person).split(' ').some(w => w.length >= 3 && qWordSet.has(w)));
-  if (read.route === 'person' && named) {
+  if (read.route === 'person' && named && await _vibeIsPerson(person, env)) {
+    console.log(`[vibe-search] "${query.slice(0, 80)}" → the actor path for "${person}"`);
     remember({ delegate: 'person' }, 21600);
     return { legacy: true };
   }
@@ -2460,10 +2477,10 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
           { role: 'user', content: `Request: ${query}\n${english !== query ? `In English: ${english}\n` : ''}` +
             `Message: ${kind === 'rare' ? 'no real film is exactly like this; say so honestly and that these are the nearest.' : 'real films like this exist; be upbeat, never say nothing matches.'}\n` +
             (exclude.length ? `The user does NOT want: ${exclude.join('; ')}. Leave out any candidate that is.\n` : '') + '\nCandidates:\n' +
-            top.map(e => `${e.id}|${e.m.t} (${e.m.year || '?'})|${String(e.m.vt || '').split('|').join(', ')}|${String(e.m.o || '').slice(0, 220)}`).join('\n') },
+            top.map((e, i) => `${i + 1}|${e.m.t} (${e.m.year || '?'})|${String(e.m.vt || '').split('|').join(', ')}|${String(e.m.o || '').slice(0, 220)}`).join('\n') },
         ],
         response_format: { type: 'json_schema', json_schema: _VIBE_REPLY_SCHEMA },
-        max_tokens: 700,
+        max_tokens: 1500,
         temperature: 0.3,
       }),
       new Promise((_, reject) => setTimeout(() => reject(new Error(`no reply within ${deadline}ms`)), deadline)),
@@ -2476,8 +2493,8 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
   const reasons = {}, tags = {}, vibeTags = {}, fit = new Map();
   let fromReply = 0;
   for (const p of (Array.isArray(reply?.films) ? reply.films : [])) {
-    const id = Number(p?.id);
-    if (!byId.has(id) || fit.has(id)) continue;
+    const id = top[Number(p?.id) - 1]?.id;          // the reply numbers candidates 1..10
+    if (!id || fit.has(id)) continue;
     fit.set(id, Number.isInteger(p.fit) ? p.fit : 2);
     fromReply++;
     if (typeof p.reason === 'string' && p.reason.trim()) reasons[id] = p.reason.trim().replace(/[\n\r]+/g, ' ').slice(0, 140);

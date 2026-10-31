@@ -9377,19 +9377,18 @@ function _keywordResultsForModal(query) {
     .filter(x => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 18).map(x => x.m);
 }
 
-/* Feature flag: the AI panel asks /api/vibe-search (semantic search over our
-   own Vectorize catalog) instead of /api/ai-search. Opened with ?vibe=1 once,
-   which this browser remembers (localStorage ff_flag_vibe); ?vibe=0 turns it off.
-   Same response shape, so nothing below changes. */
+/* The AI panel asks /api/vibe-search (semantic search over our own Vectorize catalog, streamed)
+   for everyone; it hands anything it can't answer to /api/ai-search itself. ?vibe=0 opts this
+   browser out (localStorage ff_flag_vibe = '0', shared with Cinematic), ?vibe=1 opts it back in. */
 (function readVibeFlag() {
   try {
     const v = new URLSearchParams(location.search).get('vibe');
-    if (v === '1') localStorage.setItem('ff_flag_vibe', '1');
-    if (v === '0') localStorage.removeItem('ff_flag_vibe');
-  } catch { /* storage blocked: flag stays off */ }
+    if (v === '0') localStorage.setItem('ff_flag_vibe', '0');
+    if (v === '1') localStorage.removeItem('ff_flag_vibe');
+  } catch { /* storage blocked: the default (on) stands */ }
 })();
 function vibeSearchOn() {
-  try { return localStorage.getItem('ff_flag_vibe') === '1'; } catch { return false; }
+  try { return localStorage.getItem('ff_flag_vibe') !== '0'; } catch { return true; }
 }
 
 /* An open-world answer (an actor's films, or real films the AI picked: /api/ai-search's
