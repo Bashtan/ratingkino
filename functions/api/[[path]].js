@@ -2422,7 +2422,9 @@ async function handleVibeSearch(request, url, env, cors, waitUntil) {
       vibeTags,
       suggestedRefinements: (Array.isArray(reply?.refinements) ? reply.refinements : [])
         .filter(x => typeof x === 'string').map(x => x.trim().slice(0, 30)).filter(Boolean).slice(0, 4),
-      message: typeof reply?.message === 'string' ? reply.message.trim().slice(0, 240) : null,
+      // FF Bot always says something, even if the reply call failed (the 8B misses JSON mode now and then).
+      message: (typeof reply?.message === 'string' && reply.message.trim() ? reply.message.trim().slice(0, 240) : null) ||
+        (kind === 'rare' ? 'No film is exactly like that, but these come closest.' : kind === 'described' ? 'I think I found it!' : 'Here are some I think you\'ll love.'),
       translatedQuery: english,
       userLanguage: /^[a-z]{2}$/.test(String(parsed.userLanguage || '')) ? parsed.userLanguage : 'en',
     };
