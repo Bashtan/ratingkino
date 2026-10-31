@@ -12,3 +12,7 @@ dist/
 
 .wrangler/
 .DS_Store
+
+# Vibe-search ingest: TMDB/tag caches and the dev Worker's local state (tools/vibe/)
+tools/vibe/.cache/
+tools/vibe/.wrangler/

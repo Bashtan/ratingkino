@@ -27,6 +27,15 @@ database_id   = "261cc44d-36e9-4913-a1c9-b61e1aed949e"
 [ai]
 binding = "AI"
 
+# Vibe search (/api/vibe-search): the ~50K most-voted TMDB films as bge-m3
+# vectors (1024 dims, cosine), card data as metadata; metadata indexes on year,
+# runtime, rating, votes, lang. Filled by tools/vibe/ingest.mjs. remote = true
+# only affects local `wrangler pages dev`, which then queries the real index.
+[[vectorize]]
+binding    = "VECTORIZE"
+index_name = "findfilm-films"
+remote     = true
+
 # Preview deployments (any --branch other than main) get their own KV and D1.
 # Without this block Pages applies the top-level bindings above to previews too,
 # so every preview URL could write to the production cache and Pitch database.
@@ -44,3 +53,9 @@ database_id   = "ce6003b6-4584-43e0-8d0a-39669f6810ab"
 
 [env.preview.ai]
 binding = "AI"
+
+# A small copy for previews (same ingest, --env preview): never the production index.
+[[env.preview.vectorize]]
+binding    = "VECTORIZE"
+index_name = "findfilm-films-preview"
+remote     = true

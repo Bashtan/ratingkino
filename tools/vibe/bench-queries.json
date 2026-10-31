@@ -1,0 +1,36 @@
+[
+  { "id": "plot-1",  "kind": "plot",       "q": "weatherman stuck reliving the same day in a small town until he becomes a better person", "answer": [137] },
+  { "id": "plot-2",  "kind": "plot",       "q": "thieves who sneak into people's dreams to plant an idea", "answer": [27205] },
+  { "id": "plot-3",  "kind": "plot",       "q": "a lonely little robot cleaning up an abandoned earth falls in love", "answer": [10681] },
+  { "id": "plot-4",  "kind": "plot",       "q": "old man ties thousands of balloons to his house and flies off with a boy scout", "answer": [14160] },
+  { "id": "plot-5",  "kind": "plot",       "q": "guy with no short-term memory uses tattoos and polaroids to find his wife's killer", "answer": [77] },
+  { "id": "plot-6",  "kind": "plot",       "q": "kids on bikes in the 80s hide a lost alien from the government", "answer": [601] },
+  { "id": "plot-7",  "kind": "plot",       "q": "crew of a cargo spaceship hunted one by one by a creature that bursts out of someone's chest", "answer": [348] },
+  { "id": "plot-8",  "kind": "plot",       "q": "a rat who secretly cooks in a Paris restaurant by pulling a boy's hair", "answer": [2062] },
+  { "id": "plot-9",  "kind": "plot",       "q": "poor family slowly takes over a rich family's house by posing as tutors and a driver", "answer": [496243] },
+  { "id": "plot-10", "kind": "plot",       "q": "a man finds out his whole life is a reality TV show and his town is a giant set", "answer": [37165] },
+
+  { "id": "vibe-1",  "kind": "vibe",       "q": "a cozy rainy-day movie that feels like a warm hug" },
+  { "id": "vibe-2",  "kind": "vibe",       "q": "mind-bending sci-fi that will leave me thinking for days" },
+  { "id": "vibe-3",  "kind": "vibe",       "q": "a slow-burn thriller with a twist ending I won't see coming" },
+  { "id": "vibe-4",  "kind": "vibe",       "q": "feel-good underdog sports story" },
+  { "id": "vibe-5",  "kind": "vibe",       "q": "dark comedy about a heist that goes completely wrong" },
+  { "id": "vibe-6",  "kind": "vibe",       "q": "a beautiful animated film that will make adults cry" },
+  { "id": "vibe-7",  "kind": "vibe",       "q": "something like Amélie but darker" },
+  { "id": "vibe-8",  "kind": "vibe",       "q": "atmospheric neon synth vibes, night drives and loneliness" },
+
+  { "id": "cons-1",  "kind": "constraint", "q": "a 90s romantic comedy, nothing too long", "check": { "yearMin": 1990, "yearMax": 1999, "runtimeMax": 120 } },
+  { "id": "cons-2",  "kind": "constraint", "q": "Korean revenge thriller", "check": { "lang": "ko" } },
+  { "id": "cons-3",  "kind": "constraint", "q": "a funny family movie for tonight, no horror, under 100 minutes", "check": { "runtimeMax": 100, "noGenre": 27 } },
+  { "id": "cons-4",  "kind": "constraint", "q": "a recent space survival movie", "check": { "yearMin": 2014 } },
+
+  { "id": "lang-es", "kind": "multilingual", "q": "una película donde un hombre se queda atrapado en una isla desierta y habla con una pelota de voleibol", "answer": [8358] },
+  { "id": "lang-fr", "kind": "multilingual", "q": "un film poétique et chaleureux sur une jeune femme rêveuse qui aide les gens à Montmartre", "answer": [194] },
+  { "id": "lang-uk", "kind": "multilingual", "q": "фільм про хлопчика-сироту, який вступає до школи чарівників і бореться з темним лордом", "answer": [671, 672, 673, 674, 675, 767, 12444, 12445] },
+  { "id": "lang-de", "kind": "multilingual", "q": "ein beklemmender Film über die Besatzung eines deutschen U-Boots im Zweiten Weltkrieg", "answer": [387] },
+  { "id": "lang-zh", "kind": "multilingual", "q": "一个小女孩在神灵世界的澡堂里打工，想要救回变成猪的父母", "answer": [129] },
+  { "id": "lang-ar", "kind": "multilingual", "q": "فيلم عن سفينة ضخمة تغرق وقصة حب بين فتاة غنية وشاب فقير", "answer": [597] },
+
+  { "id": "absurd-1", "kind": "absurd",    "q": "a movie about a space cat running the mafia" },
+  { "id": "absurd-2", "kind": "absurd",    "q": "a romance between two rival chess-playing robots in medieval Japan" }
+]

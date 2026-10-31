@@ -9363,6 +9363,21 @@ function _keywordResultsForModal(query) {
     .filter(x => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 18).map(x => x.m);
 }
 
+/* Feature flag: the AI panel asks /api/vibe-search (semantic search over our
+   own Vectorize catalog) instead of /api/ai-search. Opened with ?vibe=1 once,
+   which this browser remembers (localStorage ff_flag_vibe); ?vibe=0 turns it off.
+   Same response shape, so nothing below changes. */
+(function readVibeFlag() {
+  try {
+    const v = new URLSearchParams(location.search).get('vibe');
+    if (v === '1') localStorage.setItem('ff_flag_vibe', '1');
+    if (v === '0') localStorage.removeItem('ff_flag_vibe');
+  } catch { /* storage blocked: flag stays off */ }
+})();
+function vibeSearchOn() {
+  try { return localStorage.getItem('ff_flag_vibe') === '1'; } catch { return false; }
+}
+
 /* Main AI search — routes every query through the backend's English intent
    translation + never-empty guarantee, then renders into the AI Results modal. */
 async function aiSearch(query) {
@@ -9386,9 +9401,10 @@ async function aiSearch(query) {
   try {
     const controller = new AbortController();
     _aiSearchAbort = controller;
-    const timeout = setTimeout(() => controller.abort(), 12000);
+    const vibe = vibeSearchOn();
+    const timeout = setTimeout(() => controller.abort(), vibe ? 20000 : 12000);
 
-    const r = await fetch('/api/ai-search', {
+    const r = await fetch(vibe ? '/api/vibe-search' : '/api/ai-search', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ query: cleanQuery, exclude }),
