@@ -2,7 +2,44 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-30) — Icon + Social-Preview Generator; Tags on Every Page (new mascot art pending)
+## ⚡ Most Recent Session (2026-10-30/31) — Vibe Search on Workers AI + Vectorize (dark launch behind `?vibe=1`)
+
+All commits on `main`, **live on https://findfilm.ai since 2026-10-31**: Pages production `65a24ae0`, from `2d442f3`. **Visitors don't see it:** the AI panel only calls the new route after `?vibe=1` (localStorage `ff_flag_vibe`; `?vibe=0` turns it off). `/api/vibe-search` itself is public.
+
+| Commit | Feature |
+|--------|---------|
+| `4ef30f3` | **`/api/vibe-search` (`handleVibeSearch()`), the flag and the ingest.**<br>**Vectorize indexes** (created 2026-10-30, 1024 dims, cosine): **`findfilm-films`** (production; 49,851 films) and **`findfilm-films-preview`** (2,000 films). Each has metadata indexes `year`, `runtime`, `rating` (vote_average×10), `votes` (numbers) and `lang` (string), all created **before** the first insert. Bound as **`VECTORIZE`** in `wrangler.toml`: the top level gets production; `[[env.preview.vectorize]]` gets preview. `remote = true` only affects `wrangler pages dev`.<br>**Ingest, `tools/vibe/`:**<br>• **`ingest.mjs`** phases (`select` · `details` · `tags` · `upsert` · `all`; resumable NDJSON caches in `tools/vibe/.cache/`, gitignored):<br>  – `select`: TMDB `/discover`, year by year, the 50,000 most-voted (cut-off: 31 votes).<br>  – `details`: details + keywords + credits for each.<br>  – `tags`: 6–10 vibe tags + a "feel" sentence per film, 10 films per Workers AI call (70B, JSON mode, `--conc 48` ≈ 150 calls/min, about 30 min for the lot).<br>  – `upsert`: text from `docText()` (title, year, genres, tagline, overview, keywords, vibe, feel, director, cast) → bge-m3 → vector `m<tmdbId>`, with `metadata()` holding the TMDB row the panel needs.<br>  – Only films with both details and tags; `--max N` for the preview index. The progress log is named after the index the Worker reports (`upserted-<index>.txt`).<br>• It drives **`worker.js`**, a dev-only Worker (`tools/vibe/wrangler.toml`, remote AI + Vectorize, `INDEX_NAME` var). Run it with `npx wrangler dev --config tools/vibe/wrangler.toml --port 8790`; preview: `--env preview --port 8791`. Routes: `/tags`, `/upsert`, `/query`, `/info`.<br>**Classic `index.html`:** `readVibeFlag()` / `vibeSearchOn()`; `aiSearch()` uses `/api/vibe-search` with a 20s timeout when the flag is on.<br>**Review:** an adversarial review (26 agents) confirmed 13 findings, all fixed:<br>• exclusions reach both models; `_vibeExcludeGenres()` maps a phrase to genres only when it is nothing but genres ("family drama" stays with the models); other exclusions match whole tags or keywords;<br>• `zh` also searches TMDB's `cn` (`_TMDB_LANG`);<br>• cache key `vbs:v2:<sha-256>`, 6h only when every stage worked, 5 min otherwise, never from `?debug=1`;<br>• a person query caches a `{delegate}` marker. |
+| `7e5b645` | **Benchmark-driven redesign: the 70B's own picks plus the catalog.**<br>**Pipeline:** parse (70B, JSON mode) → `english`, `synopsis`, **`guesses`** (the described film plus up to 6 well-loved fits), **`likeTitles`** ("like X" never returns X), **`kind`** (`described` \| `plenty` \| `rare`), year/runtime/language limits, genres to avoid.<br>**Search:** embed query + rewrite + synopsis (bge-m3, one call) → Vectorize top 50 each (filtered) → reciprocal-rank merge. In parallel, each guess is looked up by title with **`_tmdbFindMovie()`** and fetched with **`VECTORIZE.getByIds()`**; it's kept only if it's in the catalog and inside the limits. A bare "Up (2009)" **embedded** nearest "Up in the Air", which is why guesses are not embedded.<br>**Rerank:** bge-reranker-base already returns a 0..1 score (a second sigmoid had flattened it all to ~0.5).<br>**Blend:** 0.35·reranker (only when its max ≥ 0.2) + 0.30·reciprocal rank + 0.15·rating + 0.20·votes, + 0.25 for a confirmed guess (0.08 when `kind` is `rare`), − 0.15 for a non-guess whose title only echoes a query word (`echo()`).<br>**Reply:** `@cf/meta/llama-3.1-8b-instruct-fp8-fast` (the 70B took 5–10s) **grades** the top 10 (`fit` 0–3, a reason, tags); the blend keeps the order, and misfits drop while 6 or more remain. `match` comes from `kind`.<br>**Debug:** `?debug=1&pm=<70b\|8b\|scout>&rm=…` compares models. `tools/vibe/bench.mjs --reuse-old` reuses the old engine's answers. |
+| `2d442f3` | **FF Bot always has a message.** When the 8B misses JSON mode, a template message by `kind` is used. |
+
+**Benchmark** (`tools/vibe/bench-queries.json`: 30 queries; run locally against `wrangler pages dev`):
+- **Known answers** (10 half-remembered plots + 6 in es/fr/uk/de/zh/ar): vibe **16/16 at #1**, old 16/16.
+- **Constraints, checked in code:** vibe broke 0 of 24 stated limits, old 4 of 24.
+- **Blind panel** (3 judges per query, A/B shuffled, 14 vibe/constraint/absurd queries):
+
+| Round | Vibe | Old | Queries won |
+|---|---|---|---|
+| 1 (first design) | 5.4/10 | 6.8/10 | vibe 4, old 10 |
+| 2 (`7e5b645` before its last fixes) | **6.3/10** | 6.5/10 | **vibe 6, old 5, tie 3** |
+
+- Round 2's remaining losses were addressed in `7e5b645`, untested by judges: "Amélie but darker" (title echoes), "recent space survival" ("recent" now 10 years), "90s rom-com, nothing too long" (now 120 min). The heist comedy and Korean revenge losses were not addressed.
+- **Absurd premises:** vibe was honest 6 of 6 times, old 0 of 6 ("space cat running the mafia" → Cat City).
+
+**Latency on production:** 9.5–11s for a fresh search, against about 8s for the old one. The 70B parse is 4–6s of that; the all-70B version took 10–17s. A KV hit takes **29 ms**, but the entry needs about a minute to propagate.
+
+**Known limits / gotchas**
+- **Order and the space-cat list vary between runs.** The 70B's guesses differ each time.
+- **The 8B reply sometimes misses JSON mode.** The reasons then fall back to the films' feel lines and the template message.
+- **`@cf/meta/llama-3.1-8b-instruct` was deprecated on 2026-05-30**, although Cloudflare's JSON-mode page still lists it. `…-fp8-fast` works with JSON mode.
+- **Llama 4 Scout was slower, with odd guesses** (The Avengers for the balloon house).
+- **Vectorize processes upserts asynchronously:** wait for `/info` `vectorCount` before benchmarking. Metadata indexes appear in `list-metadata-index` a little after `create-metadata-index` returns.
+- **The index is the 50K most-voted films only.** Fresh releases need a nightly ingest; that's a Pending item.
+- **Workers in a dev `worker.js` cannot have named exports:** workerd treats every export as an entrypoint.
+- **zsh doesn't word-split `$VAR`.** A `set -- $P` loop passed "year number" to wrangler as one argument.
+
+---
+
+## Session (2026-10-30) — Icon + Social-Preview Generator; Tags on Every Page (new mascot art pending)
 
 Committed on `main`. **Not deployed:** the deploy waits for the new art (the mascot holding a clapperboard). Then the owner runs the Facebook and LinkedIn sharing debuggers once. Production is still `c131bc9a`.
 
@@ -2629,6 +2666,9 @@ ratingkino/
 │                           painted in, no real alpha). raw/ is not published.
 ├── tools/mascot/         ← cut.sh + checker.py / matte.py / slice.py: pose sheet →
 │                           ff-bot-moods.webp, and the ?v= bumps. Not published.
+├── tools/vibe/           ← vibe-search ingest + benchmark: ingest.mjs (TMDB → tags → Vectorize),
+│                           worker.js + wrangler.toml (dev-only Worker, remote AI + Vectorize),
+│                           bench.mjs + bench-queries.json; .cache/ gitignored. Not published.
 ├── tools/icons/          ← make.py + og.html: raw/ff-bot-clapper.png → favicon.ico, all
 │                           assets/ icons (incl. icon-maskable-*), og-image.jpg, the manifest's
 │                           icons list, and every ?v= on them. Not published.
@@ -2775,6 +2815,7 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 | `GET /api/geo-lang` | GET | Detect language from visitor's country (`request.cf.country`) |
 | `POST /api/translate` | POST | Translate text via `@cf/meta/m2m100-1.2b`; body: `{text, targetLang}` |
 | `POST /api/ai-search` | POST | Semantic search via `@cf/meta/llama-3.3-70b-instruct-fp8-fast`; body: `{query}` |
+| `POST /api/vibe-search` | POST | Vibe search over Vectorize `findfilm-films` (`handleVibeSearch()`, see the 2026-10-30/31 block); body `{query, exclude}`; same `aiCurated` payload plus `vibeSearch`, `match`; `?debug=1` adds parse / timings / scores and skips the cache |
 | `GET /api/search` | GET | Title-first tiered search; params `q`, `type` (`movie` or `tv`), `page`, `lang`. Tier 1 title/name match (sub-sorted by `_serverTitleScore`), Tier 2 overview match, Tier 2b other TMDB hits, Tier 3 movie-only semantic (KV catalog + Llama; page 1, only when Tier 1 has < 3 hits and the query has ≥ 3 words). Returns TMDB-shaped `results` plus `_tiers`; matching reads `title` / `original_title` for movies and `name` / `original_name` for TV (`_resultTitles`) |
 | `GET /api/tmdb/*` | GET | Proxy to `api.themoviedb.org/3/*` (injects `TMDB_KEY`) |
 | `GET /api/omdb` | GET | Proxy to `www.omdbapi.com` (injects `OMDB_KEY`) |
@@ -2960,6 +3001,7 @@ Taste profile stored in `localStorage['rk_taste_v1']`: `{ genres: {}, directors:
 | `ff_layout` | `classic` \| `cinematic` — read by the layout router at the top of `index.html` |
 | `ff_mascot_off` | `'1'` once the corner mascot's × was clicked (`assets/social.js`); `#ffm` is removed on load in both layouts |
 | `ff_welcome_seen` | `'1'` once the mascot's first-visit tip has been shown (`FFBot.welcome`, `assets/social.js`) |
+| `ff_flag_vibe` | `'1'` = the AI panel uses `/api/vibe-search` (set by `?vibe=1`, cleared by `?vibe=0`; `readVibeFlag()` in Classic) |
 | `ff_hello_seen` | `'1'` once Classic's hero mascot has said "Need a recommendation?" by itself, or the search was already in use (`hello()`, `assets/social.js`) |
 | `ff_fresh_reload` (**sessionStorage**) | The `/build.json` build `assets/fresh.js` last reloaded the page for — it never reloads twice for the same build |
 | `rk_ios_pwa_dismissed` | Timestamp of last iOS PWA bottom-sheet dismiss (15-day cooldown) |
@@ -3048,6 +3090,14 @@ The site is fully installable as a PWA on all platforms.
 - [x] **TV ranking bug in `/api/search`** — fixed in `ca02d1f` (`_resultTitles`): TV results are bucketed and scored by `name` / `original_name`; "the bear" 4th → 1st, "succession" 3rd → 1st. Classic's TV tab benefits; Cinematic still calls TMDB `/search/tv` directly
 - [x] **Ship the `/api/search` TV ranking fix** (`ca02d1f`) — merged, pushed and deployed 2026-10-08 (production `6ce11eb0`); verified on findfilm.ai and ratingkino.com
 - [ ] **Diacritic-insensitive title matching in `/api/search`** — fold accents on the query and on `_resultTitles()` output so "shogun" finds *Shōgun* and "amelie" finds *Amélie* in Tier 1; it changes movie ranking too, so it needs the owner's go-ahead
+- [ ] **Vibe search, next**:
+  - [ ] **Speed:** stream the answer (SSE): cards at about 5s, then FF Bot's reasons. Or find a faster parse that keeps the 70B's picks.
+  - [ ] **Nightly ingest:** the new and changed films, from TMDB's `/movie/changes`.
+  - [ ] **TV shows:** in the index (a namespace or `type`), which also closes the AI-search-for-TV item below.
+  - [ ] **"More like this":** on every card (query by the film's own vector), and **Taste DNA** as the average of liked films' vectors.
+  - [ ] **The owner tries it** on findfilm.ai with `?vibe=1`.
+  - [ ] **A 3rd judge round** after `7e5b645`'s last fixes.
+  - [ ] **Decide on rollout:** when to make it the default.
 - [ ] **AI search for TV shows** — `/api/ai-search` is films-only (LLM curation + `search/movie` lookups + movie KV catalog); Cinematic and Classic fall back to title search on the TV tab
 - [ ] **Cinematic gaps vs Classic**: voice search (the 9-language UI, TV browsing, TV deep links and the Watchlist are done)
 - [ ] **Beta UI prototype feedback** (now `cinematic/index.html`; old preview https://beta-ui.ratingkino.pages.dev) — collect the owner's feedback, then decide: ship it at `/beta/` (add `beta` to `PUBLIC`), port pieces into `index.html`, or iterate. Not yet in it: voice (the watchlist landed in `89d2a3c`, the TV tab in `3a93af7`, i18n in `cec4746`)
