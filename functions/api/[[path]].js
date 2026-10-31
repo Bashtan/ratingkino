@@ -62,6 +62,11 @@ export async function onRequest({ request, env, params, waitUntil }) {
     return handleSearch(request, env, cors, waitUntil);
   }
 
+  /* ── /api/title-search ── Cinematic's exact title search, AI fixes typos and languages ── */
+  if (path === '/title-search') {
+    return handleTitleSearch(url, env, cors, waitUntil);
+  }
+
   /* ── /api/ai-search ── semantic movie search via Cloudflare AI ── */
   if (path === '/ai-search') {
     return handleAISearch(request, env, cors, waitUntil);
@@ -697,6 +702,221 @@ async function handleSearch(request, env, cors, waitUntil) {
     _tiers: { t1: tier1.length, t2: tier2.length, t2b: tier2b.length, t3: tier3.length },
     _query: effectiveQuery !== query ? { raw: query, effective: effectiveQuery } : undefined,
   });
+}
+
+/* ─── /api/title-search — Cinematic's search box: exact titles, AI-assisted ───
+ * GET ?q=&type=movie|tv&lang=<TMDB locale>
+ * 1. TMDB /search/{type} on the title as typed, plus the same title narrowed to a
+ *    trailing year ("Dune 1984"). TMDB matches original, translated and alternative
+ *    titles, so "Le Parrain" or "千と千尋の神隠し" are found here already. Ranked
+ *    exact > prefix > all words > TMDB's own (a title in another language).
+ * 2. No title with every word, or only obscure ones → the AI names the official title(s) the text means
+ *    (typos, missing words, a transliteration, a title in another language). Those
+ *    are searched and go first. `corrected` carries the top one's title in the page's
+ *    language, for the "matched by AI" note, unless the text was part of that title. The AI's answer is cached for a
+ *    week: tsr:v1:<sha-256 of type + normalised query>.
+ *    Before the AI, a cheap exact check: well-known films TMDB matched only by another
+ *    language's title whose translated title is exactly the text (_titleTranslated).
+ * Response: { results (TMDB objects), corrected, via: 'ai' | 'translation' | null }. ?debug=1&fx=8b|70b skips the cache.
+ */
+const TITLE_FIX_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+const _TITLE_FIX_SCHEMA = {
+  type: 'object',
+  properties: {
+    titles: {
+      type: 'array', maxItems: 3,
+      items: {
+        type: 'object',
+        properties: { title: { type: 'string' }, original: { type: 'string' }, year: { type: 'integer' } },
+        required: ['title'],
+      },
+    },
+  },
+  required: ['titles'],
+};
+const _titleFixPrompt = type => {
+  const what = type === 'tv' ? 'TV series' : 'film';
+  return `You fix title searches on a ${what} site. The user typed the title of a real ${what}, often badly: ` +
+    'typos (swapped, missing or doubled letters), missing words, a number for a sequel ("godfahter 2"), a ' +
+    'transliteration, or a title in another language. A translated title is often not a literal translation: ' +
+    'name the work released under that title in that language. ' +
+    `Return the official title(s) it most likely means, best first, at most 3: "title" = the English title as listed ` +
+    `on TMDB, "original" = the original-language title, "year" = the ${type === 'tv' ? 'first air' : 'release'} year. ` +
+    `Only real ${what === 'film' ? 'films' : 'TV series'}. Return an empty list only when the text is clearly not a ` +
+    'title: random letters, or just a person\'s name.';
+};
+
+// "Amélie", "AMELIE" and "amélie!" are one title; any script (accents and marks dropped).
+function _titleKey(t) {
+  return String(t || '').toLowerCase().normalize('NFKD').replace(/\p{M}/gu, '')
+    .replace(/&/g, ' and ').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+// A leading article doesn't make a different title: "Godfather" is "The Godfather". Only
+// unambiguous ones: German "die" or Swedish "en" would make "Die Hard" the same as "Hard".
+const _titleBare = k => k.replace(/^(the|a|an|le|la|les|l|el|los|las) /, '');
+
+// 4 exact (articles aside) · 3 prefix · 2 every word · 1 TMDB's match (a title in another language).
+function _titleScore(r, key) {
+  if (!key) return 0;
+  const names = [r.title || r.name, r.original_title || r.original_name].map(_titleKey).filter(Boolean);
+  const bare = _titleBare(key);
+  if (names.some(n => n === key || _titleBare(n) === bare)) return 4;
+  if (names.some(n => n.startsWith(key + ' ') || _titleBare(n).startsWith(bare + ' ') || (key.length >= 4 && n.startsWith(key)))) return 3;
+  const words = bare.split(' ');
+  if (names.some(n => { const have = new Set(n.split(' ')); return words.every(w => have.has(w)); })) return 2;
+  return 1;
+}
+
+async function _tmdbTitleSearch(type, query, year, lang, env) {
+  const u = new URL(`https://api.themoviedb.org/3/search/${type}`);
+  u.searchParams.set('api_key', env.TMDB_KEY);
+  u.searchParams.set('query', query);
+  u.searchParams.set('language', lang);
+  u.searchParams.set('include_adult', 'false');
+  if (year) u.searchParams.set(type === 'tv' ? 'first_air_date_year' : 'primary_release_year', String(year));
+  const r = await fetch(u.toString(), { headers: { 'User-Agent': 'FindFilm.ai/1.0' } });
+  if (!r.ok) throw new Error(`TMDB ${r.status}`);
+  return (await r.json()).results || [];
+}
+
+// The best-first list for one wanted title: score, then the better-known film among equals.
+function _titleRank(results, key, year) {
+  const yearOf = r => parseInt((r.release_date || r.first_air_date || '').slice(0, 4), 10) || 0;
+  return results
+    .map((r, i) => ({ r, i, s: _titleScore(r, key) + (year && yearOf(r) === year ? 0.5 : 0) }))
+    .sort((a, b) => b.s - a.s || (a.s >= 3 ? (b.r.vote_count || 0) - (a.r.vote_count || 0) : a.i - b.i));
+}
+
+// Well-known films TMDB found only by a title in another language ("Початок" → Inception, whose
+// Ukrainian title it is, below "The Beginning"): the ones whose translated title is exactly the text.
+async function _titleTranslated(type, ranked, key, env) {
+  const bare = _titleBare(key);
+  const pool = ranked.filter(x => x.s < 2 && (x.r.vote_count || 0) >= (type === 'tv' ? 100 : 300)).slice(0, 4);
+  const hits = await Promise.all(pool.map(async ({ r }) => {
+    try {
+      const res = await fetch(`https://api.themoviedb.org/3/${type}/${r.id}/translations?api_key=${env.TMDB_KEY}`, { headers: { 'User-Agent': 'FindFilm.ai/1.0' } });
+      const d = res.ok ? await res.json() : null;
+      return (d?.translations || []).some(tr => {
+        const k = _titleKey(tr.data?.title || tr.data?.name);
+        return k && (k === key || _titleBare(k) === bare);
+      }) ? r : null;
+    } catch { return null; }
+  }));
+  return hits.filter(Boolean).sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0));
+}
+
+// The AI's reading of a title TMDB couldn't place: [{title, original, year}], [] for "not a title",
+// null when the AI failed. Cached for a week (tsr:v1:<sha-256 of type + normalised text>).
+async function _titleFixes(type, raw, key, { env, debug, waitUntil, model }) {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${type}|${key}`)));
+  const cacheKey = 'tsr:v1:' + [...digest].map(b => b.toString(16).padStart(2, '0')).join('');
+  if (!debug && env.MOVIES_CACHE) {
+    const hit = await env.MOVIES_CACHE.get(cacheKey, 'json').catch(() => null);
+    if (hit) return hit;
+  }
+  const out = await Promise.race([
+    env.AI.run(model || TITLE_FIX_MODEL, {
+      messages: [{ role: 'system', content: _titleFixPrompt(type) }, { role: 'user', content: raw }],
+      response_format: { type: 'json_schema', json_schema: _TITLE_FIX_SCHEMA },
+      max_tokens: 300,
+      temperature: 0,
+    }).then(_vibeJSON),
+    new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000)),
+  ]).catch(e => { console.error('[title-search] AI failed:', e.message); return null; });
+  if (!out || !Array.isArray(out.titles)) return null;
+  const fixes = out.titles
+    .filter(f => f && typeof f.title === 'string' && f.title.trim())
+    .slice(0, 3)
+    .map(f => ({ title: f.title.trim().slice(0, 120), original: String(f.original || '').trim().slice(0, 120), year: Number.isInteger(f.year) ? f.year : null }));
+  if (!debug && env.MOVIES_CACHE) {
+    const w = env.MOVIES_CACHE.put(cacheKey, JSON.stringify(fixes), { expirationTtl: 7 * 86400 }).catch(() => {});
+    if (waitUntil) waitUntil(w);
+  }
+  return fixes;
+}
+
+// Each title the AI named → its exact (else prefix) TMDB matches, in the AI's order.
+async function _titleFixHits(type, fixes, lang, env) {
+  const yearOf = r => parseInt((r.release_date || r.first_air_date || '').slice(0, 4), 10) || 0;
+  const found = await Promise.all(fixes.map(async f => {
+    const keys = [_titleKey(f.title), _titleKey(f.original)].filter(Boolean);
+    const tries = [[f.title, f.year], [f.title, null]];
+    if (f.original && keys[1] !== keys[0]) tries.push([f.original, null]);
+    for (const [q, y] of tries) {
+      const res = await _tmdbTitleSearch(type, q, y, lang, env).catch(() => []);
+      const hits = res
+        .map(r => ({ r, s: Math.max(...keys.map(k => _titleScore(r, k))) + (f.year && yearOf(r) === f.year ? 0.5 : 0) }))
+        .filter(x => x.s >= 3)
+        .sort((a, b) => b.s - a.s || (b.r.vote_count || 0) - (a.r.vote_count || 0));
+      if (hits.length) return hits[0].s >= 4 ? hits.filter(x => x.s >= 4).slice(0, 3) : hits.slice(0, 3);
+    }
+    return [];
+  }));
+  const seen = new Set();
+  return found.flat().map(x => x.r).filter(r => !seen.has(r.id) && seen.add(r.id));
+}
+
+async function handleTitleSearch(url, env, cors, waitUntil) {
+  const t0 = Date.now();
+  const json = (body, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...cors } });
+  // Taken as typed: no filler stripping here, a title can start with "Get", "Like" or "Please".
+  const raw = (url.searchParams.get('q') || '').trim().replace(/\s+/g, ' ').slice(0, 200);
+  const type = url.searchParams.get('type') === 'tv' ? 'tv' : 'movie';
+  const rawLang = (url.searchParams.get('lang') || 'en-US').trim();
+  const lang = /^[a-z]{2}(-[A-Z]{2})?$/.test(rawLang) ? rawLang : 'en-US';
+  const debug = url.searchParams.get('debug') === '1';
+  if (!raw) return json({ results: [], corrected: null, ai: false });
+
+  const key = _titleKey(raw);
+  // "Dune 1984" / "Dune (1984)": also the title alone, in that year. "Blade Runner 2049" stays whole.
+  const ym = raw.match(/^(.+?)[\s(]+((?:18|19|20)\d\d)\)?$/);
+  const yr = ym && Number(ym[2]) <= new Date().getUTCFullYear() + 3 ? Number(ym[2]) : null;
+  const base = yr ? ym[1].trim() : null;
+
+  let ranked;
+  try {
+    const [whole, inYear] = await Promise.all([
+      _tmdbTitleSearch(type, raw, null, lang, env),
+      base ? _tmdbTitleSearch(type, base, yr, lang, env).catch(() => []) : [],
+    ]);
+    const best = new Map();                      // id → {r, s}: the better reading of each result
+    for (const x of [..._titleRank(whole, key, null), ..._titleRank(inYear, _titleKey(base), yr)]) {
+      if (!best.has(x.r.id) || best.get(x.r.id).s < x.s) best.set(x.r.id, x);
+    }
+    ranked = [...best.values()].sort((a, b) => b.s - a.s || (a.s >= 3 ? (b.r.vote_count || 0) - (a.r.vote_count || 0) : 0));
+  } catch (e) {
+    console.error(`[title-search] TMDB failed q="${raw.slice(0, 80)}" ${e.message}`);
+    return json({ error: 'Search failed', detail: e.message }, 502);
+  }
+
+  // A title with every word in it is the answer, unless it's a film hardly anyone has rated:
+  // then the text may be a famous film's title in another language ("El Padrino" is also a
+  // 2004 film, "Le Parrain" a film with no votes), so the AI is asked too. Its pick goes first.
+  const top = ranked[0];
+  const strong = top && top.s >= 2 && (top.r.vote_count || 0) >= (type === 'tv' ? 30 : 100);
+  let fixes = null, corrected = null, fixed = [], via = null;
+  if (!strong) {
+    const aiP = env.AI ? _titleFixes(type, raw, key, { env, debug, waitUntil, model: debug && VIBE_ALT_MODELS[url.searchParams.get('fx')] }) : Promise.resolve(null);
+    const translated = await _titleTranslated(type, ranked, key, env);
+    if (translated.length) {
+      fixed = translated;                        // certain: its own title in some language, exactly
+      via = 'translation';
+      if (waitUntil) waitUntil(aiP);             // the AI's answer is still cached for next time
+    } else {
+      fixes = await aiP;
+      fixed = await _titleFixHits(type, fixes || [], lang, env);
+      if (fixed.length) via = 'ai';
+    }
+    // A note only when the text wasn't simply part of that title ("lord of rings" is).
+    if (fixed.length && _titleScore(fixed[0], key) < 2) corrected = fixed[0].title || fixed[0].name;
+  }
+
+  const ids = new Set(fixed.map(r => r.id));
+  const results = [...fixed, ...ranked.map(x => x.r).filter(r => !ids.has(r.id))];
+  console.log(`[title-search] "${raw.slice(0, 80)}" ${type} ${lang} | best=${ranked[0]?.s ?? 0} tmdb=${ranked.length}` +
+    `${via === 'translation' ? ` translated → ${fixed.length}` : ''}${fixes ? ` ai=[${fixes.map(f => f.title).join(' | ')}] → ${fixed.length}` : ''} | ${Date.now() - t0}ms`);
+  return json({ results, corrected, via, ...(debug ? { debug: { fixes, best: ranked.slice(0, 5).map(x => [x.r.title || x.r.name, x.s]) } } : {}) });
 }
 
 /* Translate a short query to English using m2m100 (same model as desc translation).
@@ -2703,6 +2923,9 @@ async function handleGroupPicker(request, env, cors, waitUntil) {
    experience it delivers" for ANY movie. Generated on demand by the LLM
    and cached in KV (key fit:{id}) so repeat opens are instant.
 ════════════════════════════════════════════════════════════════════ */
+// The site's languages, by the name the model is asked to write in.
+const _FIT_LANGS = { en: 'English', es: 'Spanish', fr: 'French', zh: 'Simplified Chinese', ar: 'Arabic', uk: 'Ukrainian', de: 'German', sv: 'Swedish', no: 'Norwegian (Bokmål)' };
+
 async function handleFitSummary(request, env, cors, waitUntil) {
   const json = (body, status = 200) =>
     new Response(JSON.stringify(body), {
@@ -2712,10 +2935,12 @@ async function handleFitSummary(request, env, cors, waitUntil) {
 
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
-  let id, title, year, genres, overview;
+  let id, title, year, genres, overview, type, lang;
   try {
     const body = await request.json();
     id       = Number(body.id);
+    type     = body.type === 'tv' ? 'tv' : 'movie';             // Cinematic sends type + lang; Classic sends neither
+    lang     = _FIT_LANGS[body.lang] ? body.lang : 'en';
     title    = (body.title || '').toString().trim().slice(0, 200);
     year     = (body.year || '').toString().trim().slice(0, 8);
     genres   = Array.isArray(body.genres)
@@ -2730,7 +2955,8 @@ async function handleFitSummary(request, env, cors, waitUntil) {
   if (!env.AI) return json({ error: 'AI not available' }, 503);
 
   // ── KV cache lookup ──────────────────────────────────────────────
-  const cacheKey = `fit:${id}`;
+  // fit:<id> is an English film (Classic's key); a show or another language has its own.
+  const cacheKey = type === 'movie' && lang === 'en' ? `fit:${id}` : `fit:${type}:${id}:${lang}`;
   if (env.MOVIES_CACHE) {
     try {
       const hit = await env.MOVIES_CACHE.get(cacheKey);
@@ -2751,10 +2977,11 @@ async function handleFitSummary(request, env, cors, waitUntil) {
     '"skipIf": "who should skip it, one honest sentence", ' +
     '"experience": "the kind of experience it delivers (tone/pace/feel), one sentence" }. ' +
     'Each value MUST be a single sentence, max 140 characters, concrete and punchy — ' +
-    'no generic filler like "if you like good movies".';
+    'no generic filler like "if you like good movies".' +
+    (lang !== 'en' ? ` Write the three values in ${_FIT_LANGS[lang]}; keep the JSON keys in English.` : '');
 
   const userPrompt =
-    `Movie: "${title}"${year ? ` (${year})` : ''}\n` +
+    `${type === 'tv' ? 'TV series' : 'Movie'}: "${title}"${year ? ` (${year})` : ''}\n` +
     (genres ? `Genres: ${genres}\n` : '') +
     (overview ? `Overview: ${overview}\n` : '') +
     `\nWrite the spoiler-free fit guidance as JSON.`;

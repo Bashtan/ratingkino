@@ -338,7 +338,6 @@ img.fade.loaded { opacity: 1; }
   box-shadow: var(--edge), 0 0 0 5px rgba(255, 255, 255, .03), 0 28px 70px -20px rgba(0, 0, 0, .9);
 }
 .cmd-icon { flex-shrink: 0; color: var(--text-2); transition: color .3s; }
-.cmd-icon.off { display: none; }                                    /* spark = AI search (Movies); magnifier = title search (TV Shows) */
 .cmd:focus-within .cmd-icon { color: #fff; }
 .cmd-input-wrap { position: relative; flex: 1; min-width: 0; height: 100%; }
 .cmd-input {
@@ -420,6 +419,8 @@ img.fade.loaded { opacity: 1; }
 }
 @keyframes text-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
 .link-btn { color: #fff; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; border-radius: 6px; }
+.ai-note { display: inline-flex; align-items: center; gap: 5px; }   /* "✦ Matched by AI from …" */
+.ai-note svg { color: #fff; }
 @media (hover: hover) and (pointer: fine) { .link-btn:hover { text-decoration: underline; text-underline-offset: 3px; } }
 .pill-btn {
   flex-shrink: 0; height: 38px; padding: 0 16px; border-radius: 999px;
@@ -625,6 +626,11 @@ img.fade.loaded { opacity: 1; }
 }
 .qv-why svg { flex-shrink: 0; margin-top: 2px; color: #fff; }
 .qv-why b { display: block; margin-bottom: 2px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: #fff; }
+.qv-take > div { flex: 1; min-width: 0; }                             /* FindFilm AI's take (/api/fit-summary) */
+.qv-take dl { display: grid; gap: 8px; margin: 6px 0 0; }
+.qv-take dt { font-size: 12.5px; font-weight: 600; color: #fff; }
+.qv-take dd { margin: 0; }
+.qv-take .sk-lines { margin-top: 8px; }
 .qv-genres { display: flex; flex-wrap: wrap; gap: 8px; }
 .gchip { font-size: 13px; padding: 6px 12px; border-radius: 999px; background: var(--fill-1); color: #d4d4d8; }
 .qv-copy { display: grid; gap: 10px; }
@@ -770,7 +776,7 @@ img.fade.loaded { opacity: 1; }
 <!-- Watchlist storage, shared with Classic: one typed list (rk_watchlist_v2). Synchronous on purpose: the page script below reads it at once. -->
 <script src="/assets/watchlist.js?v=64c31e42"></script>
 <!-- UI strings in 9 languages, shared with Classic (window.FF_I18N). Synchronous on purpose: the page script translates the page before it first paints. -->
-<script src="/assets/i18n.js?v=97aeda61"></script>
+<script src="/assets/i18n.js?v=fca797c1"></script>
 <script>
 /* The saved language (rk_lang, shared with Classic) sets <html lang dir> now,
    so an Arabic page is right-to-left from its first paint. */
@@ -842,7 +848,7 @@ img.fade.loaded { opacity: 1; }
     </div>
     <form class="mini-search" id="miniSearch" role="search" aria-label="Search films">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="miniInput" type="search" placeholder="Ask FindFilm AI…" enterkeyhint="search" autocomplete="off" spellcheck="false" maxlength="300" aria-label="Describe what you want to watch">
+      <input id="miniInput" type="search" placeholder="Enter a film title…" enterkeyhint="search" autocomplete="off" spellcheck="false" maxlength="200" aria-label="Exact film title, in any language">
       <kbd class="kbd" id="kbdHint">⌘K</kbd>
     </form>
     <div class="topbar-right">
@@ -870,23 +876,22 @@ img.fade.loaded { opacity: 1; }
     <div class="hero-inner">
       <p class="eyebrow">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>
-        FindFilm AI · Beta
+        <span data-i18n="cin.eyebrow">FindFilm AI · Title search</span>
       </p>
-      <h1 class="hero-title" id="heroTitle" data-i18n="cin.heroTitle">What are you in the mood for?</h1>
-      <p class="hero-sub" id="heroSub">Describe a feeling, a plot, or a vibe. We’ll find the film.</p>
+      <h1 class="hero-title" id="heroTitle" data-i18n="cin.heroTitle">Type a title. AI does the rest.</h1>
+      <p class="hero-sub" id="heroSub">Exact title search for films, powered by AI. Typos and any language welcome.</p>
 
       <div class="seg" id="seg" data-ctype="movie" role="group" aria-label="Browse movies or TV shows" data-i18n-aria="cin.segLabel">
         <button class="seg-opt" type="button" data-ctype="movie" aria-pressed="true" data-i18n="nav.movies">Movies</button>
         <button class="seg-opt" type="button" data-ctype="tv" aria-pressed="false" data-i18n="nav.tvShows">TV Shows</button>
       </div>
 
-      <form class="cmd" id="cmdForm" role="search" aria-label="AI film search">
+      <form class="cmd" id="cmdForm" role="search" aria-label="AI-powered film title search">
         <div class="cmd-glow" aria-hidden="true"></div>
         <div class="cmd-field">
-          <svg class="cmd-icon" id="cmdIconAI" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>
-          <svg class="cmd-icon off" id="cmdIconSearch" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <svg class="cmd-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.4 3.9 1.5 6.2 3.1 7.6 1.4 1.3 3.5 2 6.4 2.4-2.9.4-5 1.1-6.4 2.4-1.6 1.4-2.7 3.7-3.1 7.6-.4-3.9-1.5-6.2-3.1-7.6-1.4-1.3-3.5-2-6.4-2.4 2.9-.4 5-1.1 6.4-2.4 1.6-1.4 2.7-3.7 3.1-7.6z"/></svg>
           <div class="cmd-input-wrap">
-            <input class="cmd-input" id="cmdInput" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false" maxlength="300" aria-label="Describe what you want to watch">
+            <input class="cmd-input" id="cmdInput" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false" maxlength="200" aria-label="Exact film title, in any language">
             <div class="cmd-ph" id="cmdPh" aria-hidden="true"><span class="cmd-ph-text" id="cmdPhText"></span><span class="cmd-caret"></span></div>
           </div>
           <button class="cmd-clear" id="cmdClear" type="button" aria-label="Clear search" data-i18n-aria="cin.clearSearch">
@@ -949,7 +954,7 @@ img.fade.loaded { opacity: 1; }
   </section>
   <!-- Text: cin.foot, with {tmdb} standing for the link (translateStatic). -->
   <footer class="foot" id="foot">
-    FindFilm.ai Beta — a design prototype for feedback. Film data from
+    FindFilm.ai — exact title search, powered by AI. Film data from
     <a href="https://www.themoviedb.org" target="_blank" rel="noopener">TMDB</a>; this product uses the TMDB API but is not endorsed or certified by TMDB.
   </footer>
 </main>
@@ -1026,9 +1031,7 @@ const CHIPS = [
 
 /* ── TV Shows ──
    TV has its own genre ids (10765 = Sci-Fi & Fantasy, not 878) and date fields (first_air_date),
-   so the film chips can't be reused. AI search exists for films only (as in Classic), so every
-   TV chip is a plain /discover/tv query and the TV search box is a title search. */
-const TV_TRY = ['Severance', 'The Bear', 'Slow Horses', 'Chernobyl', 'Succession'];   // "Try “…”" prompts
+   so the film chips can't be reused. Every TV chip is a plain /discover/tv query. */
 const TV_CHIPS = [
   { id: 'tv-limited', label: 'tvLimited',
     discover: { with_type: '2', sort_by: 'popularity.desc', 'vote_count.gte': '300' } },
@@ -1057,19 +1060,26 @@ const TV_CHIPS = [
 ];
 const chipLabel = c => c.brand || t(`cin.chip.${c.label}`);
 const chipSub = c => (c.net ? t('cin.tvFrom', { name: c.brand }) : t(`cin.chip.${c.sub || c.label}.sub`));
-const chipQuery = c => t(`cin.chip.${c.label}.q`);
+
+// The typewriter's examples of what the title search takes: an exact title, a typo,
+// a title in another language, a year. [dictionary key (cin.<key>), title].
+const TRY = {
+  movie: [['try', 'Interstellar'], ['tryTypo', 'Shawshank Redemtion'], ['tryLang', '千と千尋の神隠し'], ['tryYear', 'Dune 1984'], ['try', 'Amélie']],
+  tv:    [['try', 'Severance'], ['tryTypo', 'Breaking Bda'], ['tryLang', 'La casa de papel'], ['try', 'The Bear'], ['try', 'Slow Horses']],
+};
+const tryPrompts = type => [t(`cin.titlePrompt.${type}`), ...TRY[type].map(([k, title]) => t(`cin.${k}`, { title }))];
 
 // Everything that differs between the two tabs, in one place (strings are dictionary keys).
 const TYPES = {
   movie: {
-    trending: '/trending/movie/week', discover: '/discover/movie', chips: CHIPS, ai: true, count: 'cin.n.titles',
-    prompts: () => [1, 2, 3, 4, 5, 6, 7].map(i => t(`cin.prompt.${i}`)),
+    trending: '/trending/movie/week', discover: '/discover/movie', chips: CHIPS, count: 'cin.n.titles',
+    prompts: () => tryPrompts('movie'),
     homeTitle: 'cin.home.movie', homeSub: 'cin.homeSub.movie', heroSub: 'cin.heroSub.movie',
     placeholder: 'cin.ph.movie', miniLabel: 'cin.mini.movie', formLabel: 'cin.form.movie', inputLabel: 'cin.input.movie',
   },
   tv: {
-    trending: '/trending/tv/week', discover: '/discover/tv', chips: TV_CHIPS, ai: false, count: 'cin.n.shows',
-    prompts: () => [t('cin.tvPrompt'), ...TV_TRY.map(title => t('cin.tvTry', { title }))],
+    trending: '/trending/tv/week', discover: '/discover/tv', chips: TV_CHIPS, count: 'cin.n.shows',
+    prompts: () => tryPrompts('tv'),
     homeTitle: 'cin.home.tv', homeSub: 'cin.homeSub.tv', heroSub: 'cin.heroSub.tv',
     placeholder: 'cin.ph.tv', miniLabel: 'cin.mini.tv', formLabel: 'cin.form.tv', inputLabel: 'cin.input.tv',
   },
@@ -1309,7 +1319,7 @@ const qvClose = $('#qvClose'), qvBack = $('#qvBack'), qvHandle = $('#qvHandle');
 // on screen and uncovered, e.g. by a Quick View a shared link opened.
 if (firstVisit) addEventListener('DOMContentLoaded', () => window.FFBot?.welcome(cmd.querySelector('.cmd-field'), () => cmdInput.focus()));
 const wlBtn = $('#wlBtn'), wlCount = $('#wlCount'), clearLabel = $('#clearLabel'), toastEl = $('#toast');
-const seg = $('#seg'), heroSub = $('#heroSub'), cmdIconAI = $('#cmdIconAI'), cmdIconSearch = $('#cmdIconSearch');
+const seg = $('#seg'), heroSub = $('#heroSub');
 
 // Shared with Classic (/assets/watchlist.js). If that script is blocked the buttons stay inert (toggle → null) instead of taking the page down.
 const WL = window.FFWatchlist || { has: () => false, toggle: () => null, list: () => [], count: () => 0, onChange: () => () => {} };
@@ -1736,55 +1746,40 @@ async function titleFallback(v, q, title) {
   }
 }
 
-/* ── Title search: fast path for things that look like a film's name ── */
-const DESCRIPTIVE = /\b(movies?|films?|shows?|series|about|like|with|where|when|that|for|something|feel|feeling|vibes?|mood|set in|based on|funny|scary|sad|romantic|dark|cozy|thriller|comedy|horror|drama|documentary|animated|recommend|similar|want|watch|night|evening|kids|family|ending|twist)\b/i;
-const looksLikeTitle = q => q.split(/\s+/).filter(Boolean).length <= 4 && !/[,?!]/.test(q) && !DESCRIPTIVE.test(q);
-
+/* ── Title search: the search box on both tabs ──
+   /api/title-search matches the title as typed; when nothing matches exactly, AI reads it
+   (typos, a title in another language) and says which title it meant, which leads the list. */
 async function runTitle(q) {
   const v = startView('title', { q });
   const type = v.ctype;
   const title = quoted(q);
-  setHeader(title, '');
+  setHeader(title, `<span class="ai-note">${ICON.sparkSm}${esc(t('cin.matching'))}</span>`);
   showSkeletons();
   setBusy(true);
   try {
-    // Shows go straight to TMDB's own title search. /api/search buckets results by `title`/`original_title`,
-    // which TV results don't have (they use `name`), so there it demotes real title matches below overview matches.
-    const d = type === 'tv'
-      ? await tmdb('/search/tv', { query: q, include_adult: 'false' }, { signal: v.signal })
-      : await call(`/api/search?${new URLSearchParams({ q, page: '1', type, lang: TMDB_LANG[lang] })}`, { signal: v.signal });
+    const d = await call(`/api/title-search?${new URLSearchParams({ q, type, lang: TMDB_LANG[lang] })}`, { signal: v.signal, timeout: 15000 });
     if (stale(v)) return;
     const items = (d.results || []).filter(r => r.poster_path).map(r => fromTMDB(r, type));
-    if (type === 'tv') {
-      // There is no AI tier for shows: what matched by title is the answer, and a miss says so.
-      if (!items.length) {
-        showState(t('cin.noShows', { q }), t('cin.tvHint'), { label: t('cin.askAIMovies'), run: () => askAIInMovies(q) });
-        window.FFBot?.set('confused');
-        announce(t('cin.noShows', { q }));
-        return;
-      }
-      renderItems(v, items);
-      const shows = tn('cin.n.shows', v.items.length);
-      setHeader(title, `<span>${esc(shows)}</span>`);
-      window.FFBot?.found(false);
-      announce(t('cin.resultsFor', { count: shows, q }));
+    if (!items.length) {
+      setHeader(title, '');
+      showState(t('cin.noTitle', { q }), t('cin.noTitleHint'), { label: t(`cin.searchOther.${type}`), run: () => searchOtherTab(q) });
+      window.FFBot?.set('confused');
+      announce(t('cin.noTitle', { q }));
       return;
     }
-    const nq = normTitle(q);
-    const hit = nq && items.some(it => {
-      const n = normTitle(it.title);
-      return n === nq || n.startsWith(nq) || (nq.length > 3 && n.includes(nq));
-    });
-    if (!hit) { runAI(q); return; }      // not a title after all — let the AI read it
     renderItems(v, items);
-    const count = tn('cin.n.titles', v.items.length);
+    const count = tn(typeCfg(type).count, v.items.length);
+    // "Matched by AI" (or by its title in another language) when the list leads with a title the text didn't spell.
+    const note = d.corrected && t(d.via === 'translation' ? 'cin.langMatched' : 'cin.aiMatched', { q });
+    setHeader(d.corrected ? quoted(d.corrected) : title,
+      `<span>${esc(count)}</span>${note ? `<span class="muted">·</span><span class="ai-note">${ICON.sparkSm}${esc(note)}</span>` : ''}`);
     window.FFBot?.found(false);
-    setHeader(title, `<span>${esc(count)}</span><span class="muted">·</span><button class="link-btn" type="button" data-ask-ai>${ICON.sparkSm}${esc(t('cin.askAIInstead'))}</button>`);
-    announce(t('cin.resultsFor', { count, q }));
+    announce(t('cin.resultsFor', { count, q: d.corrected || q }));
   } catch (e) {
     if (stale(v) || isAbort(e)) return;
-    if (type === 'tv') { setHeader(title, ''); showError(() => runTitle(q)); window.FFBot?.set('confused'); return; }
-    runAI(q);
+    setHeader(title, '');
+    showError(() => runTitle(q));
+    window.FFBot?.set('confused');
   } finally {
     if (!stale(v)) setBusy(false);
   }
@@ -1811,7 +1806,6 @@ refineEl.addEventListener('click', e => {
   if (!b) return;
   const q = `${refineEl.dataset.base}, ${b.dataset.refine.toLowerCase()}`;
   setChip(null);
-  setInputs(q);
   runAI(q);
 });
 
@@ -1835,7 +1829,7 @@ function submitQuery(raw) {
   setChip(null);
   setInputs(q);
   if (matchMedia('(hover: none)').matches) document.activeElement?.blur();   // drop the phone keyboard
-  (typeCfg().ai && !looksLikeTitle(q) ? runAI : runTitle)(q);   // shows have no AI search: everything is a title search
+  runTitle(q);
   revealResults();
 }
 cmd.addEventListener('submit', e => { e.preventDefault(); submitQuery(cmdInput.value); });
@@ -1903,16 +1897,17 @@ chipsTrack.addEventListener('click', e => {
   if (!chip) return;
   if (activeChip === chip.id) { setInputs(''); showHome(); return; }   // tap again to clear
   setChip(chip.id);
-  if (chip.ai) { setInputs(chipQuery(chip)); runAI(chip.ai, { chip }); }
-  else { setInputs(''); runDiscover(chip); }
+  setInputs('');                                // the box is for titles; a chip is a collection
+  if (chip.ai) runAI(chip.ai, { chip });
+  else runDiscover(chip);
   revealResults();
 });
 
 /* ═══════════════════════════════════════════════════════════════
    MOVIES | TV SHOWS
-   One switch for the page: it picks the feed (trending + chips), the search and the
-   copy. AI search exists for films only — as in Classic — so on the TV tab the search
-   box is a plain title search and every chip is an instant discover query.
+   One switch for the page: it picks the feed (trending + chips), what the title search
+   looks up (films or shows) and the copy. Film chips can be AI picks; TV chips are all
+   instant discover queries.
 ═══════════════════════════════════════════════════════════════ */
 // The active tab's copy, in the current language (also redrawn by a language switch).
 function applyTypeCopy() {
@@ -1925,8 +1920,6 @@ function applyTypeCopy() {
   miniForm.setAttribute('aria-label', t(cfg.miniLabel));
   miniInput.setAttribute('aria-label', t(cfg.inputLabel));
   miniInput.placeholder = t(cfg.placeholder);
-  cmdIconAI.classList.toggle('off', !cfg.ai);
-  cmdIconSearch.classList.toggle('off', cfg.ai);
   cmdPhText.textContent = '';                     // the typewriter restarts with this tab's prompts
   renderChips();
 }
@@ -1949,11 +1942,11 @@ seg.addEventListener('click', e => {
   if (b) setCtype(b.dataset.ctype);
 });
 
-// The only way to describe a show by mood or plot: hand the words to the film AI.
-function askAIInMovies(q) {
-  setCtype('movie', { reload: false });
+// A title that isn't on this tab may be on the other one (a film searched under TV Shows).
+function searchOtherTab(q) {
+  setCtype(ctype === 'tv' ? 'movie' : 'tv', { reload: false });
   setInputs(q);
-  runAI(q);
+  runTitle(q);
 }
 
 /* ── Hero poster wall ── */
@@ -2057,7 +2050,9 @@ function shellHTML(it) {
       <div class="qv-actions" data-slot="actions"><span class="skel sk-pill"></span><span class="skel sk-pill sk-pill-w"></span></div>
     </div>
     <div class="qv-content">
-      ${it.reason ? `<div class="qv-why">${ICON.spark}<div><b>${esc(t('cin.why'))}</b>${esc(it.reason)}</div></div>` : ''}
+      ${it.reason
+        ? `<div class="qv-why">${ICON.spark}<div><b>${esc(t('cin.why'))}</b>${esc(it.reason)}</div></div>`
+        : `<div class="qv-why qv-take" data-slot="take" aria-busy="true">${ICON.spark}<div><b>${esc(t('cin.take'))}</b><div class="sk-lines"><span class="skel sk-line"></span><span class="skel sk-line"></span></div></div></div>`}
       <div class="qv-body" data-slot="body">
         <div class="qv-genres"><span class="skel sk-chip"></span><span class="skel sk-chip"></span><span class="skel sk-chip"></span></div>
         ${it.overview ? `<p class="qv-overview">${esc(it.overview)}</p>` : `<div class="sk-lines">${'<span class="skel sk-line"></span>'.repeat(4)}</div>`}
@@ -2213,6 +2208,32 @@ function fillQV(it, d) {
   settleImages(qvBody);
 }
 
+// FindFilm AI's spoiler-free take on any title without an AI pick reason: who'll love it, the
+// experience, who might skip it. /api/fit-summary, cached there per title and language.
+const TAKES = new Map();
+async function loadTake(it, token) {
+  const k = `${it.type}:${it.id}:${lang}`;
+  if (!TAKES.has(k)) {
+    TAKES.set(k, call('/api/fit-summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: it.id, type: it.type, lang, title: it.title, year: it.year, overview: it.overview }),
+      timeout: 20000,
+    }).catch(e => { TAKES.delete(k); throw e; }));
+  }
+  try {
+    const d = await TAKES.get(k);
+    const box = token === QV.token && slot('take');
+    if (!box) return;
+    const rows = [['for', d.forYou], ['feel', d.experience], ['skip', d.skipIf]].filter(([, v]) => v);
+    if (!rows.length) { box.remove(); return; }
+    box.querySelector('.sk-lines').outerHTML = `<dl>${rows.map(([key, v]) => `<div><dt>${esc(t(`cin.take.${key}`))}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`;
+    box.removeAttribute('aria-busy');
+  } catch {
+    if (token === QV.token) slot('take')?.remove();
+  }
+}
+
 async function renderQV(it) {
   const token = ++QV.token;
   qvBack.hidden = QV.stack.length < 2;
@@ -2222,6 +2243,7 @@ async function renderQV(it) {
   qvBody.classList.add('swap');
   qvScroll.scrollTop = 0;
   settleImages(qvBody);
+  if (!it.reason) loadTake(it, token);
   try {
     const d = await getDetails(it);
     if (token !== QV.token) return;
@@ -2537,10 +2559,7 @@ function relabel() {
   else if (view.kind === 'discover') runDiscover(view.chip);
   else if (view.kind === 'title') runTitle(view.q);
   else if (view.kind === 'watchlist') showWatchlist();
-  else if (view.kind === 'ai') {
-    if (view.chip && cmdInput.value) setInputs(chipQuery(view.chip));   // the chip's words in the field, now translated
-    runAI(view.q, { chip: view.chip });
-  }
+  else if (view.kind === 'ai') runAI(view.q, { chip: view.chip });
 }
 
 /* ═══════════════════════════════════════════════════════════════
