@@ -2,7 +2,32 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-31b) — Vibe Search Streams: Cards in ~5s, Not ~10s
+## ⚡ Most Recent Session (2026-10-31c) — Vibe Search Is the Default AI Search for Everyone
+
+All commits on `main`, **live on https://findfilm.ai since 2026-10-31**: Pages production **`81ff66b7`**, from `c6a3248`. The owner decided to skip the rest of the dark launch. `/` and `/cinematic/` are identical to the commit; `/build.json` = `20261031T140836Z-c6a3248`.
+
+| Commit | Feature |
+|--------|---------|
+| `c6a3248` | **On for everyone, in both layouts.**<br>**Classic:** `vibeSearchOn()` is true unless this browser opted out. `?vibe=0` stores `ff_flag_vibe = '0'`; `?vibe=1` clears it (`readVibeFlag()`). The AI panel **streams** (`_vibeStream`).<br>**Cinematic:** `runAI()` calls `/api/vibe-search` as **JSON**, since streaming there would need its own patching of cards. It reads the same key and its own `?vibe=` (near `firstVisit`).<br>**Unchanged:** the wizard (`_wizFetchPicks`), the curated-catalog feature, Vibe Check and the group picker still use `/api/ai-search`.<br>**Reply reliability:** JSON mode pretty-prints, so ten graded films overflowed `max_tokens` 700. The reply was cut off mid-array ("Expected ',' or ']' after array element") and failed often; the limit is now 1500 (read 700, picks 500). The reply also **numbers candidates 1–10**, mapped back through `top[n-1]`, because the 8B garbled long TMDB ids, so a valid reply could grade nothing. Replies now grade 4–10 films.<br>**Person route:** also needs **`_vibeIsPerson()`**: TMDB `/search/person` must have someone of exactly that name (normalised). The 8B once made "New York" the person in "a gritty 70s new york crime film". A routed query logs `[vibe-search] "<query>" → the actor path for "<name>"`. |
+
+**On production:**
+- **Classic stream:** `parsed` 1.3s, **cards 3.8s**, reply 7.3s.
+- **Cinematic (JSON):** about 10s.
+- **`/api/ai-search`** still answers.
+
+**Locally**, as a new visitor with no `ff_flag_vibe`: Classic sends `/api/vibe-search` with `Accept: text/event-stream`; Cinematic's hero search sends `/api/vibe-search` and renders 8 picks.
+
+**Rollback:**
+- **Per browser:** `?vibe=0`.
+- **For everyone:** the Pages dashboard → `ratingkino` → Deployments → **`be052c2c`** (the flagged, opt-in build) → "Rollback to this deployment". Alternatively, revert `c6a3248` and `./deploy.sh --branch main`.
+
+**Watch:**
+- **Workers AI rate limits.** A search now makes 3 text-generation calls (8B read, 70B picks, 8B reply) plus embeddings and a rerank; text generation is limited to 300 requests/min. A failed read, picks or reply call degrades the answer (no picks, or the fallback reasons and message) instead of failing it, and only an embedding or Vectorize failure hands the query to `/api/ai-search`.
+- **The 70B's `kind` and picks vary between runs.** "A widower befriends his noisy neighbours" came back "rare", with no *A Man Called Ove*.
+
+---
+
+## Session (2026-10-31b) — Vibe Search Streams: Cards in ~5s, Not ~10s
 
 All commits on `main`, **live on https://findfilm.ai since 2026-10-31**: Pages production **`be052c2c`**, from `42d0e28`. It is still behind `?vibe=1`. The live `/` is identical to the commit, and `/build.json` = `20261031T135825Z-42d0e28`.
 
@@ -3041,7 +3066,7 @@ Taste profile stored in `localStorage['rk_taste_v1']`: `{ genres: {}, directors:
 | `ff_layout` | `classic` \| `cinematic` — read by the layout router at the top of `index.html` |
 | `ff_mascot_off` | `'1'` once the corner mascot's × was clicked (`assets/social.js`); `#ffm` is removed on load in both layouts |
 | `ff_welcome_seen` | `'1'` once the mascot's first-visit tip has been shown (`FFBot.welcome`, `assets/social.js`) |
-| `ff_flag_vibe` | `'1'` = the AI panel uses `/api/vibe-search` (set by `?vibe=1`, cleared by `?vibe=0`; `readVibeFlag()` in Classic) |
+| `ff_flag_vibe` | `'0'` = this browser opted out of vibe search (`?vibe=0`; `?vibe=1` clears it). Read by Classic (`readVibeFlag()` / `vibeSearchOn()`) and Cinematic (`runAI()`). Missing = on, the default since 2026-10-31 |
 | `ff_hello_seen` | `'1'` once Classic's hero mascot has said "Need a recommendation?" by itself, or the search was already in use (`hello()`, `assets/social.js`) |
 | `ff_fresh_reload` (**sessionStorage**) | The `/build.json` build `assets/fresh.js` last reloaded the page for — it never reloads twice for the same build |
 | `rk_ios_pwa_dismissed` | Timestamp of last iOS PWA bottom-sheet dismiss (15-day cooldown) |
@@ -3138,7 +3163,9 @@ The site is fully installable as a PWA on all platforms.
   - [ ] **"More like this":** on every card (query by the film's own vector), and **Taste DNA** as the average of liked films' vectors.
   - [ ] **The owner tries it** on findfilm.ai with `?vibe=1`.
   - [ ] **A 3rd judge round** after `7e5b645`'s last fixes.
-  - [ ] **Decide on rollout:** when to make it the default.
+  - [x] **Rollout:** the default for everyone since 2026-10-31 (`c6a3248`, production `81ff66b7`); `?vibe=0` opts a browser out.
+  - [ ] **Stream in Cinematic too** (it uses JSON: about 10s with nothing on screen).
+  - [ ] **Watch Workers AI usage and rate limits** now that every AI search makes 3 text-generation calls.
 - [ ] **AI search for TV shows** — `/api/ai-search` is films-only (LLM curation + `search/movie` lookups + movie KV catalog); Cinematic and Classic fall back to title search on the TV tab
 - [ ] **Cinematic gaps vs Classic**: voice search (the 9-language UI, TV browsing, TV deep links and the Watchlist are done)
 - [ ] **Beta UI prototype feedback** (now `cinematic/index.html`; old preview https://beta-ui.ratingkino.pages.dev) — collect the owner's feedback, then decide: ship it at `/beta/` (add `beta` to `PUBLIC`), port pieces into `index.html`, or iterate. Not yet in it: voice (the watchlist landed in `89d2a3c`, the TV tab in `3a93af7`, i18n in `cec4746`)
