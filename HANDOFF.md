@@ -2,7 +2,23 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-31c) — Vibe Search Is the Default AI Search for Everyone
+## ⚡ Most Recent Session (2026-10-31d) — FF Bot Icons and Link Previews Live
+
+All commits on `main`, **live on https://findfilm.ai since 2026-10-31**: Pages production **`829e4a59`**, from `9934a25`. `/build.json` = `20261031T143209Z-9934a25`.
+
+| Commit | Feature |
+|--------|---------|
+| `9934a25` | **The FF Bot replaces the old "ff" text logo** in every favicon, app icon and link preview. Command: `python3 tools/icons/make.py assets/ff-bot.png --head 175,100,340`. The owner chose the existing transparent bot (`assets/ff-bot.png`, 624×750) over a new clapperboard pose.<br>**Small icons** (`favicon.ico` with 16, 32 and 48px frames, which used to be 16px only; `favicon-16x16.png`, `-32x32.png`, `favicon.png` 64px): the head on the `#0d0020` tile. **Crop B (`--head 175,100,340`)** centres the helmet with a hint of popcorn. The automatic crop (168,121,354) carried a strip of popcorn that was noise at 16px. In the source, the helmet spans about y 125–405 and x 168–521; the neck is at y ~410; the popcorn starts at y ~430.<br>**Large icons:** `apple-touch-icon.png` 180, `icon-192/512.png` (any), new `icon-maskable-192/512.png`, all showing the whole bot.<br>**`og-image.jpg`:** the bot on a violet glow, with "FindFilm.ai" in Montserrat 900.<br>**`site.webmanifest`:** 8 icons; "any" and "maskable" are now separate entries.<br>**Versions:** every reference in `index.html`, `cinematic/`, `pitch/`, `tv/`, the manifest and `sw.js` carries the new `?v=` (42 references in total, all checked against the staged files). The generator's "only 356×613px" warning doesn't matter for this source, because every output is a downscale. The generator is deterministic: two runs gave byte-identical large icons and OG image. |
+
+**Verified on findfilm.ai:** each icon, the manifest, the OG image and the pages are identical to the commit, with the right content type (`image/vnd.microsoft.icon`, `image/png`, `image/jpeg`, `application/manifest+json`). `og:image` and `twitter:image` = `https://findfilm.ai/assets/og-image.jpg?v=f27f1f6e`, the same on ratingkino.com.
+
+**The owner still has to:** run the Facebook Sharing Debugger and LinkedIn Post Inspector on `https://findfilm.ai/`, `/cinematic/` and a `/pitch/<id>` link. X refreshes by itself within about 7 days.
+
+**Gotcha:** `favicon.ico` was missing from the working tree (`git status` showed it deleted) before the generator ran. The generator recreated it. The cause wasn't found.
+
+---
+
+## Session (2026-10-31c) — Vibe Search Is the Default AI Search for Everyone
 
 All commits on `main`, **live on https://findfilm.ai since 2026-10-31**: Pages production **`81ff66b7`**, from `c6a3248`. The owner decided to skip the rest of the dark launch. `/` and `/cinematic/` are identical to the commit; `/build.json` = `20261031T140836Z-c6a3248`.
 
@@ -3129,7 +3145,8 @@ The site is fully installable as a PWA on all platforms.
 - [ ] **Owner's iPhone check of voice dictation** on the live site (the fix was verified with a replayed iOS result pattern, not a real mic)
 - [x] **Mascot easter egg + first-visit welcome tip** (`bee9a23`) — both layouts; live 2026-10-28 (production `43639d72`); GA event `mascot_egg`
 - [ ] **Native-speaker pass on `mascot.welcome` / `mascot.try` / `mascot.hello`** (written in-session, 9 languages) — together with the `cin.*` review
-- [ ] **New mascot art for icons + previews**: the owner sends `raw/ff-bot-clapper.png` (clapperboard pose) → `python3 tools/icons/make.py` → review the contact sheet → commit → deploy → Facebook Sharing Debugger + LinkedIn Post Inspector (X refreshes within ~7 days)
+- [x] **FF Bot icons and previews:** live 2026-10-31 (`9934a25`, production `829e4a59`), made from `assets/ff-bot.png` (crop B).
+- [ ] **The owner:** Facebook Sharing Debugger and LinkedIn Post Inspector on `/`, `/cinematic/` and a `/pitch/<id>` link (X refreshes within ~7 days)
 - [ ] **Optional: per-pitch previews**: `/pitch/:id` links could show the pitched film's poster and title (the Function would rewrite the static OG tags for that route); today every pitch shares the generic preview
 - [x] **Classic desktop mascots** (`dfe397a`): `#ffh` beside the hero search (≥1200px) and `.ffp` peeking over "Your Taste DNA" (≥1024px); GA `mascot_click`; live 2026-10-29 (production `c131bc9a`)
 - [x] **Deploy `dfe397a`** — live 2026-10-29 (production `c131bc9a` from `2ec4256`); checked on findfilm.ai at 1280 / 1440 and at 375 / 390 / 768 (hidden)
