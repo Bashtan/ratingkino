@@ -512,6 +512,9 @@ img.fade.loaded { opacity: 1; }
 .more .wl-tog { width: 28px; height: 28px; top: 6px; inset-inline-end: 6px; }
 /* In the Watchlist view a removed title stays put, dimmed, so a stray tap can be undone. */
 .tile.wl-gone .card { opacity: .38; filter: saturate(.4); }
+/* Vibe search's reply (aiPatch): a film FF Bot judged a poor fit fades out of the grid. */
+.tile.ai-out { opacity: 0; transform: scale(.96); transition: opacity .28s ease, transform .28s ease; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .tile.ai-out { transform: none; } }
 .tile.wl-gone .wl-tog { opacity: 1; transform: none; }
 
 .toast {
@@ -1533,45 +1536,184 @@ async function runAI(q, { chip = null } = {}) {
   setBusy(true);
   announce(t('cin.searchingFor', { q: chip ? title : q }));
   try {
-    // Vibe search (Vectorize + Workers AI) for everyone, as JSON here (Classic streams it); the same
-    // answer shape as /api/ai-search, which it falls back to. ?vibe=0 in either layout opts out.
+    // Vibe search (Vectorize + Workers AI) for everyone, streamed (aiStream); the same answer shape
+    // as /api/ai-search, which it falls back to by itself. ?vibe=0 in either layout opts out.
     let vibe = true;
     try { vibe = localStorage.getItem('ff_flag_vibe') !== '0'; } catch { /* storage blocked: on */ }
-    const d = await call(vibe ? '/api/vibe-search' : '/api/ai-search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: q }),
-      signal: v.signal,
-      timeout: 30000,
-    });
-    if (stale(v)) return;
-    let items = [];
-    if (Array.isArray(d.movies) && d.movies.length) {
-      items = d.movies.filter(m => m && m.poster_path).map(m => fromTMDB(m, 'movie'));
-    } else if (Array.isArray(d.ids) && d.ids.length) {
-      const catalog = await loadCatalog();
+    if (vibe) {
+      await aiStream(v, q, title);
+    } else {
+      const d = await call('/api/ai-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q }),
+        signal: v.signal,
+        timeout: 30000,
+      });
       if (stale(v)) return;
-      const byId = new Map(catalog.map(m => [Number(m.id), m]));
-      items = d.ids.map(id => byId.get(Number(id))).filter(Boolean).map(fromKV);
+      await aiShow(v, d, q, title);
     }
-    if (!items.length) throw new Error('No AI results');
-    for (const it of items) {
-      it.reason = (d.reasons && d.reasons[it.id]) || null;
-      it.vibe = (d.vibeTags && d.vibeTags[it.id]) || null;
-    }
-    renderItems(v, items);
-    const n = v.items.length;
-    const who = d.actorQuery && d.personName ? ` ${esc(t('cin.withPerson', { name: d.personName }))}` : '';
-    setHeader(title, `${ICON.sparkSm}<span>${esc(tn('cin.n.aiPicks', n))}${who}</span>${d.message ? `<span class="muted">· ${esc(d.message)}</span>` : ''}`);
-    setRefine(q, d.suggestedRefinements);
-    window.FFBot?.found(() => !refineEl.hidden);
-    announce(t('cin.resultsFor', { count: tn('cin.n.aiPicks', n), q: chip ? title : q }));
   } catch (e) {
     if (stale(v) || isAbort(e)) return;
     await titleFallback(v, q, title);
   } finally {
     if (!stale(v)) setBusy(false);
   }
+}
+
+// One AI answer (real films, or ids into the KV catalog) → the grid, the header, the refine chips.
+async function aiShow(v, d, q, title) {
+  let items = [];
+  if (Array.isArray(d.movies) && d.movies.length) {
+    items = d.movies.filter(m => m && m.poster_path).map(m => fromTMDB(m, 'movie'));
+  } else if (Array.isArray(d.ids) && d.ids.length) {
+    const catalog = await loadCatalog();
+    if (stale(v)) return;
+    const byId = new Map(catalog.map(m => [Number(m.id), m]));
+    items = d.ids.map(id => byId.get(Number(id))).filter(Boolean).map(fromKV);
+  }
+  if (!items.length) throw new Error('No AI results');
+  for (const it of items) {
+    it.reason = (d.reasons && d.reasons[it.id]) || null;
+    it.vibe = (d.vibeTags && d.vibeTags[it.id]) || null;
+  }
+  renderItems(v, items);
+  aiHeader(v, d, title);
+  setRefine(q, d.suggestedRefinements);
+  window.FFBot?.found(() => !refineEl.hidden);
+  announce(t('cin.resultsFor', { count: tn('cin.n.aiPicks', v.items.length), q: v.chip ? title : q }));
+}
+
+function aiHeader(v, d, title) {
+  const who = d.actorQuery && d.personName ? ` ${esc(t('cin.withPerson', { name: d.personName }))}` : '';
+  setHeader(title, `${ICON.sparkSm}<span>${esc(tn('cin.n.aiPicks', v.items.length))}${who}</span>${d.message ? `<span class="muted">· ${esc(d.message)}</span>` : ''}`);
+}
+
+// Server-Sent Events from a fetch() body (EventSource can't POST). Classic's twin: _readSSE.
+async function readSSE(body, onEvent) {
+  const reader = body.getReader(), dec = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let cut;
+    while ((cut = buf.indexOf('\n\n')) >= 0) {
+      const block = buf.slice(0, cut);
+      buf = buf.slice(cut + 2);
+      let name = 'message', data = '';
+      for (const line of block.split('\n')) {
+        if (line.startsWith('event:')) name = line.slice(6).trim();
+        else if (line.startsWith('data:')) data += line.slice(5).trim();
+      }
+      if (data && (await onEvent(name, JSON.parse(data))) === false) { reader.cancel().catch(() => {}); return; }
+    }
+  }
+}
+
+/* Vibe search's stream (handleVibeSearch; Classic's twin is _vibeStream). parsed (~1s) puts what
+   FF Bot understood under the title (English UI); results (~3-5s) fills the grid; reply (~7s)
+   updates each card's vibe tag and the reason its quick view shows, fades out the poor fits, adds
+   and reorders (aiPatch); final is a hand-off to the old search, shown like a JSON answer. A cache
+   hit comes as plain JSON. 20s for the cards, then 15s more for the reply, which the cards outlive. */
+async function aiStream(v, q, title) {
+  await apiReady;
+  const ctrl = new AbortController();
+  const relay = () => ctrl.abort();
+  v.signal.addEventListener('abort', relay, { once: true });
+  let timer = setTimeout(() => ctrl.abort(new DOMException('Request timed out', 'TimeoutError')), 20000);
+  let shown = false;
+  try {
+    const res = await fetch(`${api.base}/api/vibe-search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+      body: JSON.stringify({ query: q }),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!(res.headers.get('content-type') || '').includes('text/event-stream')) {
+      const d = await res.json();
+      if (!stale(v)) await aiShow(v, d, q, title);
+      return;
+    }
+    await readSSE(res.body, async (event, d) => {
+      if (stale(v)) return false;
+      if (event === 'parsed') {
+        if (lang !== 'en' || !d.english) return;
+        const f = d.filters || {}, bits = [];
+        if (f.yearMin || f.yearMax) bits.push(f.yearMin && f.yearMax ? `${f.yearMin}–${f.yearMax}` : f.yearMin ? `${f.yearMin}+` : `up to ${f.yearMax}`);
+        if (f.runtimeMax) bits.push(`≤ ${f.runtimeMax} min`);
+        if (d.avoid?.length) bits.push('no ' + d.avoid.join(', '));
+        clearInterval(thinkTimer);
+        resultsSub.textContent = '✦ ' + d.english + (bits.length ? ' · ' + bits.join(' · ') : '');
+      } else if (event === 'results' || event === 'final') {
+        clearTimeout(timer);
+        await aiShow(v, d, q, title);
+        shown = true;
+        setBusy(false);
+        timer = setTimeout(() => ctrl.abort(), 15000);
+      } else if (event === 'reply' && shown) {
+        aiPatch(v, d, q, title);
+      } else if (event === 'error' && !shown) {
+        throw new Error(d.error || 'vibe search failed');
+      }
+    });
+    if (!shown && !stale(v)) throw new Error('vibe search ended without results');
+  } catch (e) {
+    if (!shown) throw e;                          // nothing on screen yet: runAI falls back
+  } finally {
+    clearTimeout(timer);
+    v.signal.removeEventListener('abort', relay);
+  }
+}
+
+// FF Bot's reply onto the cards on screen: their vibe tags and reasons, the films it dropped
+// (kept while the user is on one: pointing, focused, or open in the quick view), the films it
+// added, the final order, the header and the refine chips.
+function aiPatch(v, d, q, title) {
+  if (stale(v) || !Array.isArray(d.movies) || !d.movies.length) return;
+  const final = d.movies.filter(m => m && m.poster_path).map(m => fromTMDB(m, 'movie'));
+  const order = final.map(keyOf), keys = new Set(order), added = [];
+  for (const f of final) {
+    const k = keyOf(f);
+    const reason = (d.reasons && d.reasons[f.id]) || null, vibe = (d.vibeTags && d.vibeTags[f.id]) || null;
+    const it = v.shown.has(k) ? store.get(k) : null;
+    if (!it) { f.reason = reason; f.vibe = vibe; added.push(f); continue; }
+    if (reason) it.reason = reason;
+    it.vibe = vibe;
+    const text = grid.querySelector(`.card[data-key="${k}"] .ov-text`);
+    if (!text) continue;
+    let tag = text.querySelector('.ov-tag');
+    if (vibe && !tag) { tag = document.createElement('span'); tag.className = 'ov-tag'; text.prepend(tag); }
+    if (tag) { if (vibe) tag.textContent = vibe; else tag.remove(); }
+  }
+  const open = new Set(QV.open ? QV.stack.map(keyOf) : []);
+  for (const tile of grid.querySelectorAll('.tile:not(.skel-tile)')) {
+    const k = tile.querySelector('.card')?.dataset.key;
+    if (!k || keys.has(k) || open.has(k) || tile.matches(':hover') || tile.contains(document.activeElement)) continue;
+    tile.classList.add('ai-out');
+    v.shown.delete(k);
+    v.items = v.items.filter(it => keyOf(it) !== k);
+    setTimeout(() => tile.remove(), 300);
+  }
+  if (added.length) renderItems(v, added, { append: true });
+  setTimeout(() => {                              // the final order, once the dropped ones have gone
+    if (stale(v)) return;
+    const tiles = order.map(k => grid.querySelector(`.card[data-key="${k}"]`)?.closest('.tile')).filter(Boolean);
+    const now = [...grid.querySelectorAll('.tile')].filter(tl => tiles.includes(tl));
+    if (!now.some((tl, i) => tl !== tiles[i])) return;
+    let anchor = tiles[tiles.length - 1].nextSibling;
+    for (let i = tiles.length - 1; i >= 0; i--) {
+      tiles[i].style.animation = 'none';         // a moved node would otherwise replay its entrance
+      grid.insertBefore(tiles[i], anchor);
+      anchor = tiles[i];
+    }
+    const rank = new Map(order.map((k, i) => [k, i]));
+    v.items.sort((a, b) => (rank.get(keyOf(a)) ?? 99) - (rank.get(keyOf(b)) ?? 99));
+  }, 320);
+  aiHeader(v, d, title);
+  const chips = (d.suggestedRefinements || []).filter(s => typeof s === 'string' && s.trim()).slice(0, 4).join('|');
+  if (chips !== [...refineEl.querySelectorAll('[data-refine]')].map(b => b.dataset.refine).join('|')) setRefine(q, d.suggestedRefinements);
 }
 
 // AI down or too slow → the title + semantic search endpoint, labelled honestly.
