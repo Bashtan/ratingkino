@@ -2,9 +2,36 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-31e) — Cinematic Streams Vibe Search Too
+## ⚡ Most Recent Session (2026-10-31f) — Cinematic Becomes an AI-Powered Exact Title Search
 
-Committed on `main`. **Not deployed yet:** waiting for the owner's go-ahead. Production is `829e4a59`, where Cinematic still uses JSON.
+All commits on `main`, **live on https://findfilm.ai since 2026-10-31**: Pages production **`a5991434`**, from `ab19ca9`. `/build.json` = `20261031T182721Z-ab19ca9`. This deploy also shipped `17e4ad6` (Cinematic streaming, below).
+
+The owner's pivot: Cinematic's search box is a **precise lookup tool for film and TV titles**, with AI front and centre for typos, other languages and the details.
+
+| Commit | Feature |
+|--------|---------|
+| `ab19ca9` | **`GET /api/title-search?q=&type=movie\|tv&lang=<TMDB locale>`** (`handleTitleSearch()`), the search box on both Cinematic tabs. Steps:<br>**1. TMDB `/search/{type}`** (`_tmdbTitleSearch`) on the text **as typed**. No `_stripFillers`, since it would turn "Get Out" into "Out". A trailing year adds a second search for the title alone in that year ("Dune 1984", "Dune (1984)"); "Blade Runner 2049" stays whole because 2049 is in the future.<br>**2. Ranking:** `_titleScore` gives 4 exact, 3 prefix, 2 every word, 1 TMDB's own match (a title in another language). It compares `_titleKey()`: lower case, any script, marks stripped, punctuation as spaces. `_titleBare()` drops only the/a/an/le/la/les/l/el/los/las; "die"/"en" would make *Die Hard* equal *Hard*. Ties at ≥3 go to the higher `vote_count`.<br>**3. A score of ≥2 is the answer**, unless the best match has fewer than 100 votes (30 for TV). "El Padrino" and "Le Parrain" are also titles of obscure films.<br>**4. Otherwise, in parallel:**<br>• **`_titleTranslated()`**: up to 4 well-known score-1 results (≥300 votes, ≥100 for TV). If one of their TMDB `/translations` titles is exactly the text, they lead the list and `via: 'translation'` is set. Examples: "Початок" → *Inception*, "Le Parrain" / "El Padrino" → *The Godfather*, "Игра престолов" → *Game of Thrones*. About 0.2s.<br>• **`_titleFixes()`**: `TITLE_FIX_MODEL` = the 70B in JSON mode (`_TITLE_FIX_SCHEMA` `{titles: [{title, original, year}]}`, up to 3; `_titleFixPrompt(type)`; 6s cap). It names the title meant: typos, sequel numbers ("godfahter 2"), transliterations, non-literal translations. **KV `tsr:v1:<sha-256 of type\|key>`, 7 days**, written even when the translation check wins. **`_titleFixHits()`** searches each title (with its year, then without, then the original title) and keeps exact, else prefix, matches. Sets `via: 'ai'`.<br>**Response:** `{results, corrected, via}`. `corrected` is the top hit's title in the page's language, given only when the text wasn't part of that title ("lord of rings" gets no note). `?debug=1&fx=8b\|70b` skips the cache.<br>**`/api/fit-summary`** takes optional **`type`** and **`lang`** (`_FIT_LANGS`, the 9 site languages). Keys `fit:<type>:<id>:<lang>`; Classic's `fit:<id>` (English film) is unchanged. The prompt says "TV series" for shows and asks for that language.<br>**Cinematic (`cinematic/index.html`):**<br>• `submitQuery()` always runs **`runTitle(q)`**, which calls `/api/title-search`. While it waits, the header shows **`.ai-note`** "✦ Matching titles…". A match gives `cin.aiMatched` / `cin.langMatched`, with the corrected title as the header title. No match gives `showState(cin.noTitle, cin.noTitleHint)` with the button **`searchOtherTab(q)`** (`cin.searchOther.<type>`).<br>• Removed: `DESCRIPTIVE`, `looksLikeTitle`, `askAIInMovies`, the "Ask AI instead" link, `TV_TRY`, `chipQuery` and the `TYPES.ai` flag. `#cmdIconSearch` is gone (the spark icon on both tabs), and so is `.cmd-icon.off`.<br>• Typewriter: **`TRY`** + **`tryPrompts(type)`** show an exact title, a typo ("Shawshank Redemtion", "Breaking Bda"), another language ("千と千尋の神隠し", "La casa de papel") and a year ("Dune 1984").<br>• **AI chips still give AI picks** (vibe stream, `runAI`) but leave the search box empty. So do the refine chips. `relabel()` no longer refills the box.<br>• **Quick view "FindFilm AI's take"** (`.qv-take`, `data-slot="take"`) for any title without an AI pick reason. **`loadTake(it, token)`** calls `/api/fit-summary` with `type` + `lang` (client cache `TAKES`) and shows `cin.take.for` / `.feel` / `.skip`; a failure removes the box.<br>• Hero: the eyebrow is `cin.eyebrow` ("FindFilm AI · Title search", **no Beta**), `cin.heroTitle` is "Type a title. AI does the rest.", and the subtitle is "Exact title search for films, powered by AI. Typos and any language welcome." The footer `cin.foot` has no "Beta… prototype" either.<br>**i18n (all 9 languages):**<br>• Rewritten: `cin.heroTitle/foot/heroSub.*/ph.*/mini.*/form.*/input.*/emptyHint`.<br>• New: `cin.eyebrow`, `cin.titlePrompt.{movie,tv}`, `cin.try/tryTypo/tryLang/tryYear`, `cin.matching`, `cin.aiMatched`, `cin.langMatched`, `cin.noTitle`, `cin.noTitleHint`, `cin.searchOther.{movie,tv}`, `cin.take` + `.for/.feel/.skip`.<br>• Removed: `cin.prompt.1–7`, `cin.tvPrompt`, `cin.tvTry`, `cin.noShows`, `cin.tvHint`, `cin.askAIMovies`, `cin.askAIInstead`, `cin.chip.*.q`.<br>• `i18n.js?v=fca797c1` in both pages. |
+
+**Model choice:** on the typo set, the 8B was 2.5× faster (~0.5s vs ~1.3s) but turned "Paraziti" into *The Parasite* (1997), and described plots into the wrong film. The 70B got them right, and its answers are cached for a week.
+
+**Prompt gotcha:** at temperature 0, the line "a translated title is often not a literal translation" made the 70B call "godfahter 2" nonsense and return `[]`. The prompt now lists heavy typos and sequel numbers as titles, and asks for `[]` only for random letters or a bare person's name.
+
+**Verified on findfilm.ai:**
+- **Exact titles:** "Inception", "Get Out", "Die Hard", "1917", "Dune (1984)", "Wonder Woman 1984" in about 0.1–0.7s.
+- **Typos via AI:** "shawshank redemtion", "intersteller", "Breaking Bda", "godfahter 2", "Harry Poter" (fr, which gives the French titles) in 1.5–3.6s. A cached repeat takes **0.3s**.
+- **Other languages:** "Початок", "El Padrino", "Игра престолов" via translation, 0.5–1.6s.
+- **No match:** "asdkjh qwe" shows the no-match state.
+- **Fit summary:** `/api/fit-summary` with `type: 'tv', lang: 'es'` answers in Spanish.
+- **Classic:** `/api/search` is unchanged.
+- **In the browser** (local, and live in English): the header reads "“Interstellar” · 1 title · ✦ Matched by AI from “intersteller”". In Ukrainian, "Початок" lists *Inception* first and the AI take comes in Ukrainian. Checked at 375px.
+
+**Owner decisions to confirm:** the Movies tab's **AI chips** (Mind-bending, Rainy-night thrillers, …) still give AI picks. That keeps a browse path that isn't a title search. Make them discover queries if Cinematic should have no vibe search at all. Plot descriptions typed in the box sometimes still resolve to the film the AI recognises ("the movie where a guy relives the same day" → *Groundhog Day*).
+
+---
+
+## Session (2026-10-31e) — Cinematic Streams Vibe Search Too
+
+Committed on `main`; **deployed with `ab19ca9`** (production `a5991434`, 2026-10-31). Since the title-search pivot above, only Cinematic's AI chips (and their refine chips) use this stream; the search box no longer does.
 
 | Commit | Feature |
 |--------|---------|
@@ -2921,7 +2948,9 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 | `POST /api/translate` | POST | Translate text via `@cf/meta/m2m100-1.2b`; body: `{text, targetLang}` |
 | `POST /api/ai-search` | POST | Semantic search via `@cf/meta/llama-3.3-70b-instruct-fp8-fast`; body: `{query}` |
 | `POST /api/vibe-search` | POST | Vibe search over Vectorize `findfilm-films` (`handleVibeSearch()`, see the 2026-10-30/31 block); body `{query, exclude}`; same `aiCurated` payload plus `vibeSearch`, `match`; `?debug=1` adds parse / timings / scores and skips the cache |
-| `GET /api/search` | GET | Title-first tiered search; params `q`, `type` (`movie` or `tv`), `page`, `lang`. Tier 1 title/name match (sub-sorted by `_serverTitleScore`), Tier 2 overview match, Tier 2b other TMDB hits, Tier 3 movie-only semantic (KV catalog + Llama; page 1, only when Tier 1 has < 3 hits and the query has ≥ 3 words). Returns TMDB-shaped `results` plus `_tiers`; matching reads `title` / `original_title` for movies and `name` / `original_name` for TV (`_resultTitles`) |
+| `GET /api/title-search` | GET | Cinematic's exact title search (`handleTitleSearch()`, see the 2026-10-31f block); params `q`, `type` (`movie` or `tv`), `lang`; TMDB title match, then translated-title check and the 70B's typo / other-language fix (KV `tsr:v1:*`, 7 days); returns `{results, corrected, via}`; `?debug=1&fx=8b\|70b` |
+| `POST /api/fit-summary` | POST | Spoiler-free "who's it for" (70B, KV 30 days); body `{id, title, year?, genres?, overview?, type?, lang?}`; `fit:<id>` for an English film (Classic), else `fit:<type>:<id>:<lang>` |
+| `GET /api/search` | GET | Title-first tiered search (Classic; Cinematic uses `/api/title-search`); params `q`, `type` (`movie` or `tv`), `page`, `lang`. Tier 1 title/name match (sub-sorted by `_serverTitleScore`), Tier 2 overview match, Tier 2b other TMDB hits, Tier 3 movie-only semantic (KV catalog + Llama; page 1, only when Tier 1 has < 3 hits and the query has ≥ 3 words). Returns TMDB-shaped `results` plus `_tiers`; matching reads `title` / `original_title` for movies and `name` / `original_name` for TV (`_resultTitles`) |
 | `GET /api/tmdb/*` | GET | Proxy to `api.themoviedb.org/3/*` (injects `TMDB_KEY`) |
 | `GET /api/omdb` | GET | Proxy to `www.omdbapi.com` (injects `OMDB_KEY`) |
 
@@ -2931,8 +2960,9 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 
 | Function | Purpose |
 |----------|---------|
-| `setCtype(next, {reload})` / `applyTypeCopy()` / `typeCfg(type)` + `TYPES` (Cinematic) | The Movies \| TV Shows tab: state `ctype`, persisted in `sessionStorage.ff_ctype`; `TYPES` holds the per-tab endpoints, chips (`CHIPS` / `TV_CHIPS`), prompts, `ai` flag and copy; views capture `ctype` in `view.ctype` |
-| `askAIInMovies(q)` (Cinematic) | TV search miss → switch to Movies without reloading and run the film AI on the same words |
+| `setCtype(next, {reload})` / `applyTypeCopy()` / `typeCfg(type)` + `TYPES` (Cinematic) | The Movies \| TV Shows tab: state `ctype`, persisted in `sessionStorage.ff_ctype`; `TYPES` holds the per-tab endpoints, chips (`CHIPS` / `TV_CHIPS`), typewriter prompts (`tryPrompts(type)` over `TRY`) and copy; views capture `ctype` in `view.ctype` |
+| `runTitle(q)` / `searchOtherTab(q)` (Cinematic) | The search box on both tabs: `/api/title-search`, the "✦ Matched by AI" note from `corrected` + `via`, the no-match state; a miss offers the other tab's title search with the same words |
+| `loadTake(it, token)` + `TAKES` (Cinematic) | Quick view "FindFilm AI's take" (`.qv-take`, `data-slot="take"`) for any title without an AI reason: `/api/fit-summary` with `type` + `lang` |
 | `FFBot.welcome(target, onTry)` (`assets/social.js`) + `welcomeToAISearch()` (Classic) | A first visit's tip (`.ffw`) under the AI search, once per browser (`ff_welcome_seen`), shown when the target is on screen and uncovered; Classic calls it from `dismissFirstVisit()` / `startOnboardFromIntro()`, Cinematic on `DOMContentLoaded` when `firstVisit` (no `rk_lang` at boot) |
 | `egg()` (corner mascot, `assets/social.js`) | Five quick clicks on `.ffm-bot` (≤500ms apart): `.ffm.is-egg` spin + the `success` pose, GA `mascot_egg` |
 | `heroUp()` / `hello()` / `sayHello(out)` (hero mascot `#ffh`, `assets/social.js`) + `tryAISearch()` (Classic) | Classic's desktop hero mascot (≥1200px): `.is-ready` once the sprite is in; the one-off hello `.is-hi` (6s, `ff_hello_seen`), never on a page view that had the welcome tip; its click (and the tip's "Try it") → AI mode + focus; GA `mascot_click` `hero` |
@@ -3205,8 +3235,12 @@ The site is fully installable as a PWA on all platforms.
   - [ ] **The owner tries it** on findfilm.ai with `?vibe=1`.
   - [ ] **A 3rd judge round** after `7e5b645`'s last fixes.
   - [x] **Rollout:** the default for everyone since 2026-10-31 (`c6a3248`, production `81ff66b7`); `?vibe=0` opts a browser out.
-  - [x] **Stream in Cinematic too:** `17e4ad6`, posters at about 4s locally. **Deploy pending the owner's go-ahead.**
+  - [x] **Stream in Cinematic too:** `17e4ad6`, deployed 2026-10-31 with `ab19ca9` (production `a5991434`); since the title-search pivot it serves only the AI chips.
   - [ ] **Watch Workers AI usage and rate limits** now that every AI search makes 3 text-generation calls.
+- [x] **Cinematic = AI-powered exact title search** (`ab19ca9`, live 2026-10-31, production `a5991434`): no Beta label, title-only copy in 9 languages, `/api/title-search` with AI typo / other-language matching, the quick view's AI take
+- [ ] **Owner: keep or convert Cinematic's AI chips** — they still give AI vibe picks; turn them into discover queries if Cinematic should have no vibe search at all
+- [ ] **Native-speaker pass on the 2026-10-31f `cin.*` copy** (title search, AI take) — together with the `cin.*` review
+- [ ] **Fit-summary text is generic** ("Fans of powerful dramas will love this") — tune its prompt together with the 8B reasons item
 - [ ] **AI search for TV shows** — `/api/ai-search` is films-only (LLM curation + `search/movie` lookups + movie KV catalog); Cinematic and Classic fall back to title search on the TV tab
 - [ ] **Cinematic gaps vs Classic**: voice search (the 9-language UI, TV browsing, TV deep links and the Watchlist are done)
 - [ ] **Beta UI prototype feedback** (now `cinematic/index.html`; old preview https://beta-ui.ratingkino.pages.dev) — collect the owner's feedback, then decide: ship it at `/beta/` (add `beta` to `PUBLIC`), port pieces into `index.html`, or iterate. Not yet in it: voice (the watchlist landed in `89d2a3c`, the TV tab in `3a93af7`, i18n in `cec4746`)
