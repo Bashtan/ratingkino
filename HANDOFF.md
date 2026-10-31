@@ -2,7 +2,31 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-31d) — FF Bot Icons and Link Previews Live
+## ⚡ Most Recent Session (2026-10-31e) — Cinematic Streams Vibe Search Too
+
+Committed on `main`. **Not deployed yet:** waiting for the owner's go-ahead. Production is `829e4a59`, where Cinematic still uses JSON.
+
+| Commit | Feature |
+|--------|---------|
+| `17e4ad6` | **Cinematic `runAI()` reads the stream.**<br>**`aiStream(v, q, title)`:** `fetch` `${api.base}/api/vibe-search` with `Accept: text/event-stream`, through **`readSSE()`** (the twin of Classic's `_readSSE`). Events:<br>• **`parsed`**: the rotating `cin.think.*` line under the title becomes "✦ <English rewrite> · years · ≤ N min · no <genre>". English UI only (`lang === 'en'`).<br>• **`results`** and **`final`**: rendered through **`aiShow()`**, then `setBusy(false)`.<br>• **`reply`**: **`aiPatch()`**.<br>• A cached answer arrives as JSON and goes through `aiShow()`.<br>**`aiShow()`** is the render step taken out of `runAI()`: films or KV `ids`, then `renderItems`, **`aiHeader()`**, `setRefine`, `FFBot.found`, `announce`. The opt-out path (`?vibe=0` → `/api/ai-search` via `call()`) uses it too.<br>**`aiPatch()`:**<br>• updates `it.reason` (what the quick view's `.qv-why` shows) and `it.vibe` on the stored items, and each card's `.ov-tag` in place;<br>• fades out dropped tiles (**`.tile.ai-out`**), except one that is hovered, focused or in `QV.stack` while `QV.open`; dropped films leave `v.items` / `v.shown`;<br>• appends added films with `renderItems(..., {append: true})`;<br>• after 320ms, reorders the tiles to the final list (with `animation: none` on moved tiles, so the `rise` entrance doesn't replay) and sorts `v.items`;<br>• refreshes the header, and the refine chips only if they changed.<br>Timeouts: 20s for the cards, then 15s more for the reply. A failure before the cards falls back to `titleFallback()`, as before. |
+
+**Verified locally** (the browser pane, a new visitor, the real hero search):
+
+| Time | What's on screen |
+|---|---|
+| 0.5s | the usual thinking line |
+| **1.5s** | FF Bot's understanding |
+| **4.0s** | 8 posters with their vibe tags; the search box unlocked |
+| 6.9–7.3s | the reply: "6 AI picks · …", 2 cards faded out, 1 added, the final order |
+
+- A cached repeat rendered in **143 ms**, already final.
+- A quick view open on a film during the reply stayed open, and its card stayed.
+- A second search 1.5s into the first: only the second's header and films remained.
+- Opt-out: `/api/ai-search` (JSON) renders through `aiShow()`.
+
+---
+
+## Session (2026-10-31d) — FF Bot Icons and Link Previews Live
 
 All commits on `main`, **live on https://findfilm.ai since 2026-10-31**: Pages production **`829e4a59`**, from `9934a25`. `/build.json` = `20261031T143209Z-9934a25`.
 
@@ -3181,7 +3205,7 @@ The site is fully installable as a PWA on all platforms.
   - [ ] **The owner tries it** on findfilm.ai with `?vibe=1`.
   - [ ] **A 3rd judge round** after `7e5b645`'s last fixes.
   - [x] **Rollout:** the default for everyone since 2026-10-31 (`c6a3248`, production `81ff66b7`); `?vibe=0` opts a browser out.
-  - [ ] **Stream in Cinematic too** (it uses JSON: about 10s with nothing on screen).
+  - [x] **Stream in Cinematic too:** `17e4ad6`, posters at about 4s locally. **Deploy pending the owner's go-ahead.**
   - [ ] **Watch Workers AI usage and rate limits** now that every AI search makes 3 text-generation calls.
 - [ ] **AI search for TV shows** — `/api/ai-search` is films-only (LLM curation + `search/movie` lookups + movie KV catalog); Cinematic and Classic fall back to title search on the TV tab
 - [ ] **Cinematic gaps vs Classic**: voice search (the 9-language UI, TV browsing, TV deep links and the Watchlist are done)
