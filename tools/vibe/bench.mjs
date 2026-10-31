@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* Run tools/vibe/bench-queries.json against both AI searches and save what each returned.
-     node tools/vibe/bench.mjs [--base http://127.0.0.1:8283] [--out tools/vibe/.cache/bench.json]
+     node tools/vibe/bench.mjs [--base http://127.0.0.1:8283] [--out tools/vibe/.cache/bench.json] [--reuse-old <earlier bench.json>]
    For every query: POST /api/vibe-search?debug=1 (no cache) and /api/ai-search,
    one after the other, recording the top 6 films, FF Bot's message, `match`,
    and the wall time. Each film gets its runtime from TMDB (TMDB_KEY in .dev.vars)
@@ -49,10 +49,12 @@ async function ask(endpoint, q) {
   }
 }
 
+// --reuse-old <bench.json>: keep /api/ai-search's answers from an earlier run instead of asking again.
+const reuse = opt('reuse-old') ? new Map(JSON.parse(fs.readFileSync(opt('reuse-old'), 'utf8')).map(r => [r.id, r.old])) : null;
 const results = [];
 for (const q of QUERIES) {
   const vibe = await ask('/api/vibe-search?debug=1', q.q);
-  const old = await ask('/api/ai-search', q.q);
+  const old = reuse?.get(q.id) || await ask('/api/ai-search', q.q);
   const rank = r => q.answer ? (r.films.findIndex(f => q.answer.includes(f.id)) + 1) || 0 : null;
   results.push({ ...q, vibe: { ...vibe, rank: rank(vibe) }, old: { ...old, rank: rank(old) } });
   console.log(`${q.id.padEnd(9)} vibe ${String(vibe.ms).padStart(5)}ms ${vibe.vibeSearch ? '' : '(fell back) '}rank ${rank(vibe) ?? '-'} | old ${String(old.ms).padStart(5)}ms rank ${rank(old) ?? '-'} | ${vibe.films.slice(0, 3).map(f => f.title).join(' · ')}`);
