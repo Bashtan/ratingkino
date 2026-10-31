@@ -4,7 +4,18 @@
 
 ## ⚡ Most Recent Session (2026-10-31b) — Vibe Search Streams: Cards in ~5s, Not ~10s
 
-Committed on `main` and pushed. **Not deployed yet.** Production is still `65a24ae0`, the non-streaming vibe search the owner is testing with `?vibe=1`; it ships once the owner says so. The JSON contract is unchanged, so nothing else depends on the deploy.
+All commits on `main`, **live on https://findfilm.ai since 2026-10-31**: Pages production **`be052c2c`**, from `42d0e28`. It is still behind `?vibe=1`. The live `/` is identical to the commit, and `/build.json` = `20261031T135825Z-42d0e28`.
+
+**On production** (5 fresh queries; Cloudflare passes events through as they are sent, with no buffering):
+
+| Event | Median | Range |
+|---|---|---|
+| headers | 0.12s | |
+| `parsed` | **0.9s** | |
+| **`results`** | **3.5s** | 2.9–5.4s |
+| `reply` | **7.5s** | 4.8–9.3s |
+
+Before streaming, nothing appeared for 9.5–11s.
 
 | Commit | Feature |
 |--------|---------|
@@ -3120,7 +3131,8 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Ship the `/api/search` TV ranking fix** (`ca02d1f`) — merged, pushed and deployed 2026-10-08 (production `6ce11eb0`); verified on findfilm.ai and ratingkino.com
 - [ ] **Diacritic-insensitive title matching in `/api/search`** — fold accents on the query and on `_resultTitles()` output so "shogun" finds *Shōgun* and "amelie" finds *Amélie* in Tier 1; it changes movie ranking too, so it needs the owner's go-ahead
 - [ ] **Vibe search, next**:
-  - [x] **Speed:** streaming (SSE) and a split read, `d8203ed`: cards at about 5s, the reply about 9s (was about 10s for everything). **Deploy pending the owner's go-ahead.**
+  - [x] **Speed:** streaming (SSE) and a split read, `d8203ed`, live 2026-10-31 (production `be052c2c`). Cards at **3.5s** median and the reply at 7.5s on production; before, about 10s for everything.
+  - [ ] **The 8B's reasons:** sometimes generic. Tune the prompt, or try another small model for the reply.
   - [ ] **Nightly ingest:** the new and changed films, from TMDB's `/movie/changes`.
   - [ ] **TV shows:** in the index (a namespace or `type`), which also closes the AI-search-for-TV item below.
   - [ ] **"More like this":** on every card (query by the film's own vector), and **Taste DNA** as the average of liked films' vectors.
