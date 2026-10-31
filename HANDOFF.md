@@ -2,7 +2,36 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-30/31) — Vibe Search on Workers AI + Vectorize (dark launch behind `?vibe=1`)
+## ⚡ Most Recent Session (2026-10-31b) — Vibe Search Streams: Cards in ~5s, Not ~10s
+
+Committed on `main` and pushed. **Not deployed yet.** Production is still `65a24ae0`, the non-streaming vibe search the owner is testing with `?vibe=1`; it ships once the owner says so. The JSON contract is unchanged, so nothing else depends on the deploy.
+
+| Commit | Feature |
+|--------|---------|
+| `d8203ed` | **Streaming and a split read.**<br>**Server:** `handleVibeSearch()` is now a thin layer (input, cache, JSON or stream) around **`_vibeRun(ctx, emit)`**.<br>• The single 70B parse is now **two JSON-mode calls in parallel**:<br>  – **`VIBE_READ_MODEL`** (8B, `_vibeReadPrompt` / `_VIBE_READ_SCHEMA`, about 1s): rewrite, synopsis, limits, avoid, route/person. It starts the search.<br>  – **`VIBE_PICK_MODEL`** (70B, `_VIBE_PICK_PROMPT` / `_VIBE_PICK_SCHEMA`): `kind`, `guesses`, `likeTitles`. A short answer, about 2–3s, **capped at 5s**, after which the search goes on without it.<br>• **Streaming** applies to requests with `Accept: text/event-stream` (but not `?debug=1`). They get a `TransformStream` Response at once (`text/event-stream`, `Cache-Control: no-cache, no-transform`), and the run continues under `waitUntil`. Events:<br>  – **`parsed`** `{english, filters, avoid}`.<br>  – **`results`** (interim payload: the top 8 by blend, each film's feel line as its reason, `interim: true`).<br>  – **`reply`** (the final payload, the same as the JSON answer and the cache).<br>  – **`done`**.<br>  – A hand-off to `/api/ai-search` decided after the stream opened arrives as **`final`** with that route's JSON body (any shape).<br>  – Errors before `results` turn into `final`; after it, nothing replaces what's on screen.<br>• **Review fixes** (3 lenses, 20 agents, 13 confirmed):<br>  – the 6-hour cache now also needs `pickOk`;<br>  – person routing matches a name **word** with accents stripped (`_vibeTitleKey`); a non-Latin query trusts the route;<br>  – with no reply (`fromReply` 0), the final list is the interim one, so no cards change.<br>**Classic (`index.html`), with `?vibe=1` only:** `aiSearch()` sends `Accept: text/event-stream` and calls **`_vibeStream(r, {seq, query, controller, timeout})`** for an event stream; JSON is handled as before. New helpers:<br>• **`_readSSE()`**: SSE parsed from the `fetch` body, since EventSource can't POST.<br>• **`_vibeShowParsed()`**: the loader line becomes "✦ <English rewrite> · years · ≤ N min · no <genre>"; English UI only.<br>• **`_applyVibeReply()`**: rebuilds only each kept card's `.movie-info` from `renderCardHTML()`, so posters stay. Dropped cards get `.airx-card-out` and are removed after 280ms, except a card that is hovered, focused, or open in the detail overlay. New films are appended; after 300ms the grid is reordered to the final list. Chips re-render only when they change.<br>• **`_renderAiPayload()`**: the one renderer for every answer shape (open world → `_renderAiCurated()`, closed-world `ids`), used for JSON and for `final`.<br>Timeouts: 20s until the cards, then 15s for the reply. **`closeAiResults()`** now aborts the search and bumps `_aiSearchSeq`. The loader's pending phrase swap checks `_ailPhraseTimer`, so it can't overwrite FF Bot's line. The "found N" summary lost its double ✦: the translated strings carry their own, a pre-existing bug. CSS `.airx-card-out`, `.airx-info-in` (reduced motion: no motion). |
+
+**Verified locally** (`findfilm-full`, the browser pane and Node `fetch`):
+- **Event timings, 6 fresh queries:**
+
+| Event | Median | Range |
+|---|---|---|
+| `parsed` | **1.0s** | 0.7–1.3s |
+| `results` | **5.0s** | 2.9–5.5s |
+| `reply` | **8.8s** | 6.0–9.5s |
+
+  Before streaming, nothing appeared for 9.5–11s.
+- **The real panel:** loader line at 1.2s, 8 cards at 3.5s, the reply at 6.5s (2 cards faded out, reasons swapped in).
+- **A cached repeat** rendered in 104 ms (JSON).
+- **A second search 2s into the first:** only the second's cards and line remained.
+- **Closing the panel mid-stream:** `_aiMatchReasons` / `_aiMatchTags` stayed empty.
+- **Flag off:** `/api/ai-search` still renders through `_renderAiPayload`.
+- **Person routing:** unit-tested on the review's examples.
+
+**Known limits:** the first card still waits for the 70B picks (≤5s), which carry most of the quality. The reply (8B) adds 2–4s after that, and its reasons are sometimes generic.
+
+---
+
+## Session (2026-10-30/31) — Vibe Search on Workers AI + Vectorize (dark launch behind `?vibe=1`)
 
 All commits on `main`, **live on https://findfilm.ai since 2026-10-31**: Pages production `65a24ae0`, from `2d442f3`. **Visitors don't see it:** the AI panel only calls the new route after `?vibe=1` (localStorage `ff_flag_vibe`; `?vibe=0` turns it off). `/api/vibe-search` itself is public.
 
@@ -3091,7 +3120,7 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Ship the `/api/search` TV ranking fix** (`ca02d1f`) — merged, pushed and deployed 2026-10-08 (production `6ce11eb0`); verified on findfilm.ai and ratingkino.com
 - [ ] **Diacritic-insensitive title matching in `/api/search`** — fold accents on the query and on `_resultTitles()` output so "shogun" finds *Shōgun* and "amelie" finds *Amélie* in Tier 1; it changes movie ranking too, so it needs the owner's go-ahead
 - [ ] **Vibe search, next**:
-  - [ ] **Speed:** stream the answer (SSE): cards at about 5s, then FF Bot's reasons. Or find a faster parse that keeps the 70B's picks.
+  - [x] **Speed:** streaming (SSE) and a split read, `d8203ed`: cards at about 5s, the reply about 9s (was about 10s for everything). **Deploy pending the owner's go-ahead.**
   - [ ] **Nightly ingest:** the new and changed films, from TMDB's `/movie/changes`.
   - [ ] **TV shows:** in the index (a namespace or `type`), which also closes the AI-search-for-TV item below.
   - [ ] **"More like this":** on every card (query by the film's own vector), and **Taste DNA** as the average of liked films' vectors.
