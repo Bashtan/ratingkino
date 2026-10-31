@@ -1342,6 +1342,15 @@ header {
 @media (prefers-reduced-motion: reduce) {
   .airx-grid-in { animation: none; }
 }
+/* Vibe search's reply (_applyVibeReply): a film FF Bot judged a poor fit fades out of the grid,
+   and each kept card's text block (its reason and tags) eases in, while the poster stays put. */
+.airx-card-out { opacity: 0; transform: scale(0.96); transition: opacity 0.26s ease, transform 0.26s ease; pointer-events: none; }
+.airx-info-in { animation: airxInfoIn 0.35s ease both; }
+@keyframes airxInfoIn { from { opacity: 0.25; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .airx-card-out { transform: none; }
+  .airx-info-in { animation: none; }
+}
 .airx-empty { display: none; flex-direction: column; align-items: center; justify-content: center;
   gap: 10px; padding: 48px 20px; text-align: center; }
 .airx-empty.show { display: flex; }
@@ -9248,6 +9257,7 @@ function showAiLoader() {
   _ailPhraseTimer = setInterval(() => {
     ph.classList.add('ail-fade');
     setTimeout(() => {
+      if (!_ailPhraseTimer) return;   // the cycle was stopped (results, or vibe search's own line) mid-swap
       _ailPhraseIdx = (_ailPhraseIdx + 1) % AIL_PHRASE_KEYS.length;
       ph.textContent = t(AIL_PHRASE_KEYS[_ailPhraseIdx]);
       ph.classList.remove('ail-fade');
@@ -9279,6 +9289,10 @@ function openAiResults(query) {
 
 function closeAiResults() {
   hideAiLoader();   // stop the phrase interval if the user bails mid-search
+  // End the search too: a vibe search's stream would otherwise land its reply after the close.
+  if (_aiSearchAbort) _aiSearchAbort.abort();
+  _aiSearchAbort = null;
+  _aiSearchSeq++;
   window.FFBot?.set('idle');
   document.getElementById('aiResultsModal').classList.remove('open');
   document.getElementById('aiResultsBackdrop').classList.remove('open');
@@ -9378,6 +9392,171 @@ function vibeSearchOn() {
   try { return localStorage.getItem('ff_flag_vibe') === '1'; } catch { return false; }
 }
 
+/* An open-world answer (an actor's films, or real films the AI picked: /api/ai-search's
+   aiCurated, or vibe search's) → the AI panel: cards, reasons, FF Bot's line, follow-ups. */
+function _renderAiCurated(data, query) {
+  data.movies.forEach(raw => { if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromTMDb(raw)); });
+  const results = data.movies.map(raw => MOVIES.find(x => x.id === raw.id)).filter(Boolean);
+  Object.entries(data.reasons  || {}).forEach(([id, v]) => _aiMatchReasons.set(Number(id), v));
+  Object.entries(data.tags     || {}).forEach(([id, v]) => _aiMatchTags.set(Number(id), v));
+  Object.entries(data.vibeTags || {}).forEach(([id, v]) => _aiVibeTags.set(Number(id), v));
+  renderAiResults(results);
+  const n = results.length;
+  const summary = data.actorQuery
+    ? t('ai.foundForActor', { name: data.personName })
+    : (data.message || (n === 1 ? t('ai.found', { n, q: query }) : t('ai.foundPlural', { n, q: query })));
+  document.getElementById('aiResultsSummary').textContent = '✦ ' + summary.replace(/^✦\s*/, '');   // the found-N strings carry their own ✦
+  renderAiFollowUps(query, data.suggestedRefinements);
+}
+
+/* Any AI-search answer → the AI panel: the open world (actor filmography, or real films the AI
+   picked) or the closed world (ids into the KV catalog snapshot). Throws on an empty answer, so the
+   caller falls back. Used for a JSON response and for vibe search's streamed `final` hand-off. */
+function _renderAiPayload(data, query) {
+  // ── Open-world path: actor filmography or LLM-curated real films ──
+  if ((data.actorQuery || data.aiCurated) && data.movies?.length) {
+    _renderAiCurated(data, query);
+    return;
+  }
+
+  // ── Closed-world path: KV catalog reorder ──
+  const { ids, reasons, tags, suggestedRefinements, message } = data;
+  if (!ids || !ids.length) throw new Error('Empty AI response');
+
+  const idOrder = new Map(ids.map((id, i) => [id, i]));
+  const aiRanked = CACHE_MOVIES
+    .filter(m => idOrder.has(m.id))
+    .sort((a, b) => idOrder.get(a.id) - idOrder.get(b.id));
+  const results = titleBoostResults(aiRanked, query);
+
+  // Union into MOVIES (no clobber) so result cards resolve via openMovie().
+  results.forEach(m => { if (!MOVIES.find(x => x.id === m.id)) MOVIES.push(m); });
+
+  buildMatchScores(results);
+  if (reasons)       Object.entries(reasons).forEach(([id, v]) => _aiMatchReasons.set(Number(id), v));
+  if (tags)          Object.entries(tags).forEach(([id, v]) => _aiMatchTags.set(Number(id), v));
+  if (data.vibeTags) Object.entries(data.vibeTags).forEach(([id, v]) => _aiVibeTags.set(Number(id), v));
+
+  renderAiResults(results);
+  const n = results.length;
+  const summary = message || (n === 1 ? t('ai.found', { n, q: query })
+                                      : t('ai.foundPlural', { n, q: query }));
+  document.getElementById('aiResultsSummary').textContent = '✦ ' + summary.replace(/^✦\s*/, '');   // the found-N strings carry their own ✦
+  renderAiFollowUps(query, suggestedRefinements);
+}
+
+/* Server-Sent Events from a fetch() body (EventSource can't POST): onEvent(name, data) per event. */
+async function _readSSE(body, onEvent) {
+  const reader = body.getReader(), dec = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let cut;
+    while ((cut = buf.indexOf('\n\n')) >= 0) {
+      const block = buf.slice(0, cut);
+      buf = buf.slice(cut + 2);
+      let name = 'message', data = '';
+      for (const line of block.split('\n')) {
+        if (line.startsWith('event:')) name = line.slice(6).trim();
+        else if (line.startsWith('data:')) data += line.slice(5).trim();
+      }
+      if (data && onEvent(name, JSON.parse(data)) === false) { reader.cancel().catch(() => {}); return; }
+    }
+  }
+}
+
+/* Vibe search's stream (handleVibeSearch): parsed (~1s) puts what FF Bot understood in the loader;
+   results (~4s) shows the cards with each film's "feel" line; reply (~6s) swaps in FF Bot's own
+   reasons, tags and line, and fades out the films it judged a poor fit; final (a hand-off to the
+   old search, in any of its shapes) renders like JSON. The 20s abort covers the wait for cards only; after that the
+   reply gets 15s more, and if it never comes the cards simply stay. */
+async function _vibeStream(r, ctx) {
+  let shown = false, replyTimer = null;
+  try {
+    await _readSSE(r.body, (event, data) => {
+      if (ctx.seq !== _aiSearchSeq) return false;   // a newer search owns the panel
+      if (event === 'parsed') _vibeShowParsed(data);
+      else if (event === 'results' || event === 'final') {
+        clearTimeout(ctx.timeout);
+        if (event === 'final') _renderAiPayload(data, ctx.query);   // any shape the old search answers in
+        else if (data.movies?.length) _renderAiCurated(data, ctx.query);
+        else throw new Error('Empty AI response');
+        shown = true;
+        replyTimer = setTimeout(() => ctx.controller.abort(), 15000);
+      } else if (event === 'reply' && shown) _applyVibeReply(data, ctx.query);
+      else if (event === 'error' && !shown) throw new Error(data.error || 'vibe search failed');
+    });
+  } catch (e) {
+    if (!shown) throw e;                            // nothing on screen yet: aiSearch() falls back
+  } finally {
+    clearTimeout(ctx.timeout);
+    clearTimeout(replyTimer);
+  }
+  if (!shown && ctx.seq === _aiSearchSeq) throw new Error('vibe search ended without results');
+  if (_aiSearchAbort === ctx.controller) _aiSearchAbort = null;
+}
+
+/* The loader's line becomes what FF Bot understood (English UI; the rewrite is in English). */
+function _vibeShowParsed(d) {
+  const ph = document.getElementById('aiLoaderPhrase');
+  if (!ph || !d?.english || (typeof CURRENT_LANG !== 'undefined' && CURRENT_LANG !== 'en')) return;
+  const f = d.filters || {}, bits = [];
+  if (f.yearMin || f.yearMax) bits.push(f.yearMin && f.yearMax ? `${f.yearMin}–${f.yearMax}` : f.yearMin ? `${f.yearMin}+` : `up to ${f.yearMax}`);
+  if (f.runtimeMax) bits.push(`≤ ${f.runtimeMax} min`);
+  if (d.avoid?.length) bits.push('no ' + d.avoid.join(', '));
+  clearInterval(_ailPhraseTimer);
+  _ailPhraseTimer = null;
+  ph.classList.remove('ail-fade');
+  ph.textContent = '✦ ' + d.english + (bits.length ? ' · ' + bits.join(' · ') : '');
+}
+
+/* FF Bot's reply onto cards already on screen: only each card's text block is rebuilt (posters
+   stay put), dropped films fade out, a film new to the list is added at the end. */
+function _applyVibeReply(data, query) {
+  const grid = document.getElementById('aiResultsGrid');
+  if (!grid || !data?.movies?.length || !document.getElementById('aiResultsModal')?.classList.contains('open')) return;
+  data.movies.forEach(raw => { if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromTMDb(raw)); });
+  const keep = new Set(data.movies.map(raw => raw.id));
+  _aiMatchReasons.clear(); _aiMatchTags.clear(); _aiVibeTags.clear();
+  Object.entries(data.reasons  || {}).forEach(([id, v]) => _aiMatchReasons.set(Number(id), v));
+  Object.entries(data.tags     || {}).forEach(([id, v]) => _aiMatchTags.set(Number(id), v));
+  Object.entries(data.vibeTags || {}).forEach(([id, v]) => _aiVibeTags.set(Number(id), v));
+  // A dropped film stays when the user is on it: pointing at it, focused in it, or reading its details.
+  const inUse = card => card.matches(':hover') || card.contains(document.activeElement) ||
+    (typeof ACTIVE_MOVIE !== 'undefined' && ACTIVE_MOVIE?.id === Number(card.id.slice(5)) &&
+     document.getElementById('overlay')?.classList.contains('open'));
+  grid.querySelectorAll('.movie-card').forEach(card => {
+    if (keep.has(Number(card.id.slice(5))) || inUse(card)) return;
+    card.classList.add('airx-card-out');
+    setTimeout(() => card.remove(), 280);
+  });
+  for (const raw of data.movies) {
+    const m = MOVIES.find(x => x.id === raw.id);
+    if (!m) continue;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = renderCardHTML(m).trim();
+    const fresh = tmp.firstElementChild;
+    const card = grid.querySelector('#card-' + m.id);
+    if (!card) { grid.appendChild(fresh); continue; }
+    const info = card.querySelector('.movie-info'), next = fresh.querySelector('.movie-info');
+    if (info && next) { next.classList.add('airx-info-in'); info.replaceWith(next); }
+  }
+  // Then the final order (the same as a cached repeat shows), once the dropped cards have gone.
+  setTimeout(() => {
+    const cards = data.movies.map(raw => grid.querySelector('#card-' + raw.id)).filter(Boolean);
+    const now = [...grid.querySelectorAll('.movie-card')].filter(c => cards.includes(c));
+    if (now.some((c, i) => c !== cards[i])) {
+      let anchor = cards[cards.length - 1].nextSibling;
+      for (let i = cards.length - 1; i >= 0; i--) { grid.insertBefore(cards[i], anchor); anchor = cards[i]; }
+    }
+  }, 300);
+  if (data.message) document.getElementById('aiResultsSummary').textContent = '✦ ' + data.message;
+  const chipsNow = [...document.querySelectorAll('#aiResultsFollowups .ai-sug-chip')].map(c => c.dataset.q).join('|');
+  if ((data.suggestedRefinements || []).slice(0, 4).join('|') !== chipsNow) renderAiFollowUps(query, data.suggestedRefinements);
+}
+
 /* Main AI search — routes every query through the backend's English intent
    translation + never-empty guarantee, then renders into the AI Results modal. */
 async function aiSearch(query) {
@@ -9406,13 +9585,18 @@ async function aiSearch(query) {
 
     const r = await fetch(vibe ? '/api/vibe-search' : '/api/ai-search', {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(vibe ? { Accept: 'text/event-stream' } : {}) },
       body:    JSON.stringify({ query: cleanQuery, exclude }),
       signal:  controller.signal,
     });
-    clearTimeout(timeout);
+    if (!r.ok) { clearTimeout(timeout); throw new Error(`HTTP ${r.status}`); }
 
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    // Vibe search streams its stages (see _vibeStream); a cache hit or a hand-off still comes as JSON.
+    if ((r.headers.get('content-type') || '').includes('text/event-stream')) {
+      await _vibeStream(r, { seq, query, controller, timeout });
+      return;
+    }
+    clearTimeout(timeout);
     const data = await r.json();
 
     // A newer aiSearch() call has since superseded this one — discard this
@@ -9429,52 +9613,7 @@ async function aiSearch(query) {
     // see their own sentence sitting still from submit through to results.
     const headerQuery = query;
 
-    // ── Open-world path: actor filmography or LLM-curated real films ──
-    if ((data.actorQuery || data.aiCurated) && data.movies?.length) {
-      data.movies.forEach(raw => {
-        if (!MOVIES.find(x => x.id === raw.id)) MOVIES.push(fromTMDb(raw));
-      });
-      const results = data.movies.map(raw => MOVIES.find(x => x.id === raw.id)).filter(Boolean);
-
-      Object.entries(data.reasons  || {}).forEach(([id, v]) => _aiMatchReasons.set(Number(id), v));
-      Object.entries(data.tags     || {}).forEach(([id, v]) => _aiMatchTags.set(Number(id), v));
-      Object.entries(data.vibeTags || {}).forEach(([id, v]) => _aiVibeTags.set(Number(id), v));
-
-      renderAiResults(results);
-      const n = results.length;
-      const summary = data.actorQuery
-        ? t('ai.foundForActor', { name: data.personName })
-        : (data.message || (n === 1 ? t('ai.found', { n, q: headerQuery })
-                                    : t('ai.foundPlural', { n, q: headerQuery })));
-      document.getElementById('aiResultsSummary').textContent = '✦ ' + summary;
-      renderAiFollowUps(query, data.suggestedRefinements);
-      return;
-    }
-
-    // ── Closed-world path: KV catalog reorder ──
-    const { ids, reasons, tags, suggestedRefinements, message } = data;
-    if (!ids || !ids.length) throw new Error('Empty AI response');
-
-    const idOrder = new Map(ids.map((id, i) => [id, i]));
-    const aiRanked = CACHE_MOVIES
-      .filter(m => idOrder.has(m.id))
-      .sort((a, b) => idOrder.get(a.id) - idOrder.get(b.id));
-    const results = titleBoostResults(aiRanked, query);
-
-    // Union into MOVIES (no clobber) so result cards resolve via openMovie().
-    results.forEach(m => { if (!MOVIES.find(x => x.id === m.id)) MOVIES.push(m); });
-
-    buildMatchScores(results);
-    if (reasons)       Object.entries(reasons).forEach(([id, v]) => _aiMatchReasons.set(Number(id), v));
-    if (tags)          Object.entries(tags).forEach(([id, v]) => _aiMatchTags.set(Number(id), v));
-    if (data.vibeTags) Object.entries(data.vibeTags).forEach(([id, v]) => _aiVibeTags.set(Number(id), v));
-
-    renderAiResults(results);
-    const n = results.length;
-    const summary = message || (n === 1 ? t('ai.found', { n, q: headerQuery })
-                                        : t('ai.foundPlural', { n, q: headerQuery }));
-    document.getElementById('aiResultsSummary').textContent = '✦ ' + summary;
-    renderAiFollowUps(query, suggestedRefinements);
+    _renderAiPayload(data, headerQuery);
 
   } catch (e) {
     // A newer aiSearch() call already superseded this one (either it aborted
