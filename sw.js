@@ -23,11 +23,11 @@ const CACHE  = 'ff-v3';
        '/' entry fetched via a redirect. '/' alone is the shell. */
 const SHELL  = [
   '/',
-  '/assets/site.webmanifest?v=84bc4ea6',
-  '/assets/apple-touch-icon.png?v=5948ada3',
-  '/assets/icon-192.png?v=9832b405',
-  '/assets/icon-512.png?v=35fad035',
-  '/assets/og-image.jpg?v=16a40cba',
+  '/assets/site.webmanifest?v=a2477eb4',
+  '/assets/apple-touch-icon.png?v=91d3d975',
+  '/assets/icon-192.png?v=52e4c6a7',
+  '/assets/icon-512.png?v=e87f3912',
+  '/assets/og-image.jpg?v=f27f1f6e',
 ];
 
 /* ── Install: pre-cache the app shell ─────────────────────────────────────── */
