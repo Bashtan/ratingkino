@@ -1,6 +1,8 @@
 # Cut the matted 2×2 sheet (think · success / confused · idea) into the mood
 # strip social.css expects: think · idea · success · confused, each 256×320.
-#   python3 slice.py <matted-sheet.png> <strip.png>
+#   python3 slice.py <matted-sheet.png> <strip.png> [TL,TR,BL,BR]
+# Another sheet (the reaction poses, raw/ff-bot-reactions.png): name its four
+# poses in reading order, and the strip keeps that order.
 # Every robot stands on its frame's bottom edge, centred on its helmet, all
 # scaled by one factor so helmet-to-feet averages 238 of 320. That matches the
 # standing mascot (ff-bot.webp: helmet-to-feet ≈ 0.89 of its height, shown in a
@@ -16,6 +18,9 @@ FW, FH = 256, 320
 HELMET_TO_FEET = 238
 QUAD = {'think': (0, 0), 'success': (1, 0), 'confused': (0, 1), 'idea': (1, 1)}
 ORDER = ['think', 'idea', 'success', 'confused']
+if len(sys.argv) > 3:
+    ORDER = sys.argv[3].split(',')
+    QUAD = {name: (i % 2, i // 2) for i, name in enumerate(ORDER)}
 
 sheet = Image.open(sys.argv[1]).convert('RGBA')
 W, H = sheet.size

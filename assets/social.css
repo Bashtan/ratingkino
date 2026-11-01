@@ -233,7 +233,11 @@
    238 of 320 — the same size as the idle pose inside a box 1/0.85 its
    height, so a cross-fade lines up; the props (?, bulb, sparks) use the room
    above and beside it. Its ?v= below is the sprite's own hash; changing it
-   changes this file, so bump ?v= of social.* in both pages as usual. */
+   changes this file, so bump ?v= of social.* in both pages as usual.
+   The trailer bot's own poses (.ffb-r, mounted by FFBot.watch only) are a
+   second sprite in the same layout, ff-bot-reactions.webp (shocked, laughing,
+   teary, hyped, from raw/ff-bot-reactions.png), fetched once a trailer plays
+   (html.ffr-on). cut.sh builds both. */
 .ffb { position: relative; display: block; flex-shrink: 0; }
 .ffb-idle { display: block; height: 100%; width: auto; transition: opacity 0.28s ease; }
 .ffb-m {
@@ -243,11 +247,16 @@
   background: no-repeat 0 0 / 400% 100%;
   transition: opacity 0.28s ease;
 }
-html.ffb-on .ffb-m, html.ffb-on .ffh-bot::before, html.ffb-on .ffh-bot::after, html.ffb-on .ffp-bot { background-image: url("/assets/ff-bot-moods.webp?v=1b892b12"); }
+html.ffb-on .ffb-m:not(.ffb-r), html.ffb-on .ffh-bot::before, html.ffb-on .ffh-bot::after, html.ffb-on .ffp-bot { background-image: url("/assets/ff-bot-moods.webp?v=1b892b12"); }
+html.ffr-on .ffb-r { background-image: url("/assets/ff-bot-reactions.webp?v=5d7e7399"); }
 .ffb-m[data-m="think"]    { background-position: 0 0; }
 .ffb-m[data-m="idea"]     { background-position: 33.3333% 0; }
 .ffb-m[data-m="success"]  { background-position: 66.6667% 0; }
 .ffb-m[data-m="confused"] { background-position: 100% 0; }
+.ffb-r[data-m="shocked"]  { background-position: 0 0; }
+.ffb-r[data-m="laughing"] { background-position: 33.3333% 0; }
+.ffb-r[data-m="teary"]    { background-position: 66.6667% 0; }
+.ffb-r[data-m="hyped"]    { background-position: 100% 0; }
 .ffb[data-mood]:not([data-mood="idle"]) > .ffb-idle { opacity: 0; }
 .ffb[data-mood="think"]    > [data-m="think"]    { opacity: 1; animation: ffb-think 1.8s ease-in-out infinite; }
 .ffb[data-mood="idea"]     > [data-m="idea"]     { opacity: 1; animation: ffb-pop 0.45s cubic-bezier(.34,1.56,.64,1) both, ffb-glow 1.4s ease-in-out 0.45s infinite; }
@@ -300,16 +309,20 @@ html.ffb-on .ffb-m, html.ffb-on .ffh-bot::before, html.ffb-on .ffh-bot::after, h
 .trb.is-up.is-away { transform: translateY(125%); opacity: 0; transition: transform 0.3s cubic-bezier(.5,0,.75,0), opacity 0.2s ease 0.1s; }
 .trb-bot { height: 100%; transform-origin: 50% 100%; }
 .ffb.trb-bot > .ffb-m[data-m] { animation: none; }
+.trb-bot[data-mood="shocked"]  > [data-m="shocked"],
+.trb-bot[data-mood="laughing"] > [data-m="laughing"],
+.trb-bot[data-mood="teary"]    > [data-m="teary"],
+.trb-bot[data-mood="hyped"]    > [data-m="hyped"] { opacity: 1; }
 .trb-bot[data-rx="watch"]   { animation: trb-bob 3.4s ease-in-out infinite; }
 .trb-bot[data-rx="curious"] { animation: ffb-think 1.8s ease-in-out infinite; }
 .trb-bot[data-rx="tense"]   { animation: trb-lean 0.7s cubic-bezier(.22,1,.36,1) both, trb-shiver 2.4s ease-in-out 0.7s infinite; }
 .trb-bot[data-rx="wow"]     { animation: ffb-pop 0.45s cubic-bezier(.34,1.56,.64,1) both, ffb-glow 1.4s ease-in-out 0.45s infinite; }
-.trb-bot[data-rx="hype"]    { animation: trb-jump 0.9s cubic-bezier(.3,.7,.4,1) infinite, ffb-twinkle 1.2s ease-in-out infinite; }
-.trb-bot[data-rx="laugh"]   { animation: trb-giggle 1.1s ease-in-out infinite; }
-.trb-bot[data-rx="shock"]   { animation: trb-jolt 0.6s cubic-bezier(.2,.9,.3,1.3) both, trb-quiver 1.8s linear 0.6s infinite; }
-.trb-bot[data-rx="sad"]     { animation: trb-droop 1.2s ease both, trb-sway 4s ease-in-out 1.2s infinite; }
-/* Watch: a breath. Tense: leans in, then a shiver now and then. Hype: jumps.
-   Laugh: a giggle. Shock: a jolt, then a quiver. Sad: droops and sways.
+.trb-bot[data-rx="hyped"]   { animation: trb-jump 0.9s cubic-bezier(.3,.7,.4,1) infinite, ffb-twinkle 1.2s ease-in-out infinite; }
+.trb-bot[data-rx="laughing"] { animation: trb-giggle 1.1s ease-in-out infinite; }
+.trb-bot[data-rx="shocked"] { animation: trb-jolt 0.6s cubic-bezier(.2,.9,.3,1.3) both, trb-quiver 1.8s linear 0.6s infinite; }
+.trb-bot[data-rx="teary"]   { animation: trb-droop 1.2s ease both, trb-sway 4s ease-in-out 1.2s infinite; }
+/* Watch: a breath. Tense: leans in, then a shiver now and then. Hyped: jumps.
+   Laughing: a giggle. Shocked: a jolt, then a quiver. Teary: droops and sways.
    Each loop starts from where its lead-in ends, so nothing snaps. */
 @keyframes trb-bob    { 50% { transform: translateY(-3%) rotate(-1.5deg); } }
 @keyframes trb-lean   { to { transform: translateY(-2%) scale(1.07) rotate(3deg); } }

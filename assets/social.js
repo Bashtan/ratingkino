@@ -204,19 +204,28 @@
      never answers never shows a bot that can't react; it ducks out of the
      way while paused and after its cheer at the end, and is removed once the
      iframe leaves the page or loads something else.
-     Reactions: watch, curious, tense, wow, hype, laugh, shock, sad. Each
-     wears one of today's poses (RX), so new art only changes RX. Where they
-     fall comes from an arc for the kind of film (ARCS: [share of the
-     trailer, reaction], picked by genre, nudged per video so no two trailers
-     match beat for beat), until real per-trailer timelines exist. */
-  var RX = { watch: 'idle', curious: 'think', tense: 'think', wow: 'idea', hype: 'success', laugh: 'success', shock: 'confused', sad: 'confused' };
+     Reactions: watch, curious, tense, wow, hyped, laughing, shocked, teary,
+     the same names the TikTok/Shorts bot uses (findfilm-tiktok-bot,
+     bot-moods.py). Each wears a pose (RX): the calm ones the search moods'
+     poses, the others their own, from ff-bot-reactions.webp (REACTIONS),
+     fetched once a trailer bot exists (html.ffr-on). Until it's in, or if it
+     can't load, a reaction wears today's stand-in (STAND_IN). tense has no
+     pose of its own yet: it wears think. Where reactions fall comes from an
+     arc for the kind of film (ARCS: [share of the trailer, reaction], picked
+     by genre, nudged per video so no two trailers match beat for beat), until
+     real per-trailer timelines exist. */
+  var RX = { watch: 'idle', curious: 'think', tense: 'think', wow: 'idea', hyped: 'hyped', laughing: 'laughing', shocked: 'shocked', teary: 'teary' };
+  var REACTIONS = ['shocked', 'laughing', 'teary', 'hyped'];
+  var STAND_IN = { shocked: 'confused', laughing: 'success', teary: 'confused', hyped: 'success' };
+  var RX_SPRITE = '/assets/ff-bot-reactions.webp?v=5d7e7399';   // = the url() in social.css
+  var rxSprite = 0, rxWaiting = [];   // as sprite: 0 not asked · 1 loading · 2 ready · 3 failed
   // A trailer's usual shape: logos, setup, the hook, rising stakes, the montage, the title card, a last sting.
   var ARCS = {
-    horror:  [[0, 'watch'], [0.08, 'curious'], [0.22, 'tense'], [0.36, 'shock'], [0.42, 'tense'], [0.6, 'curious'], [0.68, 'tense'], [0.8, 'shock'], [0.86, 'tense'], [0.94, 'shock']],
-    tension: [[0, 'watch'], [0.1, 'curious'], [0.28, 'tense'], [0.44, 'wow'], [0.52, 'tense'], [0.7, 'shock'], [0.78, 'tense'], [0.9, 'wow']],
-    action:  [[0, 'watch'], [0.1, 'curious'], [0.24, 'wow'], [0.36, 'tense'], [0.5, 'hype'], [0.66, 'wow'], [0.74, 'hype'], [0.9, 'hype']],
-    comedy:  [[0, 'watch'], [0.12, 'laugh'], [0.2, 'watch'], [0.32, 'laugh'], [0.42, 'wow'], [0.52, 'laugh'], [0.64, 'watch'], [0.72, 'laugh'], [0.88, 'laugh']],
-    heart:   [[0, 'watch'], [0.12, 'curious'], [0.3, 'wow'], [0.44, 'sad'], [0.58, 'tense'], [0.72, 'sad'], [0.84, 'wow'], [0.94, 'watch']],
+    horror:  [[0, 'watch'], [0.08, 'curious'], [0.22, 'tense'], [0.36, 'shocked'], [0.42, 'tense'], [0.6, 'curious'], [0.68, 'tense'], [0.8, 'shocked'], [0.86, 'tense'], [0.94, 'shocked']],
+    tension: [[0, 'watch'], [0.1, 'curious'], [0.28, 'tense'], [0.44, 'wow'], [0.52, 'tense'], [0.7, 'shocked'], [0.78, 'tense'], [0.9, 'wow']],
+    action:  [[0, 'watch'], [0.1, 'curious'], [0.24, 'wow'], [0.36, 'tense'], [0.5, 'hyped'], [0.66, 'wow'], [0.74, 'hyped'], [0.9, 'hyped']],
+    comedy:  [[0, 'watch'], [0.12, 'laughing'], [0.2, 'watch'], [0.32, 'laughing'], [0.42, 'wow'], [0.52, 'laughing'], [0.64, 'watch'], [0.72, 'laughing'], [0.88, 'laughing']],
+    heart:   [[0, 'watch'], [0.12, 'curious'], [0.3, 'wow'], [0.44, 'teary'], [0.58, 'tense'], [0.72, 'teary'], [0.84, 'wow'], [0.94, 'watch']],
     real:    [[0, 'watch'], [0.14, 'curious'], [0.34, 'wow'], [0.5, 'curious'], [0.68, 'wow'], [0.86, 'curious']]
   };
   var KIND_OF = {   // TMDB genre ids, movies and TV
@@ -226,7 +235,7 @@
     18: 'heart', 10749: 'heart', 10402: 'heart', 10766: 'heart',
     99: 'real', 36: 'real', 10763: 'real', 10764: 'real'
   };
-  var SIGNATURE = { horror: 'shock', tension: 'tense', action: 'hype', comedy: 'laugh', heart: 'sad', real: 'wow' };
+  var SIGNATURE = { horror: 'shocked', tension: 'tense', action: 'hyped', comedy: 'laughing', heart: 'teary', real: 'wow' };
   var YT_ORIGIN = /^https:\/\/www\.youtube(-nocookie)?\.com/;
   var RX_LEAD = 0.15, RX_GUESS_S = 150, RX_CHEER_MS = 4000;   // land a beat just ahead of its moment · a trailer's length until the player says · the cheer at the end
   var watching = [], watchTick = 0, watchIds = 0;
@@ -253,14 +262,34 @@
     return w.time + (w.state === 1 ? (performance.now() - w.at) / 1000 * w.rate : 0);
   }
   function reactionOf(w) {
-    if (w.state === 0) return performance.now() - w.endedAt < RX_CHEER_MS ? 'hype' : 'watch';
+    if (w.state === 0) return performance.now() - w.endedAt < RX_CHEER_MS ? 'hyped' : 'watch';
     if (w.state !== 1 && w.state !== 3) return 'watch';   // paused, cued: it waits with you
     var share = (playhead(w) + RX_LEAD) / (w.dur || RX_GUESS_S), rx = 'watch';
     for (var i = 0; i < w.arc.length && w.arc[i][0] <= share; i++) rx = w.arc[i][1];
     return rx;
   }
+  function poseOf(rx) {
+    var pose = RX[rx];
+    if (REACTIONS.indexOf(pose) >= 0 && rxSprite !== 2) pose = STAND_IN[pose];
+    return REACTIONS.indexOf(pose) >= 0 || sprite === 2 ? pose : 'idle';   // a layer is never shown blank
+  }
+  function warmRx(then) {
+    if (rxSprite >= 2) { if (rxSprite === 2) then(); return; }
+    rxWaiting.push(then);
+    if (rxSprite === 1) return;
+    rxSprite = 1;
+    var img = new Image();
+    img.onload = function () {
+      rxSprite = 2;
+      document.documentElement.classList.add('ffr-on');
+      var queue = rxWaiting; rxWaiting = [];
+      queue.forEach(function (fn) { fn(); });
+    };
+    img.onerror = function () { rxSprite = 3; rxWaiting = []; };
+    img.src = RX_SPRITE;
+  }
   function react(w) {
-    var rx = reactionOf(w), pose = sprite === 2 ? RX[rx] : 'idle';
+    var rx = reactionOf(w), pose = poseOf(rx);
     if (w.bot.getAttribute('data-rx') !== rx) w.bot.setAttribute('data-rx', rx);
     if (w.bot.getAttribute('data-mood') !== pose) w.bot.setAttribute('data-mood', pose);
     w.box.classList.toggle('is-up', w.started);
@@ -322,9 +351,16 @@
     var w = { frame: frame, src: src, origin: origin, box: box, bot: box.firstChild, id: ++watchIds,
       arc: arcFor(opts.genres, opts.seed || src), state: -1, time: 0, at: 0, dur: 0, rate: 1, endedAt: 0, heard: false, started: false };
     mount(w.bot);
+    REACTIONS.forEach(function (name) {
+      var layer = document.createElement('i');
+      layer.className = 'ffb-m ffb-r';
+      layer.setAttribute('data-m', name);
+      w.bot.appendChild(layer);
+    });
     frame.parentNode.appendChild(box);
     watching.push(w);
     warm(function () { react(w); });
+    warmRx(function () { react(w); });
     if (!watchTick) watchTick = setInterval(watchAll, 250);
     watchAll();
   }
