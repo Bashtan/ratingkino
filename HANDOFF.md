@@ -2,7 +2,27 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-10-31f) — Cinematic Becomes an AI-Powered Exact Title Search
+## ⚡ Most Recent Session (2026-11-01) — Cinematic Chips Become a Directory; FF Bot's Reasons and AI Take Get Specific
+
+All commits on `main`, **live on https://findfilm.ai since 2026-11-01**: Pages production **`c7be3b09`**, from `eef37a3`. `/build.json` = `20261101T092253Z-eef37a3`.
+
+The owner's decisions on the 2026-10-31f questions: Cinematic's chips become **plain categories** (a precise lookup directory, clearly apart from Classic's vibe search); **plot descriptions in the title box keep resolving through AI** (*Groundhog Day* from "a guy relives the same day" stays, on purpose).
+
+| Commit | Feature |
+|--------|---------|
+| `eef37a3` | **Cinematic chips = TMDB categories, both tabs.** `CHIPS`: **`trending`** (`home: true`, the trending feed itself; `showHome()` presses it via `setChip(typeCfg().chips.find(c => c.home)?.id)`), **`top`** (vote_average.desc, ≥5000 votes), **`new`** (released in the last 60 days, ≥30 votes), **`soon`** (the next 120 days, by popularity), `top2026`, `scifi90`, **`epic`** (genres 878\|14, by votes), **`anim`** (16 without 10751), **`heist`** (keyword 10051), `true`, `a24`. `TV_CHIPS` gains **`tv-trending`** (home), **`tv-top`** (≥1500 votes, no talk/news/reality/soap), **`tv-new`** (premiered in the last 60 days). Dates come from `day(n)` at page load. Chip click: a `home` chip → `showHome()`; tapping the active chip again → Trending. **Removed from Cinematic** (nothing used them any more): `runAI`, `aiShow`, `aiHeader`, `readSSE`, `aiStream`, `aiPatch`, `titleFallback`, `setRefine` + `#refine` + `.refine*`, `setHeader`'s `thinking` mode (`.results-sub.thinking`, `thinkTimer`), the card vibe tag (`.ov-tag`), `.tile.ai-out`, `loadCatalog`/`fromKV`, the `?vibe=` flag, `cin.why`. The quick view's take (`loadTake`) now runs for every title. **i18n:** 13 new keys × 9 languages (`cin.chip.trending/topRated(.sub)/tvTopRated.sub/new(.sub)/tvNew(.sub)/soon(.sub)`, `cin.chip.anim.sub/heist.sub/epic.sub`); 18 AI-only keys dropped (`cin.chip.mind/rainy/cozy`, `cin.think.1-4`, `cin.noMatchesFor/searchingFor/withPerson/aiBusy/tryAI/refine/why`, `cin.n.aiPicks.*`, `cin.n.matches.*`). `i18n.js?v=c737194f` in both pages.<br><br>**Vibe reply (the 8B) re-prompted**, tuned on 33 real searches (the 30 bench queries + 4) through a scratch Workers AI worker. `?debug=1` now also returns **`replyInput`** and the raw **`reply`**. **`_VIBE_REPLY_SCHEMA`**: `films` first, each `{id, pitch, fit, tags}`, so the **pitch comes before the fit**. With `reason` after `fit`, the 8B graded only 4–6 of the 10 films in 14 of 33 searches and argued its grades ("…not a time loop"); now it grades all 10 in 33 of 33. **`_VIBE_REPLY_PROMPT`**: a friend's one-sentence pitch built from a concrete character, place or situation; no ad-copy openers; no claims beyond the genres/vibe/overview; never what a film lacks. It has **no example sentences**, because the 8B pasted an example about *Grave of the Fireflies* into *Up*. Each candidate line now carries **`_vibeGenres(m)`** (`n\|title (year)\|genres\|vibe\|overview`), which stops live-action dramas being called "animated". The **`Message:` line is gone**, since the 8B parroted it ("real films like this exist"); only a `kind === 'rare'` search gets a `Note:` line. **`_VIBE_PITCH_DOUBT`**: a pitch that argues against its film ("…more espionage than space cat mafia") falls back to the film's feel line. A described film graded 3 makes `match` exact. Refinement labels like "era: 80s" are stripped. `temperature` 0.4; reasons up to 200 characters; cache **`vbs:v3:`**. Bench: repeated three-word phrases 151 → 39, stock phrases 19% → 1%, reply 2.9s → 3.8s (10 pitches instead of 4–6). Llama 4 Scout took 13.5s, so the 8B stays.<br><br>**AI take (`handleFitSummary`) grounded and re-voiced.** The server fetches TMDB `/{type}/{id}?language=en-US&append_to_response=credits,keywords` (3s timeout; on failure it falls back to what the client sent), and **`_fitFacts(type, d)`** turns it into a fact sheet: original language first ("English (some French, German)", so no false subtitle warnings), genres, length (runtime, or seasons/episodes), director or creators, 4 cast, tagline, 12 keywords, overview. **`_fitPrompt(type, lang)`** asks for FF Bot's honest take: `forYou` names the titles or filmmakers a sharp critic would compare it to, `experience` the pace, tone and standout, `skipIf` a specific dealbreaker; "Watching…" openers are banned. **`FIT_MODEL`** = 70B, `_FIT_SCHEMA` JSON mode, temperature 0.35. Banning every stock opener made it worse ("Lovers of", sloppier comparisons, broken Ukrainian), so only "Watching" is banned. A value under 25 characters is dropped: a title in straight double quotes cut "Liebhaber von" short, so titles are now asked for without straight quotes. A take missing a line isn't cached. Cache **`fit:v2:<type>:<id>:<lang>`** for both layouts; the old `fit:<id>` keys expire on their own. ~2–3s on a first open. |
+
+**Before → after (the same inputs):**
+- **AI take:** *Hereditary*: "Horror fans will love this" → "Fans of The Witch and Rosemary's Baby will devour this dark family drama." *Oppenheimer*: "History buffs will love this" → "…Hans Zimmer's score…" and "a lengthy 181-minute runtime". *Bluey*: "…in 7-minute bursts".
+- **Vibe reasons:** "feel-good underdog sports story": "Inspiring underdog basketball story with redemption arc" → "Coach Herb Brooks assembles a team of misfits to take on the Soviets in the 1980 Olympics…". "an animated film that will make adults cry": four × "…makes adults cry" → each film's own story.
+
+**Verified:** locally, every chip on both tabs (in Ukrainian; Trending is pressed on load and after Clear), the quick view's take in Ukrainian, no failed API calls, and Classic loads. On production: the hashes of `/cinematic/`, `/` and `i18n.js` match local; `/api/fit-summary` (film en, show es, Classic's body without `type`) gives 2.8–3.3s fresh answers; `/api/vibe-search` gives 6.7–9.4s for the full JSON answer (the cards stream at ~4s).
+
+**Known limits:** the 8B still opens ~7% of pitches with "Meet…" / "Join…", and its message often starts "I've got…". The 70B's Ukrainian and French have slips ("Черного дзеркала", a *Dead Poets Society* comparison for *Parasite* in French).
+
+---
+
+## Session (2026-10-31f) — Cinematic Becomes an AI-Powered Exact Title Search
 
 All commits on `main`, **live on https://findfilm.ai since 2026-10-31**: Pages production **`a5991434`**, from `ab19ca9`. `/build.json` = `20261031T182721Z-ab19ca9`. This deploy also shipped `17e4ad6` (Cinematic streaming, below).
 
@@ -25,7 +45,7 @@ The owner's pivot: Cinematic's search box is a **precise lookup tool for film an
 - **Classic:** `/api/search` is unchanged.
 - **In the browser** (local, and live in English): the header reads "“Interstellar” · 1 title · ✦ Matched by AI from “intersteller”". In Ukrainian, "Початок" lists *Inception* first and the AI take comes in Ukrainian. Checked at 375px.
 
-**Owner decisions to confirm:** the Movies tab's **AI chips** (Mind-bending, Rainy-night thrillers, …) still give AI picks. That keeps a browse path that isn't a title search. Make them discover queries if Cinematic should have no vibe search at all. Plot descriptions typed in the box sometimes still resolve to the film the AI recognises ("the movie where a guy relives the same day" → *Groundhog Day*).
+**Owner decisions** (answered 2026-11-01: the chips became categories in `eef37a3`; plot descriptions stay): the Movies tab's **AI chips** (Mind-bending, Rainy-night thrillers, …) still give AI picks. That keeps a browse path that isn't a title search. Make them discover queries if Cinematic should have no vibe search at all. Plot descriptions typed in the box sometimes still resolve to the film the AI recognises ("the movie where a guy relives the same day" → *Groundhog Day*).
 
 ---
 
@@ -2949,7 +2969,7 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 | `POST /api/ai-search` | POST | Semantic search via `@cf/meta/llama-3.3-70b-instruct-fp8-fast`; body: `{query}` |
 | `POST /api/vibe-search` | POST | Vibe search over Vectorize `findfilm-films` (`handleVibeSearch()`, see the 2026-10-30/31 block); body `{query, exclude}`; same `aiCurated` payload plus `vibeSearch`, `match`; `?debug=1` adds parse / timings / scores and skips the cache |
 | `GET /api/title-search` | GET | Cinematic's exact title search (`handleTitleSearch()`, see the 2026-10-31f block); params `q`, `type` (`movie` or `tv`), `lang`; TMDB title match, then translated-title check and the 70B's typo / other-language fix (KV `tsr:v1:*`, 7 days); returns `{results, corrected, via}`; `?debug=1&fx=8b\|70b` |
-| `POST /api/fit-summary` | POST | Spoiler-free "who's it for" (70B, KV 30 days); body `{id, title, year?, genres?, overview?, type?, lang?}`; `fit:<id>` for an English film (Classic), else `fit:<type>:<id>:<lang>` |
+| `POST /api/fit-summary` | POST | FF Bot's spoiler-free take (70B JSON mode, grounded in TMDB details fetched server-side by `_fitFacts`; KV 30 days); body `{id, title, year?, genres?, overview?, type?, lang?}`; `fit:v2:<type>:<id>:<lang>` for both layouts |
 | `GET /api/search` | GET | Title-first tiered search (Classic; Cinematic uses `/api/title-search`); params `q`, `type` (`movie` or `tv`), `page`, `lang`. Tier 1 title/name match (sub-sorted by `_serverTitleScore`), Tier 2 overview match, Tier 2b other TMDB hits, Tier 3 movie-only semantic (KV catalog + Llama; page 1, only when Tier 1 has < 3 hits and the query has ≥ 3 words). Returns TMDB-shaped `results` plus `_tiers`; matching reads `title` / `original_title` for movies and `name` / `original_name` for TV (`_resultTitles`) |
 | `GET /api/tmdb/*` | GET | Proxy to `api.themoviedb.org/3/*` (injects `TMDB_KEY`) |
 | `GET /api/omdb` | GET | Proxy to `www.omdbapi.com` (injects `OMDB_KEY`) |
@@ -2962,7 +2982,7 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 |----------|---------|
 | `setCtype(next, {reload})` / `applyTypeCopy()` / `typeCfg(type)` + `TYPES` (Cinematic) | The Movies \| TV Shows tab: state `ctype`, persisted in `sessionStorage.ff_ctype`; `TYPES` holds the per-tab endpoints, chips (`CHIPS` / `TV_CHIPS`), typewriter prompts (`tryPrompts(type)` over `TRY`) and copy; views capture `ctype` in `view.ctype` |
 | `runTitle(q)` / `searchOtherTab(q)` (Cinematic) | The search box on both tabs: `/api/title-search`, the "✦ Matched by AI" note from `corrected` + `via`, the no-match state; a miss offers the other tab's title search with the same words |
-| `loadTake(it, token)` + `TAKES` (Cinematic) | Quick view "FindFilm AI's take" (`.qv-take`, `data-slot="take"`) for any title without an AI reason: `/api/fit-summary` with `type` + `lang` |
+| `loadTake(it, token)` + `TAKES` (Cinematic) | Quick view "FindFilm AI's take" (`.qv-take`, `data-slot="take"`) for every title: `/api/fit-summary` with `type` + `lang` |
 | `FFBot.welcome(target, onTry)` (`assets/social.js`) + `welcomeToAISearch()` (Classic) | A first visit's tip (`.ffw`) under the AI search, once per browser (`ff_welcome_seen`), shown when the target is on screen and uncovered; Classic calls it from `dismissFirstVisit()` / `startOnboardFromIntro()`, Cinematic on `DOMContentLoaded` when `firstVisit` (no `rk_lang` at boot) |
 | `egg()` (corner mascot, `assets/social.js`) | Five quick clicks on `.ffm-bot` (≤500ms apart): `.ffm.is-egg` spin + the `success` pose, GA `mascot_egg` |
 | `heroUp()` / `hello()` / `sayHello(out)` (hero mascot `#ffh`, `assets/social.js`) + `tryAISearch()` (Classic) | Classic's desktop hero mascot (≥1200px): `.is-ready` once the sprite is in; the one-off hello `.is-hi` (6s, `ff_hello_seen`), never on a page view that had the welcome tip; its click (and the tip's "Try it") → AI mode + focus; GA `mascot_click` `hero` |
@@ -3228,19 +3248,20 @@ The site is fully installable as a PWA on all platforms.
 - [ ] **Diacritic-insensitive title matching in `/api/search`** — fold accents on the query and on `_resultTitles()` output so "shogun" finds *Shōgun* and "amelie" finds *Amélie* in Tier 1; it changes movie ranking too, so it needs the owner's go-ahead
 - [ ] **Vibe search, next**:
   - [x] **Speed:** streaming (SSE) and a split read, `d8203ed`, live 2026-10-31 (production `be052c2c`). Cards at **3.5s** median and the reply at 7.5s on production; before, about 10s for everything.
-  - [ ] **The 8B's reasons:** sometimes generic. Tune the prompt, or try another small model for the reply.
+  - [x] **The 8B's reasons:** re-prompted in `eef37a3` (pitch before fit, genres in the candidates, no examples; every candidate graded), live 2026-11-01 (production `c7be3b09`). Llama 4 Scout was 13.5s, so the 8B stays.
   - [ ] **Nightly ingest:** the new and changed films, from TMDB's `/movie/changes`.
   - [ ] **TV shows:** in the index (a namespace or `type`), which also closes the AI-search-for-TV item below.
   - [ ] **"More like this":** on every card (query by the film's own vector), and **Taste DNA** as the average of liked films' vectors.
   - [ ] **The owner tries it** on findfilm.ai with `?vibe=1`.
   - [ ] **A 3rd judge round** after `7e5b645`'s last fixes.
   - [x] **Rollout:** the default for everyone since 2026-10-31 (`c6a3248`, production `81ff66b7`); `?vibe=0` opts a browser out.
-  - [x] **Stream in Cinematic too:** `17e4ad6`, deployed 2026-10-31 with `ab19ca9` (production `a5991434`); since the title-search pivot it serves only the AI chips.
+  - [x] **Stream in Cinematic too:** `17e4ad6`, deployed 2026-10-31 with `ab19ca9` (production `a5991434`); removed with the AI chips in `eef37a3`, so vibe search is Classic's alone.
   - [ ] **Watch Workers AI usage and rate limits** now that every AI search makes 3 text-generation calls.
 - [x] **Cinematic = AI-powered exact title search** (`ab19ca9`, live 2026-10-31, production `a5991434`): no Beta label, title-only copy in 9 languages, `/api/title-search` with AI typo / other-language matching, the quick view's AI take
-- [ ] **Owner: keep or convert Cinematic's AI chips** — they still give AI vibe picks; turn them into discover queries if Cinematic should have no vibe search at all
+- [x] **Cinematic's AI chips → categories** (`eef37a3`, live 2026-11-01, production `c7be3b09`): Trending, Top Rated, New Releases / New Series, Coming Soon + the collections; no vibe search left in Cinematic
 - [ ] **Native-speaker pass on the 2026-10-31f `cin.*` copy** (title search, AI take) — together with the `cin.*` review
-- [ ] **Fit-summary text is generic** ("Fans of powerful dramas will love this") — tune its prompt together with the 8B reasons item
+- [x] **Fit-summary text is generic**: grounded in TMDB facts with FF Bot's voice in `eef37a3`, live 2026-11-01 (production `c7be3b09`)
+- [ ] **Native-speaker pass on the 2026-11-01 chip labels** (13 keys × 8 languages) and a look at the AI take in uk / fr, where the 70B slips (see the 2026-11-01 block)
 - [ ] **AI search for TV shows** — `/api/ai-search` is films-only (LLM curation + `search/movie` lookups + movie KV catalog); Cinematic and Classic fall back to title search on the TV tab
 - [ ] **Cinematic gaps vs Classic**: voice search (the 9-language UI, TV browsing, TV deep links and the Watchlist are done)
 - [ ] **Beta UI prototype feedback** (now `cinematic/index.html`; old preview https://beta-ui.ratingkino.pages.dev) — collect the owner's feedback, then decide: ship it at `/beta/` (add `beta` to `PUBLIC`), port pieces into `index.html`, or iterate. Not yet in it: voice (the watchlist landed in `89d2a3c`, the TV tab in `3a93af7`, i18n in `cec4746`)
