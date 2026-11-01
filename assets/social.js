@@ -5,7 +5,8 @@
    - Every brand link (a[data-ffs]) reports a GA `social_click` with its
      network and its placement (the nearest [data-ffs-place]).
    - window.FFBot: the mascot's moods during AI searches (see Moods below),
-     and FFBot.welcome(): a first visit's tip pointing at the AI search.
+     FFBot.welcome(): a first visit's tip pointing at the AI search, and
+     FFBot.watch(): the mascot reacting to a trailer as it plays.
    - Classic's hero mascot (#ffh) and the one peeking over "Your Taste DNA"
      (.ffp), computers only: see their sections below.
    - The corner mascot (#ffm, computers only) comes up once the hero strip
@@ -192,7 +193,143 @@
     });
   }
 
-  window.FFBot = { set: set, found: found, warm: function (then) { warm(then); }, welcome: welcome, mood: function () { return mood; } };
+  /* ── Trailer reactions (FFBot.watch): FF Bot watches a trailer with you ──
+     FFBot.watch(iframe, { genres: [TMDB genre ids], seed: video key }) puts a
+     reacting mascot (.trb, styles in social.css) in the bottom-left corner of
+     a YouTube embed, whose src needs enablejsapi=1 (and origin=). The page
+     follows the player over YouTube's postMessage protocol (what the IFrame
+     Player API speaks, without loading it): it says "listening" until the
+     player answers, and the player then reports its state and time
+     (infoDelivery). The bot rises in once playback starts, so a player that
+     never answers never shows a bot that can't react; it ducks out of the
+     way while paused and after its cheer at the end, and is removed once the
+     iframe leaves the page or loads something else.
+     Reactions: watch, curious, tense, wow, hype, laugh, shock, sad. Each
+     wears one of today's poses (RX), so new art only changes RX. Where they
+     fall comes from an arc for the kind of film (ARCS: [share of the
+     trailer, reaction], picked by genre, nudged per video so no two trailers
+     match beat for beat), until real per-trailer timelines exist. */
+  var RX = { watch: 'idle', curious: 'think', tense: 'think', wow: 'idea', hype: 'success', laugh: 'success', shock: 'confused', sad: 'confused' };
+  // A trailer's usual shape: logos, setup, the hook, rising stakes, the montage, the title card, a last sting.
+  var ARCS = {
+    horror:  [[0, 'watch'], [0.08, 'curious'], [0.22, 'tense'], [0.36, 'shock'], [0.42, 'tense'], [0.6, 'curious'], [0.68, 'tense'], [0.8, 'shock'], [0.86, 'tense'], [0.94, 'shock']],
+    tension: [[0, 'watch'], [0.1, 'curious'], [0.28, 'tense'], [0.44, 'wow'], [0.52, 'tense'], [0.7, 'shock'], [0.78, 'tense'], [0.9, 'wow']],
+    action:  [[0, 'watch'], [0.1, 'curious'], [0.24, 'wow'], [0.36, 'tense'], [0.5, 'hype'], [0.66, 'wow'], [0.74, 'hype'], [0.9, 'hype']],
+    comedy:  [[0, 'watch'], [0.12, 'laugh'], [0.2, 'watch'], [0.32, 'laugh'], [0.42, 'wow'], [0.52, 'laugh'], [0.64, 'watch'], [0.72, 'laugh'], [0.88, 'laugh']],
+    heart:   [[0, 'watch'], [0.12, 'curious'], [0.3, 'wow'], [0.44, 'sad'], [0.58, 'tense'], [0.72, 'sad'], [0.84, 'wow'], [0.94, 'watch']],
+    real:    [[0, 'watch'], [0.14, 'curious'], [0.34, 'wow'], [0.5, 'curious'], [0.68, 'wow'], [0.86, 'curious']]
+  };
+  var KIND_OF = {   // TMDB genre ids, movies and TV
+    27: 'horror', 53: 'tension', 9648: 'tension', 80: 'tension',
+    28: 'action', 12: 'action', 878: 'action', 14: 'action', 10752: 'action', 37: 'action', 10759: 'action', 10765: 'action', 10768: 'action',
+    35: 'comedy', 16: 'comedy', 10751: 'comedy', 10762: 'comedy',
+    18: 'heart', 10749: 'heart', 10402: 'heart', 10766: 'heart',
+    99: 'real', 36: 'real', 10763: 'real', 10764: 'real'
+  };
+  var SIGNATURE = { horror: 'shock', tension: 'tense', action: 'hype', comedy: 'laugh', heart: 'sad', real: 'wow' };
+  var YT_ORIGIN = /^https:\/\/www\.youtube(-nocookie)?\.com/;
+  var RX_LEAD = 0.15, RX_GUESS_S = 150, RX_CHEER_MS = 4000;   // land a beat just ahead of its moment · a trailer's length until the player says · the cheer at the end
+  var watching = [], watchTick = 0, watchIds = 0;
+
+  function arcFor(genres, seed) {
+    var kinds = [];
+    (genres || []).forEach(function (g) { var k = KIND_OF[g]; if (k && kinds.indexOf(k) < 0) kinds.push(k); });
+    var scary = kinds.indexOf('horror');
+    if (scary > 0) kinds.unshift(kinds.splice(scary, 1)[0]);   // a scare sets the tone wherever it's listed
+    var h = 0, i;
+    for (i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+    var arc = ARCS[kinds[0] || 'action'].map(function (beat, n) {
+      h = (Math.imul(h, 1103515245) + 12345) >>> 0;
+      return [n ? beat[0] + ((h >>> 16) % 41 - 20) / 1000 : 0, beat[1]];   // ±2%: beats stay in order (they're ≥6% apart)
+    });
+    if (kinds[1]) {   // an action comedy: the second kind takes the middle beat
+      var mid = 1;
+      for (i = 1; i < arc.length; i++) if (Math.abs(arc[i][0] - 0.5) < Math.abs(arc[mid][0] - 0.5)) mid = i;
+      arc[mid] = [arc[mid][0], SIGNATURE[kinds[1]]];
+    }
+    return arc;
+  }
+  function playhead(w) {
+    return w.time + (w.state === 1 ? (performance.now() - w.at) / 1000 * w.rate : 0);
+  }
+  function reactionOf(w) {
+    if (w.state === 0) return performance.now() - w.endedAt < RX_CHEER_MS ? 'hype' : 'watch';
+    if (w.state !== 1 && w.state !== 3) return 'watch';   // paused, cued: it waits with you
+    var share = (playhead(w) + RX_LEAD) / (w.dur || RX_GUESS_S), rx = 'watch';
+    for (var i = 0; i < w.arc.length && w.arc[i][0] <= share; i++) rx = w.arc[i][1];
+    return rx;
+  }
+  function react(w) {
+    var rx = reactionOf(w), pose = sprite === 2 ? RX[rx] : 'idle';
+    if (w.bot.getAttribute('data-rx') !== rx) w.bot.setAttribute('data-rx', rx);
+    if (w.bot.getAttribute('data-mood') !== pose) w.bot.setAttribute('data-mood', pose);
+    w.box.classList.toggle('is-up', w.started);
+    w.box.classList.toggle('is-away', w.state === 2 || (w.state === 0 && rx === 'watch'));   // YouTube's controls stay up
+  }
+  function tellPlayer(w, msg) {
+    msg.id = w.id; msg.channel = 'widget';
+    try { w.frame.contentWindow.postMessage(JSON.stringify(msg), w.origin); } catch (e) { /* mid-navigation */ }
+  }
+  function setState(w, state) {
+    if (state === w.state) return;
+    w.time = playhead(w); w.at = performance.now();   // freeze or restart the clock where it is
+    if (state === 1) w.started = true;
+    if (state === 0) w.endedAt = performance.now();
+    w.state = state;
+  }
+  function watchAll() {
+    watching = watching.filter(function (w) {
+      if (w.frame.isConnected && w.frame.getAttribute('src') === w.src) return true;
+      w.box.remove();
+      return false;
+    });
+    watching.forEach(function (w) {
+      if (!w.heard) {
+        tellPlayer(w, { event: 'listening' });
+        tellPlayer(w, { event: 'command', func: 'addEventListener', args: ['onStateChange'] });
+      }
+      react(w);
+    });
+    if (!watching.length) { clearInterval(watchTick); watchTick = 0; }
+  }
+  window.addEventListener('message', function (e) {
+    if (!watching.length || !YT_ORIGIN.test(e.origin)) return;
+    var w = null, data, info;
+    for (var i = 0; i < watching.length; i++) if (watching[i].frame.contentWindow === e.source) w = watching[i];
+    if (!w) return;
+    try { data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (x) { return; }
+    if (!data || !data.event) return;
+    w.heard = true;
+    info = data.info;
+    if (data.event === 'onStateChange' && typeof info === 'number') setState(w, info);
+    if ((data.event === 'infoDelivery' || data.event === 'initialDelivery') && info) {
+      if (info.duration > 0) w.dur = info.duration;
+      if (info.playbackRate > 0) w.rate = info.playbackRate;
+      if (typeof info.currentTime === 'number') { w.time = info.currentTime; w.at = performance.now(); }
+      if (typeof info.playerState === 'number') setState(w, info.playerState);
+    }
+    react(w);
+  });
+  function watch(frame, opts) {
+    var src = frame && frame.getAttribute('src') || '';
+    var origin = (src.match(YT_ORIGIN) || [])[0];
+    if (!origin || !frame.parentNode) return;
+    opts = opts || {};
+    var box = document.createElement('div');
+    box.className = 'trb';
+    box.setAttribute('aria-hidden', 'true');
+    box.innerHTML = '<div class="ffb trb-bot" data-rx="watch" data-mood="idle"><img class="ffb-idle" src="/assets/ff-bot.webp" alt="" width="186" height="320"></div>';
+    var w = { frame: frame, src: src, origin: origin, box: box, bot: box.firstChild, id: ++watchIds,
+      arc: arcFor(opts.genres, opts.seed || src), state: -1, time: 0, at: 0, dur: 0, rate: 1, endedAt: 0, heard: false, started: false };
+    mount(w.bot);
+    frame.parentNode.appendChild(box);
+    watching.push(w);
+    warm(function () { react(w); });
+    if (!watchTick) watchTick = setInterval(watchAll, 250);
+    watchAll();
+  }
+
+  window.FFBot = { set: set, found: found, warm: function (then) { warm(then); }, welcome: welcome, watch: watch, mood: function () { return mood; } };
   document.querySelectorAll('[data-ffb]').forEach(mount);
   document.addEventListener('focusin', function (e) {
     var el = e.target;

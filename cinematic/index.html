@@ -756,8 +756,8 @@ img.fade.loaded { opacity: 1; }
 <!-- Touch baseline + bottom-sheet drag, shared with Classic. -->
 <link rel="stylesheet" href="/assets/touch.css?v=fc8fd233">
 <!-- Social links + corner mascot, shared with Classic (index.html). -->
-<link rel="stylesheet" href="/assets/social.css?v=19b57600">
-<script src="/assets/social.js?v=6fe1df4d" defer></script>
+<link rel="stylesheet" href="/assets/social.css?v=a0563dcd">
+<script src="/assets/social.js?v=f8292321" defer></script>
 <!-- Reloads a page left open across a deploy, when it comes back after 10+ min away (/build.json). -->
 <script src="/assets/fresh.js?v=887c34fa" defer></script>
 <script src="/assets/touch.js?v=fc8fd233" defer></script>
@@ -1794,7 +1794,7 @@ function shellHTML(it) {
 function actionsHTML(it, d) {
   const tr = pickTrailer(d);
   const saved = WL.has(it.id, it.type);
-  return `${tr ? `<button class="btn-primary" type="button" data-trailer="${esc(tr.key)}">${ICON.play}<span>${esc(t('cin.playTrailer'))}</span></button>` : ''}
+  return `${tr ? `<button class="btn-primary" type="button" data-trailer="${esc(tr.key)}" data-genres="${(d.genres || []).map(g => g.id).join(',')}">${ICON.play}<span>${esc(t('cin.playTrailer'))}</span></button>` : ''}
     <button class="btn-glass" type="button" data-wl aria-label="${esc(wlBtnLabel(saved))}">${wlBtnInner(saved)}</button>
     <button class="btn-glass" type="button" data-share>${ICON.share}<span>${esc(t('cin.share'))}</span></button>`;
 }
@@ -2077,13 +2077,15 @@ function toggleTrailer(btn) {
   const media = hero?.querySelector('.qv-media');
   if (!media) return;
   if (hero.classList.contains('playing')) {
-    media.querySelector('.qv-trailer')?.remove();
+    media.querySelectorAll('.qv-trailer, .trb').forEach(el => el.remove());
     hero.classList.remove('playing');
     btn.innerHTML = `${ICON.play}<span>${esc(t('cin.playTrailer'))}</span>`;
     return;
   }
   media.insertAdjacentHTML('beforeend',
-    `<iframe class="qv-trailer" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(btn.dataset.trailer)}?autoplay=1&amp;rel=0&amp;modestbranding=1&amp;playsinline=1&amp;hl=${lang}" title="${esc(t('cin.trailer'))}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`);
+    `<iframe class="qv-trailer" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(btn.dataset.trailer)}?autoplay=1&amp;rel=0&amp;modestbranding=1&amp;playsinline=1&amp;hl=${lang}&amp;enablejsapi=1&amp;origin=${encodeURIComponent(location.origin)}" title="${esc(t('cin.trailer'))}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`);
+  // FF Bot watches along from the corner, reacting to the kind of film (social.js).
+  window.FFBot?.watch(media.querySelector('.qv-trailer'), { genres: (btn.dataset.genres || '').split(',').map(Number), seed: btn.dataset.trailer });
   hero.classList.add('playing');
   btn.innerHTML = `${ICON.stop}<span>${esc(t('cin.stopTrailer'))}</span>`;
   qvScroll.scrollTo({ top: 0, behavior: scrollBehavior() });

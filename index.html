@@ -5496,8 +5496,8 @@ if ('serviceWorker' in navigator) {
 <!-- Touch baseline + bottom-sheet drag, shared with /cinematic/. -->
 <link rel="stylesheet" href="/assets/touch.css?v=fc8fd233">
 <!-- Social links + corner mascot, shared with /cinematic/. -->
-<link rel="stylesheet" href="/assets/social.css?v=19b57600">
-<script src="/assets/social.js?v=6fe1df4d" defer></script>
+<link rel="stylesheet" href="/assets/social.css?v=a0563dcd">
+<script src="/assets/social.js?v=f8292321" defer></script>
 <!-- Reloads a page left open across a deploy, when it comes back after 10+ min away (/build.json). -->
 <script src="/assets/fresh.js?v=887c34fa" defer></script>
 <script src="/assets/touch.js?v=fc8fd233" defer></script>
@@ -12390,8 +12390,14 @@ function toggleTrailer() {
   const frame = document.getElementById('trailerFrame');
   TRAILER_OPEN = !TRAILER_OPEN;
   if (TRAILER_OPEN) {
-    frame.src = ACTIVE_MOVIE.trailer + '?autoplay=1';
+    frame.src = ACTIVE_MOVIE.trailer + '?autoplay=1&enablejsapi=1&origin=' + encodeURIComponent(location.origin);
     wrap.classList.add('active');
+    // FF Bot watches along from the corner, reacting to the kind of film
+    // (FFBot.watch, /assets/social.js); it leaves on its own once src changes.
+    const m = ACTIVE_MOVIE;
+    const genreIds = m.genreIds?.length ? m.genreIds
+      : (m.genres || []).map(name => Number(Object.keys(GENRES).find(id => GENRES[id] === name))).filter(Boolean);
+    window.FFBot?.watch(frame, { genres: genreIds, seed: _trailerKeyOf(m) || '' });
     document.getElementById('btnTrailer').textContent = t('modal.hideTrailer');
     // Drop the hero's own silent, looping copy of this same trailer while the
     // bigger inline panel plays it — otherwise the same video plays twice at
