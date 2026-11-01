@@ -2247,21 +2247,22 @@ async function handleAISearch(request, env, cors, waitUntil) {
                 blend: reranker (only when it is sure), reciprocal rank, TMDB rating,
                 vote count, and a bonus for a guess the catalog confirmed.
      5. reply   VIBE_REPLY_MODEL (JSON mode) grades the top 10 (fit 0-3) with a
-                reason + tags each, FF Bot's line, and how good the match is. The
+                pitch + tags each, FF Bot's line, and how good the match is. The
                 blend keeps the order; fit 0-1 films drop out while 6 remain.
    Streaming: with Accept: text/event-stream, the stages go out as Server-Sent Events
    (parsed ~1s, results = the cards ~4s, reply = FF Bot's grades and words, done).
    Same payload as handleAISearch's aiCurated branch (TMDB rows rebuilt from
    the metadata) plus vibeSearch/match, so the AI panel renders it as is.
    Person queries and any failure go to handleAISearch. ?debug=1 adds the
-   parse, the stage timings and the scored list (and skips the cache). KV cache:
-   vbs:v2:<sha-256 of query + exclusions>, 6h when every stage worked, else 5 min.
+   parse, the stage timings, the reply model's input and answer, and the scored
+   list (and skips the cache). KV cache: vbs:v3:<sha-256 of query + exclusions>,
+   6h when every stage worked, else 5 min.
 ════════════════════════════════════════════════════════════════════ */
 // Two reads at once. The 8B (~1s) writes the rewrite, the imagined overview and the limits, so the
 // vector search starts right away. The 70B names films (its picks are what the search leans on: the
 // 8B's were clearly worse, Kiki's Delivery Service for a space-cat mafia) with a short answer, ~2-3s
-// instead of the 4-6s of one 70B call doing everything. The 8B also grades and explains (the 70B
-// took 5-10s there). All-70B was 10-17s a search.
+// instead of the 4-6s of one 70B call doing everything. The 8B also grades and pitches, ~3-4s for
+// all 10 (the 70B took 5-10s there, Llama 4 Scout ~13s). All-70B was 10-17s a search.
 const VIBE_READ_MODEL   = '@cf/meta/llama-3.1-8b-instruct-fp8-fast';
 const VIBE_PICK_MODEL   = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 const VIBE_REPLY_MODEL  = '@cf/meta/llama-3.1-8b-instruct-fp8-fast';
@@ -2306,6 +2307,8 @@ const _VIBE_PICK_SCHEMA = {
   required: ['kind', 'guesses', 'likeTitles'],
 };
 
+// films first, and each film's pitch before its fit. Named "reason" and listed after the fit, the 8B
+// graded only 4-6 of the 10 in about half the searches and argued its grades ("not a time loop").
 const _VIBE_REPLY_SCHEMA = {
   type: 'object',
   properties: {
@@ -2315,13 +2318,13 @@ const _VIBE_REPLY_SCHEMA = {
       type: 'array',
       items: {
         type: 'object',
-        properties: { id: { type: 'integer' }, fit: { type: 'integer' }, reason: { type: 'string' }, tags: { type: 'array', items: { type: 'string' } } },
-        required: ['id', 'fit', 'reason', 'tags'],
+        properties: { id: { type: 'integer' }, pitch: { type: 'string' }, fit: { type: 'integer' }, tags: { type: 'array', items: { type: 'string' } } },
+        required: ['id', 'pitch', 'fit', 'tags'],
       },
     },
     refinements: { type: 'array', items: { type: 'string' } },
   },
-  required: ['match', 'message', 'films', 'refinements'],
+  required: ['films', 'match', 'message', 'refinements'],
 };
 
 function _vibeReadPrompt(year) {
@@ -2348,17 +2351,25 @@ const _VIBE_PICK_PROMPT =
   '- likeTitles: films the user names only as a reference ("like Amélie", "in the style of Drive"): their titles, never to be ' +
   'recommended back; else [].';
 
+// Tuned on 33 real searches (the bench queries and four more) with ?debug=1's replyInput. The 8B copies
+// any example sentence into unrelated films and parrots instructions into the message, so there are
+// none, and only a search with no real film gets a Note line.
 const _VIBE_REPLY_PROMPT =
-  'You are FF Bot, the movie-loving robot of FindFilm.ai. A user described the film they want; our search engine found the ' +
-  'candidates below (n|title (year)|vibe|overview), best first. For EVERY candidate give its n as id, and fit, 0-3 (3 = exactly what they ' +
-  'asked for, 2 = a good fit, 1 = loosely related, 0 = does not fit; a film that only shares a word with the request, like ' +
-  '"darker" in its title, is 0); a reason, one full sentence of 8-15 words on how it matches the request, never a bare ' +
-  'label (good: "A grumpy weatherman relives one day until he learns to be kind, exactly your story."; bad: "time loop"); ' +
-  'and 2-3 tags (1-3 words each). ' +
-  'match: "exact" if the films are what was asked for, "close" if they only come near, "none" if nothing fits. ' +
-  'message: one friendly sentence (max 25 words) in FF Bot\'s voice, following the "Message" line of the request. ' +
-  'refinements: 3-4 short (1-3 word) follow-up ideas. ' +
-  'Write everything in English. Use only the n numbers from the list.';
+`You are FF Bot, the film-loving robot of FindFilm.ai: a warm, witty friend who has seen everything. A user told you what they want to watch; our search engine found the candidates below (n|title (year)|genres|vibe|overview), best first.
+
+films: EVERY candidate, in order, each with:
+- id: its n.
+- pitch: one sentence of 10-18 words, the way a friend who loves the film would sell it to them: something concrete from its overview (a character by name, a place, a situation), then why that is exactly their kind of film. Mix how pitches open: a name, a place, a moment, sometimes "you". Never open with "Join", "Meet", "Experience", "Get ready", "Discover" or "Witness". No filler endings like "in this heartwarming tale". Use your own words, not the request's. Only claim what its genres, vibe and overview support. Say what the film has, never what it lacks or how it differs.
+- fit, 0-3: 3 = exactly what they asked for, 2 = a good fit, 1 = loosely related, 0 = does not fit. Go by the genres, vibe and overview: a live-action film is not "animated". A film that only shares a word with the request (like "darker" in its title) is 0.
+- tags: 2-3 short tags (1-3 words) for what stands out about it.
+
+match: "exact" if the film they describe, or films that are what they ask for, are in the list; "close" if they only come near; "none" if nothing fits.
+message: one sentence of at most 25 words handing these over in FF Bot's voice: playful, specific, naming the one you'd watch first. Sound like a friend, not a search engine. Be upbeat, unless the request has a "Note" line: then follow it, in your own words. Never start with "Get ready", "You're in luck", "These are" or "I've got", and never say "just the ticket", "matches", "found" or "your request".
+refinements: 3-4 follow-ups of 1-3 words, specific to this request, each a different direction (a mood, an era, a place, a kind of story).
+Write everything in English.`;
+
+// A pitch that argues against its own film ("…but no mafia in sight") is a grade, not a pitch.
+const _VIBE_PITCH_DOUBT = /\b(but (it'?s |it is )?not|but no|isn'?t|doesn'?t|not exactly|rather than|instead of|lacks?|minus the|more [\w -]{2,30} than)\b/i;
 
 // TMDB's own codes where they differ from ISO 639-1: cn = Cantonese, sh = Serbo-Croatian.
 const _TMDB_LANG = { zh: ['zh', 'cn'], cn: ['zh', 'cn'], sr: ['sr', 'sh'], hr: ['hr', 'sh'], bs: ['bs', 'sh'] };
@@ -2417,10 +2428,11 @@ function _vibeRow(id, m) {
   };
 }
 
-// The short text the reranker and the reply model read for a candidate.
+const _vibeGenres = m => (m.g ? String(m.g).split(',') : []).map(g => _GENRE_NAME[g]).filter(Boolean).join(', ');
+
+// The short text the reranker reads for a candidate.
 function _vibeDoc(m) {
-  const genres = (m.g ? String(m.g).split(',') : []).map(g => _GENRE_NAME[g]).filter(Boolean).join(', ');
-  return `${m.t} (${m.year || '?'}). ${genres}. ${String(m.o || '').slice(0, 320)} Vibe: ${String(m.vt || '').split('|').join(', ')}.`;
+  return `${m.t} (${m.year || '?'}). ${_vibeGenres(m)}. ${String(m.o || '').slice(0, 320)} Vibe: ${String(m.vt || '').split('|').join(', ')}.`;
 }
 
 async function handleVibeSearch(request, url, env, cors, waitUntil) {
@@ -2450,7 +2462,7 @@ async function handleVibeSearch(request, url, env, cors, waitUntil) {
   // A fixed-length key whatever the query's script (KV keys stop at 512 bytes).
   const keyText = query.toLowerCase().replace(/\s+/g, ' ') + (exclude.length ? '|x:' + [...exclude].sort().join(',') : '');
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(keyText)));
-  const cacheKey = 'vbs:v2:' + [...digest].map(b => b.toString(16).padStart(2, '0')).join('');
+  const cacheKey = 'vbs:v3:' + [...digest].map(b => b.toString(16).padStart(2, '0')).join('');
   if (env.MOVIES_CACHE && !debug) {
     try {
       const hit = await env.MOVIES_CACHE.get(cacheKey);
@@ -2688,20 +2700,21 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
   const top = ranked.slice(0, 10);
   const byId = new Map(top.map(e => [e.id, e]));
   let reply = null;
+  const replyInput = `Request: ${query}\n${english !== query ? `In English: ${english}\n` : ''}` +
+    (kind === 'rare' ? 'Note: no real film is quite this; say so warmly and honestly, then point to the nearest.\n' : '') +
+    (exclude.length ? `The user does NOT want: ${exclude.join('; ')}. Leave out any candidate that is.\n` : '') + '\nCandidates:\n' +
+    top.map((e, i) => `${i + 1}|${e.m.t} (${e.m.year || '?'})|${_vibeGenres(e.m)}|${String(e.m.vt || '').split('|').join(', ')}|${String(e.m.o || '').slice(0, 220)}`).join('\n');
   try {
     const deadline = Math.max(3000, 17000 - (Date.now() - t0));   // the AI panel gives up at 20s
     reply = _vibeJSON(await Promise.race([
       env.AI.run(models.reply, {
         messages: [
           { role: 'system', content: _VIBE_REPLY_PROMPT },
-          { role: 'user', content: `Request: ${query}\n${english !== query ? `In English: ${english}\n` : ''}` +
-            `Message: ${kind === 'rare' ? 'no real film is exactly like this; say so honestly and that these are the nearest.' : 'real films like this exist; be upbeat, never say nothing matches.'}\n` +
-            (exclude.length ? `The user does NOT want: ${exclude.join('; ')}. Leave out any candidate that is.\n` : '') + '\nCandidates:\n' +
-            top.map((e, i) => `${i + 1}|${e.m.t} (${e.m.year || '?'})|${String(e.m.vt || '').split('|').join(', ')}|${String(e.m.o || '').slice(0, 220)}`).join('\n') },
+          { role: 'user', content: replyInput },
         ],
         response_format: { type: 'json_schema', json_schema: _VIBE_REPLY_SCHEMA },
         max_tokens: 1500,
-        temperature: 0.3,
+        temperature: 0.4,
       }),
       new Promise((_, reject) => setTimeout(() => reject(new Error(`no reply within ${deadline}ms`)), deadline)),
     ]));
@@ -2717,7 +2730,8 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
     if (!id || fit.has(id)) continue;
     fit.set(id, Number.isInteger(p.fit) ? p.fit : 2);
     fromReply++;
-    if (typeof p.reason === 'string' && p.reason.trim()) reasons[id] = p.reason.trim().replace(/[\n\r]+/g, ' ').slice(0, 140);
+    const pitch = typeof p.pitch === 'string' ? p.pitch.trim().replace(/[\n\r]+/g, ' ') : '';
+    if (pitch && !_VIBE_PITCH_DOUBT.test(pitch)) reasons[id] = pitch.slice(0, 200);   // else its "feel" line, below
     const t = (Array.isArray(p.tags) ? p.tags : []).filter(x => typeof x === 'string').map(x => x.trim().slice(0, 26)).filter(Boolean).slice(0, 3);
     if (t.length) tags[id] = t;
   }
@@ -2737,7 +2751,8 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
     return _vibeRow(id, e.m);
   });
   const said = ['exact', 'close', 'none'].includes(reply?.match) ? reply.match : 'close';
-  const match = kind === 'rare' ? (said === 'none' ? 'none' : 'close') : kind === 'plenty' ? 'exact' : said;
+  // A described film the reply graded 3 was found, whatever its match says.
+  const match = kind === 'rare' ? (said === 'none' ? 'none' : 'close') : kind === 'plenty' || [...fit.values()].includes(3) ? 'exact' : said;
   const payload = {
     aiCurated: true,
     vibeSearch: true,
@@ -2747,7 +2762,7 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
     tags,
     vibeTags,
     suggestedRefinements: (Array.isArray(reply?.refinements) ? reply.refinements : [])
-      .filter(x => typeof x === 'string').map(x => x.trim().slice(0, 30)).filter(Boolean).slice(0, 4),
+      .filter(x => typeof x === 'string').map(x => x.replace(/^\s*(mood|era|place|setting|story|kind of story)\s*:\s*/i, '').trim().slice(0, 30)).filter(Boolean).slice(0, 4),
     // FF Bot always says something, even if the reply call failed (the 8B misses JSON mode now and then).
     message: (typeof reply?.message === 'string' && reply.message.trim() ? reply.message.trim().slice(0, 240) : null) || interimMessage,
     translatedQuery: english,
@@ -2759,6 +2774,7 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
   if (debug) {
     payload.debug = {
       parsed: { ...read, ...pick, filter, avoid: [...avoid] }, ms, ok: { readOk, pickOk, rerankOk, fromReply },
+      replyInput, reply,
       scored: ranked.slice(0, 20).map(e => ({ id: e.id, title: e.m.t, year: e.m.year, votes: e.m.votes, rating: e.m.rating, score: +e.score.toFixed(3), rr: e.rr == null ? null : +e.rr.toFixed(3), rrf: +(e.rrf / maxRrf).toFixed(3), guess: e.guess })),
     };
   }
@@ -2919,12 +2935,70 @@ async function handleGroupPicker(request, env, cors, waitUntil) {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   FIT SUMMARY — spoiler-free "who is this for / who should skip / what
-   experience it delivers" for ANY movie. Generated on demand by the LLM
-   and cached in KV (key fit:{id}) so repeat opens are instant.
+   FIT SUMMARY — FF Bot's spoiler-free take on ANY film or series: who will
+   love it (by the titles it compares to), what watching it is like, and an
+   honest reason to skip it. The model gets TMDB's facts (genres, length,
+   director or creators, cast, keywords, languages), fetched here, so every
+   line is about this title; the client's title and overview are the fallback.
+   Cached in KV (fit:v2:<type>:<id>:<lang>) so repeat opens are instant.
 ════════════════════════════════════════════════════════════════════ */
 // The site's languages, by the name the model is asked to write in.
 const _FIT_LANGS = { en: 'English', es: 'Spanish', fr: 'French', zh: 'Simplified Chinese', ar: 'Arabic', uk: 'Ukrainian', de: 'German', sv: 'Swedish', no: 'Norwegian (Bokmål)' };
+const FIT_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+const _FIT_SCHEMA = {
+  type: 'object',
+  properties: { forYou: { type: 'string' }, experience: { type: 'string' }, skipIf: { type: 'string' } },
+  required: ['forYou', 'experience', 'skipIf'],
+};
+
+// Tuned on 18 films and series in four languages. Without the facts it wrote "Horror fans will love
+// this" for every horror film. Banning every stock opener made it worse: "Lovers of" and
+// "Be prepared for" took their place, the comparisons got sloppier and the Ukrainian broke.
+function _fitPrompt(type, lang) {
+  const what = type === 'tv' ? 'series' : 'film';
+  return `You are FF Bot, the film-obsessed robot of FindFilm.ai, giving a friend your honest, spoiler-free take on one ${what}: warm, witty and specific. Use what you know about this ${what} as well as the facts given. Every sentence must be true of THIS ${what} and no other.
+
+Return JSON with three values, each one sentence of 12-24 words:
+- forYou: who will love it, through a taste they already have: name one or two well-known titles or filmmakers a sharp critic would compare it to (close in tone and story, not just genre), and the hook that will grab them.
+- experience: what watching it actually feels like: the pace, the tone and the standout thing (a performance, the score, the look, the writing), with a concrete detail. Don't open it with "Watching".
+- skipIf: an honest, specific reason someone might not enjoy it (graphic violence, a slow first hour, a bleak tone, its length, subtitles, but only if it isn't in English; a cliffhanger ending), said kindly.
+A little humour is welcome where it fits. Write titles without straight double quotes. Never reveal twists, character fates or the ending. Never write lines that would fit any ${what}, like "fans of the genre will love this", "an emotional rollercoaster" or "a must-watch".` +
+    (lang !== 'en' ? `\nWrite the three values in ${_FIT_LANGS[lang]}, the way a native speaker would say them, never word for word from English, with other titles under their usual ${_FIT_LANGS[lang]} names; keep the JSON keys in English.` : '');
+}
+
+// TMDB's details (English, with credits and keywords) → the fact sheet the model reads.
+function _fitFacts(type, d) {
+  const title = d.title || d.name, orig = d.original_title || d.original_name;
+  const year = (d.release_date || d.first_air_date || '').slice(0, 4);
+  const makers = type === 'tv'
+    ? (d.created_by || []).map(p => p.name)
+    : (d.credits?.crew || []).filter(c => c.job === 'Director').map(c => c.name);
+  const cast = (d.credits?.cast || []).slice(0, 4).map(c => c.name);
+  const keywords = (d.keywords?.keywords || d.keywords?.results || []).slice(0, 12).map(k => k.name);
+  // Its own language first: "English (some French, German)" is not a subtitled film.
+  const spoken = d.spoken_languages || [];
+  const own = spoken.find(l => l.iso_639_1 === d.original_language);
+  const others = spoken.filter(l => l !== own).slice(0, 2).map(l => l.english_name);
+  const languages = own ? own.english_name + (others.length ? ` (some ${others.join(', ')})` : '') : others.join(', ');
+  const length = type === 'tv'
+    ? [d.number_of_seasons && `${d.number_of_seasons} season${d.number_of_seasons > 1 ? 's' : ''}`,
+       d.number_of_episodes && `${d.number_of_episodes} episodes`,
+       d.episode_run_time?.[0] && `about ${d.episode_run_time[0]} min each`,
+       d.status === 'Ended' && 'ended'].filter(Boolean).join(', ')
+    : d.runtime ? `${d.runtime} min` : '';
+  return [
+    `${type === 'tv' ? 'TV series' : 'Film'}: ${title}${year ? ` (${year})` : ''}`,
+    orig && orig !== title && `Original title: ${orig}`,
+    languages && `Language: ${languages}`,
+    d.genres?.length && `Genres: ${d.genres.map(g => g.name).join(', ')}`,
+    length && `Length: ${length}`,
+    makers.length && `${type === 'tv' ? 'Created by' : 'Directed by'}: ${makers.slice(0, 2).join(', ')}`,
+    cast.length && `Starring: ${cast.join(', ')}`,
+    d.tagline && `Tagline: ${d.tagline}`,
+    keywords.length && `Keywords: ${keywords.join(', ')}`,
+    d.overview && `Overview: ${String(d.overview).replace(/[\n\r]+/g, ' ').slice(0, 600)}`,
+  ].filter(Boolean).join('\n');
+}
 
 async function handleFitSummary(request, env, cors, waitUntil) {
   const json = (body, status = 200) =>
@@ -2955,8 +3029,7 @@ async function handleFitSummary(request, env, cors, waitUntil) {
   if (!env.AI) return json({ error: 'AI not available' }, 503);
 
   // ── KV cache lookup ──────────────────────────────────────────────
-  // fit:<id> is an English film (Classic's key); a show or another language has its own.
-  const cacheKey = type === 'movie' && lang === 'en' ? `fit:${id}` : `fit:${type}:${id}:${lang}`;
+  const cacheKey = `fit:v2:${type}:${id}:${lang}`;
   if (env.MOVIES_CACHE) {
     try {
       const hit = await env.MOVIES_CACHE.get(cacheKey);
@@ -2967,50 +3040,44 @@ async function handleFitSummary(request, env, cors, waitUntil) {
     } catch {}
   }
 
-  const systemPrompt =
-    'You write spoiler-free viewing guidance for a movie discovery app. ' +
-    'Respond with valid JSON only — no markdown fences, no extra text. ' +
-    'NEVER reveal plot twists, character fates, surprises, or the ending. ' +
-    'Focus only on tone, pace, genre, mood, and who will enjoy it. ' +
-    'Return exactly this JSON: ' +
-    '{ "forYou": "who will love this, one concrete sentence", ' +
-    '"skipIf": "who should skip it, one honest sentence", ' +
-    '"experience": "the kind of experience it delivers (tone/pace/feel), one sentence" }. ' +
-    'Each value MUST be a single sentence, max 140 characters, concrete and punchy — ' +
-    'no generic filler like "if you like good movies".' +
-    (lang !== 'en' ? ` Write the three values in ${_FIT_LANGS[lang]}; keep the JSON keys in English.` : '');
-
-  const userPrompt =
-    `${type === 'tv' ? 'TV series' : 'Movie'}: "${title}"${year ? ` (${year})` : ''}\n` +
-    (genres ? `Genres: ${genres}\n` : '') +
-    (overview ? `Overview: ${overview}\n` : '') +
-    `\nWrite the spoiler-free fit guidance as JSON.`;
+  // TMDB's facts, in English for the model whatever the page's language; 3s, else what the client sent.
+  let facts = '';
+  if (env.TMDB_KEY) {
+    try {
+      const u = new URL(`https://api.themoviedb.org/3/${type}/${id}`);
+      u.searchParams.set('api_key', env.TMDB_KEY);
+      u.searchParams.set('language', 'en-US');
+      u.searchParams.set('append_to_response', 'credits,keywords');
+      const r = await fetch(u.toString(), { headers: { 'User-Agent': 'FindFilm.ai/1.0' }, signal: AbortSignal.timeout(3000) });
+      if (r.ok) facts = _fitFacts(type, await r.json());
+    } catch (e) {
+      console.error('[fit-summary] TMDB details failed:', e.message);
+    }
+  }
+  if (!facts) {
+    facts = `${type === 'tv' ? 'TV series' : 'Film'}: ${title}${year ? ` (${year})` : ''}\n` +
+      (genres ? `Genres: ${genres}\n` : '') +
+      (overview ? `Overview: ${overview}` : '');
+  }
 
   try {
-    const aiResp = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
+    const aiResp = await env.AI.run(FIT_MODEL, {
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user',   content: userPrompt   },
+        { role: 'system', content: _fitPrompt(type, lang) },
+        { role: 'user',   content: facts },
       ],
-      max_tokens:  350,
-      temperature: 0.3,
-      stream:      false,
+      response_format: { type: 'json_schema', json_schema: _FIT_SCHEMA },
+      max_tokens:  400,
+      temperature: 0.35,
     });
+    const result = _vibeJSON(aiResp);
+    if (!result) throw new Error(`Unexpected AI response: ${JSON.stringify(aiResp).slice(0, 200)}`);
 
-    let text = '';
-    if (aiResp?.choices?.[0]?.message?.content) text = aiResp.choices[0].message.content;
-    else if (typeof aiResp?.response === 'string') text = aiResp.response;
-    else if (typeof aiResp === 'string') text = aiResp;
-    else throw new Error(`Unexpected AI response: ${JSON.stringify(aiResp).slice(0, 200)}`);
-
-    text = text.trim();
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('No JSON object found in AI response');
-    const result = JSON.parse(match[0]);
-
-    const clean = s => typeof s === 'string'
-      ? s.trim().replace(/[\n\r]+/g, ' ').slice(0, 160)
-      : '';
+    // A value cut short (a title in "straight quotes" ends the JSON string: "Liebhaber von") is dropped.
+    const clean = s => {
+      const v = typeof s === 'string' ? s.trim().replace(/[\n\r]+/g, ' ').slice(0, 240) : '';
+      return v.length >= 25 ? v : '';
+    };
     const forYou     = clean(result.forYou);
     const skipIf     = clean(result.skipIf);
     const experience = clean(result.experience);
@@ -3019,8 +3086,8 @@ async function handleFitSummary(request, env, cors, waitUntil) {
 
     const payload = { id, forYou, skipIf, experience };
 
-    // ── Cache write (30-day TTL), non-blocking ──────────────────────
-    if (env.MOVIES_CACHE) {
+    // ── Cache write (30-day TTL), non-blocking; a take missing a line is tried again next time ──
+    if (env.MOVIES_CACHE && forYou && skipIf && experience) {
       const write = env.MOVIES_CACHE.put(cacheKey, JSON.stringify(payload), {
         expirationTtl: 60 * 60 * 24 * 30,
       }).catch(() => {});
