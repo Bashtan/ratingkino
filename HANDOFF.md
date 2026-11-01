@@ -2,7 +2,35 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-01b) — FF Bot Watches Trailers With You (Step 1 of 3)
+## ⚡ Most Recent Session (2026-11-01c) — FF Bot's New Reaction Poses (Trailer Reactions, Step 2) — READY TO DEPLOY
+
+Committed on `main` (`8e62b9e`), **not deployed yet**. This session ran in the shared checkout as the "Wrangler Tik-Tok" session, at the owner's request, while the FindFilm.ai session was idle. **To ship: `git pull` if needed, then `./deploy.sh`.** No backend change, nothing else pending in the tree. Only the owner's own `.claude/launch.json` and `spotify-worker/` are uncommitted, as always.
+
+The owner's decisions:
+- **Use their new 2×2 sheet** for the trailer bot: shocked, laughing, teary, hyped.
+- **`tense` wears the thinking pose** for now; there's no art for it.
+- **One set of reaction names** for the website and the TikTok/Shorts bot: `shocked`, `laughing`, `teary`, `hyped`, `tense`. The calm ones stay: `watch`, `curious`, `wow`.
+
+| Commit | Feature |
+|--------|---------|
+| `8e62b9e` | **Reaction names** (`assets/social.js`): `hype`→**`hyped`**, `laugh`→**`laughing`**, `shock`→**`shocked`**, `sad`→**`teary`** in `RX`, `ARCS`, `SIGNATURE`, the end cheer in `reactionOf()`, and the `.trb-bot[data-rx]` styles. The keyframes keep their names. `findfilm-tiktok-bot`'s `bot-moods.py` uses the same names, `RX` and genre→kind map.<br>**`RX`** = `{watch: idle, curious: think, tense: think, wow: idea, hyped: hyped, laughing: laughing, shocked: shocked, teary: teary}`.<br>**A second sprite, `assets/ff-bot-reactions.webp`** (59 KB, 4 × 256×320, the same layout as the moods sprite: **shocked · laughing · teary · hyped**, `?v=5d7e7399`):<br>• **`REACTIONS`** lists its poses. **`watch()`** mounts 4 more layers, **`<i class="ffb-m ffb-r" data-m="…">`**, after `mount()`'s 4, and calls **`warmRx()`**.<br>• `warmRx()` is like `warm()`: `rxSprite` 0/1/2/3, `rxWaiting`, `RX_SPRITE`. It adds **`html.ffr-on`** when the sprite loads.<br>• **`poseOf(rx)`** maps a reaction to a pose. A reaction pose falls back to **`STAND_IN`** (shocked/teary → confused, laughing/hyped → success, i.e. step 1's poses) until the sprite is in, or for good if it fails. Any pose needs its sprite, else idle, so a layer is never blank.<br>• The sprite is separate so that **`ff-bot-moods.webp` didn't change** (rebuilt byte-identical, `?v=1b892b12`). The hero (`.ffh-bot`, idea frame) and peek (`.ffp-bot`, success frame) mascots keep their positions, and visitors who never play a trailer never download the 59 KB.<br>**CSS (`assets/social.css`):**<br>• The moods `url()` line is now `html.ffb-on .ffb-m:not(.ffb-r), …`. A new line, **`html.ffr-on .ffb-r { background-image: url(ff-bot-reactions.webp?v=…) }`**.<br>• **`.ffb-r[data-m]`** positions 0 / 33.33 / 66.67 / 100%.<br>• `.trb-bot[data-mood="<pose>"] > [data-m="<pose>"] { opacity: 1 }` for the 4 (`.ffb[data-mood]:not([data-mood="idle"]) > .ffb-idle` already hides the standing pose).<br>**`tools/mascot/`:**<br>• **`checker_matte.py`** (new; also used by `findfilm-tiktok-bot/tools/build-moods.py`). The sheet's transparency is a painted checkerboard and the robot is as white as its white cells (≈249), so `matte.py` cut holes into the helmets. This matte decides per **checker cell**:<br>  1. The background floods from the border through fully matching cells that share a side, never a corner.<br>  2. An enclosed full cell is a gap if its noise is within the reached background's p95.<br>  3. Per pixel only in the cells the outline crosses.<br>  4. Bigger gaps must show both shades.<br>  5. The outline is smoothed (σ 1.5), edges are bled.<br>• **`cut.sh`** now builds **both** sprites (`cut.sh [moods-sheet] [reactions-sheet]`, defaults `raw/ff-bot-emotions.jpg`, **`raw/ff-bot-reactions.png`**) and bumps both `?v=` (its sed: one `s` per sprite, each `url()` on its own line).<br>• **`slice.py <sheet> <strip> [TL,TR,BL,BR]`** takes pose names in reading order for other sheets; with no names the default order is unchanged.<br>**Pages:** `social.css?v=9d447772`, `social.js?v=12d54ad4` in both. |
+
+**Verified locally** (`findfilm-full`):
+- **All 9 poses** in real `.trb-bot` markup on the page's CSS: right sprite per layer, same size, same baseline.
+- **Cinematic, *The Dog Stars* (28, 53, 878 → action, with tension's `tense` on the middle beat):**
+  - Play → `ff-bot-reactions.webp` fetched, `html.ffr-on`, 8 layers.
+  - Seeked with the player's own `seekTo` postMessage. At 55%: `tense`/think (`trb-lean`). At 76.5%: `hyped`, shown from `ff-bot-reactions.webp` with `trb-jump`, cross-fading from think.
+- **Classic, *The Shawshank Redemption*:** the trailer mounts the bot with the 4 new layers, `ffr-on`.
+- **Console:** only the local `/api/cache/*` 404s (no local data).
+
+**Known limits:**
+- `tense` still has no pose of its own: it wears think.
+- The hyped frame's clapperboard touches the frame's left edge (2px, ~1px on screen).
+- The new sheet's edges show a 1–2px nick here and there at 2× zoom (a painted checkerboard, not real alpha); a real transparent PNG from the owner would be crisper (`cut.sh` passes one straight through).
+
+---
+
+## Session (2026-11-01b) — FF Bot Watches Trailers With You (Step 1 of 3)
 
 All commits on `main`, **live on https://findfilm.ai since 2026-11-01**: Pages production **`d247140a`**, from `1a40069`. `/build.json` = `20261101T122411Z-1a40069`.
 
@@ -2830,10 +2858,14 @@ ratingkino/
 │                           ff-bot.webp (186×320) and ff-bot-sm.webp (70×120).
 ├── assets/ff-bot-moods.webp ← the mascot's AI moods (window.FFBot): 4 × 256×320 frames,
 │                           think · idea · success · confused. Built by tools/mascot/cut.sh.
+├── assets/ff-bot-reactions.webp ← the trailer bot's own poses (FFBot.watch): 4 × 256×320,
+│                           shocked · laughing · teary · hyped. Fetched only once a trailer plays.
 ├── raw/ff-bot-emotions.jpg ← the 2×2 pose sheet the moods are cut from (checkerboard
 │                           painted in, no real alpha). raw/ is not published.
-├── tools/mascot/         ← cut.sh + checker.py / matte.py / slice.py: pose sheet →
-│                           ff-bot-moods.webp, and the ?v= bumps. Not published.
+├── raw/ff-bot-reactions.png ← the owner's 2×2 reactions sheet (shocked TL, laughing TR,
+│                           teary BL, hyped BR; checkerboard painted in too).
+├── tools/mascot/         ← cut.sh + checker.py / matte.py / checker_matte.py / slice.py:
+│                           pose sheets → both sprites, and the ?v= bumps. Not published.
 ├── tools/vibe/           ← vibe-search ingest + benchmark: ingest.mjs (TMDB → tags → Vectorize),
 │                           worker.js + wrangler.toml (dev-only Worker, remote AI + Vectorize),
 │                           bench.mjs + bench-queries.json; .cache/ gitignored. Not published.
@@ -3005,7 +3037,7 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 | `duck()` / `soon()` (peeking mascot `.ffp`, `assets/social.js`) | The mascot over "Your Taste DNA" (≥1024px): `.is-in` / `.is-hop` the first time the button is on screen, `.is-ducked` while `data-ffp-edge` (`#rowForYou`) is under `data-ffp-under` (`.filters-bar`); GA `mascot_click` `dna` |
 | `_voiceRead(e)` / `_voiceFold(segs, text)` / `_voiceMerge(base, seg)` / `_voiceCommit()` (Classic voice) | Transcript assembly for `toggleVoiceSearch()` (phone) + `toggleDesktopVoice()` (desktop): `_voiceRead` folds ALL results of the session into one string (`_voiceSession`), `_voiceFold` replaces a result that restates the previous one (iOS snapshots) and appends new speech, `_voiceMerge` joins across engine restarts dropping word overlap (Android replays), `_voiceCommit` banks `_voiceSession` into `_finalTranscript` |
 | `FFBot.set(mood)` / `FFBot.found(hasSuggestions)` / `FFBot.warm(then)` / `FFBot.mood()` (`assets/social.js`) | The mascot's AI moods on every `[data-ffb]` host + `#ffm`: `think` while the AI works, `found()` = idea → success → idle (+ an idea nudge when refinements are offered), `confused` on no results / errors. Sprite `ff-bot-moods.webp` loads on first intent; called as `window.FFBot?.…` from Classic's `showAiLoader()` / `renderAiResults()` / `showAiResultsError()` / `closeAiResults()` and Cinematic's `startView()` / `runAI()` / `titleFallback()` / `runTitle()` |
-| `FFBot.watch(iframe, {genres, seed})` (`assets/social.js`) | FF Bot reacting to a YouTube trailer from its bottom-left corner (`.trb` > `.ffb.trb-bot[data-rx]`), synced over YouTube's postMessage protocol; reactions from `ARCS` by genre (`arcFor`), poses from `RX`. Called from Cinematic's and Classic's `toggleTrailer()`; the embed needs `enablejsapi=1&origin=` |
+| `FFBot.watch(iframe, {genres, seed})` (`assets/social.js`) | FF Bot reacting to a YouTube trailer from its bottom-left corner (`.trb` > `.ffb.trb-bot[data-rx]`), synced over YouTube's postMessage protocol. Reactions come from `ARCS` by genre (`arcFor`): watch, curious, tense, wow, hyped, laughing, shocked, teary, the same names as the Shorts bot. Poses come from `RX` via `poseOf()`. The 4 reaction poses are in `ff-bot-reactions.webp` (`REACTIONS`, `warmRx()`, `html.ffr-on`, `STAND_IN` until it loads). Called from Cinematic's and Classic's `toggleTrailer()`; the embed needs `enablejsapi=1&origin=` |
 | `FFWatchlist.*` (`assets/watchlist.js`) | The one watchlist, typed `{id, type}`; `toggle(id, type)` returns whether the title is saved afterwards; `onChange(fn)` also fires for other tabs |
 | `toggleWatchlist(id, btn, type)` / `isWatchlisted(id, type)` (Classic) | Wrappers over `FFWatchlist`; `_wlType(id, type)` resolves the type for id-only callers; the listener in `initWatchlist()` repaints badge, `.card-wl-btn`, modal button and drawer |
 | `renderWatchlistDrawer()` + `_hydrateWatchlist()` + `_openWatchlisted(id, type)` (Classic) | Drawer lookup by id+type; fetches saved titles missing from `MOVIES`; opens one (prepends it to `MOVIES`, like the deep link) |
@@ -3091,7 +3123,8 @@ Backend (`functions/api/[[path]].js`): `_actorMovies(actorName, env)` resolves a
 .ffb-m              { position: absolute; bottom: 0; left: 50%; translate: -50% 0;
                       height: calc(100% / 0.85); aspect-ratio: 256 / 320; opacity: 0;
                       background: no-repeat 0 0 / 400% 100%; }   /* frame per [data-m] */
-html.ffb-on .ffb-m  { background-image: url("/assets/ff-bot-moods.webp?v=…"); }
+html.ffb-on .ffb-m:not(.ffb-r) { background-image: url("/assets/ff-bot-moods.webp?v=…"); }
+html.ffr-on .ffb-r  { background-image: url("/assets/ff-bot-reactions.webp?v=…"); }  /* the trailer bot's own poses */
 .ffb[data-mood="think"] > [data-m="think"] { opacity: 1; animation: ffb-think …; }  /* idea, success, confused alike */
 .ffb--panel 56px · .ffb--empty 120px · .ffb--head 60px   (panel 46 / head 48 at ≤768px)
 
@@ -3228,7 +3261,9 @@ The site is fully installable as a PWA on all platforms.
 ## Pending / Next Steps
 
 - [x] **Trailer reactions, Step 1** (`1a40069`): FF Bot watches trailers in Cinematic's quick view and Classic's Trailer player, synced to YouTube, genre arcs on today's 5 poses; live 2026-11-01 (production `d247140a`)
-- [ ] **Trailer reactions, Step 2: the owner's new poses** (shocked, laughing, tense, teary, hyped). Cut them into the sprite with `tools/mascot/cut.sh` (more frames: update `.ffb-m` `background-size` and the `[data-m]` positions, and `MOODS` in social.js), then point `RX` at them (shock→shocked, laugh→laughing, tense→tense, sad→teary, hype→hyped). The timelines don't change
+- [ ] **Deploy `8e62b9e`** (trailer reactions, step 2: the owner's new poses), committed but not deployed. See the 2026-11-01c block.
+- [x] **Trailer reactions, Step 2: the owner's new poses** (`8e62b9e`): shocked, laughing, teary, hyped in their own sprite `ff-bot-reactions.webp`. `tense` wears think until it has art. The reaction names are shared with the Shorts bot.
+- [ ] **Art: a `tense` pose** for the reactions sheet (today it wears think), and ideally the reactions sheet as a real transparent PNG
 - [ ] **Trailer reactions, Step 3: real per-trailer timelines**: KV `rx:<youtubeKey>` = `[{t, rx}]`, built offline in the TikTok bot's Sandbox container (yt-dlp; ebur128 loudness spikes, scene-cut density, Whisper transcript, a frame every ~2s through a vision model; the 70B fuses them into beats from the 8 reactions). Nightly for trending + top titles. `FFBot.watch` would take `beats` and fall back to `arcFor()`; the same beats could drive the ffmpeg overlay in the Shorts
 - [x] **Merge and deploy the phone overflow fixes** (`615bb8f` RTL popovers + `31a26d5` 320px header): on `main` and live 2026-10-27 (production `db17c4dd` from `3026fac`); verified on findfilm.ai at 320/375 in en and ar
 - [x] **Social links + mascot** (`168b9cd`) — TikTok + YouTube Shorts strip, corner mascot, footer band in both layouts; live 2026-10-27 (production `3efde451`)
