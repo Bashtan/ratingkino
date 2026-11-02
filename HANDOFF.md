@@ -4,7 +4,7 @@
 
 ## ⚡ Most Recent Session (2026-11-01c) — FF Bot's New Reaction Poses (Trailer Reactions, Step 2)
 
-Committed on `main` (`8e62b9e`), **live on https://findfilm.ai since 2026-11-02**: Pages production **`92baa7e5`**, deployed from `731ffb9` with `./deploy.sh` by the "Wrangler Tik-Tok" session at the owner's request. `/build.json` = `20261102T072216Z-731ffb9`. This session ran in the shared checkout while the FindFilm.ai session was idle. No backend change. Only the owner's own `.claude/launch.json` and `spotify-worker/` are uncommitted, as always.
+Committed on `main` (`8e62b9e`), **live on https://findfilm.ai since 2026-11-02**. Both sessions ran `./deploy.sh` from `731ffb9` within the same minute at the owner's request: the "Wrangler Tik-Tok" session's **`92baa7e5`** and the FindFilm.ai session's **`d24462fd`**, which landed last and is the current production. Same commit, same files. `/build.json` = `20261102T072216Z-731ffb9`. **Before deploying, check whether another session is already doing it** (`npx wrangler pages deployment list --project-name ratingkino`): both stage into the same `dist/`. This session ran in the shared checkout while the FindFilm.ai session was idle. No backend change. Only the owner's own `.claude/launch.json` and `spotify-worker/` are uncommitted, as always.
 
 The owner's decisions:
 - **Use their new 2×2 sheet** for the trailer bot: shocked, laughing, teary, hyped.
@@ -25,7 +25,12 @@ The owner's decisions:
 
 **Verified live** (findfilm.ai, 2026-11-02):
 - Both pages and ratingkino.com serve `social.css?v=9d447772` / `social.js?v=12d54ad4`; `ff-bot-reactions.webp?v=5d7e7399` returns 200, 59 080 B.
-- **Cinematic, *Verity* (9648, 53 → tension):** Play → the sprite is fetched, `html.ffr-on`, 8 layers. Seeking every 5s: watch → curious/think → tense/think → wow/idea → tense → **`shocked` at ~105–110s from the new sprite** → tense → wow → **`hyped` (new sprite) at the end**. Checked at a 1440×900 viewport: the trailer bot is hidden on narrow screens, so its layers read opacity 0 there.
+- **Cinematic, *Verity* (9648, 53 → tension):** Play → the sprite is fetched, `html.ffr-on`, 8 layers. Seeking every 5s: watch → curious/think → tense/think → wow/idea → tense → **`shocked` at ~105–110s from the new sprite** → tense → wow → **`hyped` (new sprite) at the end**. Checked at a 1440×900 viewport.
+- **Re-checked by the FindFilm.ai session (`d24462fd`):**
+  - All 9 poses lined up in cloned `.trb-bot` markup on the live CSS: the right layer per pose, the 4 new ones from `.ffb-r`, same size and baseline.
+  - Cinematic, *The Dog Stars* (a 2:07 trailer): 61s tense/think, 91s wow/idea, 111s **hyped** (new sprite). YouTube's time display stays visible above the bot.
+  - Classic, *The Shawshank Redemption* (18, 80 → heart + tense): 51s **teary** (new sprite); pausing adds `.is-away`.
+  - **Phones too:** at 375×812, Cinematic's trailer bot is up (`.trb` 63px tall) and shows hyped at opacity 1. No rule hides it on narrow screens. An opacity of 0 means the layer isn't the current pose (or the pane was in the background), not that the bot is hidden.
 
 **Known limits:**
 - `tense` still has no pose of its own: it wears think.
