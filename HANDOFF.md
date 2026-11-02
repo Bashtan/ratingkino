@@ -3273,7 +3273,21 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Deploy `8e62b9e`** (trailer reactions, step 2): live 2026-11-02 as `92baa7e5`.
 - [x] **Trailer reactions, Step 2: the owner's new poses** (`8e62b9e`): shocked, laughing, teary, hyped in their own sprite `ff-bot-reactions.webp`. `tense` wears think until it has art. The reaction names are shared with the Shorts bot.
 - [ ] **Art: a `tense` pose** for the reactions sheet (today it wears think), and ideally the reactions sheet as a real transparent PNG
-- [ ] **Trailer reactions, Step 3: real per-trailer timelines**: KV `rx:<youtubeKey>` = `[{t, rx}]`, built offline in the TikTok bot's Sandbox container (yt-dlp; ebur128 loudness spikes, scene-cut density, Whisper transcript, a frame every ~2s through a vision model; the 70B fuses them into beats from the 8 reactions). Nightly for trending + top titles. `FFBot.watch` would take `beats` and fall back to `arcFor()`; the same beats could drive the ffmpeg overlay in the Shorts
+- [ ] **Trailer reactions, Step 3: per-trailer timelines. Blocked on a data source (2026-11-02).**
+  - **Owner's rules:**
+    - No `yt-dlp` and no downloading YouTube video, to stay within YouTube's Terms and avoid IP bans.
+    - No vision model: too slow and costly.
+    - A nightly batch for Trending + Top Rated only.
+    - An unmapped trailer falls back to `arcFor()`.
+  - **Planned shape:** KV `rx:<youtubeKey>` = `[{t, rx}]` with the 8 reactions; `FFBot.watch` takes `beats`, else `arcFor()`.
+  - **Checked: neither proposed source exists.**
+    - **TMDB:** `/{movie|tv}/{id}/videos` lists the video only by its YouTube `key` (fields: `id, iso_3166_1, iso_639_1, key, name, official, published_at, site, size, type`), with no file URL. Trending movies + Top Rated + trending TV (60 titles, 55 with a Trailer) have 1 388 videos, all `site: "YouTube"`.
+    - **YouTube Data API:** `captions.list` (50 units) returns track metadata only, no text. `captions.download` (200 units) needs OAuth (`youtube.force-ssl` / `youtubepartner`) and edit permission on the video, so a studio's trailer returns 403 `forbidden`.
+  - **The owner is choosing between:**
+    - (a) a paid licensed trailer feed with files;
+    - (b) a per-title arc from TMDB overview + keywords + genres via the 70B, still not timed to the real cuts;
+    - (c) viewers' own reactions while watching, aggregated per `youtubeKey`;
+    - (d) stopping at the genre arcs.
 - [x] **Merge and deploy the phone overflow fixes** (`615bb8f` RTL popovers + `31a26d5` 320px header): on `main` and live 2026-10-27 (production `db17c4dd` from `3026fac`); verified on findfilm.ai at 320/375 in en and ar
 - [x] **Social links + mascot** (`168b9cd`) — TikTok + YouTube Shorts strip, corner mascot, footer band in both layouts; live 2026-10-27 (production `3efde451`)
 - [x] **Cinematic i18n** — done in `cec4746` (shared `assets/i18n.js`, 9 languages, Arabic RTL); live 2026-10-27 (production `f1121318`)
