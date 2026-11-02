@@ -2,9 +2,9 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-01c) — FF Bot's New Reaction Poses (Trailer Reactions, Step 2) — READY TO DEPLOY
+## ⚡ Most Recent Session (2026-11-01c) — FF Bot's New Reaction Poses (Trailer Reactions, Step 2)
 
-Committed on `main` (`8e62b9e`), **not deployed yet**. This session ran in the shared checkout as the "Wrangler Tik-Tok" session, at the owner's request, while the FindFilm.ai session was idle. **To ship: `git pull` if needed, then `./deploy.sh`.** No backend change, nothing else pending in the tree. Only the owner's own `.claude/launch.json` and `spotify-worker/` are uncommitted, as always.
+Committed on `main` (`8e62b9e`), **live on https://findfilm.ai since 2026-11-02**: Pages production **`92baa7e5`**, deployed from `731ffb9` with `./deploy.sh` by the "Wrangler Tik-Tok" session at the owner's request. `/build.json` = `20261102T072216Z-731ffb9`. This session ran in the shared checkout while the FindFilm.ai session was idle. No backend change. Only the owner's own `.claude/launch.json` and `spotify-worker/` are uncommitted, as always.
 
 The owner's decisions:
 - **Use their new 2×2 sheet** for the trailer bot: shocked, laughing, teary, hyped.
@@ -22,6 +22,10 @@ The owner's decisions:
   - Seeked with the player's own `seekTo` postMessage. At 55%: `tense`/think (`trb-lean`). At 76.5%: `hyped`, shown from `ff-bot-reactions.webp` with `trb-jump`, cross-fading from think.
 - **Classic, *The Shawshank Redemption*:** the trailer mounts the bot with the 4 new layers, `ffr-on`.
 - **Console:** only the local `/api/cache/*` 404s (no local data).
+
+**Verified live** (findfilm.ai, 2026-11-02):
+- Both pages and ratingkino.com serve `social.css?v=9d447772` / `social.js?v=12d54ad4`; `ff-bot-reactions.webp?v=5d7e7399` returns 200, 59 080 B.
+- **Cinematic, *Verity* (9648, 53 → tension):** Play → the sprite is fetched, `html.ffr-on`, 8 layers. Seeking every 5s: watch → curious/think → tense/think → wow/idea → tense → **`shocked` at ~105–110s from the new sprite** → tense → wow → **`hyped` (new sprite) at the end**. Checked at a 1440×900 viewport: the trailer bot is hidden on narrow screens, so its layers read opacity 0 there.
 
 **Known limits:**
 - `tense` still has no pose of its own: it wears think.
@@ -3261,7 +3265,7 @@ The site is fully installable as a PWA on all platforms.
 ## Pending / Next Steps
 
 - [x] **Trailer reactions, Step 1** (`1a40069`): FF Bot watches trailers in Cinematic's quick view and Classic's Trailer player, synced to YouTube, genre arcs on today's 5 poses; live 2026-11-01 (production `d247140a`)
-- [ ] **Deploy `8e62b9e`** (trailer reactions, step 2: the owner's new poses), committed but not deployed. See the 2026-11-01c block.
+- [x] **Deploy `8e62b9e`** (trailer reactions, step 2): live 2026-11-02 as `92baa7e5`.
 - [x] **Trailer reactions, Step 2: the owner's new poses** (`8e62b9e`): shocked, laughing, teary, hyped in their own sprite `ff-bot-reactions.webp`. `tense` wears think until it has art. The reaction names are shared with the Shorts bot.
 - [ ] **Art: a `tense` pose** for the reactions sheet (today it wears think), and ideally the reactions sheet as a real transparent PNG
 - [ ] **Trailer reactions, Step 3: real per-trailer timelines**: KV `rx:<youtubeKey>` = `[{t, rx}]`, built offline in the TikTok bot's Sandbox container (yt-dlp; ebur128 loudness spikes, scene-cut density, Whisper transcript, a frame every ~2s through a vision model; the 70B fuses them into beats from the 8 reactions). Nightly for trending + top titles. `FFBot.watch` would take `beats` and fall back to `arcFor()`; the same beats could drive the ffmpeg overlay in the Shorts
