@@ -2,7 +2,23 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-03) — FF Bot's Trailer Arc Per Film (Step 3, option b); the Shorts Bot Stops Downloading
+## ⚡ Most Recent Session (2026-11-03, evening) — The Shorts Bot Renders From TMDB Stills; `rxFor()` Reads Both AI Answer Shapes
+
+On `main`. **`ratingkino-sync`** version **`31a2edc6`** (deployed with `npx wrangler deploy --config sync-worker.toml`; all 5 crons kept). Pages unchanged (`283c3518`). This session ran in the shared checkout as the "Wrangler Tik-Tok" session.
+
+| Commit | Feature |
+|--------|---------|
+| `65449f9` | **`rxFor()` (`sync-worker.js`)** reads `out.response ?? out.choices[0].message.content`. Workers AI sometimes answers the 70B in OpenAI's chat shape, and `rxFor()` then found no `beats` and counted the title as failed (it would only have been retried the next night). Found while the Shorts bot's script writer hit the same shape on the same model. |
+
+**The Shorts bot (`findfilm-tiktok-bot`) renders again, from TMDB stills only.** The details are in that repo's HANDOFF. Its FF Bot reacts with the same reaction names and `RX` as `FFBot.watch`, per line of an AI-written voiceover, using the same 9-pose strip (with the website's `raw/ff-bot-reactions.png` poses).
+- Workers AI writes the script (70B) and speaks it (Deepgram Aura-2 `thalia`).
+- The images are Ken Burns scenes over textless TMDB backdrops.
+- The cron batch runs every 3 days at 12:00 local; next run 2026-11-04.
+- **TV links fixed:** the bot's captions linked TV shows as `?movie=<id>`. `buildFindfilmLink(id, type)` now uses `?TVShows=<id>`, the site's deep link for series.
+
+---
+
+## 2026-11-03 — FF Bot's Trailer Arc Per Film (Step 3, option b); the Shorts Bot Stops Downloading
 
 All commits on `main`, live on https://findfilm.ai: Pages production **`283c3518`** from `561ba23` (`/build.json` = `20261103T095501Z-561ba23`), and **`ratingkino-sync`** version **`0c9f3995`**. This session ran in the shared checkout as the "Wrangler Tik-Tok" session, at the owner's request.
 
@@ -12,7 +28,7 @@ All commits on `main`, live on https://findfilm.ai: Pages production **`283c3518
   - `POST /` answers 503 without starting a container.
   - The image has no `yt-dlp`, and the FastSaverAPI fallback is gone.
   - The batch scripts exit at once.
-  - The plan is for it to render from TMDB stills (Ken Burns, an AI voiceover, dynamic text). That isn't started.
+  - The plan is for it to render from TMDB stills (Ken Burns, an AI voiceover, dynamic text). Done the same evening (see above).
 
 | Commit | Feature |
 |--------|---------|
@@ -3314,7 +3330,7 @@ The site is fully installable as a PWA on all platforms.
 - [ ] **Art: a `tense` pose** for the reactions sheet (today it wears think), and ideally the reactions sheet as a real transparent PNG
 - [x] **Trailer reactions, Step 3, option (b)** (`561ba23`, live 2026-11-03): an arc per film from the 70B, nightly for Trending + Top Rated (`syncTrailerArcs`, `/api/rx`, `filmArc`). See the 2026-11-03 block.
 - [ ] **Trailer reactions: viewers' own reactions (option c)**, to layer on later (the owner's idea). Aggregated per title, they could time beats to real moments.
-- [ ] **The Shorts bot renders from TMDB stills** (in `findfilm-tiktok-bot`; halted since 2026-11-03, no YouTube downloads). Its `bot-moods.py` could then take the film's arc from `rx:v1:` instead of trailer loudness.
+- [x] **The Shorts bot renders from TMDB stills** (in `findfilm-tiktok-bot`, 2026-11-03 evening): Ken Burns scenes, an AI voiceover (70B script, Aura-2 voice), the FF Bot reacting per script line (the script picks each reaction, so it doesn't need `rx:v1:`).
 - [ ] **Trailer reactions, Step 3 as first planned (2026-11-02):** per-trailer timelines. Blocked on a data source; option (b) shipped instead.
   - **Owner's rules:**
     - No `yt-dlp` and no downloading YouTube video, to stay within YouTube's Terms and avoid IP bans.
