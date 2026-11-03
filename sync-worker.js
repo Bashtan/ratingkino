@@ -322,8 +322,9 @@ async function rxFor(type, id, env) {
     max_tokens:  700,
     temperature: 0.6,
   });
-  // JSON mode puts an object in `response`; some answers still arrive as text.
-  const r = out && typeof out === 'object' && 'response' in out ? out.response : out;
+  // JSON mode puts an object in `response`, or at times answers in OpenAI's
+  // chat shape (choices[0].message.content); some answers still arrive as text.
+  const r = out?.response ?? out?.choices?.[0]?.message?.content ?? out;
   const m = r && typeof r === 'object' ? r : JSON.parse(String(r || '').match(/\{[\s\S]*\}/)?.[0] || 'null');
   return rxArc(m?.beats);
 }
