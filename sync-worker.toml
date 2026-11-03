@@ -15,8 +15,13 @@ compatibility_date = "2024-11-01"
 # Phase 1 (00:00): fetch discover pages + enrich movies  0–39
 # Phase 2 (00:05): enrich movies 40–79
 # Phase 3 (00:10): enrich movies 80–118, merge & write final 'new-releases' key
-crons = ["55 23 * * *", "0 0 * * *", "5 0 * * *", "10 0 * * *"]
+# Trailer arcs (00:20): FF Bot's arc for each Trending / Top Rated title's trailer
+crons = ["55 23 * * *", "0 0 * * *", "5 0 * * *", "10 0 * * *", "20 0 * * *"]
 
 [[kv_namespaces]]
 binding = "MOVIES_CACHE"
 id      = "9b1ddd3fe25446c390304fd3a460606e"
+
+# Workers AI: the trailer arcs' model (syncTrailerArcs).
+[ai]
+binding = "AI"

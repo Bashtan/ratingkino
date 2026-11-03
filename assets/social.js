@@ -194,7 +194,8 @@
   }
 
   /* ── Trailer reactions (FFBot.watch): FF Bot watches a trailer with you ──
-     FFBot.watch(iframe, { genres: [TMDB genre ids], seed: video key }) puts a
+     FFBot.watch(iframe, { genres: [TMDB genre ids], seed: video key,
+     film: 'movie:<id>' | 'tv:<id>' }) puts a
      reacting mascot (.trb, styles in social.css) in the bottom-left corner of
      a YouTube embed, whose src needs enablejsapi=1 (and origin=). The page
      follows the player over YouTube's postMessage protocol (what the IFrame
@@ -211,9 +212,12 @@
      fetched once a trailer bot exists (html.ffr-on). Until it's in, or if it
      can't load, a reaction wears today's stand-in (STAND_IN). tense has no
      pose of its own yet: it wears think. Where reactions fall comes from an
-     arc for the kind of film (ARCS: [share of the trailer, reaction], picked
-     by genre, nudged per video so no two trailers match beat for beat), until
-     real per-trailer timelines exist. */
+     arc, [share of the trailer, reaction] beats: the film's own (filmArc),
+     which the 70B writes nightly for the Trending and Top Rated titles from
+     their story and tone (sync-worker.js, /api/rx/<type>/<id>), else the one
+     for its kind of film (ARCS, picked by genre, nudged per video so no two
+     trailers match beat for beat). The bot's data-arc says which: film or
+     genre. Neither is timed to the trailer's actual cuts. */
   var RX = { watch: 'idle', curious: 'think', tense: 'think', wow: 'idea', hyped: 'hyped', laughing: 'laughing', shocked: 'shocked', teary: 'teary' };
   var REACTIONS = ['shocked', 'laughing', 'teary', 'hyped'];
   var STAND_IN = { shocked: 'confused', laughing: 'success', teary: 'confused', hyped: 'success' };
@@ -257,6 +261,17 @@
       arc[mid] = [arc[mid][0], SIGNATURE[kinds[1]]];
     }
     return arc;
+  }
+  // The film's own arc ({ arc } from /api/rx, null for a title without one)
+  // replaces the genre's whenever it comes, even mid-trailer.
+  function filmArc(w, film) {
+    fetch('/api/rx/' + film.replace(':', '/')).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      var arc = d && Array.isArray(d.arc) ? d.arc.filter(function (b) { return Array.isArray(b) && typeof b[0] === 'number' && RX[b[1]]; }) : [];
+      if (arc.length < 2) return;
+      w.arc = arc;
+      w.bot.setAttribute('data-arc', 'film');
+      react(w);
+    }).catch(function () { /* offline, or no arc: the genre's stays */ });
   }
   function playhead(w) {
     return w.time + (w.state === 1 ? (performance.now() - w.at) / 1000 * w.rate : 0);
@@ -347,7 +362,7 @@
     var box = document.createElement('div');
     box.className = 'trb';
     box.setAttribute('aria-hidden', 'true');
-    box.innerHTML = '<div class="ffb trb-bot" data-rx="watch" data-mood="idle"><img class="ffb-idle" src="/assets/ff-bot.webp" alt="" width="186" height="320"></div>';
+    box.innerHTML = '<div class="ffb trb-bot" data-rx="watch" data-mood="idle" data-arc="genre"><img class="ffb-idle" src="/assets/ff-bot.webp" alt="" width="186" height="320"></div>';
     var w = { frame: frame, src: src, origin: origin, box: box, bot: box.firstChild, id: ++watchIds,
       arc: arcFor(opts.genres, opts.seed || src), state: -1, time: 0, at: 0, dur: 0, rate: 1, endedAt: 0, heard: false, started: false };
     mount(w.bot);
@@ -361,6 +376,7 @@
     watching.push(w);
     warm(function () { react(w); });
     warmRx(function () { react(w); });
+    if (/^(movie|tv):\d+$/.test(opts.film || '')) filmArc(w, opts.film);
     if (!watchTick) watchTick = setInterval(watchAll, 250);
     watchAll();
   }

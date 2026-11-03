@@ -14,6 +14,7 @@
  *                            (injects WATCHMODE_API_KEY secret; region-resolved server-side)
  *   /api/reddit/reviews   → oauth.reddit.com/search, official OAuth2 client_credentials
  *                           (injects REDDIT_CLIENT_ID/REDDIT_CLIENT_SECRET; KV-cached 36h/movie)
+ *   /api/rx/<movie|tv>/<id> → KV: FF Bot's arc for the title's trailer (sync-worker.js, nightly)
  *
  * API keys and KV are stored as Cloudflare Pages secrets/bindings —
  * never exposed in HTML source.
@@ -91,6 +92,12 @@ export async function onRequest({ request, env, params, waitUntil }) {
   /* ── /api/group-picker ── taste-overlap picks for a group via Cloudflare AI ── */
   if (path === '/group-picker') {
     return handleGroupPicker(request, env, cors, waitUntil);
+  }
+
+  /* ── /api/rx/<movie|tv>/<id> ── FF Bot's arc for a title's trailer ── */
+  const rx = path.match(/^\/rx\/(movie|tv)\/(\d{1,9})$/);
+  if (rx) {
+    return handleRx(rx[1], rx[2], env, cors);
   }
 
   /* ── /api/fit-summary ── spoiler-free "who's it for" summary (KV-cached) ── */
@@ -2932,6 +2939,28 @@ async function handleGroupPicker(request, env, cors, waitUntil) {
     console.error('[group-picker] error:', e.message);
     return json({ error: 'Group picker failed', detail: e.message }, 500);
   }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   TRAILER ARC — what FF Bot reacts with, and when, while a title's trailer
+   plays (FFBot.watch in assets/social.js): { arc: [[share, reaction], …] }.
+   Written nightly by sync-worker.js (syncTrailerArcs) for the Trending and
+   Top Rated titles, so this only reads KV. { arc: null }: use the genre's arc
+   (a 200 all the same: a miss is normal, and a 404 is a console error per trailer).
+════════════════════════════════════════════════════════════════════ */
+async function handleRx(type, id, env, cors) {
+  let hit = null;
+  try { hit = await env.MOVIES_CACHE?.get(`rx:v1:${type}:${id}`, 'json'); } catch {}
+  // KV keeps each beat's moment too ([share, reaction, moment]); the page needs the first two.
+  const arc = Array.isArray(hit?.arc) ? hit.arc.map(b => [b[0], b[1]]) : null;
+  return new Response(JSON.stringify({ arc }), {
+    headers: {
+      'Content-Type': 'application/json',
+      // A miss may be filled tonight: an hour. An arc lasts 30 days in KV.
+      'Cache-Control': `public, max-age=${arc ? 86400 : 3600}`,
+      ...cors,
+    },
+  });
 }
 
 /* ════════════════════════════════════════════════════════════════════

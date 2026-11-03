@@ -19,6 +19,8 @@
  *   nr-enriched-1   – enriched batch 1 (temp, 24 h TTL)
  *   new-releases    – final 119 fully-enriched movies (48 h TTL)
  *   last-sync       – JSON object with timestamp + stats (48 h TTL)
+ *   rx:v1:<type>:<id> – FF Bot's arc for a title's trailer (30 d TTL, 00:20 UTC;
+ *                     see "Trailer arcs" below)
  *
  * NOTE: OMDb ratings are skipped because:
  *   a) each OMDb call consumes a subrequest (counts against the 50 limit)
@@ -48,6 +50,22 @@ const RETRY_DELAY_MS     = 5000;// ms to wait after a retryable error
 const KV_TTL_SEC         = 172800; // 48 h
 const KV_TEMP_TTL_SEC    = 86400;  // 24 h (temp keys between phases)
 
+// Trailer arcs (syncTrailerArcs). The lists are the site's own: Cinematic's
+// Trending and Top Rated, movies and series (TYPES and CHIPS in
+// cinematic/index.html), page 1 each.
+const RX_LISTS = [
+  ['movie', '/trending/movie/week', {}],
+  ['tv',    '/trending/tv/week',    {}],
+  ['movie', '/discover/movie', { sort_by: 'vote_average.desc', 'vote_count.gte': '5000', without_genres: '99,10770' }],
+  ['tv',    '/discover/tv',    { sort_by: 'vote_average.desc', 'vote_count.gte': '1500', without_genres: '10767,10763,10764,10766' }],
+];
+const RX_MODEL    = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+// The reactions FFBot.watch knows (RX in assets/social.js; findfilm-tiktok-bot's bot-moods.py too).
+const RX_NAMES    = ['watch', 'curious', 'tense', 'wow', 'hyped', 'laughing', 'shocked', 'teary'];
+const RX_GAP      = 0.05;   // beats closer than this (a share of the trailer) are one beat
+const RX_MAX_RUN  = 40;     // new arcs per run: 2 subrequests each (TMDB + AI)
+const RX_TTL_SEC  = 60 * 60 * 24 * 30;   // 30 d: a title still listed then gets a fresh arc
+
 export default {
   async scheduled(event, env, ctx) {
     const cron = event.cron;
@@ -55,13 +73,19 @@ export default {
     else if (cron === '0 0 * * *')   ctx.waitUntil(syncPhase1(env));
     else if (cron === '5 0 * * *')   ctx.waitUntil(syncPhase2(env));
     else if (cron === '10 0 * * *')  ctx.waitUntil(syncPhase3(env));
+    else if (cron === '20 0 * * *')  ctx.waitUntil(syncTrailerArcs(env));
   },
 
-  // Manual trigger: GET /sync-now?phase=popular|0|1|2
+  // Manual trigger: GET /sync-now?phase=popular|0|1|2|rx
   // Each phase returns immediately; poll /api/cache/status to track progress.
+  // Except rx, which answers with its stats once done: a fetch's waitUntil is
+  // cut 30 s after the response, and a run of arcs takes minutes.
   async fetch(request, env, ctx) {
     const url   = new URL(request.url);
     const phase = url.searchParams.get('phase') ?? '0';
+    if (url.pathname === '/sync-now' && phase === 'rx') {
+      return Response.json(await syncTrailerArcs(env));
+    }
     if (url.pathname === '/sync-now') {
       const fn = phase === 'popular' ? syncPhase0
                : phase === '1'       ? syncPhase2
@@ -199,6 +223,143 @@ async function syncRandomPool(env) {
   const mapped = movies.slice(0, RANDOM_POOL_COUNT).map(basicMovie);
   await env.MOVIES_CACHE.put('random-pool', JSON.stringify(mapped), { expirationTtl: KV_TTL_SEC });
   console.log(`[phase0] random-pool: ${mapped.length} movies written`);
+}
+
+/* ─── Trailer arcs: FF Bot's script for a title's trailer ─────── */
+// Runs at 00:20 UTC. For each title in RX_LISTS without one yet, the 70B writes
+// the arc FFBot.watch (assets/social.js) follows while that title's trailer
+// plays: [[share of the trailer, reaction], …], from TMDB's facts (genres,
+// keywords, tagline, overview). The trailer itself is never fetched (the
+// owner's rule: no YouTube downloads), so the beats follow the film's story
+// and tone, not the trailer's actual cuts. A title that has an arc is skipped,
+// so a night costs only the new ones. Served by /api/rx/<type>/<id>
+// (functions/api/[[path]].js); titles without one keep the genre's arc.
+// Budget: 4 list pages + 2 per new arc (TMDB + AI), ≤ RX_MAX_RUN arcs.
+
+const RX_SCHEMA = {
+  type: 'object',
+  properties: {
+    beats: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { at: { type: 'number' }, moment: { type: 'string' }, rx: { type: 'string', enum: RX_NAMES } },
+        required: ['at', 'moment', 'rx'],
+      },
+    },
+  },
+  required: ['beats'],
+};
+
+// Without moments, every arc came out on one template (curious, tense, wow,
+// hyped at the same shares, Law & Order included): naming what the trailer
+// shows makes the model picture this title's trailer before it reacts.
+function rxPrompt(type) {
+  const what = type === 'tv' ? 'series' : 'film';
+  return `You plan how FF Bot, FindFilm.ai's little robot mascot, reacts while it watches the official trailer of one ${what} beside the viewer, like a streamer's reaction cam. You can't see the trailer, so picture it from what you know about this ${what} and the facts given: the moments its trailer would really show, in order, and how a fan would react to each.
+
+Trailers differ: a comedy's is a string of gags with straight-faced beats between, a horror film's is long dread broken by scares, a drama's builds quietly to one emotional swell, an epic's opens on a mystery and climbs to a montage of spectacle, a crime story's turns on a reveal. Shape this one to fit the ${what}.
+
+The reactions, and only these names:
+- watch: just watching (the logos, quiet moments)
+- curious: intrigued by the setup or a mystery
+- tense: suspense, danger closing in, dread
+- wow: awe at spectacle, scale or a striking reveal
+- hyped: pumped by action, a chase, a triumphant moment
+- laughing: a joke, comic chaos, absurdity
+- shocked: a scare, a brutal surprise, a horrifying reveal
+- teary: grief, love, a moving moment
+
+Return JSON: beats, 6 to 9 of them, in order. Each beat has:
+- at: the share of the trailer (0 to 1) where the moment starts. The first is at 0 (the logos, watch); the last starts by 0.92; keep them at least 0.06 apart, spaced the way this trailer would be, not evenly.
+- moment: what the trailer shows then, in 3 to 8 words, specific to this ${what}. Nothing past its premise: no twists or endings.
+- rx: the reaction to that moment.
+React the way a real viewer of this ${what} would: a crime drama is curious and tense rather than hyped, a comedy laughs often, a weepie turns teary, a horror film is tense and shocked. Don't add action or spectacle the ${what} doesn't have. Use at least three different reactions.`;
+}
+
+// TMDB's details (English, with keywords) → the fact sheet the model reads.
+// A shorter cousin of _fitFacts() in functions/api/[[path]].js (separate runtime).
+function rxFacts(type, d) {
+  const year = (d.release_date || d.first_air_date || '').slice(0, 4);
+  const keywords = (d.keywords?.keywords || d.keywords?.results || []).slice(0, 15).map(k => k.name);
+  return [
+    `${type === 'tv' ? 'TV series' : 'Film'}: ${d.title || d.name}${year ? ` (${year})` : ''}`,
+    d.genres?.length && `Genres: ${d.genres.map(g => g.name).join(', ')}`,
+    d.tagline && `Tagline: ${d.tagline}`,
+    keywords.length && `Keywords: ${keywords.join(', ')}`,
+    d.overview && `Overview: ${String(d.overview).replace(/[\n\r]+/g, ' ').slice(0, 700)}`,
+  ].filter(Boolean).join('\n');
+}
+
+// The model's beats → an arc FFBot.watch can follow, [share, reaction, moment],
+// or null: known reactions only, in order, from [0, 'watch'], none closer than
+// RX_GAP, a repeat merged into the beat before it, and enough of them that it's
+// a real arc. The moment is only kept to show why (the API sends [share, reaction]).
+function rxArc(beats) {
+  if (!Array.isArray(beats)) return null;
+  const ok = beats.filter(b => b && RX_NAMES.includes(b.rx) && Number.isFinite(b.at));
+  const scale = ok.some(b => b.at > 1.5) ? 100 : 1;   // shares given as percentages
+  const arc = [[0, 'watch', 'logos']];
+  ok.map(b => [Math.round(Math.min(Math.max(b.at / scale, 0), 0.95) * 1000) / 1000, b.rx, String(b.moment || '').slice(0, 80)])
+    .sort((a, b) => a[0] - b[0])
+    .forEach(beat => {
+      const last = arc[arc.length - 1];
+      if (beat[1] !== last[1] && beat[0] - last[0] >= RX_GAP) arc.push(beat);
+    });
+  const kinds = new Set(arc.map(b => b[1]).filter(rx => rx !== 'watch'));
+  return arc.length >= 5 && kinds.size >= 2 ? arc : null;
+}
+
+async function rxFor(type, id, env) {
+  const d = await fetchJSON(tmdbUrl(env, `/${type}/${id}`, { language: 'en-US', append_to_response: 'keywords' }));
+  if (!d) return null;
+  const out = await env.AI.run(RX_MODEL, {
+    messages: [
+      { role: 'system', content: rxPrompt(type) },
+      { role: 'user',   content: rxFacts(type, d) },
+    ],
+    response_format: { type: 'json_schema', json_schema: RX_SCHEMA },
+    max_tokens:  700,
+    temperature: 0.6,
+  });
+  // JSON mode puts an object in `response`; some answers still arrive as text.
+  const r = out && typeof out === 'object' && 'response' in out ? out.response : out;
+  const m = r && typeof r === 'object' ? r : JSON.parse(String(r || '').match(/\{[\s\S]*\}/)?.[0] || 'null');
+  return rxArc(m?.beats);
+}
+
+async function syncTrailerArcs(env) {
+  console.log('[rx] Starting at', new Date().toISOString());
+  const titles = new Map();   // type:id → [type, id], each title once
+  for (const [type, path, params] of RX_LISTS) {
+    const page = await fetchJSON(tmdbUrl(env, path, { ...params, page: 1 }));
+    for (const t of page?.results || []) titles.set(`${type}:${t.id}`, [type, t.id]);
+  }
+  const todo = [];
+  for (const [key, title] of titles) {
+    if (!(await env.MOVIES_CACHE.get(`rx:v1:${key}`))) todo.push(title);
+  }
+  const stats = { listed: titles.size, had: titles.size - todo.length, made: 0, failed: 0, left: Math.max(todo.length - RX_MAX_RUN, 0) };
+
+  const run = todo.slice(0, RX_MAX_RUN);
+  for (let i = 0; i < run.length; i += BATCH_SIZE) {
+    await Promise.all(run.slice(i, i + BATCH_SIZE).map(async ([type, id]) => {
+      try {
+        const arc = await rxFor(type, id, env);
+        if (!arc) throw new Error('no usable arc');
+        await env.MOVIES_CACHE.put(`rx:v1:${type}:${id}`, JSON.stringify({ arc, at: isoDate(new Date()) }), { expirationTtl: RX_TTL_SEC });
+        stats.made++;
+      } catch (err) {
+        stats.failed++;
+        console.error(`[rx] ${type}:${id} ${err.message}`);
+      }
+    }));
+    if (i + BATCH_SIZE < run.length) await sleep(BATCH_DELAY_MS);
+  }
+
+  await writeMeta(env, { rx: stats });
+  console.log('[rx] Done —', JSON.stringify(stats));
+  return stats;
 }
 
 /* ─── TMDB fetcher ────────────────────────────────────────── */
