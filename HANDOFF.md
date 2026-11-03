@@ -2,7 +2,45 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-01c) — FF Bot's New Reaction Poses (Trailer Reactions, Step 2)
+## ⚡ Most Recent Session (2026-11-03) — FF Bot's Trailer Arc Per Film (Step 3, option b); the Shorts Bot Stops Downloading
+
+All commits on `main`, live on https://findfilm.ai: Pages production **`283c3518`** from `561ba23` (`/build.json` = `20261103T095501Z-561ba23`), and **`ratingkino-sync`** version **`0c9f3995`**. This session ran in the shared checkout as the "Wrangler Tik-Tok" session, at the owner's request.
+
+**The owner's decisions:**
+- **Step 3 is option (b):** an arc per film, written by the 70B from TMDB's facts. Option (c), viewers' own reactions, may be layered on later.
+- **The no-download rule covers the TikTok/Shorts bot too.** It is halted; see `findfilm-tiktok-bot` `9d9ff3f`, Worker `987bb2a0`.
+  - `POST /` answers 503 without starting a container.
+  - The image has no `yt-dlp`, and the FastSaverAPI fallback is gone.
+  - The batch scripts exit at once.
+  - The plan is for it to render from TMDB stills (Ken Burns, an AI voiceover, dynamic text). That isn't started.
+
+| Commit | Feature |
+|--------|---------|
+| `561ba23` | **The nightly writer (`sync-worker.js`, new section "Trailer arcs")**<br>• **`syncTrailerArcs(env)`** is a 5th cron, **`20 0 * * *`**, and also runs on **`GET /sync-now?phase=rx`**. That manual run waits for the job and answers with its stats, because a fetch's `waitUntil` is cut 30s after the response.<br>• **`RX_LISTS`**: Cinematic's Trending and Top Rated, movies and series, page 1 each (the same queries as `TYPES`/`CHIPS` in `cinematic/index.html`), about 78 titles.<br>• Titles without **KV `rx:v1:<type>:<id>`** get one. **`rxFor()`** fetches TMDB `/{type}/{id}?append_to_response=keywords`, builds the fact sheet with **`rxFacts()`** (genres, tagline, 15 keywords, overview; a short cousin of `_fitFacts`), then calls **`RX_MODEL`** (Llama 3.3 70B fp8-fast) in JSON mode (**`RX_SCHEMA`**: `beats: [{at, moment, rx}]`, `rx` an enum of `RX_NAMES`, temperature 0.6).<br>• **`rxPrompt(type)`** asks the model to picture this title's trailer and name each moment (3–8 words) before reacting. Without moments, every arc came out on one template: curious, tense, wow, hyped at the same shares, *Law & Order* included.<br>• **`rxArc(beats)`** keeps known reactions, sorted, from `[0,'watch','logos']`. It merges repeats, drops beats closer than **`RX_GAP`** (0.05), turns percentages into shares, and needs ≥5 beats and ≥2 kinds of reaction.<br>• Stored as `{arc: [[share, rx, moment]], at}` for **30 days** (`RX_TTL_SEC`). At most **`RX_MAX_RUN`** (40) new arcs per run, 3 at a time (`BATCH_SIZE`). Stats go to `last-sync.rx` `{listed, had, made, failed, left}`.<br>• `sync-worker.toml`: the 5th cron plus **`[ai] binding = "AI"`**.<br>**API:** **`GET /api/rx/<movie\|tv>/<id>`** → **`handleRx()`** reads KV only and answers `{arc: [[share, rx]]}` (the moments are dropped), or `{arc: null}` when there's none. Both are 200s, because a 404 per trailer would be a console error. `Cache-Control` is a day for an arc, an hour for a miss.<br>**Client (`assets/social.js`):**<br>• **`FFBot.watch(iframe, {genres, seed, film})`**: `film` is `'movie:<id>'` or `'tv:<id>'`.<br>• **`filmArc(w, film)`** fetches `/api/rx/…` and replaces `w.arc` whenever the answer comes, even mid-trailer. It checks each beat is `[number, a key of RX]`.<br>• **`data-arc="genre"\|"film"`** on `.trb-bot` says which arc it's on. Without an arc, `arcFor()` stays.<br>**Callers:**<br>• Cinematic `actionsHTML()` puts **`data-film="${it.type}:${it.id}"`** on the Play Trailer button, and `toggleTrailer()` passes it.<br>• Classic `toggleTrailer()` passes `` `${mediaTypeOf(m)}:${m.id}` ``.<br>• Keyed by **title, not YouTube key**, so a dubbed or alternate trailer gets the arc too. The same film had a different trailer key locally (Ukrainian) and live.<br>`social.js?v=dd864af6` in both pages. |
+
+**Production backfill:** two `/sync-now?phase=rx` runs gave `{listed:78, made:40, left:38}` and then `{had:40, made:38, failed:0, left:0}`. Each run of 40 takes about 2 minutes 20 seconds.
+
+**Verified:**
+- **Locally** (`sync-worker` on :8792, launch config added to `.claude/launch.json` but not committed; `findfilm-full` on :8283, sharing the local KV):
+  - The cron fired via `/cdn-cgi/local/scheduled?cron=20+0+*+*+*`.
+  - All 80 local arcs: 64 with 8 beats, 15 with 7, one with 5.
+  - Reactions used: tense 149, curious 103, wow 103, hyped 88, teary 35, shocked 33, laughing 25.
+  - Examples: *South Park* laughs 3×, *Lupin* turns teary at "Assane's father backstory", *American Horror Story* is shocked 2×.
+  - Cinematic and Classic *Verity*: `data-arc="film"`, and the reactions follow the film arc. *The Matrix* (no arc): `{arc:null}` 200, `data-arc="genre"`.
+- **Live** (findfilm.ai, Cinematic, *Verity*, 1440×900):
+  - The Play button has `data-film="movie:1283515"`, and the bot has `data-arc="film"`.
+  - 12% curious/think, 25% tense, 40% wow/idea, 60% curious, 80% tense, **90% shocked** (new sprite), 97% tense: the live arc `0.08 curious · 0.18 tense · 0.32 wow · 0.5 curious · 0.7 tense · 0.88 shocked · 0.95 tense`.
+  - `/api/rx/movie/603` → `{"arc":null}`.
+
+**Known limits:**
+- An arc follows the film's story and tone, **not the trailer's cuts**: neither source of timing exists (see Pending).
+- The shares cluster on the model's favourite numbers (only 34 distinct values in 542 beats). Nobody sees them side by side.
+- Titles outside Trending and Top Rated keep the genre arc, by the owner's rule.
+- `/sync-now` is public, like the other phases. `phase=rx` is bounded: it only fills missing arcs, at most 40.
+
+---
+
+## Session (2026-11-01c) — FF Bot's New Reaction Poses (Trailer Reactions, Step 2)
 
 Committed on `main` (`8e62b9e`), **live on https://findfilm.ai since 2026-11-02**. Both sessions ran `./deploy.sh` from `731ffb9` within the same minute at the owner's request: the "Wrangler Tik-Tok" session's **`92baa7e5`** and the FindFilm.ai session's **`d24462fd`**, which landed last and is the current production. Same commit, same files. `/build.json` = `20261102T072216Z-731ffb9`. **Before deploying, check whether another session is already doing it** (`npx wrangler pages deployment list --project-name ratingkino`): both stage into the same `dist/`. This session ran in the shared checkout while the FindFilm.ai session was idle. No backend change. Only the owner's own `.claude/launch.json` and `spotify-worker/` are uncommitted, as always.
 
@@ -3003,13 +3041,14 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 
 ### Cloudflare Worker — `ratingkino-sync`
 - Deployed separately: `npx wrangler deploy --config sync-worker.toml`
-- Cron: `0 0 * * *`, `5 0 * * *`, `10 0 * * *` (3 phases, 00:00–00:10 UTC)
-- Writes to `MOVIES_CACHE` KV: keys `popular`, `new-releases`, `random-pool`, `last-sync`
+- Cron: `55 23 * * *` (phase 0), `0 0 * * *`, `5 0 * * *`, `10 0 * * *` (phases 1–3), **`20 0 * * *` (trailer arcs, `syncTrailerArcs`)**
+- Writes to `MOVIES_CACHE` KV: keys `popular`, `new-releases`, `random-pool`, `last-sync`, **`rx:v1:<type>:<id>`**
+- Bindings: `MOVIES_CACHE`, **`AI`** (the arcs' 70B). Manual runs: `/sync-now?phase=popular|0|1|2|rx` (`rx` waits and answers with its stats)
 - Secrets: `TMDB_KEY`, `OMDB_KEY` (set on `ratingkino-sync` Worker, not Pages)
 
 ### KV Namespace — `MOVIES_CACHE`
 - ID: `9b1ddd3fe25446c390304fd3a460606e`
-- Keys: `popular` (100 movies), `new-releases` (~100), `random-pool` (500 lightweight), `last-sync` (timestamp)
+- Keys: `popular` (100 movies), `new-releases` (~100), `random-pool` (500 lightweight), `last-sync` (timestamp), `rx:v1:<movie|tv>:<id>` (FF Bot's trailer arc, 30 days; `/api/rx/…`)
 
 ---
 
@@ -3046,7 +3085,7 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 | `duck()` / `soon()` (peeking mascot `.ffp`, `assets/social.js`) | The mascot over "Your Taste DNA" (≥1024px): `.is-in` / `.is-hop` the first time the button is on screen, `.is-ducked` while `data-ffp-edge` (`#rowForYou`) is under `data-ffp-under` (`.filters-bar`); GA `mascot_click` `dna` |
 | `_voiceRead(e)` / `_voiceFold(segs, text)` / `_voiceMerge(base, seg)` / `_voiceCommit()` (Classic voice) | Transcript assembly for `toggleVoiceSearch()` (phone) + `toggleDesktopVoice()` (desktop): `_voiceRead` folds ALL results of the session into one string (`_voiceSession`), `_voiceFold` replaces a result that restates the previous one (iOS snapshots) and appends new speech, `_voiceMerge` joins across engine restarts dropping word overlap (Android replays), `_voiceCommit` banks `_voiceSession` into `_finalTranscript` |
 | `FFBot.set(mood)` / `FFBot.found(hasSuggestions)` / `FFBot.warm(then)` / `FFBot.mood()` (`assets/social.js`) | The mascot's AI moods on every `[data-ffb]` host + `#ffm`: `think` while the AI works, `found()` = idea → success → idle (+ an idea nudge when refinements are offered), `confused` on no results / errors. Sprite `ff-bot-moods.webp` loads on first intent; called as `window.FFBot?.…` from Classic's `showAiLoader()` / `renderAiResults()` / `showAiResultsError()` / `closeAiResults()` and Cinematic's `startView()` / `runAI()` / `titleFallback()` / `runTitle()` |
-| `FFBot.watch(iframe, {genres, seed})` (`assets/social.js`) | FF Bot reacting to a YouTube trailer from its bottom-left corner (`.trb` > `.ffb.trb-bot[data-rx]`), synced over YouTube's postMessage protocol. Reactions come from `ARCS` by genre (`arcFor`): watch, curious, tense, wow, hyped, laughing, shocked, teary, the same names as the Shorts bot. Poses come from `RX` via `poseOf()`. The 4 reaction poses are in `ff-bot-reactions.webp` (`REACTIONS`, `warmRx()`, `html.ffr-on`, `STAND_IN` until it loads). Called from Cinematic's and Classic's `toggleTrailer()`; the embed needs `enablejsapi=1&origin=` |
+| `FFBot.watch(iframe, {genres, seed, film})` (`assets/social.js`) | FF Bot reacting to a YouTube trailer from its bottom-left corner (`.trb` > `.ffb.trb-bot[data-rx][data-arc]`), synced over YouTube's postMessage protocol. Reactions come from the film's own arc when it has one (`filmArc()`, `/api/rx/<type>/<id>`, `data-arc="film"`), else from `ARCS` by genre (`arcFor`): watch, curious, tense, wow, hyped, laughing, shocked, teary, the same names as the Shorts bot. Poses come from `RX` via `poseOf()`. The 4 reaction poses are in `ff-bot-reactions.webp` (`REACTIONS`, `warmRx()`, `html.ffr-on`, `STAND_IN` until it loads). Called from Cinematic's and Classic's `toggleTrailer()`; the embed needs `enablejsapi=1&origin=` |
 | `FFWatchlist.*` (`assets/watchlist.js`) | The one watchlist, typed `{id, type}`; `toggle(id, type)` returns whether the title is saved afterwards; `onChange(fn)` also fires for other tabs |
 | `toggleWatchlist(id, btn, type)` / `isWatchlisted(id, type)` (Classic) | Wrappers over `FFWatchlist`; `_wlType(id, type)` resolves the type for id-only callers; the listener in `initWatchlist()` repaints badge, `.card-wl-btn`, modal button and drawer |
 | `renderWatchlistDrawer()` + `_hydrateWatchlist()` + `_openWatchlisted(id, type)` (Classic) | Drawer lookup by id+type; fetches saved titles missing from `MOVIES`; opens one (prepends it to `MOVIES`, like the deep link) |
@@ -3273,7 +3312,10 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Deploy `8e62b9e`** (trailer reactions, step 2): live 2026-11-02 as `92baa7e5`.
 - [x] **Trailer reactions, Step 2: the owner's new poses** (`8e62b9e`): shocked, laughing, teary, hyped in their own sprite `ff-bot-reactions.webp`. `tense` wears think until it has art. The reaction names are shared with the Shorts bot.
 - [ ] **Art: a `tense` pose** for the reactions sheet (today it wears think), and ideally the reactions sheet as a real transparent PNG
-- [ ] **Trailer reactions, Step 3: per-trailer timelines. Blocked on a data source (2026-11-02).**
+- [x] **Trailer reactions, Step 3, option (b)** (`561ba23`, live 2026-11-03): an arc per film from the 70B, nightly for Trending + Top Rated (`syncTrailerArcs`, `/api/rx`, `filmArc`). See the 2026-11-03 block.
+- [ ] **Trailer reactions: viewers' own reactions (option c)**, to layer on later (the owner's idea). Aggregated per title, they could time beats to real moments.
+- [ ] **The Shorts bot renders from TMDB stills** (in `findfilm-tiktok-bot`; halted since 2026-11-03, no YouTube downloads). Its `bot-moods.py` could then take the film's arc from `rx:v1:` instead of trailer loudness.
+- [ ] **Trailer reactions, Step 3 as first planned (2026-11-02):** per-trailer timelines. Blocked on a data source; option (b) shipped instead.
   - **Owner's rules:**
     - No `yt-dlp` and no downloading YouTube video, to stay within YouTube's Terms and avoid IP bans.
     - No vision model: too slow and costly.
