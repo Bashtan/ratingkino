@@ -22,6 +22,10 @@
  *   rx:v1:<type>:<id> – FF Bot's arc for a title's trailer (30 d TTL, 00:20 UTC;
  *                     see "Trailer arcs" below)
  *
+ * Vectorize findfilm-films (binding VECTORIZE): the vibe-search index. At
+ * 00:30 UTC the new releases go in and the recent ones get fresh votes
+ * (see "Vibe index" below).
+ *
  * NOTE: OMDb ratings are skipped because:
  *   a) each OMDb call consumes a subrequest (counts against the 50 limit)
  *   b) the OMDb free key allows 1000 req/day — easily exceeded with 119 movies
@@ -29,6 +33,8 @@
  *   To re-enable: upgrade to Cloudflare Workers Standard ($5/mo, 1000 subreqs)
  *   then restore the OMDb block in enrichOne().
  */
+
+import { detailsRow, docText, metadata, tagFilms, tagInput, embed, vectorId } from './tools/vibe/film-doc.mjs';
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 
@@ -74,17 +80,26 @@ export default {
     else if (cron === '5 0 * * *')   ctx.waitUntil(syncPhase2(env));
     else if (cron === '10 0 * * *')  ctx.waitUntil(syncPhase3(env));
     else if (cron === '20 0 * * *')  ctx.waitUntil(syncTrailerArcs(env));
+    else if (cron === '30 0 * * *')  ctx.waitUntil(syncVibeIndex(env));
   },
 
-  // Manual trigger: GET /sync-now?phase=popular|0|1|2|rx
+  // Manual trigger: GET /sync-now?phase=popular|0|1|2|rx|vibe
   // Each phase returns immediately; poll /api/cache/status to track progress.
-  // Except rx, which answers with its stats once done: a fetch's waitUntil is
-  // cut 30 s after the response, and a run of arcs takes minutes.
+  // Except rx and vibe, which answer with their stats once done: a fetch's
+  // waitUntil is cut 30 s after the response, and these runs take minutes.
+  // vibe&dry=1 only reports what a run would do; vibe&max=N tags at most N films.
   async fetch(request, env, ctx) {
     const url   = new URL(request.url);
     const phase = url.searchParams.get('phase') ?? '0';
     if (url.pathname === '/sync-now' && phase === 'rx') {
       return Response.json(await syncTrailerArcs(env));
+    }
+    if (url.pathname === '/sync-now' && phase === 'vibe') {
+      const max = parseInt(url.searchParams.get('max') || '', 10);
+      return Response.json(await syncVibeIndex(env, {
+        dry: url.searchParams.get('dry') === '1',
+        maxTag: max > 0 ? Math.min(max, VIBE_MAX_TAG) : VIBE_MAX_TAG,
+      }));
     }
     if (url.pathname === '/sync-now') {
       const fn = phase === 'popular' ? syncPhase0
@@ -360,6 +375,168 @@ async function syncTrailerArcs(env) {
 
   await writeMeta(env, { rx: stats });
   console.log('[rx] Done —', JSON.stringify(stats));
+  return stats;
+}
+
+/* ─── Vibe index: new releases into vibe search ──────────────── */
+// The vibe-search index (Vectorize findfilm-films, read by /api/vibe-search)
+// was filled once with the 50K most-voted films (tools/vibe/ingest.mjs: 31
+// votes or more), so a film out this week was never in it, though it is what
+// the Shorts promote. Each night syncVibeIndex() adds the new releases people
+// are likely to look for and keeps the recent ones' votes current. The lists,
+// in priority order:
+//   shorts    released in the last 3 days, most popular first: the pool the
+//             Shorts bot picks from (findfilm-tiktok-bot, fetchRecentContent)
+//   trending  this week's trending films
+//   recent    released in the last VIBE_RECENT_DAYS, most popular first
+// A film needs an overview, a poster and a release date no later than today.
+// Each is looked up in the index by id:
+//   missing, or there without vibe tags → TMDB details, vibe tags (the 70B,
+//     10 films a call), embedded and upserted with the bulk ingest's text and
+//     metadata (tools/vibe/film-doc.mjs). If the 70B misses a film, it goes in
+//     untagged (its overview still finds it) and is tagged on a later night.
+//   there, but its title, overview, genres or year changed → details again
+//     and re-embedded, keeping its tags.
+//   there, with new votes, a new rating or new images → new metadata on the
+//     same vector.
+// TMDB's /movie/changes was the first plan, but it lists ~7,300 edits a day
+// with no votes, so finding the new films in it would cost a details call each.
+// Budget (Workers Paid: 10,000 subrequests): ~18 list pages, a getByIds per 20
+// films, a details call per film added or re-embedded, one tag call per 10 new
+// films (≤ VIBE_MAX_TAG a run), an embed call per 50, an upsert per 500.
+const VIBE_RECENT_DAYS  = 120;
+const VIBE_RECENT_PAGES = 15;    // the 300 most popular of them
+const VIBE_SHORTS_PAGES = 2;     // the bot walks page 1
+const VIBE_MAX_TAG      = 200;   // films tagged per run; the rest wait for the next
+const VIBE_TAG_BATCH    = 10;
+const VIBE_TAG_CONC     = 4;
+const VIBE_GET_BATCH    = 20;
+const VIBE_EMBED_BATCH  = 50;
+const VIBE_UPSERT_BATCH = 500;
+// Metadata fields that change the embedded text, and those that don't.
+const VIBE_TEXT_KEYS = ['t', 'o', 'g', 'year'];
+const VIBE_META_KEYS = ['votes', 'rating', 'p', 'b', 'd', 'ot', 'lang'];
+
+function vibeLists(today) {
+  const ago  = n => isoDate(new Date(Date.now() - n * 86400000));
+  const disc = { include_adult: 'false', include_video: 'false', language: 'en-US',
+                 sort_by: 'popularity.desc', 'primary_release_date.lte': today };
+  return [
+    ['shorts',   '/discover/movie',      { ...disc, 'primary_release_date.gte': ago(3) },                VIBE_SHORTS_PAGES],
+    ['trending', '/trending/movie/week', { language: 'en-US' },                                          1],
+    ['recent',   '/discover/movie',      { ...disc, 'primary_release_date.gte': ago(VIBE_RECENT_DAYS) }, VIBE_RECENT_PAGES],
+  ];
+}
+
+const chunks = (a, n) => Array.from({ length: Math.ceil(a.length / n) }, (_, k) => a.slice(k * n, k * n + n));
+
+async function pool(items, n, fn) {
+  let i = 0;
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
+    while (i < items.length) await fn(items[i++]);
+  }));
+}
+
+async function syncVibeIndex(env, { dry = false, maxTag = VIBE_MAX_TAG } = {}) {
+  const t0 = Date.now();
+  const today = isoDate(new Date());
+  console.log('[vibe] Starting at', new Date().toISOString(), dry ? '(dry run)' : '');
+
+  // 1. The candidates, the Shorts' pool first.
+  const films = new Map();   // id → TMDB row
+  const lists = {};
+  for (const [name, path, params, pages] of vibeLists(today)) {
+    lists[name] = 0;
+    for (let page = 1; page <= pages; page++) {
+      const d = await fetchJSON(tmdbUrl(env, path, { ...params, page }));
+      for (const m of d?.results || []) {
+        if (m.adult || !m.overview || !m.poster_path || !m.release_date || m.release_date > today || films.has(m.id)) continue;
+        films.set(m.id, m);
+        lists[name]++;
+      }
+      if (!d || page >= (d.total_pages || 0)) break;
+    }
+  }
+
+  // 2. Which of them the index has.
+  const have = new Map();    // id → {id, values, metadata}
+  for (const ids of chunks([...films.keys()], VIBE_GET_BATCH)) {
+    for (const v of (await env.VECTORIZE.getByIds(ids.map(vectorId))) || []) have.set(Number(String(v.id).slice(1)), v);
+  }
+
+  // 3. What each needs.
+  const add = [], reembed = [], refresh = [];
+  for (const [id, row] of films) {
+    const v = have.get(id), m = v?.metadata;
+    if (!m || !m.vt) { add.push({ row }); continue; }
+    const tag = { tags: String(m.vt).split('|').filter(Boolean), feel: m.f || '' };
+    const det = { runtime: m.runtime || 0, kw: String(m.kw || '').split('|').filter(Boolean), dir: m.dir || '',
+                  cast: String(m.cast || '').split('|').filter(Boolean) };
+    const fresh = metadata({ ...row, det, tag });   // equals m except where TMDB changed
+    const changed = keys => keys.some(k => (fresh[k] ?? '') !== (m[k] ?? ''));
+    if (changed(VIBE_TEXT_KEYS) || (changed(VIBE_META_KEYS) && !v.values?.length)) reembed.push({ row, tag });
+    else if (changed(VIBE_META_KEYS)) refresh.push({ id: v.id, values: v.values, metadata: fresh });
+  }
+  const tagNow = add.slice(0, maxTag);
+  const stats = {
+    listed: films.size, lists, inIndex: have.size,
+    added: 0, retagged: 0, reembedded: 0, refreshed: 0, untagged: 0, failed: 0, left: add.length - tagNow.length,
+  };
+  if (dry) {
+    console.log('[vibe] Dry run —', JSON.stringify(stats));
+    return { ...stats, dry: true, toAdd: add.length, toReembed: reembed.length, toRefresh: refresh.length,
+             adding: tagNow.slice(0, 60).map(({ row }) => `${row.id} ${row.title} (${row.release_date}, ${row.vote_count} votes)`) };
+  }
+
+  // 4. TMDB details for each film to embed; vibe tags for those without.
+  const work = [...tagNow, ...reembed];
+  await pool(work, BATCH_SIZE * 2, async w => {
+    const d = await fetchJSON(tmdbUrl(env, `/movie/${w.row.id}`, { language: 'en-US', append_to_response: 'keywords,credits' }));
+    if (d) w.det = detailsRow(w.row.id, d);
+  });
+  const ready = work.filter(w => w.det);
+  stats.failed += work.length - ready.length;
+  for (let pass = 1; pass <= 2; pass++) {    // the 70B misses JSON now and then: a 2nd pass for those
+    await pool(chunks(ready.filter(w => !w.tag), VIBE_TAG_BATCH), VIBE_TAG_CONC, async group => {
+      try {
+        const got = await tagFilms(env.AI, group.map(w => tagInput({ ...w.row, det: w.det })));
+        for (const w of group) if (got[w.row.id]?.tags?.length) w.tag = got[w.row.id];
+      } catch (err) {
+        console.error(`[vibe] tags (pass ${pass}): ${err.message}`);
+      }
+    });
+  }
+
+  // 5. Embed, then write the new vectors and the refreshed metadata.
+  const rows = [];
+  for (const group of chunks(ready, VIBE_EMBED_BATCH)) {
+    const fs = group.map(w => ({ ...w.row, det: w.det, tag: w.tag || {} }));
+    try {
+      const vecs = await embed(env.AI, fs.map(docText));
+      fs.forEach((f, k) => rows.push({ id: vectorId(f.id), values: vecs[k], metadata: metadata(f) }));
+      for (const w of group) {
+        if (!w.tag) stats.untagged++;
+        if (reembed.includes(w)) stats.reembedded++;
+        else if (have.has(w.row.id)) stats.retagged++;
+        else stats.added++;
+      }
+    } catch (err) {
+      stats.failed += group.length;
+      console.error(`[vibe] embed: ${err.message}`);
+    }
+  }
+  rows.push(...refresh);
+  stats.refreshed = refresh.length;
+  try {
+    for (const group of chunks(rows, VIBE_UPSERT_BATCH)) await env.VECTORIZE.upsert(group);
+  } catch (err) {
+    stats.error = `upsert: ${err.message}`;
+    console.error(`[vibe] ${stats.error}`);
+  }
+
+  stats.ms = Date.now() - t0;
+  await writeMeta(env, { vibe: { ...stats, at: new Date().toISOString() } });
+  console.log('[vibe] Done —', JSON.stringify(stats));
   return stats;
 }
 

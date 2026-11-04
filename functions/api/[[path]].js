@@ -2240,19 +2240,25 @@ async function handleAISearch(request, env, cors, waitUntil) {
                 English rewrite, an imagined TMDB overview of the ideal film, year /
                 runtime / language limits, genres to avoid; the search starts on it.
                 VIBE_PICK_MODEL (70B, ~2-3s): kind (described / plenty / rare), the
-                model's picks (the described film and up to 6 well-loved fits), and
-                "like X" titles never to return. The picks carry what the 70B knows;
-                the catalog keeps only real ones within the limits.
+                model's picks (the described film and up to 6 well-loved fits),
+                "like X" titles never to return, and newest (they want what's just
+                out). The picks carry what the 70B knows; the catalog keeps only
+                real ones within the limits. A query the 8B calls a bare title is
+                also looked up as one: that exact film goes first.
      2. embed   the raw query, the rewrite and the overview in one bge-m3 call
                 (multilingual: the raw query lands next to English overviews too);
                 the guesses are looked up by title on TMDB and fetched by id.
-     3. search  VECTORIZE (findfilm-films, the ~50K most-voted TMDB films,
-                filled by tools/vibe/ingest.mjs: the text and metadata
-                there must match _vibeRow / _vibeDoc here) with each vector,
-                top 50 with metadata, merged by weighted reciprocal rank.
+     3. search  VECTORIZE (findfilm-films: the ~50K most-voted TMDB films from
+                tools/vibe/ingest.mjs, plus the new releases sync-worker.js's
+                syncVibeIndex adds each night; both write tools/vibe/film-doc.mjs's
+                text and metadata, which must match _vibeRow / _vibeDoc here) with
+                each vector, top 50 with metadata, merged by weighted reciprocal rank.
+                A recent-releases lane (the last two years only) counts for one
+                described film or the newest: the 70B can't name a film out this week.
      4. rerank  the best 40 with bge-reranker-base (0..1 relevance) against the rewrite, then
-                blend: reranker (only when it is sure), reciprocal rank, TMDB rating,
-                vote count, and a bonus for a guess the catalog confirmed.
+                blend: reranker (only when it is sure), reciprocal rank, TMDB rating
+                (by its votes, under 31), vote count, a bonus for a guess the catalog
+                confirmed, and for the newest, recency and a title with the query's words.
      5. reply   VIBE_REPLY_MODEL (JSON mode) grades the top 10 (fit 0-3) with a
                 pitch + tags each, FF Bot's line, and how good the match is. The
                 blend keeps the order; fit 0-1 films drop out while 6 remain.
@@ -2262,7 +2268,7 @@ async function handleAISearch(request, env, cors, waitUntil) {
    the metadata) plus vibeSearch/match, so the AI panel renders it as is.
    Person queries and any failure go to handleAISearch. ?debug=1 adds the
    parse, the stage timings, the reply model's input and answer, and the scored
-   list (and skips the cache). KV cache: vbs:v3:<sha-256 of query + exclusions>,
+   list (and skips the cache). KV cache: vbs:v4:<sha-256 of query + exclusions>,
    6h when every stage worked, else 5 min.
 ════════════════════════════════════════════════════════════════════ */
 // Two reads at once. The 8B (~1s) writes the rewrite, the imagined overview and the limits, so the
@@ -2280,6 +2286,10 @@ const VIBE_ALT_MODELS   = {
   scout: '@cf/meta/llama-4-scout-17b-16e-instruct',
 };
 const VIBE_RERANK_MODEL = '@cf/baai/bge-reranker-base';
+// A TMDB rating counts fully from this many votes (the bulk ingest's floor, so the ~50K films it
+// indexed score as before); below it, in proportion: the nightly ingest's films out this week have
+// a handful of votes, and one 10/10 is not a 10.
+const _VIBE_SURE_VOTES = 31;
 const _GENRE_NAME = {
   28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime', 99: 'Documentary',
   18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History', 27: 'Horror', 10402: 'Music',
@@ -2310,8 +2320,9 @@ const _VIBE_PICK_SCHEMA = {
     kind:       { type: 'string' },
     guesses:    { type: 'array', items: { type: 'string' } },
     likeTitles: { type: 'array', items: { type: 'string' } },
+    newest:     { type: 'boolean' },
   },
-  required: ['kind', 'guesses', 'likeTitles'],
+  required: ['kind', 'guesses', 'likeTitles', 'newest'],
 };
 
 // films first, and each film's pitch before its fit. Named "reason" and listed after the fit, the 8B
@@ -2352,11 +2363,14 @@ const _VIBE_PICK_PROMPT =
   'You are a film expert helping a movie search engine. For the request (any language), answer with JSON:\n' +
   '- kind: "described" if they describe one specific film; "plenty" if it is a mood, genre or theme with many real films; ' +
   '"rare" if it is a specific premise no real film quite has (e.g. a space cat running the mafia).\n' +
-  '- guesses: if they describe one specific film, that film first; then up to 6 real, well-loved films ("Title (Year)") that fit ' +
+  '- guesses: if they describe one specific film, that film first; then up to 6 real, well-loved films ("Title (Year)", the ' +
+  'English title as TMDB lists it, whatever language the request is in) that fit ' +
   'the request best and respect every limit in it (years, length, language, what to avoid). Only films you are sure exist. ' +
   '[] for an impossible premise only if nothing real is close.\n' +
   '- likeTitles: films the user names only as a reference ("like Amélie", "in the style of Drive"): their titles, never to be ' +
-  'recommended back; else [].';
+  'recommended back; else [].\n' +
+  '- newest: true if they want a film that is new or just out ("the new Godzilla movie", "the latest Pixar film", ' +
+  '"a new horror movie in theaters"); false otherwise, also when "new" is part of a name or setting ("New York", "New Year").';
 
 // Tuned on 33 real searches (the bench queries and four more) with ?debug=1's replyInput. The 8B copies
 // any example sentence into unrelated films and parrots instructions into the message, so there are
@@ -2416,8 +2430,9 @@ function _vibeTitleKey(t) {
 }
 
 function _vibeJSON(out) {
-  // JSON mode puts an object in `response`; some answers still arrive as text.
-  const r = out && typeof out === 'object' && 'response' in out ? out.response : out;
+  // JSON mode puts an object in `response`, at times answers in OpenAI's chat shape
+  // (choices[0].message.content, seen from the 70B on 2026-11-03), and some answers still arrive as text.
+  const r = out?.response ?? out?.choices?.[0]?.message?.content ?? out;
   if (r && typeof r === 'object') return r;
   const m = String(r || '').match(/\{[\s\S]*\}/);
   return m ? JSON.parse(m[0]) : null;
@@ -2469,7 +2484,7 @@ async function handleVibeSearch(request, url, env, cors, waitUntil) {
   // A fixed-length key whatever the query's script (KV keys stop at 512 bytes).
   const keyText = query.toLowerCase().replace(/\s+/g, ' ') + (exclude.length ? '|x:' + [...exclude].sort().join(',') : '');
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(keyText)));
-  const cacheKey = 'vbs:v3:' + [...digest].map(b => b.toString(16).padStart(2, '0')).join('');
+  const cacheKey = 'vbs:v4:' + [...digest].map(b => b.toString(16).padStart(2, '0')).join('');
   if (env.MOVIES_CACHE && !debug) {
     try {
       const hit = await env.MOVIES_CACHE.get(cacheKey);
@@ -2566,6 +2581,14 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
     remember({ delegate: 'person' }, 21600);
     return { legacy: true };
   }
+  // A query that is just a film's title ("Godzilla Minus Zero"): looked up by that title, and a film
+  // of exactly that name in the catalog goes first. The 70B can't name a film out this week, and the
+  // 8B writes a made-up plot for its rewrite, so neither the picks nor the vectors find it otherwise.
+  const titleIn = read.route === 'title' ? query.match(/^(.*?)\s*(?:\(?((?:19|20)\d{2})\)?)?\s*$/) : null;
+  const titleP = titleIn && titleIn[1].length >= 2
+    ? _tmdbFindMovie(titleIn[1], titleIn[2] ? Number(titleIn[2]) : null, env).then(r =>
+        r && [r.title, r.original_title].some(t => _vibeTitleKey(t) === _vibeTitleKey(titleIn[1])) ? r : null).catch(() => null)
+    : Promise.resolve(null);
   const readOk = !!read.english;
   const english  = String(read.english || query).slice(0, 600);
   const synopsis = String(read.synopsis || '').slice(0, 900);
@@ -2594,8 +2617,21 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
   const vecs = emb?.data || emb?.response?.data || emb?.response;
   if (!Array.isArray(vecs) || vecs.length !== texts.length) throw new Error('embedding failed');
   const weight = t => t === english || t === synopsis ? 1 : 0.7;
-  const lists = await Promise.all(vecs.map(v =>
-    env.VECTORIZE.query(v, { topK: 50, returnMetadata: 'all', ...(Object.keys(filter).length ? { filter } : {}) })));
+  const searches = vecs.map((v, k) => ({ v, w: weight(texts[k]), filter }));
+  // The recent-releases lane: the nightly ingest (syncVibeIndex in sync-worker.js) adds the films out
+  // this week. They have few votes yet and the 70B can't name them, so among ~50K films a loose
+  // description of one seldom makes the top 50. The query and the rewrite are searched again among the
+  // films of the last two calendar years only, unless the query's own years already say so (or
+  // exclude them). Its results count only when the request is for one film or for the newest (see
+  // below): on moods (benchmark, 2026-11-04) it put 2025-26 films in 8 of 84 top-6 places, some of
+  // them misfits (Hamnet for "a beautiful animated film"), where the search had none before.
+  const freshFrom = year - 1;
+  if (!(yearMin >= freshFrom) && !(yearMax && yearMax < freshFrom)) {
+    const freshFilter = { ...filter, year: { $gte: freshFrom, ...(yearMax ? { $lte: yearMax } : {}) } };
+    for (const t of new Set([query, english])) searches.push({ v: vecs[texts.indexOf(t)], w: 0.7, filter: freshFilter, fresh: true });
+  }
+  const lists = await Promise.all(searches.map(s =>
+    env.VECTORIZE.query(s.v, { topK: 50, returnMetadata: 'all', ...(Object.keys(s.filter).length ? { filter: s.filter } : {}) })));
   ms.search = Date.now() - t0;
 
   // 3. The 70B's picks. Each guess ("Up (2009)") is looked up by title on TMDB, then fetched from the
@@ -2605,12 +2641,20 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
   // without its picks (such an answer is cached for minutes, not hours: see pickOk).
   const pick = await Promise.race([pickP, new Promise(r => setTimeout(() => r({}), Math.max(0, 5000 - (Date.now() - t0))))]);
   const kind = ['described', 'plenty', 'rare'].includes(pick.kind) ? pick.kind : 'plenty';
+  // "The new Godzilla movie": the newest fits go first. The 70B's picks for it are as old as its
+  // training (it named Godzilla vs. Kong), so then only a pick from the last two years gets its bonus.
+  const newest = pick.newest === true || yearMin >= year - 2;
+  const recency = m => {    // 1 for a film out in the last 120 days, down to 0 at two years
+    const days = (Date.now() - Date.parse(m.d || '')) / 86400000;
+    return days >= 0 ? Math.max(0, Math.min(1, (730 - days) / 610)) : 0;
+  };
   const guesses = (Array.isArray(pick.guesses) ? pick.guesses : []).filter(g => typeof g === 'string' && g.trim()).slice(0, 7).map(g => g.slice(0, 120));
-  const guessed = guesses.length ? await Promise.all(guesses.map(g => {
+  const titled = await titleP;
+  const guessed = guesses.length || titled ? await Promise.all(guesses.map(g => {
     const t = g.match(/^(.*?)\s*\((\d{4})\)\s*$/);
     return _tmdbFindMovie(t ? t[1].trim() : g.trim(), t ? Number(t[2]) : null, env).catch(() => null);
   })).then(async raws => {
-    const ids = [...new Set(raws.filter(Boolean).map(r => 'm' + r.id))];
+    const ids = [...new Set([titled, ...raws].filter(Boolean).map(r => 'm' + r.id))];
     return ids.length ? env.VECTORIZE.getByIds(ids) : [];
   }).catch(() => []) : [];
   ms.guesses = Date.now() - t0;
@@ -2629,7 +2673,8 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
     return true;
   };
   lists.forEach((res, k) => {
-    const w = weight(texts[k]);
+    if (searches[k].fresh && kind !== 'described' && !newest) return;
+    const w = searches[k].w;
     (res?.matches || []).forEach((mt, rank) => {
       const id = Number(String(mt.id).slice(1));
       const m = mt.metadata || {};
@@ -2648,7 +2693,8 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
     if (language && !(_TMDB_LANG[language] || [language]).includes(m.lang)) continue;
     const e = pool.get(id) || { id, m, rrf: 0, best: 0, guess: 0 };
     e.rrf += 1.3 / 60;                                // as if first in a list of its own
-    e.guess = 1;                                      // the film the model named, confirmed in our catalog
+    if (titled && id === titled.id) e.named = 1;      // the title the user typed
+    else e.guess = 1;                                 // the film the model named, confirmed in our catalog
     pool.set(id, e);
   }
   const ranked = [...pool.values()].sort((a, b) => b.rrf - a.rrf).slice(0, 40);
@@ -2677,11 +2723,20 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
   // for "Amélie but darker") is a lexical echo, not a fit.
   const STOP = new Set(['movie', 'movies', 'film', 'films', 'something', 'like', 'about', 'with', 'that', 'this', 'from', 'into', 'feel', 'feels', 'where', 'what', 'some', 'very', 'more', 'than', 'have', 'will']);
   const qWords = new Set(_vibeTitleKey(`${query} ${english}`).split(' ').filter(w => w.length >= 4 && !STOP.has(w)));
-  const echo = e => !e.guess && _vibeTitleKey(e.m.t).split(' ').some(w => qWords.has(w));
+  // Asked for the newest ("the new Godzilla movie"), a film of the last two years whose title has one
+  // of the query's words is what they mean, and it is no echo.
+  const NEW_STOP = new Set(['newest', 'latest', 'looking', 'want', 'watch', 'recent', 'release', 'released', 'theaters',
+    'theatres', 'cinema', 'cinemas', 'came', 'come', 'show', 'find', 'just', 'year', 'week', 'month']);
+  const newHit = e => newest && recency(e.m) > 0 && _vibeTitleKey(e.m.t).split(' ').some(w => qWords.has(w) && !NEW_STOP.has(w));
+  const echo = e => !e.guess && !e.named && !newHit(e) && _vibeTitleKey(e.m.t).split(' ').some(w => qWords.has(w));
   for (const e of ranked) {
     e.score = 0.35 * (maxRr >= 0.2 ? (e.rr || 0) / maxRr : 0) + 0.30 * (e.rrf / maxRrf)
-      + 0.15 * ((e.m.rating || 0) / 100) + 0.20 * Math.min(Math.log10((e.m.votes || 0) + 1) / 4.3, 1)
+      + 0.15 * ((e.m.rating || 0) / 100) * Math.min((e.m.votes || 0) / _VIBE_SURE_VOTES, 1)
+      + 0.20 * Math.min(Math.log10((e.m.votes || 0) + 1) / 4.3, 1)
       + (kind === 'rare' ? 0.08 : 0.25) * e.guess    // for an impossible premise the model's picks are only loose neighbours
+        * (newest && !recency(e.m) ? 0 : 1)
+      + (newest ? 0.35 * recency(e.m) + (newHit(e) ? 0.25 : 0) : 0)
+      + 0.6 * (e.named || 0)
       - (kind !== 'described' && echo(e) ? 0.15 : 0);
   }
   ranked.sort((a, b) => b.score - a.score);
@@ -2742,6 +2797,7 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
     const t = (Array.isArray(p.tags) ? p.tags : []).filter(x => typeof x === 'string').map(x => x.trim().slice(0, 26)).filter(Boolean).slice(0, 3);
     if (t.length) tags[id] = t;
   }
+  for (const e of top) if (e.named) fit.set(e.id, 3);   // the title the user typed is never a misfit
   // Blend order; misfits (fit 0, then 1) go last and drop off while 6+ remain. A film the reply
   // didn't grade counts as doubtful (1), unless it is one of the 70B's own confirmed picks.
   // No reply at all (failed, or past its deadline): the cards already on screen stay exactly as they are.
@@ -2780,9 +2836,9 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
   remember(payload, readOk && pickOk && rerankOk && fromReply >= 3 ? 21600 : 300);
   if (debug) {
     payload.debug = {
-      parsed: { ...read, ...pick, filter, avoid: [...avoid] }, ms, ok: { readOk, pickOk, rerankOk, fromReply },
+      parsed: { ...read, ...pick, filter, avoid: [...avoid], newest }, ms, ok: { readOk, pickOk, rerankOk, fromReply },
       replyInput, reply,
-      scored: ranked.slice(0, 20).map(e => ({ id: e.id, title: e.m.t, year: e.m.year, votes: e.m.votes, rating: e.m.rating, score: +e.score.toFixed(3), rr: e.rr == null ? null : +e.rr.toFixed(3), rrf: +(e.rrf / maxRrf).toFixed(3), guess: e.guess })),
+      scored: ranked.slice(0, 20).map(e => ({ id: e.id, title: e.m.t, year: e.m.year, votes: e.m.votes, rating: e.m.rating, score: +e.score.toFixed(3), rr: e.rr == null ? null : +e.rr.toFixed(3), rrf: +(e.rrf / maxRrf).toFixed(3), guess: e.guess, ...(e.named ? { named: 1 } : {}) })),
     };
   }
   return { payload };

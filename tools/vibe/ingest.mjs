@@ -19,6 +19,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { docText, metadata, detailsRow, tagInput } from './film-doc.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../..');
@@ -121,14 +122,7 @@ async function details() {
   let done = 0;
   await pool(todo, 24, async c => {
     const d = await tmdb(`/movie/${c.id}`, { language: 'en-US', append_to_response: 'keywords,credits' });
-    const row = {
-      id: c.id,
-      runtime: d?.runtime || 0,
-      tagline: (d?.tagline || '').slice(0, 160),
-      kw: (d?.keywords?.keywords || []).map(k => k.name).slice(0, 15),
-      dir: (d?.credits?.crew || []).find(p => p.job === 'Director')?.name || '',
-      cast: (d?.credits?.cast || []).slice(0, 3).map(p => p.name),
-    };
+    const row = detailsRow(c.id, d);
     out.write(JSON.stringify(row) + '\n');
     if (++done % 1000 === 0) log(`details: ${done}/${todo.length}`);
   });
@@ -155,7 +149,7 @@ async function tags() {
     await pool(batches, Number(opt('conc', 16)), async b => {   // --conc: Workers AI allows 300 calls/min; one call takes ~20s
       try {
         const res = await worker('/tags', {
-          films: b.map(f => ({ id: f.id, title: f.title, year: (f.release_date || '').slice(0, 4), genres: f.genreNames, keywords: f.det?.kw || [], overview: f.overview })),
+          films: b.map(tagInput),
         });
         for (const [id, t] of Object.entries(res.tags || {})) out.write(JSON.stringify({ id: Number(id), ...t }) + '\n');
       } catch (e) { failed++; }
@@ -167,42 +161,7 @@ async function tags() {
   if (left) log(`tags: ${left} films still untagged after 3 passes (upsert skips them; run tags again)`);
 }
 
-const cut = (s, n) => (s || '').length > n ? s.slice(0, n - 1).trimEnd() + '…' : (s || '');
-
-export function docText(f) {
-  const y = (f.release_date || '').slice(0, 4);
-  const d = f.det || {}, t = f.tag || {};
-  return [
-    `${f.title}${y ? ` (${y})` : ''}.`,
-    f.genreNames.length ? `${f.genreNames.join(', ')}.` : '',
-    d.tagline || '',
-    f.overview || '',
-    d.kw?.length ? `Themes: ${d.kw.slice(0, 12).join(', ')}.` : '',
-    t.tags?.length ? `Vibe: ${t.tags.join(', ')}.` : '',
-    t.feel || '',
-    d.dir ? `Directed by ${d.dir}.` : '',
-    d.cast?.length ? `Starring ${d.cast.join(', ')}.` : '',
-  ].filter(Boolean).join(' ').slice(0, 2400);
-}
-
-function metadata(f) {
-  const d = f.det || {}, t = f.tag || {};
-  const m = {
-    // indexed (filters): see the create-metadata-index calls in HANDOFF.md
-    year: Number((f.release_date || '').slice(0, 4)) || 0,
-    runtime: d.runtime || 0,
-    rating: Math.round((f.vote_average || 0) * 10),
-    votes: f.vote_count || 0,
-    lang: f.original_language || '',
-    // the TMDB row /api/vibe-search rebuilds for the AI panel, plus grounding for the reply
-    t: f.title, d: f.release_date || '', g: (f.genre_ids || []).join(','),
-    p: f.poster_path || '', b: f.backdrop_path || '', pop: Math.round((f.popularity || 0) * 10) / 10,
-    o: cut(f.overview, 600), kw: (d.kw || []).slice(0, 12).join('|'), vt: (t.tags || []).join('|'),
-    f: t.feel || '', dir: d.dir || '', cast: (d.cast || []).join('|'),
-  };
-  if (f.original_title && f.original_title !== f.title) m.ot = cut(f.original_title, 120);
-  return m;
-}
+// docText() and metadata(): film-doc.mjs, shared with the nightly ingest (sync-worker.js).
 
 async function upsert() {
   // The log is named after the index the running Worker writes to, so the
