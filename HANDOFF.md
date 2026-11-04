@@ -2,7 +2,43 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-03, evening) — The Shorts Bot Renders From TMDB Stills; `rxFor()` Reads Both AI Answer Shapes
+## ⚡ Most Recent Session (2026-11-04) — Vibe Search Takes In New Releases Nightly
+
+All commits on `main`, live on https://findfilm.ai: Pages production **`645db8f7`** from `ad2b429` (`./deploy.sh`: 18/18 sensitive paths unpublished), and **`ratingkino-sync`** version **`633f6016`** (deployed with **`npx wrangler deploy --config sync-worker.toml --env=""`**; 6 crons).
+
+**Why:** the vibe-search index (Vectorize `findfilm-films`) held only the 50K most-voted films (31+ votes), so the new releases the Shorts promote could never be found. This morning none of today's Shorts pool was in it, and live vibe search found 0 of 6 test queries for this week's films.
+
+| Commit | Feature |
+|--------|---------|
+| `ad2b429` | **Nightly ingest: `syncVibeIndex(env, {dry, maxTag})`** (`sync-worker.js`, new section "Vibe index"). It's a 6th cron, **`30 0 * * *`**, and also runs on **`GET /sync-now?phase=vibe`**, which waits and answers with its stats. **`&dry=1`** only reports what a run would do (`toAdd`, `toReembed`, `toRefresh`, the first 60 to add); **`&max=N`** tags at most N films.<br>**Lists, `vibeLists(today)`, in priority order:**<br>• `shorts`: `/discover/movie`, released in the last 3 days, `popularity.desc`, 2 pages. This is the Shorts bot's own pool (`fetchRecentContent` in `findfilm-tiktok-bot`).<br>• `trending`: `/trending/movie/week`.<br>• `recent`: released in the last **`VIBE_RECENT_DAYS`** (120), the 15 most popular pages (300 films).<br>• A film needs an overview, a poster and `release_date ≤ today`. About 322 films a night.<br>**Per film, after `VECTORIZE.getByIds` in chunks of `VIBE_GET_BATCH` (20):**<br>• Missing, or there with no `vt` tags: TMDB details (`detailsRow`), vibe tags (`tagFilms`, the 70B, 10 a call, `VIBE_TAG_CONC` 4, a second pass for misses), embedded and upserted. At most **`VIBE_MAX_TAG`** (200) a run; the rest go in `left`. A film the 70B misses goes in untagged and is retagged on a later night.<br>• Title, overview, genres or year changed (`VIBE_TEXT_KEYS`): details again, re-embedded, tags kept.<br>• Votes, rating, images, date or language changed (`VIBE_META_KEYS`): new metadata on the **same vector values**, no AI.<br>• Stats go to `last-sync.vibe` `{listed, lists, inIndex, added, retagged, reembedded, refreshed, untagged, failed, left, ms}`.<br>• TMDB's `/movie/changes` (the first plan) lists about 7,300 edits a day with no votes, so it wasn't used.<br>**`tools/vibe/film-doc.mjs` (new, shared):** `docText`, `metadata`, `detailsRow`, `tagFilms`/`tagInput`, `TAG_SYSTEM`/`TAG_SCHEMA`, `embed`, `vectorId`, `GENRE_NAME`, `parseJSON` (both answer shapes). `ingest.mjs`, the dev `worker.js` and `sync-worker.js` all import it. It gives byte-identical text and metadata on all 50,000 cached films, with and without `genreNames`.<br>**`sync-worker.toml`:** `[[vectorize]] VECTORIZE → findfilm-films`, the 6th cron, and a dev-only **`[env.preview]`** (preview KV, AI, `findfilm-films-preview`, all `remote`): `npx wrangler dev --config sync-worker.toml --env preview --test-scheduled --port 8793` (`.claude/launch.json` `sync-worker-preview`, not committed).<br>**`/api/vibe-search`:**<br>• **A typed title** (the 8B's `route: "title"`) is looked up with `_tmdbFindMovie`. A film of exactly that title (`_vibeTitleKey`, a trailing year allowed) gets **`e.named`**: +0.6, never echo-penalised, graded fit 3.<br>• **The recent-releases lane:** `query` and `english` searched again with `year ≥ year − 1` (`freshFrom`). It counts only when `kind === 'described'` or `newest`. On mood queries it put 2025–26 films in 8 of 84 top-6 slots, *Hamnet* for "a beautiful animated film" among them.<br>• **`newest`:** a new field in `_VIBE_PICK_SCHEMA` (the 70B: "the new Godzilla movie" → true; "New York" → false), or `yearMin ≥ year − 2`. It adds `0.35·recency(m)` (1 up to 120 days old, 0 at two years) and +0.25 for **`newHit`**: a recent film whose title has a query word not in `NEW_STOP`. A guess older than two years then loses its bonus, since the 70B named *Godzilla vs. Kong*.<br>• **`_VIBE_SURE_VOTES` (31):** a rating counts in proportion to its votes below 31, so the bulk catalog scores as before.<br>• The pick prompt asks for **English TMDB titles** in any request language. The 70B had started writing "تايتنك (1997)", so the Arabic *Titanic* query missed **on production too**.<br>• **`_vibeJSON`** reads `choices[0].message.content` too.<br>• Cache key **`vbs:v4:`**. Debug: `parsed.newest`, `scored[].named`. |
+
+**Production backfill:** dry run `{listed:322, inIndex:127, toAdd:195, toReembed:5, toRefresh:112}`, then the run gave `{added:195, reembedded:5, refreshed:112, untagged:0, failed:0, left:0, ms:114575}`. The index went from 49,851 to **50,046 vectors** within about 1 minute. The preview index (`--env preview`, `&max=30`) went from 2,000 to 2,030 first; a second dry run then had `toRefresh: 0`.
+
+**Verified on production** (`/api/vibe-search?debug=1`; morning → now):
+
+| Query | Before | After |
+|---|---|---|
+| "Godzilla Minus Zero" (the title) | — | **#1** |
+| "the new godzilla movie" | — | **#1** (also in Classic's AI panel; FF Bot: "I'd start with Godzilla Minus Zero, it's the new Godzilla movie…") |
+| "ex special forces guy fights a foreign corporation trying to take his hometown" (*Ghost Soldier*) | — | **#1** (#5 in one local run) |
+| "the new cat in the hat movie" | — (2003 film) | **#1** |
+| "becky goes undercover for the CIA in poland to stop a nazi family" | — | **#1** |
+| "ex-cop with amnesia working on a remote farm, someone is watching him" (*Model Citizen*) | — | — (see limits) |
+
+**Benchmark** (`tools/vibe/bench.mjs`, locally against `wrangler pages dev`, 3 runs):
+- **Known answers:** 15/16 and 13/16 at #1. The 13/16 run had two 70B pick timeouts (`pickOk: false`); a re-check gave 13/13 ok on both production and local. The 70B's pick takes a median 1.2s locally and 0.9s on production.
+- **Mood queries** (14): recent films in the top 6s went from 0 (prod) to 4 of 84, all for "a recent space survival movie", which asks for them.
+
+**Known limits:**
+- **A loose description of a brand-new film can still miss.** *Model Citizen* ranks #1 for a close paraphrase but outside the top 50 of 50K for "remote farm / someone is watching him". The 70B confidently names classics (*Shutter Island*, *Memento*) and can't know a 2026 film.
+- **Parasite (`plot-9`) misses on production too, before and after this change:** the 70B now answers "rare" with no guesses for "poor family slowly takes over a rich family's house…". It was #1 on 2026-10-31. A model-side change, not investigated.
+- **Shorts that run after 00:30 UTC on a film TMDB added that day** wait for the next night. The `recent` list (300 by popularity) covers nearly all of the bot's top 20 anyway.
+- **Films that leave the window** keep the votes they had when they left. A full `ingest.mjs` run now and then refreshes everything.
+- `/sync-now?phase=vibe` is public, like the other phases. Without new films it only reads TMDB and Vectorize and writes metadata.
+
+---
+
+## 2026-11-03 (evening) — The Shorts Bot Renders From TMDB Stills; `rxFor()` Reads Both AI Answer Shapes
 
 On `main`. **`ratingkino-sync`** version **`31a2edc6`** (deployed with `npx wrangler deploy --config sync-worker.toml`; all 5 crons kept). Pages unchanged (`283c3518`). This session ran in the shared checkout as the "Wrangler Tik-Tok" session.
 
@@ -292,7 +328,7 @@ All commits on `main`, **live on https://findfilm.ai since 2026-10-31**: Pages p
 - **`@cf/meta/llama-3.1-8b-instruct` was deprecated on 2026-05-30**, although Cloudflare's JSON-mode page still lists it. `…-fp8-fast` works with JSON mode.
 - **Llama 4 Scout was slower, with odd guesses** (The Avengers for the balloon house).
 - **Vectorize processes upserts asynchronously:** wait for `/info` `vectorCount` before benchmarking. Metadata indexes appear in `list-metadata-index` a little after `create-metadata-index` returns.
-- **The index is the 50K most-voted films only.** Fresh releases need a nightly ingest; that's a Pending item.
+- **The index is the 50K most-voted films only.** Fresh releases need a nightly ingest. Done 2026-11-04 (`syncVibeIndex`, see that block).
 - **Workers in a dev `worker.js` cannot have named exports:** workerd treats every export as an entrypoint.
 - **zsh doesn't word-split `$VAR`.** A `set -- $P` loop passed "year number" to wrangler as one argument.
 
@@ -2930,6 +2966,8 @@ ratingkino/
 ├── tools/mascot/         ← cut.sh + checker.py / matte.py / checker_matte.py / slice.py:
 │                           pose sheets → both sprites, and the ?v= bumps. Not published.
 ├── tools/vibe/           ← vibe-search ingest + benchmark: ingest.mjs (TMDB → tags → Vectorize),
+│                           film-doc.mjs (a film's text, metadata, tags, embedding: shared with
+│                           sync-worker.js's nightly syncVibeIndex; bundled by wrangler),
 │                           worker.js + wrangler.toml (dev-only Worker, remote AI + Vectorize),
 │                           bench.mjs + bench-queries.json; .cache/ gitignored. Not published.
 ├── tools/icons/          ← make.py + og.html: raw/ff-bot-clapper.png → favicon.ico, all
@@ -3012,9 +3050,9 @@ do not assume it rolled back.
 npx wrangler deploy --config www-redirect/wrangler.toml
 ```
 
-**Deploy / update sync Worker:**
+**Deploy / update sync Worker** (`--env=""` = the top level; `[env.preview]` is for `wrangler dev` only):
 ```bash
-npx wrangler deploy --config sync-worker.toml
+npx wrangler deploy --config sync-worker.toml --env=""
 ```
 
 **Secrets:**
@@ -3056,10 +3094,11 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 - Secrets (production env only; preview has none): `TMDB_KEY`, `OMDB_KEY`, `WATCHMODE_API_KEY`, `FIRECRAWL_API_KEY`, `SPOTIFY_CLIENT_SECRET`, `AXIOM_API_TOKEN`
 
 ### Cloudflare Worker — `ratingkino-sync`
-- Deployed separately: `npx wrangler deploy --config sync-worker.toml`
-- Cron: `55 23 * * *` (phase 0), `0 0 * * *`, `5 0 * * *`, `10 0 * * *` (phases 1–3), **`20 0 * * *` (trailer arcs, `syncTrailerArcs`)**
-- Writes to `MOVIES_CACHE` KV: keys `popular`, `new-releases`, `random-pool`, `last-sync`, **`rx:v1:<type>:<id>`**
-- Bindings: `MOVIES_CACHE`, **`AI`** (the arcs' 70B). Manual runs: `/sync-now?phase=popular|0|1|2|rx` (`rx` waits and answers with its stats)
+- Deployed separately: `npx wrangler deploy --config sync-worker.toml --env=""` (https://ratingkino-sync.dimabashtan.workers.dev)
+- Cron: `55 23 * * *` (phase 0), `0 0 * * *`, `5 0 * * *`, `10 0 * * *` (phases 1–3), **`20 0 * * *` (trailer arcs, `syncTrailerArcs`)**, **`30 0 * * *` (new releases into vibe search, `syncVibeIndex`)**
+- Writes to `MOVIES_CACHE` KV: keys `popular`, `new-releases`, `random-pool`, `last-sync` (incl. `.rx` and `.vibe` stats), **`rx:v1:<type>:<id>`**; and to **Vectorize `findfilm-films`**
+- Bindings: `MOVIES_CACHE`, **`AI`** (the arcs' 70B; the vibe tags and bge-m3), **`VECTORIZE`** (`findfilm-films`). Manual runs: `/sync-now?phase=popular|0|1|2|rx|vibe` (`rx` and `vibe` wait and answer with their stats; `vibe&dry=1`, `vibe&max=N`)
+- The account is on **Workers Paid** (the Shorts bot's Containers need it): 10,000 subrequests per invocation, so the "50 subrequests" notes in `sync-worker.js`'s header are stale
 - Secrets: `TMDB_KEY`, `OMDB_KEY` (set on `ratingkino-sync` Worker, not Pages)
 
 ### KV Namespace — `MOVIES_CACHE`
@@ -3385,8 +3424,10 @@ The site is fully installable as a PWA on all platforms.
 - [ ] **Vibe search, next**:
   - [x] **Speed:** streaming (SSE) and a split read, `d8203ed`, live 2026-10-31 (production `be052c2c`). Cards at **3.5s** median and the reply at 7.5s on production; before, about 10s for everything.
   - [x] **The 8B's reasons:** re-prompted in `eef37a3` (pitch before fit, genres in the candidates, no examples; every candidate graded), live 2026-11-01 (production `c7be3b09`). Llama 4 Scout was 13.5s, so the 8B stays.
-  - [ ] **Nightly ingest:** the new and changed films, from TMDB's `/movie/changes`.
-  - [ ] **TV shows:** in the index (a namespace or `type`), which also closes the AI-search-for-TV item below.
+  - [x] **Nightly ingest** (`ad2b429`, live 2026-11-04): `syncVibeIndex`, 00:30 UTC, the Shorts' pool + trending + the 300 most popular of the last 120 days; plus a typed-title lookup, a recent-releases lane and `newest` in `/api/vibe-search`. Not from `/movie/changes` (~7,300 edits a day, no votes). See the 2026-11-04 block.
+  - [ ] **Parasite (`plot-9`) misses:** the 70B now calls "poor family takes over a rich family's house by posing as tutors" `rare` with no guesses (production, before and after `ad2b429`; #1 on 2026-10-31).
+  - [ ] **A 3rd judge round** should include `newest` queries ("the new X movie", "new horror movies") and loose descriptions of this week's films.
+  - [ ] **TV shows, next (the owner's call, 2026-11-04):** in the index (a namespace or `type`), which also closes the AI-search-for-TV item below. `syncVibeIndex` and `film-doc.mjs` are the place to start: the Shorts bot promotes series too.
   - [ ] **"More like this":** on every card (query by the film's own vector), and **Taste DNA** as the average of liked films' vectors.
   - [ ] **The owner tries it** on findfilm.ai with `?vibe=1`.
   - [ ] **A 3rd judge round** after `7e5b645`'s last fixes.
