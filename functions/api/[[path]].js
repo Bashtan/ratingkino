@@ -2268,7 +2268,7 @@ async function handleAISearch(request, env, cors, waitUntil) {
    the metadata) plus vibeSearch/match, so the AI panel renders it as is.
    Person queries and any failure go to handleAISearch. ?debug=1 adds the
    parse, the stage timings, the reply model's input and answer, and the scored
-   list (and skips the cache). KV cache: vbs:v4:<sha-256 of query + exclusions>,
+   list (and skips the cache). KV cache: vbs:v5:<sha-256 of query + exclusions>,
    6h when every stage worked, else 5 min.
 ════════════════════════════════════════════════════════════════════ */
 // Two reads at once. The 8B (~1s) writes the rewrite, the imagined overview and the limits, so the
@@ -2314,15 +2314,19 @@ const _VIBE_READ_SCHEMA = {
   required: ['route', 'english', 'synopsis', 'yearMin', 'yearMax', 'runtimeMax', 'language', 'avoidGenres', 'person', 'userLanguage'],
 };
 
+// The 70B writes the fields in this order, so it names the films before it judges the kind. With kind
+// first (d8203ed, 2026-10-31) it settled on "rare" before recalling anything and then had to answer
+// guesses: [] — Parasite from "a poor family takes over a rich family's house by posing as tutors",
+// 0 of 3 times; films first, 48 of 48 known answers as the first guess (2026-11-04).
 const _VIBE_PICK_SCHEMA = {
   type: 'object',
   properties: {
-    kind:       { type: 'string' },
     guesses:    { type: 'array', items: { type: 'string' } },
     likeTitles: { type: 'array', items: { type: 'string' } },
+    kind:       { type: 'string' },
     newest:     { type: 'boolean' },
   },
-  required: ['kind', 'guesses', 'likeTitles', 'newest'],
+  required: ['guesses', 'likeTitles', 'kind', 'newest'],
 };
 
 // films first, and each film's pitch before its fit. Named "reason" and listed after the fit, the 8B
@@ -2369,8 +2373,9 @@ const _VIBE_PICK_PROMPT =
   '[] for an impossible premise only if nothing real is close.\n' +
   '- likeTitles: films the user names only as a reference ("like Amélie", "in the style of Drive"): their titles, never to be ' +
   'recommended back; else [].\n' +
-  '- newest: true if they want a film that is new or just out ("the new Godzilla movie", "the latest Pixar film", ' +
-  '"a new horror movie in theaters"); false otherwise, also when "new" is part of a name or setting ("New York", "New Year").';
+  '- newest: true only if they ask for a film that is new or just out ("the new Godzilla movie", "the latest Pixar film", ' +
+  '"a new horror movie in theaters"); false otherwise, including when "new" is part of a name, a place or a holiday ' +
+  '("New York", "New Year\'s Eve", "New Orleans").';
 
 // Tuned on 33 real searches (the bench queries and four more) with ?debug=1's replyInput. The 8B copies
 // any example sentence into unrelated films and parrots instructions into the message, so there are
@@ -2484,7 +2489,7 @@ async function handleVibeSearch(request, url, env, cors, waitUntil) {
   // A fixed-length key whatever the query's script (KV keys stop at 512 bytes).
   const keyText = query.toLowerCase().replace(/\s+/g, ' ') + (exclude.length ? '|x:' + [...exclude].sort().join(',') : '');
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(keyText)));
-  const cacheKey = 'vbs:v4:' + [...digest].map(b => b.toString(16).padStart(2, '0')).join('');
+  const cacheKey = 'vbs:v5:' + [...digest].map(b => b.toString(16).padStart(2, '0')).join('');
   if (env.MOVIES_CACHE && !debug) {
     try {
       const hit = await env.MOVIES_CACHE.get(cacheKey);
