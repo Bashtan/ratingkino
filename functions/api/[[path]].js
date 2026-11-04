@@ -2286,6 +2286,15 @@ const VIBE_ALT_MODELS   = {
   scout: '@cf/meta/llama-4-scout-17b-16e-instruct',
 };
 const VIBE_RERANK_MODEL = '@cf/baai/bge-reranker-base';
+// How long the cards wait for the 70B's picks, from the start of the search. Past it the search goes on
+// without them, and that weaker answer is cached for 5 minutes, not 6 hours (pickOk). At 5s about 1
+// search in 10 lost its picks (2026-11-04); the AI panel waits 20s for the cards.
+const VIBE_PICK_WAIT_MS = 8000;
+// The reranker alone is sure of the film they describe (one plot the 70B can't name, e.g. a film out
+// this week) when the first candidate scores at least RR_SURE and no other in the top 10 reaches RR_ALONE,
+// unless the 70B calls the request a mood ("plenty"). Over 120 production searches (2026-11-04): 14 right,
+// 0 wrong; 0.9 caught half of them, and on a mood 0.8 once picked McFarland, USA.
+const VIBE_RR_SURE = 0.8, VIBE_RR_ALONE = 0.5;
 // A TMDB rating counts fully from this many votes (the bulk ingest's floor, so the ~50K films it
 // indexed score as before); below it, in proportion: the nightly ingest's films out this week have
 // a handful of votes, and one 10/10 is not a 10.
@@ -2329,8 +2338,12 @@ const _VIBE_PICK_SCHEMA = {
   required: ['guesses', 'likeTitles', 'kind', 'newest'],
 };
 
-// films first, and each film's pitch before its fit. Named "reason" and listed after the fit, the 8B
-// graded only 4-6 of the 10 in about half the searches and argued its grades ("not a time loop").
+// The 8B writes the fields in the order of `properties` (`required` doesn't set it): match and message
+// first. Films first was tried on 2026-11-04 (320 replies on the same inputs): it then argued with its
+// own grades on moods (hedged 15% against 5%) and ran past max_tokens 2.5% of the time (0 of 440 this
+// way); the line it writes up front is what a cut-off reply still has (_vibeReplyJSON).
+// Each film's pitch before its fit: named "reason" and listed after the fit, the 8B graded only 4-6 of
+// the 10 in about half the searches and argued its grades ("not a time loop").
 const _VIBE_REPLY_SCHEMA = {
   type: 'object',
   properties: {
@@ -2379,20 +2392,28 @@ const _VIBE_PICK_PROMPT =
 
 // Tuned on 33 real searches (the bench queries and four more) with ?debug=1's replyInput. The 8B copies
 // any example sentence into unrelated films and parrots instructions into the message, so there are
-// none, and only a search with no real film gets a Note line.
+// none; only a search with no real film gets a Note line, and one the search is sure of a Found line.
 const _VIBE_REPLY_PROMPT =
 `You are FF Bot, the film-loving robot of FindFilm.ai: a warm, witty friend who has seen everything. A user told you what they want to watch; our search engine found the candidates below (n|title (year)|genres|vibe|overview), best first.
 
 films: EVERY candidate, in order, each with:
 - id: its n.
 - pitch: one sentence of 10-18 words, the way a friend who loves the film would sell it to them: something concrete from its overview (a character by name, a place, a situation), then why that is exactly their kind of film. Mix how pitches open: a name, a place, a moment, sometimes "you". Never open with "Join", "Meet", "Experience", "Get ready", "Discover" or "Witness". No filler endings like "in this heartwarming tale". Use your own words, not the request's. Only claim what its genres, vibe and overview support. Say what the film has, never what it lacks or how it differs.
-- fit, 0-3: 3 = exactly what they asked for, 2 = a good fit, 1 = loosely related, 0 = does not fit. Go by the genres, vibe and overview: a live-action film is not "animated". A film that only shares a word with the request (like "darker" in its title) is 0.
+- fit, 0-3: 3 = exactly what they asked for, 2 = a good fit, 1 = loosely related, 0 = does not fit. Go by the genres, vibe and overview: a live-action film is not "animated". A film that only shares a word with the request (like "darker" in its title) is 0. The candidate a "Found" line names is 3.
 - tags: 2-3 short tags (1-3 words) for what stands out about it.
 
 match: "exact" if the film they describe, or films that are what they ask for, are in the list; "close" if they only come near; "none" if nothing fits.
-message: one sentence of at most 25 words handing these over in FF Bot's voice: playful, specific, naming the one you'd watch first. Sound like a friend, not a search engine. Be upbeat, unless the request has a "Note" line: then follow it, in your own words. Never start with "Get ready", "You're in luck", "These are" or "I've got", and never say "just the ticket", "matches", "found" or "your request".
+message: one sentence of at most 25 words handing these over in FF Bot's voice: playful, specific, naming the one you'd watch first. Sound like a friend, not a search engine. Be upbeat, unless the request has a "Note" line: then follow it, in your own words. If it has a "Found" line, that candidate is the very film they described: hand it over by name, with confidence. Never start with "Get ready", "You're in luck", "These are" or "I've got", and never say "just the ticket", "matches", "found" or "your request".
 refinements: 3-4 follow-ups of 1-3 words, specific to this request, each a different direction (a mood, an era, a place, a kind of story).
 Write everything in English.`;
+
+// A request that excludes something says so ("no horror", "without gore", "not too long", "nothing scary").
+const _VIBE_NEGATION = /\b(no|not|non|without|avoid|avoiding|except|excluding|nothing|never|skip|minus|don'?t|doesn'?t|isn'?t|aren'?t|won'?t|free of|other than|instead of|rather than)\b|-free\b/i;
+
+// FF Bot hedging about the list ("none that perfectly capture…", "not quite", "the closest I could find").
+// It also matches praise ("Nothing says cozy quite like Paddington 2"), so it only counts when the 8B's
+// own match is below "exact": all 78 hedges seen on 2026-11-04 came with "close" or "none".
+const _VIBE_MESSAGE_DOUBT = /\b(none(?! other)|nothing(?! short)|no films?|no movies?)\b[^.!?]{0,40}\b(quite|exactly|perfectly|fully|an? (exact|perfect) (match|fit))\b|\b(aren['’]?t|isn['’]?t|doesn['’]?t|don['’]?t|not)(\s+[\w'’]+){0,2}\s+(quite|exactly|perfectly|an? (exact|perfect))\b|\bcouldn['’]?t find\b|\bclosest\b|\bno (perfect|exact)\b|\bcome[s]? close\b/i;
 
 // A pitch that argues against its own film ("…but no mafia in sight") is a grade, not a pitch.
 const _VIBE_PITCH_DOUBT = /\b(but (it'?s |it is )?not|but no|isn'?t|doesn'?t|not exactly|rather than|instead of|lacks?|minus the|more [\w -]{2,30} than)\b/i;
@@ -2441,6 +2462,29 @@ function _vibeJSON(out) {
   if (r && typeof r === 'object') return r;
   const m = String(r || '').match(/\{[\s\S]*\}/);
   return m ? JSON.parse(m[0]) : null;
+}
+
+// FF Bot's reply, also when it was cut off at max_tokens: now and then the 8B runs on (a film's pitch
+// too long, or an endless run of whitespace in JSON mode). The match, the message and every film
+// before the cut are kept: the text is closed after the last complete film.
+function _vibeReplyJSON(out) {
+  try {
+    const whole = _vibeJSON(out);
+    if (whole) return whole;
+  } catch { /* cut off: salvage below */ }
+  const text = String(out?.response ?? out?.choices?.[0]?.message?.content ?? '');
+  const films = text.indexOf('"films"');
+  if (films < 0) return null;
+  for (let j = text.lastIndexOf('}'), tries = 0; j > films && tries < 40; j = text.lastIndexOf('}', j - 1), tries++) {
+    try {
+      const r = JSON.parse(text.slice(text.indexOf('{'), j + 1) + ']}');
+      if (Array.isArray(r.films)) {
+        console.log(`[vibe-search] reply cut off: kept ${r.films.length} films`);
+        return Object.assign(r, { cut: true });
+      }
+    } catch { /* not a film's end: try the one before */ }
+  }
+  return null;
 }
 
 // A metadata record (see tools/vibe/ingest.mjs) → the TMDB row fromTMDb() expects.
@@ -2607,8 +2651,13 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
   if (yearMin || yearMax) filter.year = { ...(yearMin ? { $gte: yearMin } : {}), ...(yearMax ? { $lte: yearMax } : {}) };
   if (runtimeMax) filter.runtime = { $gt: 0, $lte: runtimeMax };
   if (language) filter.lang = { $in: _TMDB_LANG[language] || [language] };
+  // The 8B's genres to avoid count only when the request says to avoid something, and never as a near
+  // blanket: for "a beautiful animated film that will make adults cry" it listed 12 to 18 of the 19
+  // genres, Animation among them, and an empty pool sent the search to /api/ai-search (2026-11-04).
+  const readAvoid = (Array.isArray(read.avoidGenres) ? read.avoidGenres : []).map(g => _GENRE_MAP[String(g).toLowerCase().trim()]).filter(Boolean);
+  const saysAvoid = _VIBE_NEGATION.test(`${query} ${english}`);
   const avoid = new Set([
-    ...(Array.isArray(read.avoidGenres) ? read.avoidGenres : []).map(g => _GENRE_MAP[String(g).toLowerCase().trim()]),
+    ...(saysAvoid && new Set(readAvoid).size < 10 ? readAvoid : []),
     ...exclude.flatMap(_vibeExcludeGenres),
   ].filter(Boolean));
   // Other exclusions ("sad", "gore") drop a film only when one of its whole tags or keywords says so.
@@ -2642,9 +2691,9 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
   // 3. The 70B's picks. Each guess ("Up (2009)") is looked up by title on TMDB, then fetched from the
   // index by id: a bare title is a poor embedding ("Up (2009)" lands nearest "Up in the Air"), a title
   // search is exact. getByIds ignores filters, so the query's limits are applied below.
-  // The cards wait for the 70B only so long: it is usually back in 2-3s, and past 5s the search goes on
-  // without its picks (such an answer is cached for minutes, not hours: see pickOk).
-  const pick = await Promise.race([pickP, new Promise(r => setTimeout(() => r({}), Math.max(0, 5000 - (Date.now() - t0))))]);
+  // The cards wait for the 70B only so long (VIBE_PICK_WAIT_MS): it is usually back in 1-3s, and past
+  // that the search goes on without its picks (such an answer is cached for minutes, not hours: see pickOk).
+  const pick = await Promise.race([pickP, new Promise(r => setTimeout(() => r({}), Math.max(0, VIBE_PICK_WAIT_MS - (Date.now() - t0))))]);
   const kind = ['described', 'plenty', 'rare'].includes(pick.kind) ? pick.kind : 'plenty';
   // "The new Godzilla movie": the newest fits go first. The 70B's picks for it are as old as its
   // training (it named Godzilla vs. Kong), so then only a pick from the last two years gets its bonus.
@@ -2655,10 +2704,12 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
   };
   const guesses = (Array.isArray(pick.guesses) ? pick.guesses : []).filter(g => typeof g === 'string' && g.trim()).slice(0, 7).map(g => g.slice(0, 120));
   const titled = await titleP;
+  let firstGuessId = null;   // the film the 70B names first: for a described film, the one they describe
   const guessed = guesses.length || titled ? await Promise.all(guesses.map(g => {
     const t = g.match(/^(.*?)\s*\((\d{4})\)\s*$/);
     return _tmdbFindMovie(t ? t[1].trim() : g.trim(), t ? Number(t[2]) : null, env).catch(() => null);
   })).then(async raws => {
+    firstGuessId = raws[0]?.id ?? null;
     const ids = [...new Set([titled, ...raws].filter(Boolean).map(r => 'm' + r.id))];
     return ids.length ? env.VECTORIZE.getByIds(ids) : [];
   }).catch(() => []) : [];
@@ -2703,7 +2754,10 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
     pool.set(id, e);
   }
   const ranked = [...pool.values()].sort((a, b) => b.rrf - a.rrf).slice(0, 40);
-  if (!ranked.length) return { legacy: true };
+  if (!ranked.length) {
+    console.log(`[vibe-search] nothing passed the limits, using /api/ai-search: "${query.slice(0, 80)}" ${JSON.stringify({ filter, avoid: [...avoid], lists: lists.map(l => l?.matches?.length || 0) })}`);
+    return { legacy: true };
+  }
 
   // 4. Rerank against the rewrite, then blend.
   let rerankOk = false;
@@ -2746,15 +2800,31 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
   }
   ranked.sort((a, b) => b.score - a.score);
 
+  // Is #1 the film they describe, by the search's own evidence? The title they typed; the 70B's first
+  // pick for a described film; the newest with their words in its title; or the reranker alone sure of
+  // it (the 70B can't name a film out this week: it called the Becky plot "rare"). FF Bot is then told
+  // so, and never hedges about it (a reply written before its grades once said "none quite capture" with
+  // Parasite at #1).
+  // A typed title is found only by its exact match (the 70B "corrected" Godzilla Minus Zero to Minus
+  // One), and the newest never by a pick older than two years (it named the 2003 Cat in the Hat). Over
+  // 120 production searches: 57 right, 0 on moods; the one wrong is the 70B sure of a film it knows
+  // (The Bourne Identity for a 2026 plot), which is #1 on the cards anyway.
+  const lead = ranked[0];
+  const rrSure = kind !== 'plenty' && (lead.rr || 0) >= VIBE_RR_SURE && ranked.slice(1, 10).every(e => (e.rr || 0) < VIBE_RR_ALONE);
+  const firstPick = kind === 'described' && lead.id === firstGuessId && read.route !== 'title' && !(newest && !recency(lead.m));
+  // Never a film they excluded by name ("…not groundhog day"): forcing its fit would keep it on top.
+  const excludedTitle = exclude.some(x => { const k = _vibeTitleKey(x); return k && _vibeTitleKey(lead.m.t).includes(k); });
+  const found = !excludedTitle && !!(lead.named || firstPick || (kind === 'described' && newHit(lead)) || rrSure);
+
   // The cards, now: the top 8 in blend order, each with its "feel" line until FF Bot's reasons arrive.
   const vibeTagOf = e => String(e.m.vt || '').split('|').filter(Boolean)[0];
-  const interimMessage = kind === 'rare' ? 'No film is exactly like that, but these come closest.'
-    : kind === 'described' ? 'I think I found it!' : 'Here are some I think you\'ll love.';
+  const interimMessage = found ? 'I think I found it!'
+    : kind === 'rare' ? 'No film is exactly like that, but these come closest.' : 'Here are some I think you\'ll love.';
   const userLanguage = /^[a-z]{2}$/.test(String(read.userLanguage || '')) ? read.userLanguage : 'en';
   const first = ranked.slice(0, 8);
   emit('results', {
     aiCurated: true, vibeSearch: true, interim: true,
-    match: kind === 'rare' ? 'close' : 'exact',
+    match: kind === 'rare' && !found ? 'close' : 'exact',
     movies: first.map(e => _vibeRow(e.id, e.m)),
     reasons: Object.fromEntries(first.filter(e => e.m.f).map(e => [e.id, e.m.f])),
     tags: {},
@@ -2768,12 +2838,13 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
   const byId = new Map(top.map(e => [e.id, e]));
   let reply = null;
   const replyInput = `Request: ${query}\n${english !== query ? `In English: ${english}\n` : ''}` +
-    (kind === 'rare' ? 'Note: no real film is quite this; say so warmly and honestly, then point to the nearest.\n' : '') +
+    (found ? 'Found: candidate 1 is the film they describe.\n'
+      : kind === 'rare' ? 'Note: no real film is quite this; say so warmly and honestly, then point to the nearest.\n' : '') +
     (exclude.length ? `The user does NOT want: ${exclude.join('; ')}. Leave out any candidate that is.\n` : '') + '\nCandidates:\n' +
     top.map((e, i) => `${i + 1}|${e.m.t} (${e.m.year || '?'})|${_vibeGenres(e.m)}|${String(e.m.vt || '').split('|').join(', ')}|${String(e.m.o || '').slice(0, 220)}`).join('\n');
   try {
     const deadline = Math.max(3000, 17000 - (Date.now() - t0));   // the AI panel gives up at 20s
-    reply = _vibeJSON(await Promise.race([
+    reply = _vibeReplyJSON(await Promise.race([
       env.AI.run(models.reply, {
         messages: [
           { role: 'system', content: _VIBE_REPLY_PROMPT },
@@ -2803,10 +2874,12 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
     if (t.length) tags[id] = t;
   }
   for (const e of top) if (e.named) fit.set(e.id, 3);   // the title the user typed is never a misfit
+  if (found) fit.set(lead.id, 3);                        // nor the film the search is sure they describe
   // Blend order; misfits (fit 0, then 1) go last and drop off while 6+ remain. A film the reply
   // didn't grade counts as doubtful (1), unless it is one of the 70B's own confirmed picks.
   // No reply at all (failed, or past its deadline): the cards already on screen stay exactly as they are.
-  const graded = top.map(e => ({ id: e.id, f: fit.has(e.id) ? fit.get(e.id) : e.guess ? 2 : 1 }));
+  // A reply cut off at max_tokens never reached the films after the cut: they aren't doubtful, just ungraded.
+  const graded = top.map(e => ({ id: e.id, f: fit.has(e.id) ? fit.get(e.id) : e.guess || reply?.cut ? 2 : 1 }));
   const chosen = fromReply ? graded.filter(g => g.f >= 2).map(g => g.id).slice(0, 8) : first.map(e => e.id);
   for (const level of [1, 0]) {
     for (const g of graded) if (chosen.length < 6 && g.f === level) chosen.push(g.id);
@@ -2820,7 +2893,16 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
   });
   const said = ['exact', 'close', 'none'].includes(reply?.match) ? reply.match : 'close';
   // A described film the reply graded 3 was found, whatever its match says.
-  const match = kind === 'rare' ? (said === 'none' ? 'none' : 'close') : kind === 'plenty' || [...fit.values()].includes(3) ? 'exact' : said;
+  const match = found ? 'exact'
+    : kind === 'rare' ? (said === 'none' ? 'none' : 'close') : kind === 'plenty' || [...fit.values()].includes(3) ? 'exact' : said;
+  // FF Bot's line must agree with the answer: an exact one is handed over without hedging (on moods
+  // the 8B said "none exactly fit your 100-minute limit, sorry!" over films the filter kept under 100).
+  let message = typeof reply?.message === 'string' && reply.message.trim() ? reply.message.trim().slice(0, 240) : null;
+  if (message && match === 'exact' && said !== 'exact' && movies[0] && _VIBE_MESSAGE_DOUBT.test(message)) {
+    console.log(`[vibe-search] hedging message replaced: "${message.slice(0, 120)}"`);
+    const title = movies[0].title + (/[!?.]$/.test(movies[0].title) ? '' : '!');
+    message = found ? `I think I found it: ${title}` : `I'd start with ${title}`;
+  }
   const payload = {
     aiCurated: true,
     vibeSearch: true,
@@ -2832,16 +2914,16 @@ async function _vibeRun({ query, exclude, env, debug, remember, models }, emit) 
     suggestedRefinements: (Array.isArray(reply?.refinements) ? reply.refinements : [])
       .filter(x => typeof x === 'string').map(x => x.replace(/^\s*(mood|era|place|setting|story|kind of story)\s*:\s*/i, '').trim().slice(0, 30)).filter(Boolean).slice(0, 4),
     // FF Bot always says something, even if the reply call failed (the 8B misses JSON mode now and then).
-    message: (typeof reply?.message === 'string' && reply.message.trim() ? reply.message.trim().slice(0, 240) : null) || interimMessage,
+    message: message || interimMessage,
     translatedQuery: english,
     userLanguage,
   };
   emit('reply', payload);
   const pickOk = !!pick.kind;   // without the 70B's picks the answer is weaker: don't keep it 6 hours
-  remember(payload, readOk && pickOk && rerankOk && fromReply >= 3 ? 21600 : 300);
+  remember(payload, readOk && pickOk && rerankOk && fromReply >= 3 && !reply?.cut ? 21600 : 300);
   if (debug) {
     payload.debug = {
-      parsed: { ...read, ...pick, filter, avoid: [...avoid], newest }, ms, ok: { readOk, pickOk, rerankOk, fromReply },
+      parsed: { ...read, ...pick, filter, avoid: [...avoid], newest, found, rrSure }, ms, ok: { readOk, pickOk, rerankOk, fromReply },
       replyInput, reply,
       scored: ranked.slice(0, 20).map(e => ({ id: e.id, title: e.m.t, year: e.m.year, votes: e.m.votes, rating: e.m.rating, score: +e.score.toFixed(3), rr: e.rr == null ? null : +e.rr.toFixed(3), rrf: +(e.rrf / maxRrf).toFixed(3), guess: e.guess, ...(e.named ? { named: 1 } : {}) })),
     };
