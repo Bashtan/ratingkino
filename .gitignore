@@ -16,3 +16,6 @@ dist/
 # Vibe-search ingest: TMDB/tag caches and the dev Worker's local state (tools/vibe/)
 tools/vibe/.cache/
 tools/vibe/.wrangler/
+
+# npm dependencies of the Pages Functions (package.json). Installed by deploy.sh; never published.
+node_modules/

@@ -6,8 +6,10 @@
  * Facebook, iMessage, X, Slack and WhatsApp build their preview from the Open
  * Graph / Twitter Card tags without running JavaScript, so every shared title
  * used to preview as the site itself. For a deep link this rewrites those tags
- * in the static index.html (HTMLRewriter) with the title's name, year, plot
- * and poster from TMDB. Every other request to "/" passes straight through.
+ * in the static index.html (HTMLRewriter) with the title's name, year and plot
+ * from TMDB, and points the image at its 1200×630 card (backdrop, poster and
+ * FindFilm score, drawn by functions/og/[[path]].js). Every other request to
+ * "/" passes straight through.
  *
  * - Every visitor gets the same HTML: no user-agent sniffing, so any crawler works.
  * - <title> is left alone: no page script resets it, so a visitor's tab would
@@ -18,7 +20,7 @@
  */
 
 const SITE        = 'https://findfilm.ai';
-const POSTER      = 'https://image.tmdb.org/t/p/w780';   // TMDB posters are 2:3, so 780×1170
+const CARD_VERSION = 'v1';                               // functions/og/[[path]].js's CARD_VERSION
 const OG_TTL_SEC  = 7 * 86400;
 const OG_WAIT_MS  = 1500;
 const DESC_MAX    = 200;
@@ -97,16 +99,13 @@ function previewTags(card, link) {
     content['meta[property="og:description"]'] = desc;
     content['meta[name="twitter:description"]'] = desc;
   }
-  if (card.poster) {     // no poster: the mascot card stays, with its own size and alt
-    const alt = `Poster for ${title}`;
-    content['meta[property="og:image"]'] = POSTER + card.poster;
-    content['meta[property="og:image:type"]'] = /\.png$/i.test(card.poster) ? 'image/png' : 'image/jpeg';
-    content['meta[property="og:image:width"]'] = '780';
-    content['meta[property="og:image:height"]'] = '1170';
-    content['meta[property="og:image:alt"]'] = alt;
-    content['meta[name="twitter:image"]'] = POSTER + card.poster;
-    content['meta[name="twitter:image:alt"]'] = alt;
-  }
+  // The title's own 1200×630 card (functions/og/), drawn on first request.
+  const image = `${SITE}/og/${CARD_VERSION}/${link.type}/${link.id}.jpg`;
+  const alt = `${title}: poster and FindFilm score`;
+  content['meta[property="og:image"]'] = image;
+  content['meta[property="og:image:alt"]'] = alt;
+  content['meta[name="twitter:image"]'] = image;
+  content['meta[name="twitter:image:alt"]'] = alt;
 
   const rewriter = new HTMLRewriter();
   for (const [selector, value] of Object.entries(content)) {

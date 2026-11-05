@@ -1,0 +1,11 @@
+{
+  "name": "findfilm-functions",
+  "private": true,
+  "description": "Dependencies of the Pages Functions (functions/), bundled by wrangler at deploy. The site itself has no build step.",
+  "dependencies": {
+    "@jsquash/jpeg": "1.6.0",
+    "@resvg/resvg-wasm": "2.6.2",
+    "satori": "0.15.2",
+    "yoga-wasm-web": "0.3.3"
+  }
+}

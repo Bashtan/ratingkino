@@ -59,6 +59,13 @@ PUBLIC=(
 rm -rf "$DIST"
 mkdir -p "$DIST"
 
+# The Functions import npm packages (package.json: the link-preview card's
+# renderer in functions/og/). wrangler bundles them from node_modules/, which is
+# never staged or published. Install them when missing or older than the lockfile.
+if [[ ! -f node_modules/.package-lock.json || package-lock.json -nt node_modules/.package-lock.json ]]; then
+  npm ci --no-audit --no-fund --loglevel=error
+fi
+
 missing=()
 for p in "${PUBLIC[@]}"; do
   if [[ -e "$p" ]]; then
