@@ -2,13 +2,19 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-05) — Link Previews for Shared Titles
+## ⚡ Most Recent Session (2026-11-05) — Link Previews for Shared Titles, With Wide Cards
 
-All commits on `main`, live on https://findfilm.ai: Pages production **`2f0f1383`** from `d7edaa8` (`/build.json` = `20261105T143242Z-d7edaa8`; `./deploy.sh`: 18/18 sensitive paths unpublished, custom domains clean). Before deploying, `wrangler pages deployment list` showed no other session deploying.
+All commits on `main`, live on https://findfilm.ai:
+- Pages production **`731b71fb`** from `cd99a9f` (`/build.json` = `20261105T152915Z-cd99a9f`).
+- Before it: `a9e5e5ad` from `6adaf02`, and `2f0f1383` from `d7edaa8`.
+- Every `./deploy.sh` run: 18/18 sensitive paths unpublished, custom domains clean.
+- Before each deploy, `wrangler pages deployment list` showed no other session deploying.
 
 | Commit | Feature |
 |--------|---------|
 | `d7edaa8` | **`functions/index.js`** (new): a Pages Function for **`/` only**, so `/api/*` and every static asset are untouched.<br>**What it does:** a deep link, **`/?movie=<id>`** or **`/?TVShows=<id>`**, gets its preview tags rewritten in the static `index.html` with **`HTMLRewriter`** before it's returned. Telegram, Facebook, iMessage, X, Slack and WhatsApp read these tags without running JavaScript; every shared title used to preview as the site with the mascot card. Any other request to `/` → `context.next()`.<br>• **`deepLink(url)`** mirrors `parseMediaDeepLink()`: the first recognised key, matched case-insensitively, with a positive safe-integer id. GET only; HEAD passes through.<br>• **`titleCard(env, type, id)`**: KV **`og:v1:<movie\|tv>:<id>`** in `MOVIES_CACHE` (7 days, `OG_TTL_SEC`) → else TMDB `/{type}/{id}?language=en-US`. It stores `{name, year, overview, poster}` and returns `null` for an unknown id or `adult: true`.<br>• **`OG_WAIT_MS` = 1500:** a slower lookup serves the default tags, and its KV write still lands via `waitUntil` for the next crawler.<br>• **`previewTags(card, link)`**:<br>  - `og:type` = `video.movie` / `video.tv_show`.<br>  - `og:url` = `https://findfilm.ai/?movie=<id>` / `?TVShows=<id>`, the canonical spelling. Facebook re-scrapes `og:url`, so it must be the title's own.<br>  - `og:title` + `twitter:title` = "Name (Year)".<br>  - `meta description` + `og:description` + `twitter:description` = the plot, through **`clip()`**: ≤ 200 characters (`DESC_MAX`), cut at a word, plus "…".<br>  - `og:image` + `twitter:image` = **`https://image.tmdb.org/t/p/w780<poster_path>`**. `og:image:width/height` = **780×1170**, because TMDB posters are 2:3 (checked: 160–200 KB each). `og:image:type` comes from the file extension; the alt texts read "Poster for Name (Year)".<br>  - No plot → the site's description stays. No poster → the mascot card stays, with its own size and alt.<br>• **Left alone:**<br>  - `<title>`: no page script resets it, so a visitor's tab would keep the film's name after closing it.<br>  - `<link rel="canonical">` stays `/`.<br>  - `twitter:card` stays `summary_large_image`.<br>• **Caching:** conditional headers are dropped before `context.next()`, and the rewrite carries no `ETag`/`Last-Modified`, so a 304 can't skip the rewrite.<br>• **No user-agent sniffing:** every visitor gets the same HTML, and the movie still opens as before (checked in Classic). |
+| `6adaf02` | **Wide preview cards, `functions/og/[[path]].js` (new):** `GET /og/v1/<movie\|tv>/<id>.jpg` → a 1200×630 JPEG. `functions/index.js`'s **`previewTags()`** now points `og:image` / `twitter:image` here (`CARD_VERSION` `v1` in both files), with alt "Name (Year): poster and FindFilm score". The static tags (`image/jpeg`, 1200×630) already match, and the `w780` poster tags are gone.<br>**The card:**<br>• The TMDB backdrop (`w1280`) under two `INK` (`#0d0020`) gradients. Without a backdrop: a violet radial gradient, unveiled.<br>• The poster (`w500`, 334×501, radius 18, shadow).<br>• "FindFilm**.ai**" (Montserrat 900).<br>• The title in Montserrat 900: 72 / 60 / 50 px by length, `lineClamp: 3`. A title outside **`DRAWABLE`** (Latin, Latin-ext, Cyrillic, punctuation) is left off.<br>• **`facts()`**: year (TV: `2011–2019` or `2022–`) · 2 genres · runtime or seasons.<br>• **`scoreRow()`**: star + **`score()`**, which is `calcAvg()`'s formula (IMDb weighted by `imdbVotes`, RT/10 and MC/10 at 1000), plus IMDb / RT / MC chips. Without OMDb: TMDB's user score if `vote_count` ≥ 20.<br>• No score: **`upcoming()`** ("In cinemas 16 Dec 2026" / "Premieres …") or "Ratings · Trailer · Where to watch".<br>**Pipeline (`drawCard()`):** TMDB (`append_to_response=external_ids`) → OMDb (2.5 s cap), the two images as data URIs (`imageData()`), **`engines()`** and **`fonts()`** in parallel → **satori** (element tree built with **`h()`**, divs default to `display: flex`) → **resvg** (pixels; `free()`d) → **mozjpeg** (`@jsquash/jpeg`, q82). Cards are 47–91 KB.<br>• **satori is pinned to 0.15.2**, with `satori/wasm` + `yoga-wasm-web` 0.3.3. From 0.16 on, satori shapes text with HarfBuzz; in 0.63 it also uses an Emscripten layout build. Their glue compiles WebAssembly at runtime ("Wasm code generation disallowed by embedder") and reads `self.location`, so Workers can't run it. Every `.wasm` is imported, so wrangler bundles it ahead of time.<br>• **Fonts:** **`assets/og/`** holds Montserrat 700/900 and Inter 500/600 (static TTFs from Google Fonts) plus **`OFL.txt`**. They're read through `env.ASSETS` and kept per isolate.<br>**Caching:**<br>• `caches.default`, then KV **`ogimg:v1:<type>:<id>`** (7 days), then a draw. Responses carry `Cache-Control: public, max-age=86400`.<br>• An unknown id, an adult title or any error → **302 to `/assets/og-image.jpg`**, never cached. A bad path → 404.<br>• To redraw every card, bump `v1` in both files.<br>**npm, new to the repo:** **`package.json`** (exact versions: `satori`, `yoga-wasm-web`, `@resvg/resvg-wasm`, `@jsquash/jpeg`) + `package-lock.json`. `node_modules/` is gitignored, and **`deploy.sh` runs `npm ci`** when `node_modules/.package-lock.json` is missing or older than the lockfile (so `--stage-only` and the local server get them too). The site itself still has no build step. |
+| `cd99a9f` | **Share buttons warm the card.** A first draw takes about 3.2–3.7 s on production (locally 1.4–2 s); a KV hit takes about 20 ms. So:<br>• Classic's **`warmPreviewCard(type, id)`** (next to `mediaShareUrl`), called by `shareMovie()` (native sheet) and `openShare()` (the share panel, so it covers copy, native and social buttons).<br>• Cinematic's **`shareItem()`**.<br>Both `fetch('/og/v1/…', { priority: 'low' })`, so the card is in KV before the app the link is pasted into unfurls it.<br>**`sw.js`**: `/og/*` is network-only, so the service worker doesn't keep the cards. |
 
 **Verified:**
 - **Locally** (`findfilm-full`, `wrangler pages dev`):
@@ -21,9 +27,25 @@ All commits on `main`, live on https://findfilm.ai: Pages production **`2f0f1383
   - KV: 336 ms on a miss, 11 ms on a hit.
   - Apart from the rewritten tags, the page is identical.
 - **Live:** the same cases on findfilm.ai, plus ratingkino.com. The plain `/` is unchanged. Lookups take about 0.4–0.7 s on a miss and about 55 ms once the KV entry has propagated.
+- **Cards, locally:**
+  - *I Play Rocky* (RT only → 8.4), *Game of Thrones* (IMDb 9.2), *Inception* (IMDb / RT / MC → 8.8).
+  - *Dr. Strangelove* is clamped to 3 lines at 50 px.
+  - *Avengers: Doomsday* shows "In cinemas 16 Dec 2026".
+  - In Node: a Cyrillic title with no images (brand gradient), and a Japanese title (left off).
+  - `999999999` → 302; `person/5` and `v0` → 404.
+- **Cards, live:** the same titles plus *The Matrix*, *The Dark Knight*, *Stranger Things*, *Pulp Fiction*, *Forrest Gump* and *Interstellar*.
+  - Each is 1200×630, progressive JPEG.
+  - First draw 3.2–4.8 s (the first ones right after the deploy were slowest); then about 20 ms.
+  - ratingkino.com serves them too.
+- **Share warm-up, locally:**
+  - Classic's share panel on *The Matrix* fetched `/og/v1/movie/603.jpg` (200, 2.1 s, drawn).
+  - Cinematic's Share on *Game of Thrones* fetched `/og/v1/tv/1399.jpg` (200, 28 ms, cached), with `navigator.share` stubbed.
+- **Share warm-up, live:** both pages and `sw.js` carry the change.
 
 **Known limits / ideas:**
-- **Posters are portrait.** X and Facebook crop `summary_large_image` to about 1.91:1, showing the poster's middle band. iMessage and Telegram show it whole. A composed 1200×630 card (backdrop + poster + rating) would fill every shape; that's an idea, not built.
+- **A first draw takes about 3–5 s on production.** A link copied from the address bar, rather than shared with a Share button, waits for that on its first unfurl. Some apps may give up and show no image that first time.
+- **Cards are drawn on demand only.** An idea: warm Trending / Top Rated nightly from `sync-worker.js` by fetching their `/og/v1/…` URLs (`RX_LISTS` has them).
+- **Card text is English** (TMDB `en-US`); non-Latin/Cyrillic titles are left off the card, though `og:title` still names them.
 - **Previews are English** (`language=en-US`): shared links carry no language.
 - **Platforms cache previews.** A link shared before this deploy keeps its old preview until the platform re-scrapes it (Facebook's Sharing Debugger, Telegram's @WebpageBot).
 - **Only `/` is covered.** `/cinematic/?movie=` is only ever a passing redirect: Cinematic clears the query, and its Share button links `/?movie=`.
@@ -3018,7 +3040,11 @@ ratingkino/
 │                           by deploy.sh into dist/, a new id per deploy) has changed.
 ├── functions/
 │   ├── index.js          ← Pages Function for "/" only: link-preview tags for /?movie= · /?TVShows=
+│   ├── og/[[path]].js    ← /og/v1/<movie|tv>/<id>.jpg: the 1200×630 preview card (satori → resvg → mozjpeg)
 │   └── api/[[path]].js   ← Cloudflare Pages Function (API proxy + KV reader + AI)
+├── package.json          ← npm deps of the Functions only (exact versions); deploy.sh runs npm ci.
+│                           node_modules/ is gitignored and never published.
+├── assets/og/            ← the preview card's fonts (Montserrat 700/900, Inter 500/600) + OFL.txt
 ├── sync-worker.js        ← Cloudflare Worker — nightly data sync (deployed separately)
 ├── sync-worker.toml      ← wrangler config for sync Worker
 ├── wrangler.toml         ← wrangler config for Pages (KV + D1 + AI; [env.preview] = preview KV/D1)
@@ -3483,7 +3509,7 @@ The site is fully installable as a PWA on all platforms.
 - [ ] **Cast-to-TV receiver for TV shows** — `/tv/:id` (`tv/index.html`) only fetches `/movie/{id}`; needs a media-type signal in its URL and a TV-aware fetch
 - [ ] **Media type through id-only lookups** — `MOVIES.find(x => x.id === id)` sites (`openMovie`, `enrichNow`, `updateCardInGrid`, card `onclick`s; the watchlist itself is typed since `89d2a3c`, but `_openWatchlisted()` still ends in `openMovie(id)`) can still collide across movie/TV ids via actor filmographies
 - [ ] **Product Hunt listing** — confirm title, tagline, description, and gallery screenshots are ready
-- [ ] **SEO** — `<meta name="description">`, Open Graph tags, `<link rel="canonical">` minimal — expand before marketing push. Shared titles now get their own preview tags (`functions/index.js`, `d7edaa8`); canonical, `<title>` and JSON-LD are still site-wide.
+- [ ] **SEO** — `<meta name="description">`, Open Graph tags, `<link rel="canonical">` minimal — expand before marketing push. Shared titles now get their own preview tags (`functions/index.js`, `d7edaa8`) and a 1200×630 card (`functions/og/`, `6adaf02`); canonical, `<title>` and JSON-LD are still site-wide.
 - [x] **`www.findfilm.ai` redirect** — it had no DNS record at all; now the Worker `findfilm-www-redirect` (`www-redirect/`, `d834fe8`) on the Custom Domain 301s to `https://findfilm.ai` + path + query, live 2026-10-29
 - [ ] **Sync Worker monitoring** — no alerting if nightly cron fails; consider health-check script against `/api/cache/status`
 - [ ] **AI description translation quality** — m2m100-1.2b; consider switching to llama-3.3-70b-instruct for translation
