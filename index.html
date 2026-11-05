@@ -9828,6 +9828,10 @@ const MEDIA_QUERY_KEY = { movie: 'movie', tv: 'TVShows' };
 const mediaTypeOf   = m => (m && m.isTV ? 'tv' : 'movie');
 const mediaQuery    = (type, id) => `?${MEDIA_QUERY_KEY[type === 'tv' ? 'tv' : 'movie']}=${id}`;
 const mediaShareUrl = (type, id) => `${location.origin}${location.pathname}${mediaQuery(type, id)}`;
+// A shared link's preview image is drawn on its first request (functions/og/), which
+// takes a few seconds. Asking for it the moment someone shares means it's ready by the
+// time the app they paste into unfurls the link.
+const warmPreviewCard = (type, id) => { fetch(`/og/v1/${type === 'tv' ? 'tv' : 'movie'}/${id}.jpg`, { priority: 'low' }).catch(() => {}); };
 
 // First recognised key in the query string → { type: 'movie'|'tv', id }, else null.
 // Keys match case-insensitively (hand-typed or lower-cased links still resolve);
@@ -12540,6 +12544,7 @@ function shareMovie(id, type) {
   const title = (m && m.title) ? m.title : (document.querySelector(`#card-${id} .movie-title`)?.textContent || 'FindFilm.ai');
   const url = mediaShareUrl(type || mediaTypeOf(m), id);
   if (navigator.share) {
+    warmPreviewCard(type || mediaTypeOf(m), id);
     navigator.share({ title: `${title} — FindFilm.ai`, url }).catch(() => {});
     return;
   }
@@ -12557,6 +12562,7 @@ function activeShareUrl() {
 function openShare() {
   if (!ACTIVE_MOVIE) return;
   const m = ACTIVE_MOVIE;
+  warmPreviewCard(mediaTypeOf(m), m.id);
   const url   = encodeURIComponent(activeShareUrl());
   const title = encodeURIComponent(m.title + ' — FindFilm.ai');
   document.getElementById('shareGrid').innerHTML = [

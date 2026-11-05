@@ -85,6 +85,10 @@ self.addEventListener('fetch', (e) => {
   // stale forever with only a background revalidate that nobody ever read.
   if (url.pathname.startsWith('/api/')) return;
 
+  // /og/* → network-only: link-preview images, requested by the share buttons only
+  // to have them drawn server-side; there's no point keeping them here.
+  if (url.pathname.startsWith('/og/')) return;
+
   // /build.json → network-only: it is how an open page learns the site was
   // redeployed (assets/fresh.js), so a cached copy would hide exactly that.
   if (url.pathname === '/build.json') return;

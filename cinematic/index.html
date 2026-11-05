@@ -1803,6 +1803,9 @@ function actionsHTML(it, d) {
 // the link then opens in whichever layout the recipient has chosen.
 async function shareItem(it, btn) {
   const url = `${location.origin}/?${it.type === 'tv' ? 'TVShows' : 'movie'}=${it.id}`;
+  // The link's preview image (functions/og/) is drawn on first request, in a few
+  // seconds: ask for it now so it's ready when the app it's pasted into unfurls it.
+  fetch(`/og/v1/${it.type === 'tv' ? 'tv' : 'movie'}/${it.id}.jpg`, { priority: 'low' }).catch(() => {});
   if (navigator.share) {
     try { await navigator.share({ title: `${it.title} — FindFilm.ai`, url }); } catch { /* dismissed */ }
     return;
