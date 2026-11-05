@@ -18,7 +18,8 @@ compatibility_date = "2024-11-01"
 # Phase 3 (00:10): enrich movies 80–118, merge & write final 'new-releases' key
 # Trailer arcs (00:20): FF Bot's arc for each Trending / Top Rated title's trailer
 # Vibe index (00:30): the new releases into vibe search's Vectorize index (syncVibeIndex)
-crons = ["55 23 * * *", "0 0 * * *", "5 0 * * *", "10 0 * * *", "20 0 * * *", "30 0 * * *"]
+# Preview cards (00:40): the Trending / Top Rated titles' link-preview images, drawn ahead (syncPreviewCards)
+crons = ["55 23 * * *", "0 0 * * *", "5 0 * * *", "10 0 * * *", "20 0 * * *", "30 0 * * *", "40 0 * * *"]
 
 [[kv_namespaces]]
 binding = "MOVIES_CACHE"

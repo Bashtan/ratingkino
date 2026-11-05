@@ -21,6 +21,9 @@
  *   last-sync       – JSON object with timestamp + stats (48 h TTL)
  *   rx:v1:<type>:<id> – FF Bot's arc for a title's trailer (30 d TTL, 00:20 UTC;
  *                     see "Trailer arcs" below)
+ *   ogimg:v1:<type>:<id> – a title's link-preview card, written by the Pages site
+ *                     (functions/og/); at 00:40 UTC the listed titles' cards are
+ *                     requested so they're drawn ahead of a share (see "Preview cards")
  *
  * Vectorize findfilm-films (binding VECTORIZE): the vibe-search index. At
  * 00:30 UTC the new releases go in and the recent ones get fresh votes
@@ -72,6 +75,11 @@ const RX_GAP      = 0.05;   // beats closer than this (a share of the trailer) a
 const RX_MAX_RUN  = 40;     // new arcs per run: 2 subrequests each (TMDB + AI)
 const RX_TTL_SEC  = 60 * 60 * 24 * 30;   // 30 d: a title still listed then gets a fresh arc
 
+// Preview cards (syncPreviewCards): the same lists' link-preview images.
+const CARD_URL    = 'https://findfilm.ai/og/v1';   // CARD_VERSION in functions/og/[[path]].js
+const CARD_KV     = 'ogimg:v1';                    // its KV key prefix
+const CARD_POOL   = 3;                             // cards drawn at once (each ~3–4 s)
+
 export default {
   async scheduled(event, env, ctx) {
     const cron = event.cron;
@@ -81,11 +89,12 @@ export default {
     else if (cron === '10 0 * * *')  ctx.waitUntil(syncPhase3(env));
     else if (cron === '20 0 * * *')  ctx.waitUntil(syncTrailerArcs(env));
     else if (cron === '30 0 * * *')  ctx.waitUntil(syncVibeIndex(env));
+    else if (cron === '40 0 * * *')  ctx.waitUntil(syncPreviewCards(env));
   },
 
-  // Manual trigger: GET /sync-now?phase=popular|0|1|2|rx|vibe
+  // Manual trigger: GET /sync-now?phase=popular|0|1|2|rx|vibe|cards
   // Each phase returns immediately; poll /api/cache/status to track progress.
-  // Except rx and vibe, which answer with their stats once done: a fetch's
+  // Except rx, vibe and cards, which answer with their stats once done: a fetch's
   // waitUntil is cut 30 s after the response, and these runs take minutes.
   // vibe&dry=1 only reports what a run would do; vibe&max=N tags at most N films.
   async fetch(request, env, ctx) {
@@ -93,6 +102,9 @@ export default {
     const phase = url.searchParams.get('phase') ?? '0';
     if (url.pathname === '/sync-now' && phase === 'rx') {
       return Response.json(await syncTrailerArcs(env));
+    }
+    if (url.pathname === '/sync-now' && phase === 'cards') {
+      return Response.json(await syncPreviewCards(env));
     }
     if (url.pathname === '/sync-now' && phase === 'vibe') {
       const max = parseInt(url.searchParams.get('max') || '', 10);
@@ -344,13 +356,19 @@ async function rxFor(type, id, env) {
   return rxArc(m?.beats);
 }
 
-async function syncTrailerArcs(env) {
-  console.log('[rx] Starting at', new Date().toISOString());
-  const titles = new Map();   // type:id → [type, id], each title once
+// RX_LISTS' titles: type:id → [type, id], each title once.
+async function listedTitles(env) {
+  const titles = new Map();
   for (const [type, path, params] of RX_LISTS) {
     const page = await fetchJSON(tmdbUrl(env, path, { ...params, page: 1 }));
     for (const t of page?.results || []) titles.set(`${type}:${t.id}`, [type, t.id]);
   }
+  return titles;
+}
+
+async function syncTrailerArcs(env) {
+  console.log('[rx] Starting at', new Date().toISOString());
+  const titles = await listedTitles(env);
   const todo = [];
   for (const [key, title] of titles) {
     if (!(await env.MOVIES_CACHE.get(`rx:v1:${key}`))) todo.push(title);
@@ -375,6 +393,48 @@ async function syncTrailerArcs(env) {
 
   await writeMeta(env, { rx: stats });
   console.log('[rx] Done —', JSON.stringify(stats));
+  return stats;
+}
+
+/* ─── Preview cards: a shared title's link-preview image, drawn ahead ─────── */
+// Runs at 00:40 UTC. A shared title's preview image, /og/v1/<type>/<id>.jpg
+// (functions/og/[[path]].js on the Pages site), is drawn on its first request
+// in about 3–4 s, then kept in KV for a week (ogimg:v1:<type>:<id>). The titles
+// people share most are the ones on the site's lists, so this requests each
+// listed title's card that isn't in KV: when a link is unfurled, it's served
+// in ~20 ms. A card that has expired is drawn again, with that week's scores.
+// Budget: 4 list pages + 1 request per card drawn.
+
+async function syncPreviewCards(env) {
+  console.log('[cards] Starting at', new Date().toISOString());
+  const titles = await listedTitles(env);
+  // Which cards exist: one KV list of the prefix (keys only), not a get per
+  // title, which would read each ~70 KB JPEG.
+  const have = new Set();
+  let cursor;
+  do {
+    const page = await env.MOVIES_CACHE.list({ prefix: `${CARD_KV}:`, cursor });
+    page.keys.forEach(k => have.add(k.name));
+    cursor = page.list_complete ? null : page.cursor;
+  } while (cursor);
+
+  const todo = [...titles].filter(([key]) => !have.has(`${CARD_KV}:${key}`)).map(([, title]) => title);
+  const stats = { listed: titles.size, had: titles.size - todo.length, drawn: 0, failed: 0 };
+  await pool(todo, CARD_POOL, async ([type, id]) => {
+    try {
+      // A card that can't be drawn answers 302 (to the default image): not followed.
+      const res = await fetch(`${CARD_URL}/${type}/${id}.jpg`, { redirect: 'manual' });
+      await res.arrayBuffer();
+      if (res.status !== 200 || !(res.headers.get('Content-Type') || '').startsWith('image/')) throw new Error(`HTTP ${res.status}`);
+      stats.drawn++;
+    } catch (err) {
+      stats.failed++;
+      console.error(`[cards] ${type}:${id} ${err.message}`);
+    }
+  });
+
+  await writeMeta(env, { cards: stats });
+  console.log('[cards] Done —', JSON.stringify(stats));
   return stats;
 }
 
