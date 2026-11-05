@@ -2,7 +2,35 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-04) — Vibe Search Takes In New Releases Nightly; Parasite Found Again; FF Bot Agrees With the Results
+## ⚡ Most Recent Session (2026-11-05) — Link Previews for Shared Titles
+
+All commits on `main`, live on https://findfilm.ai: Pages production **`2f0f1383`** from `d7edaa8` (`/build.json` = `20261105T143242Z-d7edaa8`; `./deploy.sh`: 18/18 sensitive paths unpublished, custom domains clean). Before deploying, `wrangler pages deployment list` showed no other session deploying.
+
+| Commit | Feature |
+|--------|---------|
+| `d7edaa8` | **`functions/index.js`** (new): a Pages Function for **`/` only**, so `/api/*` and every static asset are untouched.<br>**What it does:** a deep link, **`/?movie=<id>`** or **`/?TVShows=<id>`**, gets its preview tags rewritten in the static `index.html` with **`HTMLRewriter`** before it's returned. Telegram, Facebook, iMessage, X, Slack and WhatsApp read these tags without running JavaScript; every shared title used to preview as the site with the mascot card. Any other request to `/` → `context.next()`.<br>• **`deepLink(url)`** mirrors `parseMediaDeepLink()`: the first recognised key, matched case-insensitively, with a positive safe-integer id. GET only; HEAD passes through.<br>• **`titleCard(env, type, id)`**: KV **`og:v1:<movie\|tv>:<id>`** in `MOVIES_CACHE` (7 days, `OG_TTL_SEC`) → else TMDB `/{type}/{id}?language=en-US`. It stores `{name, year, overview, poster}` and returns `null` for an unknown id or `adult: true`.<br>• **`OG_WAIT_MS` = 1500:** a slower lookup serves the default tags, and its KV write still lands via `waitUntil` for the next crawler.<br>• **`previewTags(card, link)`**:<br>  - `og:type` = `video.movie` / `video.tv_show`.<br>  - `og:url` = `https://findfilm.ai/?movie=<id>` / `?TVShows=<id>`, the canonical spelling. Facebook re-scrapes `og:url`, so it must be the title's own.<br>  - `og:title` + `twitter:title` = "Name (Year)".<br>  - `meta description` + `og:description` + `twitter:description` = the plot, through **`clip()`**: ≤ 200 characters (`DESC_MAX`), cut at a word, plus "…".<br>  - `og:image` + `twitter:image` = **`https://image.tmdb.org/t/p/w780<poster_path>`**. `og:image:width/height` = **780×1170**, because TMDB posters are 2:3 (checked: 160–200 KB each). `og:image:type` comes from the file extension; the alt texts read "Poster for Name (Year)".<br>  - No plot → the site's description stays. No poster → the mascot card stays, with its own size and alt.<br>• **Left alone:**<br>  - `<title>`: no page script resets it, so a visitor's tab would keep the film's name after closing it.<br>  - `<link rel="canonical">` stays `/`.<br>  - `twitter:card` stays `summary_large_image`.<br>• **Caching:** conditional headers are dropped before `context.next()`, and the rewrite carries no `ETag`/`Last-Modified`, so a 304 can't skip the rewrite.<br>• **No user-agent sniffing:** every visitor gets the same HTML, and the movie still opens as before (checked in Classic). |
+
+**Verified:**
+- **Locally** (`findfilm-full`, `wrangler pages dev`):
+  - Movie *I Play Rocky* (1286656, the owner's example) and TV *Game of Thrones* (1399) get their tags.
+  - `?tvshows=1399&layout=classic` works too.
+  - *Fast & Furious* (13804): the `&` and the quotes in the plot are escaped correctly.
+  - `999999999` and `abc` keep the defaults.
+  - HEAD passes through.
+  - A request carrying the page's `If-None-Match` still gets the rewrite.
+  - KV: 336 ms on a miss, 11 ms on a hit.
+  - Apart from the rewritten tags, the page is identical.
+- **Live:** the same cases on findfilm.ai, plus ratingkino.com. The plain `/` is unchanged. Lookups take about 0.4–0.7 s on a miss and about 55 ms once the KV entry has propagated.
+
+**Known limits / ideas:**
+- **Posters are portrait.** X and Facebook crop `summary_large_image` to about 1.91:1, showing the poster's middle band. iMessage and Telegram show it whole. A composed 1200×630 card (backdrop + poster + rating) would fill every shape; that's an idea, not built.
+- **Previews are English** (`language=en-US`): shared links carry no language.
+- **Platforms cache previews.** A link shared before this deploy keeps its old preview until the platform re-scrapes it (Facebook's Sharing Debugger, Telegram's @WebpageBot).
+- **Only `/` is covered.** `/cinematic/?movie=` is only ever a passing redirect: Cinematic clears the query, and its Share button links `/?movie=`.
+
+---
+
+## Session (2026-11-04) — Vibe Search Takes In New Releases Nightly; Parasite Found Again; FF Bot Agrees With the Results
 
 All commits on `main`, live on https://findfilm.ai: Pages production **`00824729`** from `bc80a46` (before it `3fa7fda6` from `a2c496b` and `645db8f7` from `ad2b429`; `./deploy.sh`: 18/18 sensitive paths unpublished), and **`ratingkino-sync`** version **`633f6016`** (deployed with **`npx wrangler deploy --config sync-worker.toml --env=""`**; 6 crons).
 
@@ -2989,6 +3017,7 @@ ratingkino/
 │                           that comes back after 10+ min away when /build.json (written
 │                           by deploy.sh into dist/, a new id per deploy) has changed.
 ├── functions/
+│   ├── index.js          ← Pages Function for "/" only: link-preview tags for /?movie= · /?TVShows=
 │   └── api/[[path]].js   ← Cloudflare Pages Function (API proxy + KV reader + AI)
 ├── sync-worker.js        ← Cloudflare Worker — nightly data sync (deployed separately)
 ├── sync-worker.toml      ← wrangler config for sync Worker
@@ -3454,7 +3483,7 @@ The site is fully installable as a PWA on all platforms.
 - [ ] **Cast-to-TV receiver for TV shows** — `/tv/:id` (`tv/index.html`) only fetches `/movie/{id}`; needs a media-type signal in its URL and a TV-aware fetch
 - [ ] **Media type through id-only lookups** — `MOVIES.find(x => x.id === id)` sites (`openMovie`, `enrichNow`, `updateCardInGrid`, card `onclick`s; the watchlist itself is typed since `89d2a3c`, but `_openWatchlisted()` still ends in `openMovie(id)`) can still collide across movie/TV ids via actor filmographies
 - [ ] **Product Hunt listing** — confirm title, tagline, description, and gallery screenshots are ready
-- [ ] **SEO** — `<meta name="description">`, Open Graph tags, `<link rel="canonical">` minimal — expand before marketing push
+- [ ] **SEO** — `<meta name="description">`, Open Graph tags, `<link rel="canonical">` minimal — expand before marketing push. Shared titles now get their own preview tags (`functions/index.js`, `d7edaa8`); canonical, `<title>` and JSON-LD are still site-wide.
 - [x] **`www.findfilm.ai` redirect** — it had no DNS record at all; now the Worker `findfilm-www-redirect` (`www-redirect/`, `d834fe8`) on the Custom Domain 301s to `https://findfilm.ai` + path + query, live 2026-10-29
 - [ ] **Sync Worker monitoring** — no alerting if nightly cron fails; consider health-check script against `/api/cache/status`
 - [ ] **AI description translation quality** — m2m100-1.2b; consider switching to llama-3.3-70b-instruct for translation
