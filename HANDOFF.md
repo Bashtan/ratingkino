@@ -2,7 +2,18 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-05) — Link Previews for Shared Titles: Wide Cards, Drawn Ahead Nightly
+## ⚡ Most Recent Session (2026-11-06) — The Shorts Bot Downloads Trailers Again (Mac Only); the Website Doesn't
+
+No change to the website or its Workers this session; the deployments are as in the 2026-11-05 block below.
+
+**The owner changed the 2026-11-03 rule for the Shorts bot only.** In `findfilm-tiktok-bot` (`07885a8`, Worker `82ee6871`), each batch every 3 days is now 1 static Short (TMDB stills + Brian's ElevenLabs voice) plus 2 **dynamic** ones cut from the official YouTube trailer, with its own sound, like the old "The Mongoose". The IMDb Top 20 is dynamic only.
+- The trailer is downloaded with `yt-dlp` on the owner's Mac (`tools/trailer.py`), never on Cloudflare, and never with account cookies.
+- The owner accepted YouTube's Terms and the copyright risks (Content ID, strikes) for the current channels.
+- **findfilm.ai keeps the no-download rule:** `FFBot.watch` and the trailer arcs still use YouTube embeds and TMDB facts only. Details are in the bot repo's HANDOFF.
+
+---
+
+## 2026-11-05 — Link Previews for Shared Titles: Wide Cards, Drawn Ahead Nightly
 
 All commits on `main`, live on https://findfilm.ai:
 - Pages production **`731b71fb`** from `cd99a9f` (`/build.json` = `20261105T152915Z-cd99a9f`).
