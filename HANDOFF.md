@@ -2,7 +2,21 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-08c) — The Vibe Dial: Mood Sliders in Both Layouts
+## ⚡ Most Recent Session (2026-11-08d) — Hero Cleanup: Search and First Films Above the Fold
+
+Committed on `main`, **NOT deployed yet: waiting for the owner's review.** Live is still Pages `276fca60` from `8865ae5`.
+
+| Commit | Feature |
+|--------|---------|
+| `0bb42c7` | **Minimal hero, both layouts.** Removed the hero social strip (`.ffs--hero`, `.ffs--desk`; footer `.ffs-band` already has the links; phone twin `#ffsFeed` kept), `data-ffm-after` moved to `#heroSearch` / Cinematic's `.chips-wrap`. Removed hero mascot `#ffh` (`heroBot`, `hello`, `sayHello`, `.ffh*`). Removed voice-language picker `#voiceLangWrap` (`.voice-lang-*`, `.vl-*`): `_voiceLang()` + `VOICE_BCP` now use `CURRENT_LANG`. `search.modeTitlePh` = "Describe the vibe or plot..." in 9 languages (my translations); `mascot.hello`, `voicelang.title` removed. `FFDial.mount` options **`toggleHost`, `toggleClass`** + **`FFDial.placeToggle(row)`**: "Set the mood" is the first chip (`#vibeChips`; Cinematic `chipsTrack`, re-placed by `renderChips()`). `.hero-sub-row` puts `#heroTitle` and `.how-ratings-link` on one line. |
+
+**Measured, Classic 1440×900:** tabs moved from 395 to 248, feed from 435 to 288, first cards from 512 to about 365. Open dial panel pushes tabs to 418. 1024px and 375px: no sideways scroll, chips fit at 1024.
+
+**Not changed, for the owner to decide:** the default mode is still title search (Enter runs a title search; descriptions fall to the closest-films fallback; `SEARCH_MODE` 'ai' would make Enter a vibe search). Cinematic's full-height hero (720px at 1440×900) was not compressed.
+
+---
+
+## Earlier Session (2026-11-08c) — The Vibe Dial: Mood Sliders in Both Layouts
 
 All commits on `main`, live on https://findfilm.ai since 2026-11-08: Pages production **`276fca60`** from `8865ae5` (`/build.json` = `20261108T154724Z-8865ae5`; `./deploy.sh`: 18/18 sensitive paths unpublished, custom domains clean). Pages only; the sync Worker didn't change.
 
@@ -3288,7 +3302,7 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 | `loadTake(it, token)` + `TAKES` (Cinematic) | Quick view "FindFilm AI's take" (`.qv-take`, `data-slot="take"`) for every title: `/api/fit-summary` with `type` + `lang` |
 | `FFBot.welcome(target, onTry)` (`assets/social.js`) + `welcomeToAISearch()` (Classic) | A first visit's tip (`.ffw`) under the AI search, once per browser (`ff_welcome_seen`), shown when the target is on screen and uncovered; Classic calls it from `dismissFirstVisit()` / `startOnboardFromIntro()`, Cinematic on `DOMContentLoaded` when `firstVisit` (no `rk_lang` at boot) |
 | `egg()` (corner mascot, `assets/social.js`) | Five quick clicks on `.ffm-bot` (≤500ms apart): `.ffm.is-egg` spin + the `success` pose, GA `mascot_egg` |
-| `heroUp()` / `hello()` / `sayHello(out)` (hero mascot `#ffh`, `assets/social.js`) + `tryAISearch()` (Classic) | Classic's desktop hero mascot (≥1200px): `.is-ready` once the sprite is in; the one-off hello `.is-hi` (6s, `ff_hello_seen`), never on a page view that had the welcome tip; its click (and the tip's "Try it") → AI mode + focus; GA `mascot_click` `hero` |
+| **REMOVED 2026-11-08 (hero cleanup):** `heroUp()` / `hello()` / `sayHello(out)` (hero mascot `#ffh`, `assets/social.js`) + `tryAISearch()` (Classic) | Classic's desktop hero mascot (≥1200px): `.is-ready` once the sprite is in; the one-off hello `.is-hi` (6s, `ff_hello_seen`), never on a page view that had the welcome tip; its click (and the tip's "Try it") → AI mode + focus; GA `mascot_click` `hero` |
 | `duck()` / `soon()` (peeking mascot `.ffp`, `assets/social.js`) | The mascot over "Your Taste DNA" (≥1024px): `.is-in` / `.is-hop` the first time the button is on screen, `.is-ducked` while `data-ffp-edge` (`#rowForYou`) is under `data-ffp-under` (`.filters-bar`); GA `mascot_click` `dna` |
 | `_voiceRead(e)` / `_voiceFold(segs, text)` / `_voiceMerge(base, seg)` / `_voiceCommit()` (Classic voice) | Transcript assembly for `toggleVoiceSearch()` (phone) + `toggleDesktopVoice()` (desktop): `_voiceRead` folds ALL results of the session into one string (`_voiceSession`), `_voiceFold` replaces a result that restates the previous one (iOS snapshots) and appends new speech, `_voiceMerge` joins across engine restarts dropping word overlap (Android replays), `_voiceCommit` banks `_voiceSession` into `_finalTranscript` |
 | `FFBot.set(mood)` / `FFBot.found(hasSuggestions)` / `FFBot.warm(then)` / `FFBot.mood()` (`assets/social.js`) | The mascot's AI moods on every `[data-ffb]` host + `#ffm`: `think` while the AI works, `found()` = idea → success → idle (+ an idea nudge when refinements are offered), `confused` on no results / errors. Sprite `ff-bot-moods.webp` loads on first intent; called as `window.FFBot?.…` from Classic's `showAiLoader()` / `renderAiResults()` / `showAiResultsError()` / `closeAiResults()` and Cinematic's `startView()` / `runAI()` / `titleFallback()` / `runTitle()` |
@@ -3384,8 +3398,8 @@ html.ffr-on .ffb-r  { background-image: url("/assets/ff-bot-reactions.webp?v=…
 .ffb--panel 56px · .ffb--empty 120px · .ffb--head 60px   (panel 46 / head 48 at ≤768px)
 
 /* Classic desktop mascots (assets/social.css): absolute, nothing moves */
-.ffh  (≥1200px + hover)  absolute in .hero-search-anchor, inset-inline-end: calc(50% + 418px); bottom: -40px
-      .ffh-bot::before = idea frame minus bulb · ::after = the bulb · .ffh-bubble centred over the head
+(removed 2026-11-08) .ffh  (≥1200px + hover)  absolute in .hero-search-anchor, inset-inline-end: calc(50% + 418px); bottom: -40px
+(removed 2026-11-08)       .ffh-bot::before = idea frame minus bulb · ::after = the bulb · .ffh-bubble centred over the head
       .is-ready fade-in · :hover / :focus-visible / .is-hi → bubble + ffh-wave · html:has(.ffw.is-in) → wave + bulb
 .ffp  (≥1024px + hover)  inside .dna-trigger, overflow:hidden box above it, z 99 (over .filters-bar) / .is-ducked z 98
       .ffp-bot success frame, translate 100% → (--ffp-h − --ffp-peek) on .is-in · .is-hop · .dna-trigger:hover −14px
@@ -3462,7 +3476,7 @@ Taste profile stored in `localStorage['rk_taste_v1']`: `{ genres: {}, directors:
 | `ff_mascot_off` | `'1'` once the corner mascot's × was clicked (`assets/social.js`); `#ffm` is removed on load in both layouts |
 | `ff_welcome_seen` | `'1'` once the mascot's first-visit tip has been shown (`FFBot.welcome`, `assets/social.js`) |
 | `ff_flag_vibe` | `'0'` = this browser opted out of vibe search (`?vibe=0`; `?vibe=1` clears it). Read by Classic (`readVibeFlag()` / `vibeSearchOn()`) and Cinematic (`runAI()`). Missing = on, the default since 2026-10-31 |
-| `ff_hello_seen` | `'1'` once Classic's hero mascot has said "Need a recommendation?" by itself, or the search was already in use (`hello()`, `assets/social.js`) |
+| **REMOVED 2026-11-08 (hero cleanup):** `ff_hello_seen` | `'1'` once Classic's hero mascot has said "Need a recommendation?" by itself, or the search was already in use (`hello()`, `assets/social.js`) |
 | `ff_fresh_reload` (**sessionStorage**) | The `/build.json` build `assets/fresh.js` last reloaded the page for — it never reloads twice for the same build |
 | `rk_ios_pwa_dismissed` | Timestamp of last iOS PWA bottom-sheet dismiss (15-day cooldown) |
 | `rk_install_banner_dismissed` | Timestamp of last mobile install banner dismiss (7-day cooldown) |
@@ -3514,6 +3528,8 @@ The site is fully installable as a PWA on all platforms.
 ---
 
 ## Pending / Next Steps
+
+- [ ] **Hero cleanup: owner review, then `./deploy.sh --branch main`.** Decide: Enter = vibe search by default? Compress Cinematic's hero?
 
 - [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
 - [x] **Phase 1 on a real phone** (owner, 2026-11-08): tip placement, animation and the fallback approved.
