@@ -2,7 +2,39 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-06) — The Shorts Bot Downloads Trailers Again (Mac Only); the Website Doesn't
+## ⚡ Most Recent Session (2026-11-08) — UX Upgrade Phase 1: No Dead-End Searches; a True 50/25/25 Score That Explains Itself (READY TO DEPLOY)
+
+Committed on `main` (`134e232`), **not deployed yet**. To ship, run both together, because the preview-card version moved to `v2` in the site and the sync Worker:
+1. `./deploy.sh --branch main`
+2. `npx wrangler deploy --config sync-worker.toml --env=""`
+3. `curl -s "https://ratingkino-sync.dimabashtan.workers.dev/sync-now?phase=cards"`, to redraw the Trending and Top Rated cards at the new score (about 2 minutes).
+
+**The owner's decisions (2026-11-08) for the 3-phase upgrade:**
+- **Score:** fixed weights, 50% IMDb, 25% RT, 25% Metacritic. Done here.
+- **Sign-in (Phase 3):** Google and Apple only. No email, password or OTP. The owner knows Apple needs a paid Developer membership.
+- **Movie Pitch** stays 100% free and anonymous. Accounts only for new cross-device or group features.
+- **Domains:** `findfilm.ai` is the brand. `ratingkino.com` will redirect permanently, with a one-time transfer of guest data first (it's a separate origin with its own `localStorage`; today it answers 200, it does not redirect).
+
+| Commit | Feature |
+|--------|---------|
+| `134e232` | **The score: `assets/score.js` (new, `window.FFScore`), loaded synchronously by both layouts.** `value(r)`, `parts(r)`, `mix(r, locale)`, `fromOmdb(od)`, `seen()`, `introduce(anchor, text, gotIt)`, `introduceWhenStill(getAnchor, …)`. A missing source is left out and the others keep their proportions. **`calcAvg()`** calls it; the same formula is in **`unifiedRating()`** (`tv/index.html`) and **`score()`** (`functions/og/[[path]].js`). `imdbV`/`rtV`/`mcV` no longer affect the score.<br>**Explanation:**<br>• Classic's modal: **`.mr-mix`** in `refreshModalRatings()`, always visible ("50% IMDb · 25% Rotten Tomatoes · 25% Metacritic", or "Only IMDb has rated this so far"). `.mr-mix-name` repeats "FindFilm score:" on phones, where `.mr-hero-lbl` is hidden.<br>• Classic's `#rtip`: each source's share (`.rtip-pct`), translated header.<br>• Cinematic's Quick View: **`loadScore()`** (new `data-slot="score"`, `.qv-score*`), `SCORES` cache, OMDb via `/api/omdb`, `external_ids` appended for TV. It replaces TMDB's ★ in the meta row; a title OMDb doesn't know keeps the ★. **Cinematic's grid cards still show TMDB's ★.**<br>• **First exposure:** `FFScore.introduce`, one tip per browser (`localStorage ff_score_intro_seen`; `assets/score.css`, `.ffsc-tip`). Classic: `_introduceScoreOnGrid()` (from `renderGrid` / `updateCardInGrid`, first `.rb.avg.unified` in view; not while a deep link is opening or the first-visit intro is up) and the modal's score. Cinematic: the Quick View score.<br>**Preview cards are `v2`:** `CARD_VERSION` (`functions/og`, `functions/index.js`), the share buttons' URL (`warmPreviewCard`, `shareItem`), `CARD_URL` / `CARD_KV` (`sync-worker.js`). `/og/v1/…` answers 301 to `v2`.<br>**Empty state: `assets/closest.js` (new, `FFClosest.find(query, signal)`)** POSTs `/api/vibe-search` as JSON, 15 s cap, never rejects; `null` for `match: 'none'`, no films, or a failure.<br>**Classic (`_recoverEmptyGrid()`, from `renderGrid` on an empty list):** a query waits `CLOSEST_PAUSE_MS` (900; title search runs as you type) then `FFClosest`; `_closestSeq` / `_closestAbort` cancel it on any new `loadMovies`. **`_showRecovered()`** fills `MOVIES`; **`#closestNote`** (`_setClosestNote`, `_renderClosestNote`, redrawn on a language change) says what's on screen. No query: **`_loosenFilters()`** tries rating −1 (not below 5), rating off, country off, genre off via `fetchPage(page, loose)`, then moves the controls. Floor: **`_showPopular()`** (TMDB trending, else `CACHE_MOVIES`). `_otherTabAction()` offers the other tab: from Movies only if TMDB has that title there, from TV always. **`#emptyState` is now only a failed request's Try Again** (`_showErrorState`). AI panel: `_showAiPopular()` before its error screen.<br>**Cinematic (`showClosest(v, q)`, from `runTitle`):** the same chain; a `[data-search-other]` button in `.results-sub`. A chip with nothing falls back to Trending (`showEmpty` is gone).<br>**TV:** the vibe index has films only, so TV goes to popular series with a "Search films instead" button.<br>**i18n, all 9 languages:** `score.name`, `score.tip`, `score.gotIt`, `score.onlyOne`, `closest.finding`, `closest.vibe`, `closest.popular`, `closest.ratingLower`, `closest.ratingOff`, `closest.countryOff`, `closest.genreOff`. Removed: `grid.noResults*`, `grid.noMatches`, `grid.emptyReset`, `search.noMatch*`, `score.weighted*`, `cin.nothingYet`, `cin.emptyHint`, `cin.noTitle*`. **Written in-session, no native-speaker pass.** |
+
+**Why `match: 'none'` decides it (probed 12 queries on the local server):** keyboard mash (`asdfghjkl`, `lkjhg`) comes back `kind: rare`, `match: none`; real descriptions that no title matches come back `exact` or `close` with good films ("a lonely lighthouse keeper befriends a seal": *The Lighthouse*, *The Lighthouse of the Orcas*, *Song of the Sea*). The interim `results` event can't say `none`, so the fallback takes the JSON answer: 5–9 s uncached, instant from the 6-hour cache.
+
+**Verified locally (`findfilm-full`, the Browser pane):**
+- **Formula (Node):** Inception IMDb 8.8 / RT 86 / MC 74 = 8.4; two sources keep 2:1; one source is itself; none is null; `N/A` from OMDb is no rating.
+- **Classic:** the lighthouse query gives 6 films with reasons; `asdfghjkl` gives 20 popular films; typing on cancels (0 vibe calls for abandoned text); "Ted Lasso" on Movies offers the TV tab; TV gives popular series and the button leads to closest films; rating 10 + Brazil removes the rating; 9.5 + France shows 8+ with paging; every API failing shows Try Again.
+- **Cinematic:** the same queries and both tab buttons; Quick View shows Inception 8.4 with its chips; Game of Thrones (`external_ids`) shows "Only IMDb has rated this so far"; Godzilla Minus Zero (no OMDb data) keeps TMDB's ★.
+- **Tip:** on the grid, in Classic's modal and in Quick View; 375px and desktop. Note lines in `uk`, `ar`, `de`, `zh`. The preview card reads 8.4; `/og/v1/` answers 301; bad paths 404. Local console: only the known `/api/cache/*` 404s.
+- **Test note:** the Browser pane was hidden, which freezes CSS transitions and `requestAnimationFrame`, so sheets were checked with animations off. Real-device timing of the tip after a sheet opens is untested.
+
+**Known limits:**
+- **Cinematic's grid cards still show TMDB's ★**, so a card and its Quick View can differ.
+- The wizard and group picker keep their failure screens; those only appear if the request itself fails.
+
+---
+
+## Session (2026-11-06) — The Shorts Bot Downloads Trailers Again (Mac Only); the Website Doesn't
 
 No change to the website or its Workers this session; the deployments are as in the 2026-11-05 block below.
 
@@ -3022,6 +3054,10 @@ ratingkino/
 ├── assets/touch.css / .js ← shared by index.html + cinematic/index.html: touch baseline
 │                           (tap highlight, double-tap zoom, long-press, overscroll, iOS
 │                           16px fields), iOS :active, FFSheet drag-to-dismiss. ?v=<hash>.
+├── assets/score.js / .css ← shared by index.html + cinematic/index.html: the FindFilm score
+│                           (FFScore: 50/25/25, the mix line, the one-time tip). ?v=<hash>.
+├── assets/closest.js     ← shared by index.html + cinematic/index.html: FFClosest, the closest
+│                           films when a search finds nothing (/api/vibe-search). ?v=<hash>.
 ├── assets/social.css / .js ← shared by index.html + cinematic/index.html: TikTok +
 │                           YouTube Shorts strip (.ffs), corner mascot (#ffm), footer
 │                           band (.ffs-band), GA social_click. ?v=<hash>.
@@ -3440,6 +3476,11 @@ The site is fully installable as a PWA on all platforms.
 
 ## Pending / Next Steps
 
+- [ ] **Deploy `134e232`** (UX Phase 1): `./deploy.sh --branch main` and the sync Worker together, then `/sync-now?phase=cards`. See the 2026-11-08 block.
+- [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, not deployed yet).
+- [ ] **UX Phase 2:** the Vibe Dial (test the axes on 30 films first), then Tonight's Three (`POST /api/tonight`; code picks the films).
+- [ ] **UX Phase 3 (Guest-First):** `assets/store.js` first (per-item dates, so merges can work), remove the first-visit quiz; then Google + Apple sign-in, `/api/me/import` (idempotent, newest change per film wins), ongoing sync. Needs a privacy policy page and the Apple Developer membership.
+- [ ] **`ratingkino.com`:** 301 to `findfilm.ai`, with a one-time transfer of guest data first.
 - [x] **Trailer reactions, Step 1** (`1a40069`): FF Bot watches trailers in Cinematic's quick view and Classic's Trailer player, synced to YouTube, genre arcs on today's 5 poses; live 2026-11-01 (production `d247140a`)
 - [x] **Deploy `8e62b9e`** (trailer reactions, step 2): live 2026-11-02 as `92baa7e5`.
 - [x] **Trailer reactions, Step 2: the owner's new poses** (`8e62b9e`): shocked, laughing, teary, hyped in their own sprite `ff-bot-reactions.webp`. `tense` wears think until it has art. The reaction names are shared with the Shorts bot.
