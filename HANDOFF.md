@@ -2,15 +2,17 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-08c) — The Vibe Dial: Mood Sliders in Both Layouts (READY TO DEPLOY)
+## ⚡ Most Recent Session (2026-11-08c) — The Vibe Dial: Mood Sliders in Both Layouts
 
-Committed on `main` (`3b9bfbd`), **not deployed yet**. To ship: `./deploy.sh --branch main`. Pages only; the sync Worker didn't change.
+All commits on `main`, live on https://findfilm.ai since 2026-11-08: Pages production **`276fca60`** from `8865ae5` (`/build.json` = `20261108T154724Z-8865ae5`; `./deploy.sh`: 18/18 sensitive paths unpublished, custom domains clean). Pages only; the sync Worker didn't change.
 
 | Commit | Feature |
 |--------|---------|
 | `3b9bfbd` | **`POST /api/vibe-dial`** (`handleVibeDial()`): `{dial: {mood, tone, novelty}, text?}` → `{movies}` (12 TMDB-shaped rows via `_vibeRow`). **No language model:** one `bge-m3` call, one or two Vectorize searches. About 0.5 s locally; KV **`vbd:v2:<sha256>`** for a day.<br>**`functions/_lib/dial.js` (new; no `onRequest`, so no route):** `cleanDial`, `dialQuery`, `dialFilter(d, relaxed)`, `tagScore`, `rankDial(matches, d, {text, limit})`, `DIAL_AXES`, `DIAL_STOPS`. `tools/vibe/dial-bench.mjs` imports it, so the benchmark tests the shipping code.<br>**Ranking:**<br>• A dial alone: the stop phrases are the query. **With words: `A film about <words>.` chooses the 50 candidates and the dial only orders them.** Dial words in that query drown the words (tried in full and as one adjective per slider: "a heist" + Cozy gave *The Grinch*, Paris + Familiar *The Princess and the Frog*).<br>• `dialFilter`: votes ≥ 800 (≥ 5000 / ≥ 1500 familiar, 150–6000 / 300–15000 experimental), rating ≥ 6.5, runtime ≥ 60; `relaxed` (fewer than 6 picks) 150 votes and 5.8.<br>• `rankDial`: no Documentary / TV Movie; no `ADULT` tags or keywords; War genre off the Cozy and Familiar ends; `ATROCITY` themes off Cozy; `total = 3·cosine + fit (×1.5 with words) + quality`; with words, only films with `fit ≥ 0.1` while at least 6 remain; at most 30% of a row per lead genre.<br>**UI: `assets/dial.js` + `dial.css` (new, `window.FFDial`, `#ffDial`):** `mount(host, {t, onChange, onReset, onSee})`, `value`, `summary`, `isSet`, `reset({silent})`, `setVisible`, `setSee`, `relabel`. Native `<input type=range>` (keyboard, screen reader, `aria-valuetext`, RTL), 5 stops, search on release (`SETTLE_MS` 120). "See the films" under 900px, because results are below the fold on phones.<br>**Classic:** **`runDial(dial)`** shares `_closestSeq` / `_closestAbort` with the fallback, so any new search cancels it; hides `#feedSections`; `_showRecovered` fills the grid; `#closestNote` says "Mood: Cozy · Funny" (note vars can be a function, so a language change redraws them). Reset → `loadMovies`. **Cinematic:** **`runDial(dial)`**, a `'dial'` view; Clear resets the sliders. **Films only:** TV tabs hide the dial and reset it.<br>**i18n:** `dial.open`, `dial.cozy/intense/funny/serious/familiar/experimental`, `dial.reset`, `dial.see`, `dial.showing`, 9 languages, written in-session. |
 
 **Verified locally (`findfilm-full`):** the API (0.5 s, instant from cache; junk stops and an empty dial 400; Ukrainian words work); Classic and Cinematic: slider → grid and note/header, two sliders together, words + dial, Reset back to the feed, TV tab hides it; note and labels in `uk`, `ar`, `de`; 375px with no sideways scroll. `dial-bench.mjs` on the shipping code: 11 of 11, ordering still 100%. **Not tested by hand on a real touch screen:** the sliders were driven by script.
+
+**Live:** `dial.js`, `dial.css` and `i18n.js` match the commit on both pages; `/api/vibe-dial` answers in 0.6–1.1 s uncached (Cozy, Intense + Serious, Experimental, a heist + Cozy, cooking + Cozy) and 400 for an empty dial; a slider fills Classic's grid and Cinematic's in under a second, Reset returns the home view; no console errors.
 
 **Known limits:**
 - **A narrow topic with a dial it doesn't suit is weak:** "outer space" + Funny falls back to films with no lean (*Aliens*), and Paris + Familiar is thin. Dial words can't help (see above); more candidates would (`topK` above 50 needs a metadata fetch).
@@ -3517,7 +3519,9 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Phase 1 on a real phone** (owner, 2026-11-08): tip placement, animation and the fallback approved.
 - [ ] **Owner's review of the Phase 1 strings** in `assets/i18n.js` (`score.*`, `closest.*`), 8 non-English languages.
 - [x] **Vibe Dial 30-film test** (`7894f75`): passed, no axis backfill needed.
-- [ ] **Deploy the Vibe Dial** (`3b9bfbd`): `./deploy.sh --branch main`. Then the owner tries the sliders on a real phone.
+- [x] **Vibe Dial live** (`3b9bfbd`, Pages `276fca60`, 2026-11-08).
+- [ ] **Owner's phone test of the sliders** (feel under a thumb, the UI), and their review of the `dial.*` strings.
+- [ ] **After that test (owner agreed):** narrow topic + a mood it doesn't suit: search more films per query (`topK` above 50 needs a metadata fetch; a little slower).
 - [ ] **UX Phase 2, next:** Tonight's Three (`POST /api/tonight`; code picks the films, on `functions/_lib/dial.js`'s ranking).
 - [ ] **UX Phase 3 (Guest-First):** `assets/store.js` first (per-item dates, so merges can work), remove the first-visit quiz; then Google + Apple sign-in, `/api/me/import` (idempotent, newest change per film wins), ongoing sync. Needs a privacy policy page and the Apple Developer membership.
 - [ ] **`ratingkino.com`:** 301 to `findfilm.ai`, with a one-time transfer of guest data first.
