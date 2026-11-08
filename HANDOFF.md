@@ -2,7 +2,26 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-08) — UX Upgrade Phase 1: No Dead-End Searches; a True 50/25/25 Score That Explains Itself
+## ⚡ Most Recent Session (2026-11-08b) — The Vibe Dial's 30-Film Test: No Backfill Needed
+
+Committed on `main` (`7894f75`). A benchmark only: **nothing on the site or its Workers changed.** The owner tested UX Phase 1 on a real phone (tip placement, animation, fallback): approved; they're reviewing the translations themselves.
+
+| Commit | Feature |
+|--------|---------|
+| `7894f75` | **`tools/vibe/dial-bench.mjs` + `dial-films.json`** (30 films hand-labelled on the axes where their place is obvious). Needs the dev Worker (`vibe-ingest`, port 8790), which gains read-only **`/embed`, `/films`, `/near`** in `tools/vibe/worker.js`.<br>**Axis scores, no new data:** `embed` (cosine to two anchor sentences, from the film's stored vector), `tags` (**`tagScore()`**: the film's `vt` tags and genres against two vocabularies per axis, written from the catalog's most common tags), `blend` (the two averaged as z-scores, plus −log10(votes) on novelty).<br>**Dial alone:** each stop has a fixed English phrase (`STOPS`), embedded and searched, no language model. **With typed words: the words choose the 50 candidates and the dial only orders them.** Putting both in one query let the dial drown the words.<br>**`listFor()` rules:** `limits()` (votes ≥ 800 by default, ≥ 5000 / ≥ 1500 familiar, 150–6000 / 300–15000 experimental; rating ≥ 6.5; runtime ≥ 60), no Documentary or TV Movie, at most 3 of 10 per lead genre (`LEAD_CAP`), `total = 3·cosine + fit + quality`. |
+
+**Results:** ordering **100% on every axis** (mood 42 pairs, tone 56, novelty 63; run once, nothing tuned afterwards). Separately: embeddings alone 100/100/98%, tags alone 100/100/92%, vote counts alone 87%. **11 of 11 pass marks.**
+
+**Read these results with care:**
+- The labels are mine (the session's) and all 30 films are famous and at the extremes, so this shows the data holds for clear cases, not for mid-range or obscure films.
+- The first run also met 11 of 11, with poor lists: stand-up specials, shorts, kids' Christmas films for Cozy, *The Grinch* for "a heist" + cozy. So the genre marks are too lenient, and `listFor()` was changed after reading those lists. **The list marks are not a clean pass.**
+- Clear misses still in the lists: *Life Is Beautiful* under Cozy, *Schindler's List* under Familiar, *365 Days* under Serious, *The Book Thief* under "a heist" + cozy. A list of three extremes at once (intense + serious + experimental) is thin. To handle when building: war films off the cozy and familiar ends, an adult-content filter. Check with new queries.
+
+**Decision: no 50,000-film axis backfill.** The dial can be built on the current index.
+
+---
+
+## Session (2026-11-08) — UX Upgrade Phase 1: No Dead-End Searches; a True 50/25/25 Score That Explains Itself
 
 All commits on `main`, live on https://findfilm.ai since 2026-11-08: Pages production **`6981e386`** from `e00ec45` (`/build.json` = `20261108T120835Z-e00ec45`; `./deploy.sh`: 18/18 sensitive paths unpublished, custom domains clean) and **`ratingkino-sync`** version **`486e7ed8`**. Preview cards redrawn at the new score: `/sync-now?phase=cards` gave `{listed: 79, had: 0, drawn: 77, failed: 2}` in 2 min 10 s, then `{had: 77, drawn: 2, failed: 0}`.
 
@@ -3475,8 +3494,10 @@ The site is fully installable as a PWA on all platforms.
 ## Pending / Next Steps
 
 - [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
-- [ ] **Owner's checks on Phase 1:** the score tip's timing on a real phone; the new strings in the 8 non-English languages.
-- [ ] **UX Phase 2:** the Vibe Dial (test the axes on 30 films first), then Tonight's Three (`POST /api/tonight`; code picks the films).
+- [x] **Phase 1 on a real phone** (owner, 2026-11-08): tip placement, animation and the fallback approved.
+- [ ] **Owner's review of the Phase 1 strings** in `assets/i18n.js` (`score.*`, `closest.*`), 8 non-English languages.
+- [x] **Vibe Dial 30-film test** (`7894f75`): passed, no axis backfill needed.
+- [ ] **UX Phase 2:** build the Vibe Dial from `dial-bench.mjs`'s `STOPS`, `tagScore()` and `listFor()`, then Tonight's Three (`POST /api/tonight`; code picks the films).
 - [ ] **UX Phase 3 (Guest-First):** `assets/store.js` first (per-item dates, so merges can work), remove the first-visit quiz; then Google + Apple sign-in, `/api/me/import` (idempotent, newest change per film wins), ongoing sync. Needs a privacy policy page and the Apple Developer membership.
 - [ ] **`ratingkino.com`:** 301 to `findfilm.ai`, with a one-time transfer of guest data first.
 - [x] **Trailer reactions, Step 1** (`1a40069`): FF Bot watches trailers in Cinematic's quick view and Classic's Trailer player, synced to YouTube, genre arcs on today's 5 poses; live 2026-11-01 (production `d247140a`)
