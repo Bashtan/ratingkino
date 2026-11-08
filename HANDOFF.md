@@ -4,12 +4,13 @@
 
 ## ⚡ Most Recent Session (2026-11-08d) — Hero Cleanup: Search and First Films Above the Fold
 
-All commits on `main`, live on https://findfilm.ai since 2026-11-08: Pages production **`169f4649`** from `c71c486` (`/build.json` = `20261108T163106Z-c71c486`; `./deploy.sh`: 18/18 sensitive paths unpublished, custom domains clean).
+All commits on `main`, live on https://findfilm.ai since 2026-11-08: Pages production **`16d8d494`** from `6180cf6` (`/build.json` = `20261108T164152Z-6180cf6`; `./deploy.sh`: 18/18 sensitive paths unpublished, custom domains clean).
 
 | Commit | Feature |
 |--------|---------|
 | `0bb42c7` | **Minimal hero, both layouts.** Removed the hero social strip (`.ffs--hero`, `.ffs--desk`; footer `.ffs-band` already has the links; phone twin `#ffsFeed` kept), `data-ffm-after` moved to `#heroSearch` / Cinematic's `.chips-wrap`. Removed hero mascot `#ffh` (`heroBot`, `hello`, `sayHello`, `.ffh*`). Removed voice-language picker `#voiceLangWrap` (`.voice-lang-*`, `.vl-*`): `_voiceLang()` + `VOICE_BCP` now use `CURRENT_LANG`. `search.modeTitlePh` = "Describe the vibe or plot..." in 9 languages (my translations); `mascot.hello`, `voicelang.title` removed. `FFDial.mount` options **`toggleHost`, `toggleClass`** + **`FFDial.placeToggle(row)`**: "Set the mood" is the first chip (`#vibeChips`; Cinematic `chipsTrack`, re-placed by `renderChips()`). `.hero-sub-row` puts `#heroTitle` and `.how-ratings-link` on one line. |
 | `c71c486` | **Enter = vibe search; compact Cinematic hero.** New **`GET /api/is-title?q=&lang=`** → `{title}` (`handleIsTitle()`, one TMDB search, no AI; `_titleMatches()` factored out of `handleTitleSearch()`; `TITLE_VOTES`, `TITLE_MAX_WORDS`, `TITLE_GENRE_WORDS`): exact film name with ≥100 votes (one word ≥1000; genre words never), or a franchise name starting a ≥1000-vote title. Client **`FFClosest.isTitle(q, lang, signal)`** (900 ms cap, false when unsure). **Classic:** `SEARCH_MODE` defaults to `'ai'`; Enter handler with `_enterSeq`; `chooseSearchMode()` / `_savedSearchMode()` persist only a menu choice under **`ff_search_mode`** (`rk_searchMode` was rewritten on every load, so it can't tell a choice from the old default); `_paintSearchPlaceholder()`; TV shows `cin.ph.tv`; rotating hints gone (`getDesktopPlaceholders`, `_cycleDeskPh`, `search.ph0-3`, `.ph-fading`). `search.modePlotPh` = "Describe the vibe or plot...", `search.modeTitlePh` restored. **Cinematic:** `runVibe(q)` (view kind `'vibe'`; no vibe answer → `runTitle(q, {vibeTried:true})`), TV stays `runTitle`. Hero: `.eyebrow` and `.hero-sub` removed (`cin.eyebrow`, `cin.heroSub.*` etc. deleted), no `min-height`, `.hero-title` smaller, `.cmd-field` 58px; `cin.heroTitle` = "What do you feel like watching?" (my translations). |
+| `6180cf6` | **Mood button and phone placeholder.** `button.ffd-toggle` is purple in both layouts (`assets/dial.css`; `.on`, a set dial, stays white). New i18n **`search.modePlotPhShort`** ("Describe the vibe...", 9 languages, my translations), used by `searchModePlaceholder()` under **`PHONE_SEARCH`** (`(max-width: 768px)`, repainted by a `matchMedia` listener) and by Cinematic's `TYPES.movie.prompts` under 767px. Classic phones: `#searchMusicBtn { display: none }` and `.search-ph-overlay` 15px, because the short line needed 147px and had 115px at 375 wide (now 164; 149 at 360). **`openVibeCheck('music')` has no other entry point, so music vibe is desktop/tablet only until one is added.** |
 
 **Measured, Classic 1440×900:** tabs moved from 395 to 248, feed from 435 to 288, first cards from 512 to about 365. Open dial panel pushes tabs to 418. 1024px and 375px: no sideways scroll, chips fit at 1024.
 
@@ -3533,7 +3534,9 @@ The site is fully installable as a PWA on all platforms.
 
 ## Pending / Next Steps
 
-- [x] **Hero cleanup** (`0bb42c7`, `c71c486`), live on Pages `169f4649`. Owner to review the new `search.modePlotPh` and `cin.heroTitle` translations.
+- [x] **Hero cleanup** (`0bb42c7`, `c71c486`, `6180cf6`), live on Pages `16d8d494`. Owner to review the new `search.modePlotPh`, `search.modePlotPhShort` and `cin.heroTitle` translations.
+- [ ] **Music vibe on phones:** the search bar's music button is hidden at ≤768px and was its only entry point (`openVibeCheck('music')`). Add another entry if phones should keep it.
+- [ ] **Tonight's Three** is next (owner, 2026-11-08): placement to confirm, then `POST /api/tonight`.
 
 - [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
 - [x] **Phase 1 on a real phone** (owner, 2026-11-08): tip placement, animation and the fallback approved.
