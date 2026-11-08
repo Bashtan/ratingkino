@@ -19,6 +19,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { cleanDial, dialQuery, dialFilter, rankDial, tagScore, genresOf, tagsOf } from '../../functions/_lib/dial.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -34,48 +35,15 @@ const post = async (route, body) => {
   return d;
 };
 
-/* Each axis: its poles as anchor sentences (compared with a film's embedding) and as vocabularies
-   (compared with a film's vibe tags and genres), written from the catalog's most common tags. */
+// Each axis's poles as sentences to compare with a film's stored embedding (the ordering test only).
 const AXES = {
-  mood: {
-    neg: 'cozy', pos: 'intense',
-    anchors: ['A cozy, gentle, comforting film that feels warm and safe, heartwarming and low-stakes.',
-              'An intense, tense, gripping film, harrowing and high-stakes, that keeps you on edge.'],
-    tags: [['cozy', 'heartwarming', 'heartfelt', 'charming', 'uplifting', 'feel-good', 'feel good', 'family-friendly', 'family friendly', 'gentle', 'sweet', 'comforting', 'warm', 'whimsical', 'lighthearted', 'light-hearted', 'hopeful', 'holiday cheer', 'heartwarming story', 'rainy-day comfort', 'carefree', 'playful', 'lighthearted fun'],
-           ['intense', 'thrilling', 'suspenseful', 'gripping', 'tense', 'gritty', 'violent', 'gory', 'disturbing', 'dark', 'harrowing', 'brutal', 'action-packed', 'action packed', 'fast-paced', 'fast paced', 'intense action', 'intense thriller', 'intense drama', 'chaotic', 'desperate', 'twisted', 'creepy', 'ominous', 'haunting', 'vengeful', 'dark atmosphere', 'creepy atmosphere']],
-    genres: [{ Family: 1, Animation: 0.5, Romance: 0.5, Comedy: 0.5 }, { Horror: 1, Thriller: 1, War: 1, Crime: 0.5, Action: 0.5 }],
-  },
-  tone: {
-    neg: 'funny', pos: 'serious',
-    anchors: ['A very funny comedy full of laughs, silly and lighthearted.',
-              'A serious, somber, weighty drama, grave and unsmiling.'],
-    tags: [['funny', 'comedy', 'humorous', 'comical', 'witty', 'hilarious', 'quirky humor', 'offbeat humor', 'light-hearted', 'lighthearted', 'funny moments', 'satirical', 'satire', 'absurd', 'slapstick', 'comedy of errors', 'witty banter', 'campy', 'parody', 'spoof', 'lighthearted fun', 'gross-out', 'romantic comedy', 'fun'],
-           ['tragic', 'emotional', 'dramatic', 'emotional depth', 'emotional turmoil', 'thought-provoking', 'somber', 'melancholic', 'bittersweet', 'historical drama', 'war drama', 'social commentary', 'true story', 'emotional drama', 'intense drama', 'harrowing', 'heartbreaking', 'grim', 'bleak', 'tear-jerker', 'tearjerker', 'drama', 'crime drama', 'psychological', 'disturbing']],
-    genres: [{ Comedy: 1.5 }, { Drama: 0.5, War: 1, History: 1 }],
-  },
-  novelty: {
-    neg: 'familiar', pos: 'experimental',
-    anchors: ['A crowd-pleasing mainstream blockbuster with a familiar, conventional story, easy to follow.',
-              'An experimental, avant-garde art film, surreal and unconventional, strange and challenging.'],
-    tags: [['entertaining', 'blockbuster', 'crowd-pleaser', 'crowd pleaser', 'fun', 'heroic', 'classic', 'epic', 'family-friendly', 'family friendly', 'romantic comedy', 'superhero', 'action-packed', 'action packed', 'relatable', 'nostalgic'],
-           ['surreal', 'experimental', 'avant-garde', 'mind-bending', 'unconventional', 'artistic', 'abstract', 'arthouse', 'art house', 'dreamlike', 'non-linear', 'nonlinear', 'existential', 'philosophical', 'bizarre', 'strange', 'trippy', 'hypnotic', 'psychedelic', 'enigmatic', 'cryptic', 'dreamlike state', 'unsettling']],
-    genres: [{}, {}],
-  },
+  mood:    { neg: 'cozy', pos: 'intense', anchors: ['A cozy, gentle, comforting film that feels warm and safe, heartwarming and low-stakes.', 'An intense, tense, gripping film, harrowing and high-stakes, that keeps you on edge.'] },
+  tone:    { neg: 'funny', pos: 'serious', anchors: ['A very funny comedy full of laughs, silly and lighthearted.', 'A serious, somber, weighty drama, grave and unsmiling.'] },
+  novelty: { neg: 'familiar', pos: 'experimental', anchors: ['A crowd-pleasing mainstream blockbuster with a familiar, conventional story, easy to follow.', 'An experimental, avant-garde art film, surreal and unconventional, strange and challenging.'] },
 };
 
-const GENRE = { 28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime', 99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History', 27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance', 878: 'Science Fiction', 10770: 'TV Movie', 53: 'Thriller', 10752: 'War', 37: 'Western' };
-const genresOf = m => String(m.g || '').split(',').map(n => GENRE[n]).filter(Boolean);
-const tagsOf = m => String(m.vt || '').split('|').map(t => t.toLowerCase().trim()).filter(Boolean);
 const dot = (a, b) => a.reduce((s, x, i) => s + x * b[i], 0);
 const cos = (a, b) => dot(a, b) / Math.sqrt(dot(a, a) * dot(b, b));
-
-// Tags and genres: -1 (first pole) to +1 (second pole).
-function tagScore(axis, m) {
-  const a = AXES[axis], tags = tagsOf(m), g = genresOf(m);
-  const side = i => tags.filter(t => a.tags[i].includes(t)).length + g.reduce((s, x) => s + (a.genres[i][x] || 0), 0);
-  const n = side(0), p = side(1);
-  return (p - n) / (p + n + 1);
-}
 
 const zs = list => {
   const mean = list.reduce((s, x) => s + x, 0) / list.length;
@@ -94,46 +62,12 @@ function ordering(rows, scoreKey, axis) {
   return { pct: right / (neg.length * pos.length), pairs: neg.length * pos.length, wrong };
 }
 
-/* The dial's stops: phrases for the query, and catalog limits. */
-const STOPS = {
-  mood:    { '-2': 'cozy, gentle, comforting and heartwarming', '-1': 'warm and easygoing', 1: 'tense and gripping', 2: 'intense, harrowing, nail-biting and high-stakes' },
-  tone:    { '-2': 'a laugh-out-loud funny comedy', '-1': 'light and playful', 1: 'thoughtful and earnest', 2: 'a serious, somber, weighty drama' },
-  novelty: { '-2': 'a crowd-pleasing mainstream favorite', '-1': 'popular and accessible', 1: 'offbeat and unconventional', 2: 'an experimental, surreal art film' },
-};
-function limits(d) {
-  const votes = { $gte: 800 };
-  if (d.novelty === -2) votes.$gte = 5000;
-  if (d.novelty === -1) votes.$gte = 1500;
-  if (d.novelty === 2) { votes.$gte = 150; votes.$lte = 6000; }
-  if (d.novelty === 1) { votes.$gte = 300; votes.$lte = 15000; }
-  return { votes, rating: { $gte: 65 }, runtime: { $gte: 60 } };   // no shorts: their tags read cozy or strange too easily
-}
-const NOT_A_PICK = ['Documentary', 'TV Movie'];   // stand-up specials and making-ofs read as "funny" and "serious"
-const LEAD_CAP = 3;                               // at most this many of the 10 share a lead genre, or Cozy is all cartoons
-
-/* With words typed, the words choose the candidates and the dial only orders them. In the first
-   version the dial's phrases went into the same query, and they drowned the words ("a heist" + cozy
-   gave The Grinch). Dial alone: its phrases are the query. */
-async function listFor(d, text) {
-  const phrases = Object.keys(STOPS).filter(a => d[a]).map(a => STOPS[a][d[a]]);
-  const q = text ? `A film about ${text}.` : `A film that is ${phrases.join(', ')}.`;
+async function listFor(dial, text) {
+  const d = cleanDial(dial);
+  const q = dialQuery(d, text);
   const [vec] = (await post('/embed', { texts: [q] })).vectors;
-  const { matches } = await post('/near', { vector: vec, topK: 50, filter: limits(d) });
-  const scored = matches.filter(m => !genresOf(m.metadata).some(g => NOT_A_PICK.includes(g))).map(m => {
-    let fit = 0;
-    for (const a of Object.keys(STOPS)) if (d[a]) fit += (d[a] / 2) * tagScore(a, m.metadata);
-    const quality = (m.metadata.rating || 0) / 100 + Math.log10((m.metadata.votes || 0) + 1) / 8;
-    return { m, total: m.score * 3 + fit * (text ? 1.5 : 1) + quality };
-  }).sort((a, b) => b.total - a.total);
-  const lead = {}, picks = [];
-  for (const s of scored) {
-    const g = genresOf(s.m.metadata)[0] || '';
-    if ((lead[g] || 0) >= LEAD_CAP) continue;
-    lead[g] = (lead[g] || 0) + 1;
-    picks.push(s);
-    if (picks.length === 10) break;
-  }
-  return { q, films: picks.map(s => ({ id: s.m.id, title: s.m.metadata.t, year: s.m.metadata.year, votes: s.m.metadata.votes, rating: s.m.metadata.rating, genres: genresOf(s.m.metadata), tags: tagsOf(s.m.metadata).slice(0, 5) })) };
+  const { matches } = await post('/near', { vector: vec, topK: 50, filter: dialFilter(d) });
+  return { q, films: rankDial(matches, d, { text, limit: 10 }).map(x => ({ id: x.id, title: x.metadata.t, year: x.metadata.year, votes: x.metadata.votes, rating: x.metadata.rating, genres: genresOf(x.metadata), tags: tagsOf(x.metadata).slice(0, 5) })) };
 }
 
 const has = (f, gs) => f.genres.some(g => gs.includes(g));
@@ -195,8 +129,16 @@ async function main() {
     'intense+serious+experimental': { mood: 2, tone: 2, novelty: 2 },
     'cozy+serious': { mood: -2, tone: 2 },
     'intense+funny': { mood: 2, tone: -2 },
+    'new: cozy+experimental': { mood: -2, novelty: 2 },
+    'new: funny+experimental': { tone: -2, novelty: 2 },
+    'new: slightly tense, slightly serious': { mood: 1, tone: 1 },
+    'new: slightly cozy, slightly funny': { mood: -1, tone: -1 },
+    'new: serious+familiar': { tone: 2, novelty: -2 },
   };
-  const withText = [['a heist', { mood: -2 }], ['a heist', { mood: 2 }], ['space travel', { tone: -2 }], ['space travel', { tone: 2 }]];
+  const withText = [['a heist', { mood: -2 }], ['a heist', { mood: 2 }], ['space travel', { tone: -2 }], ['space travel', { tone: 2 }],
+    // New for the build: not used while the ranking was tuned.
+    ['a road trip', { mood: -2 }], ['a road trip', { mood: 2 }], ['a wedding', { tone: -2 }], ['a wedding', { tone: 2 }],
+    ['a haunted house', { tone: -2 }], ['a haunted house', { novelty: 2 }], ['a dog', { mood: -1 }], ['a dog', { tone: 2 }]];
   for (const [name, d] of Object.entries(settings)) report.lists[name] = await listFor(d);
   for (const [text, d] of withText) report.lists[`"${text}" ${JSON.stringify(d)}`] = await listFor(d, text);
   console.log('\n── Lists');

@@ -15,10 +15,13 @@
  *   /api/reddit/reviews   → oauth.reddit.com/search, official OAuth2 client_credentials
  *                           (injects REDDIT_CLIENT_ID/REDDIT_CLIENT_SECRET; KV-cached 36h/movie)
  *   /api/rx/<movie|tv>/<id> → KV: FF Bot's arc for the title's trailer (sync-worker.js, nightly)
+ *   /api/vibe-dial     → the mood sliders: Vectorize + the film's tags, no language model
  *
  * API keys and KV are stored as Cloudflare Pages secrets/bindings —
  * never exposed in HTML source.
  */
+
+import { cleanDial, dialQuery, dialFilter, rankDial, DIAL_KEYS } from '../_lib/dial.js';
 
 // Shared by the /tmdb/* proxy and /watchmode/sources — resolves the visitor's
 // region with the same priority everywhere: Cloudflare's edge geo-IP
@@ -80,6 +83,10 @@ export async function onRequest({ request, env, params, waitUntil }) {
   }
 
   /* ── /api/vibe-check ── photo/music → vibe translation → movie curation ── */
+  if (path === '/vibe-dial') {
+    return handleVibeDial(request, env, cors, waitUntil);
+  }
+
   if (path === '/vibe-check') {
     return handleVibeCheck(request, env, cors, waitUntil);
   }
@@ -2596,6 +2603,50 @@ async function handleVibeSearch(request, url, env, cors, waitUntil) {
   return new Response(readable, {
     headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', ...cors },
   });
+}
+
+/* The mood sliders (functions/_lib/dial.js). POST {dial: {mood, tone, novelty}, text?} → {movies}, best
+   first. Embeds one sentence and searches; no language model, so it answers quickly, and a dial alone
+   has only 124 possible answers, kept for a day like any other. */
+async function handleVibeDial(request, env, cors, waitUntil) {
+  const json = (body, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...cors } });
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+  let dial, text;
+  try {
+    const body = await request.json();
+    dial = cleanDial(body.dial);
+    text = String(body.text || '').trim().replace(/\s+/g, ' ').slice(0, 200);
+  } catch {
+    return json({ error: 'Invalid JSON body' }, 400);
+  }
+  if (!text && !DIAL_KEYS.some(a => dial[a])) return json({ error: 'Set a slider' }, 400);
+  if (!env.VECTORIZE || !env.AI) return json({ error: 'Search unavailable' }, 503);
+
+  const keyText = JSON.stringify([DIAL_KEYS.map(a => dial[a]), text.toLowerCase()]);
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(keyText)));
+  const cacheKey = 'vbd:v2:' + [...digest].map(b => b.toString(16).padStart(2, '0')).join('');
+  const hit = await env.MOVIES_CACHE?.get(cacheKey, 'json').catch(() => null);
+  if (hit) return json(hit);
+
+  try {
+    const emb = await env.AI.run(VIBE_EMBED_MODEL, { text: [dialQuery(dial, text)] });
+    const [vector] = emb?.data || emb?.response?.data || emb?.response || [];
+    if (!vector) throw new Error('embedding failed');
+    // The quality floor comes down only for a corner of the dial too thin to fill a row.
+    let picks = [];
+    for (const relaxed of [false, true]) {
+      const { matches } = await env.VECTORIZE.query(vector, { topK: 50, returnMetadata: 'all', filter: dialFilter(dial, relaxed) });
+      picks = rankDial(matches, dial, { text });
+      if (picks.length >= 6) break;
+    }
+    const payload = { movies: picks.map(x => _vibeRow(Number(String(x.id).slice(1)), x.metadata)) };
+    if (picks.length && waitUntil) waitUntil(env.MOVIES_CACHE?.put(cacheKey, JSON.stringify(payload), { expirationTtl: 86400 }).catch(() => {}));
+    return json(payload);
+  } catch (e) {
+    console.error('[vibe-dial] failed:', e.message);
+    return json({ error: 'Search failed' }, 502);
+  }
 }
 
 /* The vibe-search run (see the block above handleVibeSearch). emit(event, data) gets each stage

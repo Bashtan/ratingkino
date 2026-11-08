@@ -5510,8 +5510,10 @@ if ('serviceWorker' in navigator) {
 <link rel="stylesheet" href="/assets/score.css?v=28152cc2">
 <script src="/assets/score.js?v=0768b69c"></script>
 <script src="/assets/closest.js?v=9f5a832b"></script>
+<link rel="stylesheet" href="/assets/dial.css?v=6cf9db9b">
+<script src="/assets/dial.js?v=e2f2e610"></script>
 <!-- UI strings in 9 languages, shared with Cinematic (window.FF_I18N → TRANSLATIONS). Synchronous on purpose: the page script reads it at once. -->
-<script src="/assets/i18n.js?v=7dc88417"></script>
+<script src="/assets/i18n.js?v=a94cd699"></script>
 </head>
 <body>
 <!-- Social brand icons for the .ffs / .ffm / .ffs-band blocks (/assets/social.css),
@@ -5787,6 +5789,7 @@ if ('serviceWorker' in navigator) {
     <button class="vibe-chip" type="button" onclick="vibeSearch(t('vibe.chaos'))">🎢 <span data-i18n="vibe.chaos">Pure chaos &amp; twists</span></button>
     <button class="vibe-chip" type="button" onclick="vibeSearch(t('vibe.soul'))">❤️‍🩹 <span data-i18n="vibe.soul">Good for the soul</span></button>
   </div>
+  <div id="ffDial"></div>
   <!-- Social strip (tablets + computers; phones get the #ffsFeed twin after the first feed row) -->
   <div class="ffs ffs--hero ffs--desk noskim" role="group" aria-labelledby="ffsHeroLabel" data-ffs-place="hero" data-ffm-after>
     <img class="ffs-bot" src="/assets/ff-bot-sm.webp" alt="" width="34" height="58" loading="lazy" decoding="async">
@@ -6522,6 +6525,7 @@ function applyTranslations() {
   if (gridExplore) gridExplore.textContent = t('grid.explore');
   // The note above a recovered grid is built from t()
   _renderClosestNote();
+  if (document.getElementById('ffDial')?.firstChild) window.FFDial.relabel();
   // "Catalog refreshed {when}" (hero band + ratings modal)
   renderCatalogFreshness();
   // Re-render suggestion pills in the new language if the panel is open
@@ -7595,6 +7599,11 @@ function syncContentTypeUI(type) {
   }
   // Feed sections: only shown for movies
   document.getElementById('feedSections').style.display = type === 'movie' ? '' : 'none';
+  // The mood sliders search films only
+  if (document.getElementById('ffDial')?.firstChild) {
+    window.FFDial.reset({ silent: true });
+    window.FFDial.setVisible(type === 'movie');
+  }
 }
 
 function setContentType(type) {
@@ -8339,7 +8348,7 @@ function _renderClosestNote() {
   el.classList.toggle('show', !!n);
   if (!n) { el.textContent = ''; return; }
   el.innerHTML = (n.q ? `<strong>${esc(t('cin.quoted', { q: n.q }))}</strong>` : '') +
-    `<span>${esc(n.text.map(([key, vars]) => t(key, vars)).join(' '))}</span>` +
+    `<span>${esc(n.text.map(([key, vars]) => t(key, typeof vars === 'function' ? vars() : vars)).join(' '))}</span>` +
     (n.action ? `<button type="button">${esc(t(n.action.key))}</button>` : '');
   if (n.action) el.querySelector('button').onclick = n.action.run;
 }
@@ -8454,6 +8463,50 @@ async function _recoverEmptyGrid() {
     window.FFBot?.set('confused');
   }
 }
+
+/* ── The Vibe Dial (mood sliders, FFDial in /assets/dial.js) ─────────────
+   Letting go of a slider fills the normal grid from /api/vibe-dial. Words in the search box choose the
+   films and the dial orders them. Shares _closestSeq with the fallback: any new search cancels it.
+   Films only (the vibe index has no series), so the TV tab hides it. */
+async function runDial(dial) {
+  _cancelClosest();
+  const seq = _closestSeq, stale = () => seq !== _closestSeq;
+  const controller = _closestAbort = new AbortController();
+  const text = document.getElementById('searchInput').value.trim();
+  const feedEl = document.getElementById('feedSections');
+  if (feedEl) { feedEl.style.display = 'none'; feedEl.classList.remove('feed-animate-in'); }
+  document.getElementById('countRow')?.classList.add('searching');
+  applyBrowseCollapse();
+  document.getElementById('emptyState').classList.remove('show');
+  document.getElementById('loadWrap').style.display = 'none';
+  showSkeletons(8);
+  window.FFBot?.set('think');
+  try {
+    const r = await fetch('/api/vibe-dial', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dial, text }), signal: controller.signal,
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    if (stale()) return;
+    const list = (data.movies || []).map(fromTMDb);
+    if (!list.length) { await _showPopular(text, null, stale); return; }
+    _showRecovered(list, { q: text, text: [['dial.showing', () => ({ mood: window.FFDial.summary() })]] });
+    window.FFDial.setSee(true);
+  } catch (e) {
+    if (stale() || e.name === 'AbortError') return;
+    console.warn('[dial] failed:', e.message);
+    _showErrorState();
+    window.FFBot?.set('confused');
+  }
+}
+
+window.FFDial.mount(document.getElementById('ffDial'), {
+  t,
+  onChange: runDial,
+  onReset: () => loadMovies(1, false),
+  onSee: () => document.getElementById('closestNote').scrollIntoView({ behavior: 'smooth', block: 'center' }),
+});
 
 function _showErrorState() {
   _setClosestNote(null);

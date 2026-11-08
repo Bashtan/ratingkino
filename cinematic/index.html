@@ -777,8 +777,10 @@ img.fade.loaded { opacity: 1; }
 <link rel="stylesheet" href="/assets/score.css?v=28152cc2">
 <script src="/assets/score.js?v=0768b69c"></script>
 <script src="/assets/closest.js?v=9f5a832b"></script>
+<link rel="stylesheet" href="/assets/dial.css?v=6cf9db9b">
+<script src="/assets/dial.js?v=e2f2e610"></script>
 <!-- UI strings in 9 languages, shared with Classic (window.FF_I18N). Synchronous on purpose: the page script translates the page before it first paints. -->
-<script src="/assets/i18n.js?v=7dc88417"></script>
+<script src="/assets/i18n.js?v=a94cd699"></script>
 <script>
 /* The saved language (rk_lang, shared with Classic) sets <html lang dir> now,
    so an Arabic page is right-to-left from its first paint. */
@@ -911,6 +913,7 @@ img.fade.loaded { opacity: 1; }
           <div class="chips-track" id="chipsTrack" role="group" aria-label="Quick picks" data-i18n-aria="cin.quickPicks"></div>
         </div>
       </div>
+      <div id="ffDial"></div>
       <!-- Social strip, the same markup as Classic's. -->
       <div class="ffs ffs--hero noskim" role="group" aria-labelledby="ffsHeroLabel" data-ffs-place="hero" data-ffm-after>
     <img class="ffs-bot" src="/assets/ff-bot-sm.webp" alt="" width="34" height="58" loading="lazy" decoding="async">
@@ -1550,6 +1553,43 @@ async function runTitle(q) {
   }
 }
 
+/* ── The Vibe Dial (mood sliders, FFDial in /assets/dial.js) ──
+   Letting go of a slider fills the grid from /api/vibe-dial; words in the search box choose the films
+   and the dial orders them. Films only (the vibe index has no series), so the TV tab hides it. */
+async function runDial(dial) {
+  setChip(null);
+  const text = cmdInput.value.trim();
+  const v = startView('dial', { dial });
+  window.FFBot?.set('think');
+  setHeader(FFDial.summary(), text ? `<span>${esc(quoted(text))}</span>` : '');
+  showSkeletons();
+  setBusy(true);
+  try {
+    const d = await call('/api/vibe-dial', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dial, text }), signal: v.signal, timeout: 12000,
+    });
+    if (stale(v)) return;
+    let items = (d.movies || []).filter(r => r.poster_path).map(r => fromTMDB(r, 'movie'));
+    if (!items.length) {
+      const pop = await tmdb(typeCfg('movie').trending, { page: 1 }, { signal: v.signal });
+      if (stale(v)) return;
+      items = (pop.results || []).filter(r => r.poster_path).map(r => fromTMDB(r, 'movie'));
+      setHeader(FFDial.summary(), `<span>${esc(t('closest.popular'))}</span>`);
+    }
+    renderItems(v, items);
+    FFDial.setSee(true);
+    window.FFBot?.found(false);
+    announce(t('dial.showing', { mood: FFDial.summary() }));
+  } catch (e) {
+    if (stale(v) || isAbort(e)) return;
+    showError(() => runDial(dial));
+    window.FFBot?.set('confused');
+  } finally {
+    if (!stale(v)) setBusy(false);
+  }
+}
+
 /* A title that matches nothing never ends the search: the closest films to its vibe (FFClosest,
    /assets/closest.js), else what's trending. The vibe index has films only, so the TV tab goes
    straight to Trending and offers the search on Films. */
@@ -1620,7 +1660,7 @@ function focusSearch() {
   cmdInput.focus({ preventScroll: true });
 }
 mobSearchBtn.addEventListener('click', focusSearch);
-clearBtn.addEventListener('click', () => { setInputs(''); showHome(); });
+clearBtn.addEventListener('click', () => { setInputs(''); FFDial.reset({ silent: true }); showHome(); });
 
 /* ── Typing placeholder ── */
 (function typewriter() {
@@ -1704,6 +1744,8 @@ function setCtype(next, { reload = true } = {}) {
   activeChip = null;
   applyTypeCopy();
   $('#chips').scrollLeft = 0;
+  FFDial.reset({ silent: true });
+  FFDial.setVisible(ctype === 'movie');
   if (!reload) return;
   setInputs('');
   showHome();
@@ -2365,9 +2407,11 @@ function relabel() {
   QV.cache.clear();
   if (!view) return;                           // still booting: showHome() comes next
   clearLabel.textContent = t(view.kind === 'watchlist' ? 'results.close' : 'cin.clear');
+  FFDial.relabel();
   if (view.kind === 'home') showHome();
   else if (view.kind === 'discover') runDiscover(view.chip);
   else if (view.kind === 'title') runTitle(view.q);
+  else if (view.kind === 'dial') runDial(view.dial);
   else if (view.kind === 'watchlist') showWatchlist();
 }
 
@@ -2411,6 +2455,8 @@ async function openDeepLink() {
    BOOT
 ═══════════════════════════════════════════════════════════════ */
 try { if (sessionStorage.getItem('ff_ctype') === 'tv') ctype = 'tv'; } catch { /* not remembered */ }
+FFDial.mount($('#ffDial'), { t, onChange: runDial, onReset: showHome, onSee: revealResults });
+FFDial.setVisible(ctype === 'movie');
 applyTypeCopy();
 syncWL();
 showSkeletons(18);
