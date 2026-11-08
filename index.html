@@ -348,7 +348,6 @@ header {
   opacity: 1;
   transition: opacity 0.35s ease;
 }
-.search-ph-overlay.ph-fading { opacity: 0; }
 /* Hide when user is typing, focused, or in AI mode */
 .search-wrap.typing .search-ph-overlay,
 .search-wrap:focus-within .search-ph-overlay,
@@ -5432,26 +5431,26 @@ if ('serviceWorker' in navigator) {
      render them identically. Linked after the main <style> on purpose: its
      rules must win over this file's own .logo rules (same values, plus the
      fixed logo width and the phone-only wordmark hide). -->
-<link rel="stylesheet" href="/assets/layout-switch.css?v=8b45db4c">
-<script src="/assets/layout-switch.js?v=8b45db4c" defer></script>
+<link rel="stylesheet" href="/assets/layout-switch.css?v=25800d7f">
+<script src="/assets/layout-switch.js?v=3b28858d" defer></script>
 <!-- Touch baseline + bottom-sheet drag, shared with /cinematic/. -->
-<link rel="stylesheet" href="/assets/touch.css?v=fc8fd233">
+<link rel="stylesheet" href="/assets/touch.css?v=9a940d58">
 <!-- Social links + corner mascot, shared with /cinematic/. -->
 <link rel="stylesheet" href="/assets/social.css?v=6846bb47">
 <script src="/assets/social.js?v=38dce9fa" defer></script>
 <!-- Reloads a page left open across a deploy, when it comes back after 10+ min away (/build.json). -->
 <script src="/assets/fresh.js?v=887c34fa" defer></script>
-<script src="/assets/touch.js?v=fc8fd233" defer></script>
+<script src="/assets/touch.js?v=271cca50" defer></script>
 <!-- Watchlist storage, shared with /cinematic/: one typed list (rk_watchlist_v2). Synchronous on purpose: initWatchlist() below reads it at once. -->
 <script src="/assets/watchlist.js?v=64c31e42"></script>
 <!-- The FindFilm score (formula, first-exposure tip) and the closest-films fallback: shared with Cinematic. -->
 <link rel="stylesheet" href="/assets/score.css?v=28152cc2">
 <script src="/assets/score.js?v=0768b69c"></script>
-<script src="/assets/closest.js?v=9f5a832b"></script>
+<script src="/assets/closest.js?v=342743a9"></script>
 <link rel="stylesheet" href="/assets/dial.css?v=5f3e602f">
 <script src="/assets/dial.js?v=47ab0774"></script>
 <!-- UI strings in 9 languages, shared with Cinematic (window.FF_I18N → TRANSLATIONS). Synchronous on purpose: the page script reads it at once. -->
-<script src="/assets/i18n.js?v=886252e0"></script>
+<script src="/assets/i18n.js?v=3ea509b2"></script>
 </head>
 <body>
 <!-- Social brand icons for the .ffs / .ffm / .ffs-band blocks (/assets/social.css),
@@ -5651,11 +5650,11 @@ if ('serviceWorker' in navigator) {
         <svg class="sw-mode-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <div class="sw-mode-menu" id="smMenu" role="listbox" aria-label="Search mode">
-        <button class="sw-mode-opt active" id="smTitle" type="button" role="option" aria-selected="true" onclick="setSearchMode('title')">
+        <button class="sw-mode-opt active" id="smTitle" type="button" role="option" aria-selected="true" onclick="chooseSearchMode('title')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <span data-i18n="search.modeTitle">By Title</span>
         </button>
-        <button class="sw-mode-opt" id="smPlot" type="button" role="option" aria-selected="false" onclick="setSearchMode('ai')">
+        <button class="sw-mode-opt" id="smPlot" type="button" role="option" aria-selected="false" onclick="chooseSearchMode('ai')">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
           <span data-i18n="search.modePlot">Describe what you remember</span>
         </button>
@@ -6456,8 +6455,6 @@ function applyTranslations() {
     // Embedded mode-selector trigger label (no data-i18n so it tracks SEARCH_MODE, not a fixed key)
     const _smLabel = document.getElementById('smLabel');
     if (_smLabel) _smLabel.textContent = SEARCH_MODE === 'ai' ? t('search.modePlot') : t('search.modeTitle');
-  } else if (_phOverlay && !_searchInp?.value) {
-    _phOverlay.textContent = getDesktopPlaceholders()[_deskPhIdx];
   }
   // Switcher button: show native name of current language
   const nameEl = document.getElementById('langBtnName');
@@ -6852,7 +6849,7 @@ let DETECTED_COUNTRY = 'US';  // ISO-3166-1 from /api/geo-lang; used for watch p
 // ── AI search state ──────────────────────────────────────────
 let CACHE_MOVIES      = [];    // snapshot of the 119 KV movies for AI search
 let AI_SEARCH_ACTIVE  = false;
-let SEARCH_MODE       = 'title';   // 'title' = exact title search · 'ai' = plot/mood semantic search
+let SEARCH_MODE       = 'ai';      // 'ai' = vibe/plot search, Enter's default (a plain film name still gets the title search) · 'title' = title search only
 let AI_SEARCH_TIMER   = null;
 let _lastQuery        = '';        // last AI query for follow-up context
 let _aiSearchSeq      = 0;         // generation counter — discards stale responses from superseded calls
@@ -6986,7 +6983,7 @@ function resetToHome(e) {
   _aiVibeTags.clear();
   hideAIBanner();
   clearFollowUps();
-  setSearchMode('title');
+  setSearchMode(_savedSearchMode());
   document.getElementById('searchWrap')?.classList.remove('ai-active', 'typing');
   document.getElementById('searchModeLabel')?.classList.remove('show');
   document.getElementById('countRow')?.classList.remove('searching');
@@ -7501,6 +7498,7 @@ function setGenre(genreId) {
 // movie-only feed rows. Split out of setContentType() so init() can enter the TV tab
 // for a ?TVShows= deep link before anything has loaded.
 function syncContentTypeUI(type) {
+  _paintSearchPlaceholder();
   // Toggle button states
   document.getElementById('ctMovies').classList.toggle('active', type === 'movie');
   document.getElementById('ctTV').classList.toggle('active', type === 'tv');
@@ -8442,11 +8440,7 @@ function resetAllFilters() {
   document.getElementById('searchWrap')?.classList.remove('typing', 'ai-active');
   // Reset overlay
   const overlay = document.getElementById('searchPhOverlay');
-  if (overlay) {
-    _deskPhIdx = 0;
-    overlay.textContent = getDesktopPlaceholders()[0];
-    overlay.classList.remove('ph-fading');
-  }
+  if (overlay) overlay.textContent = searchModePlaceholder();
   // Genre
   ACTIVE_GENRE = '';
   document.querySelectorAll('.gpill').forEach(p => p.classList.remove('active'));
@@ -8802,39 +8796,18 @@ function expandBrowse() {
 /* Rotating example queries shown in the placeholder — localised via t() */
 function getAIExamples() { return [0,1,2,3,4,5,6,7,8,9].map(i => t(`ai.example.${i}`)); }
 
-/* ── Animated desktop placeholder overlay ─────────────────────────
-   Cycles through 4 NLP-education strings with a smooth opacity fade.
-   The overlay is used instead of the native ::placeholder so we can
-   animate the transition. Native placeholder kept for a11y only.    */
-function getDesktopPlaceholders() {
-  return [t('search.ph0'), t('search.ph1'), t('search.ph2'), t('search.ph3')];
-}
-let _deskPhIdx   = 0;
-let _deskPhTimer = null;
-
-function _cycleDeskPh() {
-  const inp     = document.getElementById('searchInput');
-  const overlay = document.getElementById('searchPhOverlay');
-  if (!overlay) return;
-  if (SEARCH_MODE === 'title') return; // Title mode uses a fixed placeholder — no rotation
-  if (document.activeElement === inp || inp.value || IS_LOADING || AI_SEARCH_ACTIVE) return; // paused while focused / typing / fetching
-  overlay.classList.add('ph-fading');
-  setTimeout(() => {
-    _deskPhIdx = (_deskPhIdx + 1) % 4;
-    overlay.textContent = getDesktopPlaceholders()[_deskPhIdx];
-    overlay.classList.remove('ph-fading');
-  }, 350);
-}
-
-function initDesktopPlaceholder() {
-  const overlay = document.getElementById('searchPhOverlay');
-  if (!overlay) return;
-  _deskPhTimer = setInterval(_cycleDeskPh, 3800);
-}
-
 /* Returns the current mode's placeholder text (localized). */
 function searchModePlaceholder() {
+  if (CONTENT_TYPE === 'tv') return t('cin.ph.tv');    // the vibe index has films only
   return SEARCH_MODE === 'ai' ? t('search.modePlotPh') : t('search.modeTitlePh');
+}
+
+function _paintSearchPlaceholder() {
+  const inp     = document.getElementById('searchInput');
+  const overlay = document.getElementById('searchPhOverlay');
+  const ph = searchModePlaceholder();
+  if (inp) inp.placeholder = ph;                                   // a11y / native fallback
+  if (overlay && (!inp || !inp.value)) overlay.textContent = ph;   // visible custom overlay
 }
 
 /* Switch between 'title' (exact-title) and 'ai' (plot/mood semantic) search modes.
@@ -8847,8 +8820,6 @@ function setSearchMode(mode) {
   const smTitle = document.getElementById('smTitle');
   const smPlot  = document.getElementById('smPlot');
   const wrap    = document.getElementById('searchWrap');
-  const overlay = document.getElementById('searchPhOverlay');
-  const inp     = document.getElementById('searchInput');
   if (smTitle) { smTitle.classList.toggle('active', !isAI); smTitle.setAttribute('aria-selected', String(!isAI)); }
   if (smPlot)  { smPlot.classList.toggle('active', isAI);   smPlot.setAttribute('aria-selected', String(isAI)); }
   if (wrap)    wrap.classList.toggle('mode-ai', isAI);
@@ -8858,14 +8829,17 @@ function setSearchMode(mode) {
   if (swMode)  swMode.classList.toggle('is-ai', isAI);
   if (smLabel) smLabel.textContent = isAI ? t('search.modePlot') : t('search.modeTitle');
   closeModeMenu();
-  // Fixed per-mode placeholder (supersedes the rotating hint once a mode is chosen)
-  const ph = searchModePlaceholder();
-  if (inp) inp.placeholder = ph;                       // a11y / native fallback
-  if (overlay && (!inp || !inp.value)) {               // visible custom overlay
-    _deskPhIdx = 0;
-    overlay.textContent = ph;
-  }
-  try { localStorage.setItem('rk_searchMode', mode); } catch(e) {}
+  _paintSearchPlaceholder();
+}
+
+/* The visitor picked a mode in the menu: only this is remembered. (The old key, rk_searchMode, was
+   rewritten on every load, so it can't tell a choice from the old 'title' default.) */
+function chooseSearchMode(mode) {
+  setSearchMode(mode);
+  try { localStorage.setItem('ff_search_mode', mode); } catch(e) {}
+}
+function _savedSearchMode() {
+  try { return localStorage.getItem('ff_search_mode') === 'title' ? 'title' : 'ai'; } catch(e) { return 'ai'; }
 }
 
 /* ── Embedded mode-selector dropdown (open/close) ──────────────────
@@ -8921,13 +8895,8 @@ function syncSearchPlacement() {
 }
 syncSearchPlacement();
 
-// Restore saved mode (defaults to Title) and paint the initial placeholder
-initDesktopPlaceholder();
-(function initSearchMode() {
-  let saved = 'title';
-  try { saved = localStorage.getItem('rk_searchMode') || 'title'; } catch(e) {}
-  setSearchMode(saved === 'ai' ? 'ai' : 'title');
-})();
+// Restore the visitor's choice (default: vibe search) and paint the placeholder
+setSearchMode(_savedSearchMode());
 
 /* ── Search suggestion pills ──────────────────────────────────────
    Shown on focus when the input is empty; each pill fires an AI
@@ -8978,9 +8947,6 @@ function _applySuggestion(text) {
   if (!inp) return;
   inp.value = text;
   wrap.classList.add('typing');
-  // Hide the animated overlay (it checks inp.value on next tick anyway)
-  const overlay = document.getElementById('searchPhOverlay');
-  if (overlay) overlay.classList.add('ph-fading');
   hideSuggestions();
   saveSession();
   // Prefer AI semantic search for NL phrases; fall back to title search
@@ -9759,15 +9725,21 @@ document.getElementById('searchInput').addEventListener('input', function() {
   applyFilters();
 });
 
-// Enter key runs the search using the logic for the active mode:
-//   • Plot/AI mode → semantic aiSearch()  • Title mode → exact-title loadMovies()
-document.getElementById('searchInput').addEventListener('keydown', e => {
+// Enter on films runs the vibe search (aiSearch), unless the visitor chose By Title or the text is
+// plainly a film's name (FFClosest.isTitle). TV has no vibe index, so it's always the title search.
+let _enterSeq = 0;
+document.getElementById('searchInput').addEventListener('keydown', async e => {
   if (e.key !== 'Enter') return;
   clearTimeout(filterTimer);
   clearTimeout(AI_SEARCH_TIMER);
-  const q = e.target.value.trim();
+  const seq = ++_enterSeq;
+  const inp = e.target;
+  const q = inp.value.trim();
   if (!q) { clearAISearch(); return; }
-  if (SEARCH_MODE === 'ai' && CACHE_MOVIES.length && CONTENT_TYPE === 'movie') {
+  const wantsVibe = SEARCH_MODE === 'ai' && CONTENT_TYPE === 'movie'
+    && !(await FFClosest.isTitle(q, TMDB_LANG[CURRENT_LANG] || 'en-US'));
+  if (seq !== _enterSeq || inp.value.trim() !== q) return;   // kept typing, or pressed Enter again
+  if (wantsVibe) {
     aiSearch(q);
     // Desktop: defer blur until the AI Results modal's own opacity fade-in
     // (.airx-backdrop/.airx-modal, both `transition: opacity .3s`) has visually gone
@@ -9785,13 +9757,13 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
     // before the sheet animates. (The glow-collapse this was avoiding is already a
     // non-issue on touch — the mobile override above removes the wide glow and its
     // transition entirely.)
-    if (IS_TOUCH) e.target.blur();
-    else          setTimeout(() => e.target.blur(), 300);
+    if (IS_TOUCH) inp.blur();
+    else          setTimeout(() => inp.blur(), 300);
   } else {
     loadMovies(1, false);
     // No modal opens for a plain title search, so there's nothing to hide the
     // focus-loss transition behind — blur right away (next frame) as before.
-    requestAnimationFrame(() => e.target.blur());
+    requestAnimationFrame(() => inp.blur());
   }
 });
 

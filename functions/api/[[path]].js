@@ -71,6 +71,11 @@ export async function onRequest({ request, env, params, waitUntil }) {
     return handleTitleSearch(url, env, cors, waitUntil);
   }
 
+  /* ── /api/is-title ── is this text plainly a film's name? Enter's router, no AI ── */
+  if (path === '/is-title') {
+    return handleIsTitle(url, env, cors);
+  }
+
   /* ── /api/ai-search ── semantic movie search via Cloudflare AI ── */
   if (path === '/ai-search') {
     return handleAISearch(request, env, cors, waitUntil);
@@ -870,6 +875,59 @@ async function _titleFixHits(type, fixes, lang, env) {
   return found.flat().map(x => x.r).filter(r => !seen.has(r.id) && seen.add(r.id));
 }
 
+// TMDB's matches for the text as typed, best first: [{r, s}]. Throws when TMDB fails.
+async function _titleMatches(type, raw, lang, env) {
+  const key = _titleKey(raw);
+  // "Dune 1984" / "Dune (1984)": also the title alone, in that year. "Blade Runner 2049" stays whole.
+  const ym = raw.match(/^(.+?)[\s(]+((?:18|19|20)\d\d)\)?$/);
+  const yr = ym && Number(ym[2]) <= new Date().getUTCFullYear() + 3 ? Number(ym[2]) : null;
+  const base = yr ? ym[1].trim() : null;
+  const [whole, inYear] = await Promise.all([
+    _tmdbTitleSearch(type, raw, null, lang, env),
+    base ? _tmdbTitleSearch(type, base, yr, lang, env).catch(() => []) : [],
+  ]);
+  const best = new Map();                      // id → {r, s}: the better reading of each result
+  for (const x of [..._titleRank(whole, key, null), ..._titleRank(inYear, _titleKey(base), yr)]) {
+    if (!best.has(x.r.id) || best.get(x.r.id).s < x.s) best.set(x.r.id, x);
+  }
+  return [...best.values()].sort((a, b) => b.s - a.s || (a.s >= 3 ? (b.r.vote_count || 0) - (a.r.vote_count || 0) : 0));
+}
+
+/* ─── /api/is-title — does Enter mean a film's name or a description? ───
+ * GET ?q=&lang=<TMDB locale> → { title: boolean }. One TMDB search, no AI.
+ * The search box invites a description, so Enter runs the vibe search unless the text is plainly
+ * a known film's name. Vote floors keep descriptions out: "love" or "horror" are also obscure
+ * films, so one word needs a well-known film. A franchise's name ("lord of the rings",
+ * "harry potter") counts when it starts a well-known title. Anything unsure is false.
+ */
+const TITLE_MAX_WORDS = 8;
+const TITLE_VOTES = { oneWord: 1000, exact: 100, franchise: 1000 };
+const TITLE_GENRE_WORDS = new Set(['action', 'adventure', 'animation', 'comedy', 'crime', 'documentary', 'drama', 'family',
+  'fantasy', 'history', 'horror', 'music', 'mystery', 'romance', 'thriller', 'war', 'western', 'science fiction', 'sci fi',
+  'romantic comedy', 'dark comedy', 'true crime', 'film noir', 'noir', 'coming of age']);
+
+async function handleIsTitle(url, env, cors) {
+  const answer = title => new Response(JSON.stringify({ title }), { headers: { 'Content-Type': 'application/json', ...cors } });
+  const raw = (url.searchParams.get('q') || '').trim().replace(/\s+/g, ' ').slice(0, 200);
+  const rawLang = (url.searchParams.get('lang') || 'en-US').trim();
+  const lang = /^[a-z]{2}(-[A-Z]{2})?$/.test(rawLang) ? rawLang : 'en-US';
+  const key = _titleKey(raw);
+  const words = key ? _titleBare(key).split(' ').length : 0;
+  if (!words || words > TITLE_MAX_WORDS || TITLE_GENRE_WORDS.has(key)) return answer(false);
+  let ranked;
+  try {
+    ranked = await _titleMatches('movie', raw, lang, env);
+  } catch (e) {
+    console.error(`[is-title] TMDB failed q="${raw.slice(0, 80)}" ${e.message}`);
+    return answer(false);
+  }
+  return answer(ranked.some(({ r, s }) => {
+    const votes = r.vote_count || 0;
+    if (s >= 4) return votes >= (words === 1 ? TITLE_VOTES.oneWord : TITLE_VOTES.exact);
+    return s >= 3 && words >= 2 && votes >= TITLE_VOTES.franchise;
+  }));
+}
+
 async function handleTitleSearch(url, env, cors, waitUntil) {
   const t0 = Date.now();
   const json = (body, status = 200) =>
@@ -883,22 +941,10 @@ async function handleTitleSearch(url, env, cors, waitUntil) {
   if (!raw) return json({ results: [], corrected: null, ai: false });
 
   const key = _titleKey(raw);
-  // "Dune 1984" / "Dune (1984)": also the title alone, in that year. "Blade Runner 2049" stays whole.
-  const ym = raw.match(/^(.+?)[\s(]+((?:18|19|20)\d\d)\)?$/);
-  const yr = ym && Number(ym[2]) <= new Date().getUTCFullYear() + 3 ? Number(ym[2]) : null;
-  const base = yr ? ym[1].trim() : null;
 
   let ranked;
   try {
-    const [whole, inYear] = await Promise.all([
-      _tmdbTitleSearch(type, raw, null, lang, env),
-      base ? _tmdbTitleSearch(type, base, yr, lang, env).catch(() => []) : [],
-    ]);
-    const best = new Map();                      // id → {r, s}: the better reading of each result
-    for (const x of [..._titleRank(whole, key, null), ..._titleRank(inYear, _titleKey(base), yr)]) {
-      if (!best.has(x.r.id) || best.get(x.r.id).s < x.s) best.set(x.r.id, x);
-    }
-    ranked = [...best.values()].sort((a, b) => b.s - a.s || (a.s >= 3 ? (b.r.vote_count || 0) - (a.r.vote_count || 0) : 0));
+    ranked = await _titleMatches(type, raw, lang, env);
   } catch (e) {
     console.error(`[title-search] TMDB failed q="${raw.slice(0, 80)}" ${e.message}`);
     return json({ error: 'Search failed', detail: e.message }, 502);

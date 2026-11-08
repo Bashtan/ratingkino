@@ -8,13 +8,17 @@
    as it does for keyboard mash; or it failed or timed out), and the page shows
    popular titles instead. Films only: the vibe index has no series yet.
 
+   window.FFClosest.isTitle(query, lang, signal) → true when the text is plainly a
+   film's name, so Enter runs the title search instead of the vibe search. Never
+   rejects: unsure, failed or slower than TITLE_WAIT_MS is false (the vibe search).
+
    Loaded synchronously in <head> by both documents as ?v=<8-char content hash>.
    After editing, bump ?v= in index.html and cinematic/index.html:
      shasum -a 256 assets/closest.js | cut -c1-8
    ═══════════════════════════════════════ */
 (function () {
   'use strict';
-  var TIMEOUT_MS = 15000;
+  var TIMEOUT_MS = 15000, TITLE_WAIT_MS = 900;
 
   function find(query, signal) {
     var ctl = new AbortController();
@@ -40,5 +44,19 @@
     });
   }
 
-  window.FFClosest = { find: find };
+  function isTitle(query, lang, signal) {
+    var ctl = new AbortController();
+    var timer = setTimeout(function () { ctl.abort(); }, TITLE_WAIT_MS);
+    if (signal) {
+      if (signal.aborted) ctl.abort();
+      else signal.addEventListener('abort', function () { ctl.abort(); }, { once: true });
+    }
+    return fetch('/api/is-title?' + new URLSearchParams({ q: query, lang: lang || 'en-US' }), { signal: ctl.signal })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { return !!(d && d.title); })
+      .catch(function () { return false; })
+      .finally(function () { clearTimeout(timer); });
+  }
+
+  window.FFClosest = { find: find, isTitle: isTitle };
 })();
