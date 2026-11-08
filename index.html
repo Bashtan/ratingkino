@@ -3717,6 +3717,9 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
   }
   .vibe-chip { flex: 0 0 auto; }
   .search-wrap--hero .search-input { height: 46px; font-size: 15px; }
+  /* The short placeholder needs the room: it matches the typed text, and the music button goes (phones only). */
+  .search-wrap--hero .search-ph-overlay { left: 4px; right: 0; font-size: 15px; }
+  #searchMusicBtn { display: none; }
   .search-wrap--hero .sw-mode-trigger { height: 44px; font-size: 12px; padding: 0 8px 0 9px; gap: 4px; }
   /* Mode menu (#smMenu) — its nowrap options made it as wide as the longest label.
      French "Décrivez ce dont vous vous souvenez" is 310px, so at 320px the menu ran
@@ -5447,10 +5450,10 @@ if ('serviceWorker' in navigator) {
 <link rel="stylesheet" href="/assets/score.css?v=28152cc2">
 <script src="/assets/score.js?v=0768b69c"></script>
 <script src="/assets/closest.js?v=342743a9"></script>
-<link rel="stylesheet" href="/assets/dial.css?v=5f3e602f">
+<link rel="stylesheet" href="/assets/dial.css?v=2cf76d83">
 <script src="/assets/dial.js?v=47ab0774"></script>
 <!-- UI strings in 9 languages, shared with Cinematic (window.FF_I18N → TRANSLATIONS). Synchronous on purpose: the page script reads it at once. -->
-<script src="/assets/i18n.js?v=3ea509b2"></script>
+<script src="/assets/i18n.js?v=ab91c98c"></script>
 </head>
 <body>
 <!-- Social brand icons for the .ffs / .ffm / .ffs-band blocks (/assets/social.css),
@@ -8796,10 +8799,12 @@ function expandBrowse() {
 /* Rotating example queries shown in the placeholder — localised via t() */
 function getAIExamples() { return [0,1,2,3,4,5,6,7,8,9].map(i => t(`ai.example.${i}`)); }
 
+const PHONE_SEARCH = '(max-width: 768px)';   // the hero's phone layout
 /* Returns the current mode's placeholder text (localized). */
 function searchModePlaceholder() {
   if (CONTENT_TYPE === 'tv') return t('cin.ph.tv');    // the vibe index has films only
-  return SEARCH_MODE === 'ai' ? t('search.modePlotPh') : t('search.modeTitlePh');
+  if (SEARCH_MODE !== 'ai') return t('search.modeTitlePh');
+  return t(matchMedia(PHONE_SEARCH).matches ? 'search.modePlotPhShort' : 'search.modePlotPh');   // the whole line doesn't fit beside the icons
 }
 
 function _paintSearchPlaceholder() {
@@ -8897,6 +8902,7 @@ syncSearchPlacement();
 
 // Restore the visitor's choice (default: vibe search) and paint the placeholder
 setSearchMode(_savedSearchMode());
+matchMedia(PHONE_SEARCH).addEventListener('change', _paintSearchPlaceholder);
 
 /* ── Search suggestion pills ──────────────────────────────────────
    Shown on focus when the input is empty; each pill fires an AI
