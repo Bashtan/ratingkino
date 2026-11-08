@@ -4,15 +4,18 @@
 
 ## ⚡ Most Recent Session (2026-11-08d) — Hero Cleanup: Search and First Films Above the Fold
 
-Committed on `main`, **NOT deployed yet: waiting for the owner's review.** Live is still Pages `276fca60` from `8865ae5`.
+All commits on `main`, live on https://findfilm.ai since 2026-11-08: Pages production **`169f4649`** from `c71c486` (`/build.json` = `20261108T163106Z-c71c486`; `./deploy.sh`: 18/18 sensitive paths unpublished, custom domains clean).
 
 | Commit | Feature |
 |--------|---------|
 | `0bb42c7` | **Minimal hero, both layouts.** Removed the hero social strip (`.ffs--hero`, `.ffs--desk`; footer `.ffs-band` already has the links; phone twin `#ffsFeed` kept), `data-ffm-after` moved to `#heroSearch` / Cinematic's `.chips-wrap`. Removed hero mascot `#ffh` (`heroBot`, `hello`, `sayHello`, `.ffh*`). Removed voice-language picker `#voiceLangWrap` (`.voice-lang-*`, `.vl-*`): `_voiceLang()` + `VOICE_BCP` now use `CURRENT_LANG`. `search.modeTitlePh` = "Describe the vibe or plot..." in 9 languages (my translations); `mascot.hello`, `voicelang.title` removed. `FFDial.mount` options **`toggleHost`, `toggleClass`** + **`FFDial.placeToggle(row)`**: "Set the mood" is the first chip (`#vibeChips`; Cinematic `chipsTrack`, re-placed by `renderChips()`). `.hero-sub-row` puts `#heroTitle` and `.how-ratings-link` on one line. |
+| `c71c486` | **Enter = vibe search; compact Cinematic hero.** New **`GET /api/is-title?q=&lang=`** → `{title}` (`handleIsTitle()`, one TMDB search, no AI; `_titleMatches()` factored out of `handleTitleSearch()`; `TITLE_VOTES`, `TITLE_MAX_WORDS`, `TITLE_GENRE_WORDS`): exact film name with ≥100 votes (one word ≥1000; genre words never), or a franchise name starting a ≥1000-vote title. Client **`FFClosest.isTitle(q, lang, signal)`** (900 ms cap, false when unsure). **Classic:** `SEARCH_MODE` defaults to `'ai'`; Enter handler with `_enterSeq`; `chooseSearchMode()` / `_savedSearchMode()` persist only a menu choice under **`ff_search_mode`** (`rk_searchMode` was rewritten on every load, so it can't tell a choice from the old default); `_paintSearchPlaceholder()`; TV shows `cin.ph.tv`; rotating hints gone (`getDesktopPlaceholders`, `_cycleDeskPh`, `search.ph0-3`, `.ph-fading`). `search.modePlotPh` = "Describe the vibe or plot...", `search.modeTitlePh` restored. **Cinematic:** `runVibe(q)` (view kind `'vibe'`; no vibe answer → `runTitle(q, {vibeTried:true})`), TV stays `runTitle`. Hero: `.eyebrow` and `.hero-sub` removed (`cin.eyebrow`, `cin.heroSub.*` etc. deleted), no `min-height`, `.hero-title` smaller, `.cmd-field` 58px; `cin.heroTitle` = "What do you feel like watching?" (my translations). |
 
 **Measured, Classic 1440×900:** tabs moved from 395 to 248, feed from 435 to 288, first cards from 512 to about 365. Open dial panel pushes tabs to 418. 1024px and 375px: no sideways scroll, chips fit at 1024.
 
-**Not changed, for the owner to decide:** the default mode is still title search (Enter runs a title search; descriptions fall to the closest-films fallback; `SEARCH_MODE` 'ai' would make Enter a vibe search). Cinematic's full-height hero (720px at 1440×900) was not compressed.
+**Measured, Cinematic 1440×900:** hero 720 → 320px, first posters at 427–695, so the whole first row is above the fold (375px phone: hero 406, no sideways scroll).
+
+**Routing, verified locally and on live `/api/is-title`:** Inception, godfather, matrix, lord of the rings, harry potter, Dune 1984, Spider-Man, heat → title. horror, comedy, cozy mystery, sad movie about a dog, dark, godfater → vibe (the vibe search puts *The Godfather* first for "godfater"). **Known trade-off:** "love" and "road trip" are well-known films, so they go to the title search. **Classic phones:** `submitMobSearch()` was already vibe-first and has no title check, on purpose: a wait there leaves the screen empty after Send.
 
 ---
 
@@ -3477,6 +3480,7 @@ Taste profile stored in `localStorage['rk_taste_v1']`: `{ genres: {}, directors:
 | `ff_welcome_seen` | `'1'` once the mascot's first-visit tip has been shown (`FFBot.welcome`, `assets/social.js`) |
 | `ff_flag_vibe` | `'0'` = this browser opted out of vibe search (`?vibe=0`; `?vibe=1` clears it). Read by Classic (`readVibeFlag()` / `vibeSearchOn()`) and Cinematic (`runAI()`). Missing = on, the default since 2026-10-31 |
 | **REMOVED 2026-11-08 (hero cleanup):** `ff_hello_seen` | `'1'` once Classic's hero mascot has said "Need a recommendation?" by itself, or the search was already in use (`hello()`, `assets/social.js`) |
+| `ff_search_mode` | `'title'` or `'ai'`, only when the visitor picks a mode in Classic's search menu (`chooseSearchMode()`); absent = vibe search. |
 | `ff_fresh_reload` (**sessionStorage**) | The `/build.json` build `assets/fresh.js` last reloaded the page for — it never reloads twice for the same build |
 | `rk_ios_pwa_dismissed` | Timestamp of last iOS PWA bottom-sheet dismiss (15-day cooldown) |
 | `rk_install_banner_dismissed` | Timestamp of last mobile install banner dismiss (7-day cooldown) |
@@ -3529,7 +3533,7 @@ The site is fully installable as a PWA on all platforms.
 
 ## Pending / Next Steps
 
-- [ ] **Hero cleanup: owner review, then `./deploy.sh --branch main`.** Decide: Enter = vibe search by default? Compress Cinematic's hero?
+- [x] **Hero cleanup** (`0bb42c7`, `c71c486`), live on Pages `169f4649`. Owner to review the new `search.modePlotPh` and `cin.heroTitle` translations.
 
 - [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
 - [x] **Phase 1 on a real phone** (owner, 2026-11-08): tip placement, animation and the fallback approved.
