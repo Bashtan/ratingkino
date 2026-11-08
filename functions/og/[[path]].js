@@ -1,11 +1,11 @@
 /**
- * Cloudflare Pages Function — /og/v1/<movie|tv>/<id>.jpg: a title's link-preview card.
+ * Cloudflare Pages Function — /og/v2/<movie|tv>/<id>.jpg: a title's link-preview card.
  *
  * functions/index.js points og:image / twitter:image of a shared title at this
  * route. The card is 1200×630 (the 1.91:1 that X, Facebook, LinkedIn and Slack
  * show uncropped): the TMDB backdrop, darkened, behind the poster, the title in
  * the site's Montserrat, year · genres · runtime, and the FindFilm score with
- * its sources, the same weighted average as calcAvg() in index.html.
+ * its sources: 50% IMDb, 25% Rotten Tomatoes, 25% Metacritic (FFScore in assets/score.js).
  *
  * Pipeline: TMDB (+ OMDb for IMDb / Rotten Tomatoes / Metacritic) → an element
  * tree → satori (layout + text as paths → SVG) → resvg (SVG → RGBA pixels) →
@@ -13,8 +13,10 @@
  * engines are bundled by wrangler from package.json's dependencies; the fonts
  * are static assets (assets/og/*.ttf, read through env.ASSETS).
  *
- * - A finished card is kept in KV for a week (`ogimg:v1:<type>:<id>`) and in the
- *   colo's cache. Bump the `v1` in the path (and CARD_VERSION) to redraw them all.
+ * - A finished card is kept in KV for a week (`ogimg:<version>:<type>:<id>`) and in
+ *   the colo's cache. To redraw them all, bump CARD_VERSION here and in
+ *   functions/index.js, the share buttons' /og/ URL in both pages, and CARD_URL and
+ *   CARD_KV in sync-worker.js. An older version's URL redirects to the current one.
  * - Missing pieces degrade: no backdrop → the brand gradient; no poster → the
  *   text takes the width; no score → a "coming" date or a plain tagline; a title
  *   the fonts can't draw (CJK, Arabic, …) is left off the card (og:title has it).
@@ -30,7 +32,7 @@ import resvgWasm from '@resvg/resvg-wasm/index_bg.wasm';
 import encodeJpeg, { init as initJpeg } from '@jsquash/jpeg/encode.js';
 import jpegWasm from '@jsquash/jpeg/codec/enc/mozjpeg_enc.wasm';
 
-const CARD_VERSION = 'v1';
+const CARD_VERSION = 'v2';
 const W = 1200, H = 630;
 const TTL_SEC      = 7 * 86400;
 const FALLBACK     = 'https://findfilm.ai/assets/og-image.jpg?v=f27f1f6e';
@@ -54,8 +56,11 @@ export async function onRequestGet(context) {
   const { request, env, params, waitUntil } = context;
   const [version, type, file] = params.path || [];
   const id = /^(\d{1,10})\.jpg$/.exec(file || '')?.[1];
-  if (version !== CARD_VERSION || (type !== 'movie' && type !== 'tv') || !id) {
+  if (!/^v\d+$/.test(version || '') || (type !== 'movie' && type !== 'tv') || !id) {
     return new Response('Not found', { status: 404 });
+  }
+  if (version !== CARD_VERSION) {   // an unfurl that kept an older image URL
+    return Response.redirect(new URL(`/og/${CARD_VERSION}/${type}/${id}.jpg`, request.url).href, 301);
   }
 
   const cache = caches.default;
@@ -227,20 +232,20 @@ function facts(d, type) {
   return parts.join('  ·  ');
 }
 
-// The site's own score (calcAvg() in index.html): IMDb weighted by its votes,
-// Rotten Tomatoes and Metacritic at 1000 each, all on a 10-point scale; TMDB's
-// user score when OMDb has none.
+// The site's own score (FFScore.value in assets/score.js): 50% IMDb, 25% Rotten
+// Tomatoes, 25% Metacritic on a 10-point scale, a missing source left out and the
+// others keeping their proportions; TMDB's user score when OMDb has none.
 function score(od, d) {
   const srcs = [], chips = [];
   const imdb = parseFloat(od?.imdbRating);
   if (imdb > 0) {
-    srcs.push({ v: imdb, w: parseInt(String(od.imdbVotes || '0').replace(/,/g, ''), 10) || 1000 });
+    srcs.push({ v: imdb, w: 0.5 });
     chips.push(['IMDb', imdb.toFixed(1)]);
   }
   const rt = parseInt((od?.Ratings || []).find(r => r.Source === 'Rotten Tomatoes')?.Value, 10);
-  if (rt > 0) { srcs.push({ v: rt / 10, w: 1000 }); chips.push(['RT', `${rt}%`]); }
+  if (rt > 0) { srcs.push({ v: rt / 10, w: 0.25 }); chips.push(['RT', `${rt}%`]); }
   const mc = parseInt(od?.Metascore, 10);
-  if (mc > 0) { srcs.push({ v: mc / 10, w: 1000 }); chips.push(['MC', String(mc)]); }
+  if (mc > 0) { srcs.push({ v: mc / 10, w: 0.25 }); chips.push(['MC', String(mc)]); }
 
   if (srcs.length) {
     const avg = srcs.reduce((s, x) => s + x.v * x.w, 0) / srcs.reduce((s, x) => s + x.w, 0);

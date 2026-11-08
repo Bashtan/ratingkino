@@ -21,7 +21,7 @@
  *   last-sync       – JSON object with timestamp + stats (48 h TTL)
  *   rx:v1:<type>:<id> – FF Bot's arc for a title's trailer (30 d TTL, 00:20 UTC;
  *                     see "Trailer arcs" below)
- *   ogimg:v1:<type>:<id> – a title's link-preview card, written by the Pages site
+ *   ogimg:v2:<type>:<id> – a title's link-preview card, written by the Pages site
  *                     (functions/og/); at 00:40 UTC the listed titles' cards are
  *                     requested so they're drawn ahead of a share (see "Preview cards")
  *
@@ -76,8 +76,8 @@ const RX_MAX_RUN  = 40;     // new arcs per run: 2 subrequests each (TMDB + AI)
 const RX_TTL_SEC  = 60 * 60 * 24 * 30;   // 30 d: a title still listed then gets a fresh arc
 
 // Preview cards (syncPreviewCards): the same lists' link-preview images.
-const CARD_URL    = 'https://findfilm.ai/og/v1';   // CARD_VERSION in functions/og/[[path]].js
-const CARD_KV     = 'ogimg:v1';                    // its KV key prefix
+const CARD_URL    = 'https://findfilm.ai/og/v2';   // CARD_VERSION in functions/og/[[path]].js
+const CARD_KV     = 'ogimg:v2';                    // its KV key prefix
 const CARD_POOL   = 3;                             // cards drawn at once (each ~3–4 s)
 
 export default {
@@ -397,9 +397,9 @@ async function syncTrailerArcs(env) {
 }
 
 /* ─── Preview cards: a shared title's link-preview image, drawn ahead ─────── */
-// Runs at 00:40 UTC. A shared title's preview image, /og/v1/<type>/<id>.jpg
+// Runs at 00:40 UTC. A shared title's preview image, /og/v2/<type>/<id>.jpg
 // (functions/og/[[path]].js on the Pages site), is drawn on its first request
-// in about 3–4 s, then kept in KV for a week (ogimg:v1:<type>:<id>). The titles
+// in about 3–4 s, then kept in KV for a week (ogimg:v2:<type>:<id>). The titles
 // people share most are the ones on the site's lists, so this requests each
 // listed title's card that isn't in KV: when a link is unfurled, it's served
 // in ~20 ms. A card that has expired is drawn again, with that week's scores.

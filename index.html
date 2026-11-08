@@ -1721,6 +1721,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .rtip-tmdb    { color: #01b4e4; }
 .rtip-val { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
 .rtip-denom { font-size: 10px; font-weight: 400; color: rgba(255,255,255,0.4); }
+.rtip-pct { margin-inline-start: auto; font-size: 11px; color: rgba(255,255,255,0.45); }
 
 /* ─── Confidence badge ─── data-quality pill on cards + modal. */
 .conf-badge {
@@ -2502,6 +2503,8 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
 .mr-avg-num { font-size: 46px; font-weight: 900; font-family: 'Montserrat', sans-serif; color: #fff; letter-spacing: -2px; line-height: 1; text-shadow: 0 2px 18px rgba(255,138,0,0.35); }
 .mr-hero-lbl { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; }
 .mr-breakdown { display: flex; align-items: center; gap: 6px; margin-top: 3px; flex-wrap: wrap; }
+.mr-mix { flex-basis: 100%; margin: 0; font-size: 12px; line-height: 1.4; color: var(--muted); }
+.mr-mix-name { display: none; }   /* phones only: .mr-hero-lbl says it on wider screens */
 .mrb-src { display: flex; align-items: center; gap: 4px; }
 .mrb-lbl { font-size: 9.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; }
 .mrb-num { font-size: 13px; font-weight: 800; font-family: 'Montserrat', sans-serif; line-height: 1; }
@@ -3367,23 +3370,6 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
   transform: translateY(-1px);
 }
 /* Zero-result query display */
-.empty-query-wrap { margin: 14px 0 6px; }
-.empty-query-text {
-  display: block; font-size: 15px; font-weight: 500;
-  font-family: 'Inter', sans-serif;
-  color: var(--muted); line-height: 1.6; margin-bottom: 8px;
-}
-/* The quoted query span — styled as a cinematic italic title */
-.empty-query-text span {
-  font-family: 'Cormorant Garamond', serif; font-style: italic;
-  font-size: 22px; font-weight: 700; color: #fff;
-  letter-spacing: -0.3px; display: inline;
-}
-.empty-recovery-hint {
-  font-size: 12px; color: var(--muted);
-  font-family: 'DM Mono', monospace; letter-spacing: 0.5px;
-}
-/* Fuzzy match hint banner above results */
 .fuzzy-hint {
   display: none; font-size: 11px; font-family: 'DM Mono', monospace;
   letter-spacing: 0.5px; color: var(--muted);
@@ -3393,6 +3379,22 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
 }
 .fuzzy-hint.show { display: block; }
 .fuzzy-hint strong { color: var(--text-sub); font-style: italic; font-weight: 600; }
+/* What the grid shows instead of nothing, and why (_setClosestNote) */
+.closest-note {
+  display: none; align-items: center; flex-wrap: wrap; gap: 6px 10px;
+  padding: 10px 14px; margin-bottom: 14px;
+  font-size: 13.5px; line-height: 1.45; color: var(--text-sub);
+  background: rgba(255,255,255,0.04);
+  border-radius: 10px; border-inline-start: 2px solid var(--accent);
+}
+.closest-note.show { display: flex; }
+.closest-note strong { color: #fff; font-weight: 600; overflow-wrap: anywhere; }
+.closest-note button {
+  min-height: 32px; padding: 0 12px; margin-inline-start: auto;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: #fff;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 999px; cursor: pointer;
+}
 
 
 /* ─── MOBILE SEARCH TOGGLE ───────────────────── */
@@ -3952,6 +3954,7 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
   .mr-star       { font-size: 13px; }
   .mr-avg-num    { font-size: 17px; letter-spacing: -0.5px; }
   .mr-hero-lbl   { display: none; }
+  .mr-mix-name   { display: inline; color: var(--text-sub); }
   /* FindFilm chip: collapse to inline pill matching the aggregated card */
   .ff-score-card { flex-direction: row; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; }
   .ff-score-top  { gap: 5px; }
@@ -5503,8 +5506,12 @@ if ('serviceWorker' in navigator) {
 <script src="/assets/touch.js?v=fc8fd233" defer></script>
 <!-- Watchlist storage, shared with /cinematic/: one typed list (rk_watchlist_v2). Synchronous on purpose: initWatchlist() below reads it at once. -->
 <script src="/assets/watchlist.js?v=64c31e42"></script>
+<!-- The FindFilm score (formula, first-exposure tip) and the closest-films fallback: shared with Cinematic. -->
+<link rel="stylesheet" href="/assets/score.css?v=28152cc2">
+<script src="/assets/score.js?v=0768b69c"></script>
+<script src="/assets/closest.js?v=9f5a832b"></script>
 <!-- UI strings in 9 languages, shared with Cinematic (window.FF_I18N → TRANSLATIONS). Synchronous on purpose: the page script reads it at once. -->
-<script src="/assets/i18n.js?v=c737194f"></script>
+<script src="/assets/i18n.js?v=7dc88417"></script>
 </head>
 <body>
 <!-- Social brand icons for the .ffs / .ffm / .ffs-band blocks (/assets/social.css),
@@ -6038,23 +6045,16 @@ if ('serviceWorker' in navigator) {
 
   <!-- Fuzzy match hint: shown when top result title doesn't match query -->
   <div id="fuzzyHint" class="fuzzy-hint"></div>
+  <div id="closestNote" class="closest-note" role="status"></div>
 
   <!-- results-zone: stable min-height wrapper prevents footer CLS -->
   <div class="results-zone">
     <div class="movie-grid" id="movieGrid"></div>
     <div class="empty-state" id="emptyState">
-      <div class="empty-icon" id="emptyIcon">🎬</div>
-      <div class="empty-title" id="emptyTitle" data-i18n="grid.noResults">No results found</div>
-      <!-- Shown only on zero-result searches to display the quoted query -->
-      <div class="empty-query-wrap" id="emptyQueryWrap" style="display:none">
-        <div class="empty-query-text"><span data-i18n="search.noMatchFor">No exact match found for</span> <span id="emptyQueryText"></span></div>
-        <div class="empty-recovery-hint" data-i18n="search.noMatchHint">Check out these titles instead.</div>
-      </div>
-      <div class="empty-sub" id="emptySub" data-i18n="grid.noResultsSub">We couldn't find any movies matching your search or filters.</div>
-      <!-- No-results CTA: clears all filters + sessionStorage then reloads -->
-      <button class="state-btn" id="emptyResetBtn" onclick="resetAllFilters()" data-i18n="grid.emptyReset" style="display:none">Clear Filters &amp; Reset Search</button>
-      <!-- Error CTA: re-triggers the last fetch -->
-      <button class="state-btn state-btn-retry" id="emptyRetryBtn" onclick="retryLastFetch()" data-i18n="grid.errorRetry" style="display:none">Try Again</button>
+      <div class="empty-icon" aria-hidden="true">⚠️</div>
+      <div class="empty-title" data-i18n="grid.errorTitle"></div>
+      <div class="empty-sub" data-i18n="grid.errorBody"></div>
+      <button class="state-btn state-btn-retry" onclick="retryLastFetch()" data-i18n="grid.errorRetry">Try Again</button>
     </div>
   </div>
   <div class="load-wrap" id="loadWrap">
@@ -6520,14 +6520,8 @@ function applyTranslations() {
   // Grid explore title (default state)
   const gridExplore = document.getElementById('gridExploreTitle');
   if (gridExplore) gridExplore.textContent = t('grid.explore');
-  // Keep empty/error state texts correct after language change
-  const _emptyEl = document.getElementById('emptyState');
-  if (_emptyEl?.classList.contains('show')) {
-    const _isError = document.getElementById('emptyRetryBtn')?.style.display !== 'none';
-    document.getElementById('emptyTitle').textContent = _isError ? t('grid.errorTitle') : t('grid.noResults');
-    document.getElementById('emptySub').textContent   = _isError ? t('grid.errorBody')  : t('grid.noResultsSub');
-    if (_isError) document.getElementById('emptyIcon').textContent = '⚠️';
-  }
+  // The note above a recovered grid is built from t()
+  _renderClosestNote();
   // "Catalog refreshed {when}" (hero band + ratings modal)
   renderCatalogFreshness();
   // Re-render suggestion pills in the new language if the panel is open
@@ -7697,14 +7691,9 @@ function fromPersonCredit(raw) {
    WEIGHTED AVERAGE
 ═══════════════════════════════════ */
 function calcAvg(m) {
-  const srcs = [];
-  if (m.imdb != null && m.imdb > 0) srcs.push({ v: m.imdb,      w: m.imdbV || 1000 });
-  if (m.rt   != null && m.rt   > 0) srcs.push({ v: m.rt / 10,   w: m.rtV   || 1000 });
-  if (m.mc   != null && m.mc   > 0) srcs.push({ v: m.mc / 10,   w: m.mcV   || 1000 });
-  if (!srcs.length) return m.tmdbScore != null ? m.tmdbScore.toFixed(1) : '—';
-  const totalW = srcs.reduce((s,x) => s+x.w, 0);
-  const sumWV  = srcs.reduce((s,x) => s+x.v*x.w, 0);
-  return (sumWV/totalW).toFixed(1);
+  const score = window.FFScore.value(m);   // 50% IMDb, 25% RT, 25% Metacritic (/assets/score.js)
+  if (score == null) return m.tmdbScore != null ? m.tmdbScore.toFixed(1) : '—';
+  return score.toFixed(1);
 }
 function calcAvgNum(m) {
   const a = calcAvg(m);
@@ -8194,7 +8183,7 @@ function avgBadgeHTML(m) {
     onclick="if(IS_TOUCH){event.stopPropagation();toggleRatingTooltip(${m.id},this)}"`;
   if (hasCritic) {
     return `<span class="rb avg unified" ${handlers}
-      title="Unified score from IMDb, Rotten Tomatoes &amp; Metacritic">★ ${calcAvg(m)}</span>`;
+      title="${esc(t('score.name'))}">★ ${calcAvg(m)}</span>`;
   }
   const tmdb = m.tmdbScore != null ? (+m.tmdbScore).toFixed(1) : '—';
   return `<span class="rb avg tmdb-only" ${handlers}
@@ -8257,11 +8246,13 @@ function renderCardHTML(m) {
 /* ─── Rating breakdown tooltip ──────────────────────────────────── */
 function _buildRtipRows(m) {
   const rows = [];
-  if (m.imdb) rows.push(`<div class="rtip-row"><span class="rtip-src rtip-imdb">IMDb</span><span class="rtip-val">${m.imdb}<span class="rtip-denom"> / 10</span></span></div>`);
-  if (m.rt)   rows.push(`<div class="rtip-row"><span class="rtip-src rtip-rt">RT</span><span class="rtip-val">${m.rt}<span class="rtip-denom">%</span></span></div>`);
+  const pctFmt = new Intl.NumberFormat(CURRENT_LANG, { style: 'percent' });
+  const shares = Object.fromEntries(window.FFScore.parts(m).map(p => [p.key, `<span class="rtip-pct">${pctFmt.format(p.share)}</span>`]));
+  if (m.imdb) rows.push(`<div class="rtip-row"><span class="rtip-src rtip-imdb">IMDb</span>${shares.imdb}<span class="rtip-val">${m.imdb}<span class="rtip-denom"> / 10</span></span></div>`);
+  if (m.rt)   rows.push(`<div class="rtip-row"><span class="rtip-src rtip-rt">RT</span>${shares.rt}<span class="rtip-val">${m.rt}<span class="rtip-denom">%</span></span></div>`);
   if (m.mc) {
     const cls = m.mc >= 61 ? 'rtip-mc-good' : m.mc >= 40 ? 'rtip-mc-mid' : 'rtip-mc-bad';
-    rows.push(`<div class="rtip-row"><span class="rtip-src ${cls}">MC</span><span class="rtip-val">${m.mc}<span class="rtip-denom"> / 100</span></span></div>`);
+    rows.push(`<div class="rtip-row"><span class="rtip-src ${cls}">MC</span>${shares.mc}<span class="rtip-val">${m.mc}<span class="rtip-denom"> / 100</span></span></div>`);
   }
   if (!rows.length && m.tmdbScore) rows.push(`<div class="rtip-row"><span class="rtip-src rtip-tmdb">TMDB</span><span class="rtip-val">${(+m.tmdbScore).toFixed(1)}<span class="rtip-denom"> / 10</span></span></div>`);
   return rows;
@@ -8273,8 +8264,8 @@ function showRatingTooltip(mid, el) {
   if (!m || !tip) return;
   const rows = _buildRtipRows(m);
   if (!rows.length) return;
-  tip.innerHTML = `<div class="rtip-header">Unified Rating</div>${rows.join('')}`;
-  const TIP_W = 172;
+  tip.innerHTML = `<div class="rtip-header">${esc(window.FFScore.parts(m).length ? t('score.name') : t('rating.tmdb'))}</div>${rows.join('')}`;
+  const TIP_W = 190;
   const r = el.getBoundingClientRect();
   let left = r.left + r.width / 2 - TIP_W / 2;
   left = Math.max(8, Math.min(left, window.innerWidth - TIP_W - 8));
@@ -8301,31 +8292,172 @@ function updateCardInGrid(tmdbId) {
   if (!el) return;
   const m = MOVIES.find(x => x.id === tmdbId);
   if (m) el.outerHTML = renderCardHTML(m);
+  _introduceScoreOnGrid();
 }
 
-/* ── Empty / Error state helpers ─────────────────────────────────── */
-function _showNoResultsState() {
-  document.getElementById('emptyIcon').textContent    = '🍿';
-  document.getElementById('emptyTitle').textContent   = t('grid.noResults');
-  document.getElementById('emptyTitle').style.display = '';
-  document.getElementById('emptySub').textContent     = t('grid.noResultsSub');
-  document.getElementById('emptySub').style.display   = '';
-  document.getElementById('emptyQueryWrap').style.display = 'none';
-  document.getElementById('emptyResetBtn').style.display  = '';
-  document.getElementById('emptyRetryBtn').style.display  = 'none';
-  document.getElementById('emptyState').classList.add('show');
+/* The first FindFilm score a browser shows gets a one-time tip (FFScore.introduce); the modal's
+   line and the card's tooltip explain it from then on. Never over the first-visit intro. */
+function _introduceScore(anchor) {
+  if (!anchor || document.getElementById('fvOverlay')) return;
+  window.FFScore.introduce(anchor, t('score.tip'), t('score.gotIt'));
+}
+function _introduceScoreOnGrid() {
+  if (window.FFScore.seen() || parseMediaDeepLink()) return;   // a shared link's movie is about to open: its score gets the tip
+  if (document.body.classList.contains('airx-open') || document.getElementById('overlay')?.classList.contains('open')) return;
+  _introduceScore([...document.querySelectorAll('#movieGrid .rb.avg.unified')].find(el => {
+    const r = el.getBoundingClientRect();
+    return r.height > 0 && r.top > 90 && r.bottom < innerHeight - 20;
+  }));
+}
+
+/* ── Zero results never end the search ─────────────────────────────────
+   A query that matches nothing shows the closest films to its vibe (FFClosest, /assets/closest.js);
+   filters that match nothing are loosened one at a time; failing both, popular titles. #emptyState
+   is only for a request that failed, with its Try Again. Title search runs as you type, so the vibe
+   search waits for a pause first (CLOSEST_PAUSE_MS). The vibe index has films only, so the TV tab
+   goes straight to popular series and offers the search on Movies. */
+const CLOSEST_PAUSE_MS = 900;
+let _closestSeq = 0, _closestAbort = null, _closestNote = null, _closestReasons = false;
+
+function _cancelClosest() {
+  _closestSeq++;
+  if (_closestAbort) _closestAbort.abort();
+  _closestAbort = null;
+  if (_closestReasons) { _aiMatchReasons.clear(); _closestReasons = false; }
+  _setClosestNote(null);
+}
+
+// { q, text: [[i18n key, vars], …], action: { key, run } }, or null to hide. Kept so a language change can redraw it.
+function _setClosestNote(note) {
+  _closestNote = note;
+  _renderClosestNote();
+}
+function _renderClosestNote() {
+  const el = document.getElementById('closestNote');
+  if (!el) return;
+  const n = _closestNote;
+  el.classList.toggle('show', !!n);
+  if (!n) { el.textContent = ''; return; }
+  el.innerHTML = (n.q ? `<strong>${esc(t('cin.quoted', { q: n.q }))}</strong>` : '') +
+    `<span>${esc(n.text.map(([key, vars]) => t(key, vars)).join(' '))}</span>` +
+    (n.action ? `<button type="button">${esc(t(n.action.key))}</button>` : '');
+  if (n.action) el.querySelector('button').onclick = n.action.run;
+}
+
+// The other tab: offered from Movies when it has that title, and always from TV (the closest films live on Movies).
+async function _otherTabAction(q) {
+  const other = CONTENT_TYPE === 'tv' ? 'movie' : 'tv';
+  const action = { key: `cin.searchOther.${CONTENT_TYPE}`, run: () => setContentType(other) };
+  if (CONTENT_TYPE === 'tv') return action;
+  try {
+    const d = await tmdbGet(`/search/${other}`, { query: q, include_adult: false });
+    return d.total_results > 0 ? action : null;
+  } catch { return null; }
+}
+
+function _showRecovered(list, note, pages = 1) {
+  MOVIES      = list;
+  CUR_PAGE    = 1;
+  TOTAL_PAGES = pages;
+  TOTAL_COUNT = list.length;
+  applySortOrder();
+  renderGrid(MOVIES, false);
+  _setClosestNote(note);
+  for (const m of list) queueEnrich(m);
+  document.getElementById('loadWrap').style.display = pages > 1 ? '' : 'none';
+  window.FFBot?.found(false);
+}
+
+async function _showPopular(q, action, stale) {
+  let list = [];
+  try {
+    const d = await tmdbGet(`/trending/${CONTENT_TYPE}/week`, { language: TMDB_LANG[CURRENT_LANG] || 'en-US' });
+    list = (d.results || []).filter(r => r.poster_path).map(fromTMDb);
+  } catch { /* the page's own catalog, below */ }
+  if (stale()) return;
+  if (!list.length) list = CACHE_MOVIES.slice(0, 20);
+  if (!list.length) throw new Error('nothing to show');
+  _showRecovered(list, { q, text: [['closest.popular']], action });
+}
+
+// Rating first, genre last (it's closest to what they came for). The controls move to match what's on screen.
+async function _loosenFilters(stale) {
+  const ratingEl = document.getElementById('fMinRating'), countryEl = document.getElementById('fCountry');
+  const from = parseFloat(ratingEl.value) || 0;
+  const steps = [];
+  if (from > 0) {
+    const lower = Math.floor(from) - 1;
+    if (lower >= 5) steps.push(['rating', { minRating: String(lower) }, ['closest.ratingLower', { from, to: lower }]]);
+    steps.push(['rating', { minRating: '0' }, ['closest.ratingOff', { from }]]);
+  }
+  if (countryEl.value) {
+    steps.push(['country', { country: '' }, ['closest.countryOff', { country: countryEl.selectedOptions[0]?.textContent.trim() || countryEl.value }]]);
+  }
+  if (ACTIVE_GENRE) {
+    steps.push(['genre', { genre: '' }, ['closest.genreOff', { genre: document.querySelector('.gpill.active')?.textContent.trim() || ACTIVE_GENRE }]]);
+  }
+  const loose = {}, notes = {};
+  for (const [kind, change, text] of steps) {
+    Object.assign(loose, change);
+    notes[kind] = text;
+    const data = await fetchPage(1, loose);
+    if (stale()) return true;
+    const list = (data.results || []).map(fromTMDb);
+    if (!list.length) continue;
+    if ('minRating' in loose) { ratingEl.value = loose.minRating; syncRatingSlider(); }
+    if ('country' in loose)   { countryEl.value = ''; syncCountrySelectUI(); }
+    if ('genre' in loose) {
+      ACTIVE_GENRE = '';
+      document.querySelectorAll('.gpill').forEach(p => p.classList.remove('active'));
+      document.getElementById('pill-all')?.classList.add('active');
+    }
+    updateFilterCount();
+    saveSession();
+    _showRecovered(list, { q: '', text: Object.values(notes) }, Math.min(data.total_pages || 1, 500));
+    return true;
+  }
+  return false;
+}
+
+async function _recoverEmptyGrid() {
+  _cancelClosest();
+  const seq = _closestSeq, stale = () => seq !== _closestSeq;
+  const controller = _closestAbort = new AbortController();
+  const q = document.getElementById('searchInput').value.trim();
+  document.getElementById('emptyState').classList.remove('show');
+  document.getElementById('loadWrap').style.display = 'none';
+  showSkeletons(8);
+  window.FFBot?.set('think');
+  try {
+    if (!q) {
+      if (!(await _loosenFilters(stale)) && !stale()) await _showPopular('', null, stale);
+      return;
+    }
+    _setClosestNote({ q, text: [['closest.finding']] });
+    await new Promise(r => setTimeout(r, CLOSEST_PAUSE_MS));
+    if (stale()) return;
+    const [found, action] = await Promise.all([
+      CONTENT_TYPE === 'movie' ? window.FFClosest.find(q, controller.signal) : null,
+      _otherTabAction(q),
+    ]);
+    if (stale()) return;
+    if (!found) { await _showPopular(q, action, stale); return; }
+    if (!document.body.classList.contains('airx-open')) {   // the AI panel owns these while it's open
+      Object.entries(found.reasons).forEach(([id, v]) => _aiMatchReasons.set(Number(id), v));
+      _closestReasons = true;
+    }
+    _showRecovered(found.movies.map(fromTMDb), { q, text: [['closest.vibe']], action });
+  } catch (e) {
+    if (stale()) return;
+    console.warn('[closest] failed:', e.message);
+    _showErrorState();
+    window.FFBot?.set('confused');
+  }
 }
 
 function _showErrorState() {
+  _setClosestNote(null);
   document.getElementById('movieGrid').innerHTML = '';
-  document.getElementById('emptyIcon').textContent    = '⚠️';
-  document.getElementById('emptyTitle').textContent   = t('grid.errorTitle');
-  document.getElementById('emptyTitle').style.display = '';
-  document.getElementById('emptySub').textContent     = t('grid.errorBody');
-  document.getElementById('emptySub').style.display   = '';
-  document.getElementById('emptyQueryWrap').style.display = 'none';
-  document.getElementById('emptyResetBtn').style.display  = 'none';
-  document.getElementById('emptyRetryBtn').style.display  = '';
   document.getElementById('emptyState').classList.add('show');
   document.getElementById('loadWrap').style.display = 'none';
 }
@@ -8380,21 +8512,17 @@ function renderGrid(movies, append = false) {
   const grid  = document.getElementById('movieGrid');
   const empty = document.getElementById('emptyState');
   if (!movies.length && !append) {
-    grid.innerHTML = '';
-    _showNoResultsState();
-    document.getElementById('countShown').textContent = '0';
+    _recoverEmptyGrid();
     return;
   }
   empty.classList.remove('show');
-  // Reset button visibility when results reappear
-  document.getElementById('emptyResetBtn').style.display = 'none';
-  document.getElementById('emptyRetryBtn').style.display = 'none';
   const html = movies.map(renderCardHTML).join('');
   if (append) grid.insertAdjacentHTML('beforeend', html);
   else        grid.innerHTML = html;
   const shown = grid.querySelectorAll('.movie-card:not(.skeleton-card)').length;
   document.getElementById('countShown').textContent = shown.toLocaleString();
   document.getElementById('countTotal').textContent  = TOTAL_COUNT.toLocaleString();
+  _introduceScoreOnGrid();
 }
 
 function showSkeletons(n = 20) {
@@ -8405,9 +8533,11 @@ function showSkeletons(n = 20) {
 /* ═══════════════════════════════════
    LOAD MOVIES
 ═══════════════════════════════════ */
-async function fetchPage(page) {
-  const country   = document.getElementById('fCountry').value;
-  const minRating = document.getElementById('fMinRating').value;
+// `loose` overrides the filters on screen (_loosenFilters tries them before moving the controls).
+async function fetchPage(page, loose = {}) {
+  const country   = loose.country   ?? document.getElementById('fCountry').value;
+  const minRating = loose.minRating ?? document.getElementById('fMinRating').value;
+  const genre     = loose.genre     ?? ACTIVE_GENRE;
   const q         = document.getElementById('searchInput').value.trim();
   const type      = CONTENT_TYPE;
 
@@ -8428,8 +8558,8 @@ async function fetchPage(page) {
     include_adult: false,
     'vote_count.gte': 50,
   };
-  if (ACTIVE_GENRE) params.with_genres = resolveGenreParam(ACTIVE_GENRE);
-  if (country)      params.with_origin_country = country;
+  if (genre)   params.with_genres = resolveGenreParam(genre);
+  if (country) params.with_origin_country = country;
   // minRating comes from a 0–10 range slider now — '0' means "Any" and must
   // stay falsy here (a bare truthy check on the string would send a no-op
   // vote_average.gte=0 to TMDB on every single request).
@@ -8549,6 +8679,7 @@ async function loadMovies(page = 1, append = false, scrollToGrid = true) {
   // deliberate user action on the main page and is left untouched.
   if (!append && document.body.classList.contains('airx-open')) return;
   IS_LOADING = true;
+  if (!append) _cancelClosest();
 
   // ── Show/hide discovery rows based on whether a search query is active ──
   // feedSections holds the "For You" and discovery rows.
@@ -8628,57 +8759,21 @@ async function loadMovies(page = 1, append = false, scrollToGrid = true) {
     applySortOrder();
     renderGrid(append ? newMovies : MOVIES, append);
 
-    // ── Zero-result recovery ──────────────────────────────────
+    // ── Fuzzy match hint ───────────────────────────────────
+    // If the top result's title shares no words with the query, the user
+    // likely has a typo or alternate title — surface a gentle hint.
     const fuzzyEl = document.getElementById('fuzzyHint');
-    if (!append && sq) {
-      if (TOTAL_COUNT === 0) {
-        // Zero-result state: show "No exact match found for '[query]'" and restore feed rows
-        const qWrap   = document.getElementById('emptyQueryWrap');
-        const qText   = document.getElementById('emptyQueryText');
-        const sub     = document.getElementById('emptySub');
-        const titleEl = document.getElementById('emptyTitle');
-        if (qText)   qText.textContent  = `"${sq}"`;
-        if (qWrap)   qWrap.style.display = '';
-        if (sub)     sub.style.display   = 'none';
-        if (titleEl) titleEl.style.display = 'none'; // "No results found" is redundant
-        // Restore For You / Fresh rows so the user has content to browse
-        _restoreFeedSections();
-        if (fuzzyEl) fuzzyEl.classList.remove('show');
+    if (fuzzyEl) {
+      const topTitle = !append && sq && MOVIES.length > 0 ? (MOVIES[0].title || '').toLowerCase() : null;
+      const qWords   = topTitle === null ? [] : sq.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      if (qWords.length > 0 && !qWords.some(w => topTitle.includes(w))) {
+        fuzzyEl.innerHTML = `Showing results for: <strong>"${esc(MOVIES[0].title)}"</strong>`;
+        fuzzyEl.classList.add('show');
       } else {
-        // Hide zero-result overrides, restore normal empty-state header
-        const qWrap   = document.getElementById('emptyQueryWrap');
-        const sub     = document.getElementById('emptySub');
-        const titleEl = document.getElementById('emptyTitle');
-        if (qWrap)   qWrap.style.display = 'none';
-        if (sub)     sub.style.display   = '';
-        if (titleEl) titleEl.style.display = '';
-        // ── Fuzzy match hint ───────────────────────────────────
-        // If the top result's title shares no words with the query, the user
-        // likely has a typo or alternate title — surface a gentle hint.
-        if (fuzzyEl && MOVIES.length > 0) {
-          const topTitle = (MOVIES[0].title || '').toLowerCase();
-          const qWords   = sq.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-          const disjoint = qWords.length > 0 && !qWords.some(w => topTitle.includes(w));
-          if (disjoint) {
-            fuzzyEl.innerHTML = `Showing results for: <strong>"${esc(MOVIES[0].title)}"</strong>`;
-            fuzzyEl.classList.add('show');
-          } else {
-            fuzzyEl.classList.remove('show');
-          }
-        } else if (fuzzyEl) {
-          fuzzyEl.classList.remove('show');
-        }
+        fuzzyEl.classList.remove('show');
       }
-    } else if (fuzzyEl) {
-      fuzzyEl.classList.remove('show');
-      const qWrap   = document.getElementById('emptyQueryWrap');
-      const sub     = document.getElementById('emptySub');
-      const titleEl = document.getElementById('emptyTitle');
-      if (qWrap)   qWrap.style.display   = 'none';
-      if (sub)     sub.style.display     = '';
-      if (titleEl) titleEl.style.display = '';
     }
-    // ─────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────
 
     // Scroll the results grid into view on the first page of any browse filter
     // (search / genre / country / rating) so the user doesn't have to scroll
@@ -9187,9 +9282,6 @@ function keywordFilterCache(query) {
   MOVIES      = results;
   TOTAL_COUNT = CACHE_MOVIES.length;
   renderGrid(results, false);
-  if (!results.length) {
-    document.getElementById('emptySub').textContent = t('grid.noMatches');
-  }
 }
 
 /* Vibe Search: pull natural negative filters ("no gore", "not sad") out of a query.
@@ -9316,7 +9408,7 @@ function renderAiResults(results) {
   const empty = document.getElementById('aiResultsEmpty');
   hideAiLoader();   // the AI is done thinking — retire the reel
   empty.classList.remove('show');
-  if (!results.length) { grid.innerHTML = ''; showAiResultsError(); return; }
+  if (!results.length) { _showAiPopular(); return; }
   // Skeletons → real cards used to be a bare innerHTML swap: eight shimmering
   // placeholders were replaced by eight posters in a single frame, which read as
   // an abrupt "screen switch" rather than the search resolving. Fade the new
@@ -9343,6 +9435,15 @@ function renderAiFollowUps(query, dynamicChips) {
       `<button class="ai-sug-chip" style="animation-delay:${i*65}ms"
          onclick="applyFollowUp(this.dataset.q)" data-q="${esc(c)}">↺ ${esc(c)}</button>`
     ).join('')}</div><div class="airx-foot-space"></div>`;
+}
+
+// Nothing for the AI panel to show: the page's own catalog, and a retry only when it has none.
+function _showAiPopular() {
+  const floor = CACHE_MOVIES.slice(0, 12);
+  if (!floor.length) { showAiResultsError(); return; }
+  floor.forEach(m => { if (!MOVIES.find(x => x.id === m.id)) MOVIES.push(m); });
+  renderAiResults(floor);
+  document.getElementById('aiResultsSummary').textContent = t('closest.popular');
 }
 
 function showAiResultsError() {
@@ -9631,7 +9732,7 @@ async function aiSearch(query) {
       document.getElementById('aiResultsSummary').textContent = '✦ ' + t('results.closest');
       renderAiFollowUps(query, null);
     } else {
-      showAiResultsError();
+      _showAiPopular();
     }
   }
 }
@@ -9831,7 +9932,7 @@ const mediaShareUrl = (type, id) => `${location.origin}${location.pathname}${med
 // A shared link's preview image is drawn on its first request (functions/og/), which
 // takes a few seconds. Asking for it the moment someone shares means it's ready by the
 // time the app they paste into unfurls the link.
-const warmPreviewCard = (type, id) => { fetch(`/og/v1/${type === 'tv' ? 'tv' : 'movie'}/${id}.jpg`, { priority: 'low' }).catch(() => {}); };
+const warmPreviewCard = (type, id) => { fetch(`/og/v2/${type === 'tv' ? 'tv' : 'movie'}/${id}.jpg`, { priority: 'low' }).catch(() => {}); };
 
 // First recognised key in the query string → { type: 'movie'|'tv', id }, else null.
 // Keys match case-insensitively (hand-typed or lower-cased links still resolve);
@@ -10799,9 +10900,14 @@ function refreshModalRatings(m) {
   }
 
   // Hero avg label
-  const srcLbl = srcCount === 0
-    ? t('score.tmdbOnly')
-    : (srcCount > 1 ? t('score.weightedPlural', { n: srcCount }) : t('score.weighted', { n: srcCount }));
+  const srcLbl = srcCount === 0 ? t('score.tmdbOnly') : t('score.name');
+
+  // What the number is, always on screen: the sources' shares, or the one source there is so far.
+  const parts = window.FFScore.parts(m);
+  const mixText = parts.length === 1 ? t('score.onlyOne', { source: parts[0].name }) : window.FFScore.mix(m, CURRENT_LANG);
+  const mixLine = parts.length
+    ? `<p class="mr-mix"><span class="mr-mix-name">${esc(t('score.name'))}: </span>${esc(mixText)}</p>`
+    : '';
 
   // Inline breakdown items
   const bdItems = [];
@@ -10817,7 +10923,12 @@ function refreshModalRatings(m) {
     <div class="mr-hero-lbl">${srcLbl}</div>
     ${breakdown}
     <div class="mr-conf">${confidenceBadgeHTML(m)}</div>
-  </div>${localBadge}`;
+  </div>${localBadge}${mixLine}`;
+  if (parts.length) {
+    window.FFScore.introduceWhenStill(
+      () => document.getElementById('overlay')?.classList.contains('open') && !document.getElementById('fvOverlay') ? el.querySelector('.mr-avg-num') : null,
+      t('score.tip'), t('score.gotIt'));
+  }
 }
 
 /* Cast entries for the modal's Starring row, in priority order.

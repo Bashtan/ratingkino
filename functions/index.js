@@ -20,7 +20,7 @@
  */
 
 const SITE        = 'https://findfilm.ai';
-const CARD_VERSION = 'v1';                               // functions/og/[[path]].js's CARD_VERSION
+const CARD_VERSION = 'v2';                               // functions/og/[[path]].js's CARD_VERSION
 const OG_TTL_SEC  = 7 * 86400;
 const OG_WAIT_MS  = 1500;
 const DESC_MAX    = 200;

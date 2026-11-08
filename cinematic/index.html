@@ -411,6 +411,7 @@ img.fade.loaded { opacity: 1; }
 .results-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 6px 0 0; min-height: 22px; font-size: 15px; color: var(--text-2); }
 .results-sub svg { flex-shrink: 0; }
 .results-sub .muted { color: var(--text-3); }
+.results-sub .link-btn { padding: 0; font: inherit; color: #fff; text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; cursor: pointer; }
 .link-btn { color: #fff; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; border-radius: 6px; }
 .ai-note { display: inline-flex; align-items: center; gap: 5px; }   /* "✦ Matched by AI from …" */
 .ai-note svg { color: #fff; }
@@ -594,6 +595,15 @@ img.fade.loaded { opacity: 1; }
 .qv-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-height: 22px; margin-top: 12px; font-size: 14px; color: var(--text-2); }
 .qv-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-3); }
 .qv-meta .rating { color: #fff; font-weight: 600; }
+.qv-score { margin-top: 14px; }                                     /* the FindFilm score (loadScore) */
+.qv-score-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.qv-score-star { color: #fbbf24; font-size: 18px; line-height: 1; }
+.qv-score-num { font-size: 26px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+.qv-score-name { font-size: 14px; font-weight: 600; }
+.qv-score-srcs { display: flex; flex-wrap: wrap; gap: 6px; }
+.qv-score-srcs span { padding: 3px 9px; font-size: 12px; color: var(--text-2); background: var(--fill-1); border-radius: 999px; }
+.qv-score-srcs b { font-weight: 600; color: #fff; }
+.qv-score-mix { margin: 8px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--text-2); }
 .badge { font-size: 11.5px; font-weight: 600; line-height: 1; padding: 4px 7px; border-radius: 5px; background: var(--fill-2); color: #e4e4e7; letter-spacing: .02em; }
 .qv-actions { display: flex; flex-wrap: wrap; gap: 10px; min-height: 44px; margin-top: 20px; }
 .btn-primary, .btn-glass {
@@ -763,8 +773,12 @@ img.fade.loaded { opacity: 1; }
 <script src="/assets/touch.js?v=fc8fd233" defer></script>
 <!-- Watchlist storage, shared with Classic: one typed list (rk_watchlist_v2). Synchronous on purpose: the page script below reads it at once. -->
 <script src="/assets/watchlist.js?v=64c31e42"></script>
+<!-- The FindFilm score (formula, first-exposure tip) and the closest-films fallback: shared with Classic. -->
+<link rel="stylesheet" href="/assets/score.css?v=28152cc2">
+<script src="/assets/score.js?v=0768b69c"></script>
+<script src="/assets/closest.js?v=9f5a832b"></script>
 <!-- UI strings in 9 languages, shared with Classic (window.FF_I18N). Synchronous on purpose: the page script translates the page before it first paints. -->
-<script src="/assets/i18n.js?v=c737194f"></script>
+<script src="/assets/i18n.js?v=7dc88417"></script>
 <script>
 /* The saved language (rk_lang, shared with Classic) sets <html lang dir> now,
    so an Arabic page is right-to-left from its first paint. */
@@ -1425,7 +1439,6 @@ function showState(title, sub, action) {
   grid.setAttribute('aria-busy', 'false');
   if (action) grid.querySelector('[data-state-action]').addEventListener('click', action.run, { once: true });
 }
-const showEmpty = () => showState(t('cin.nothingYet'), t('cin.emptyHint'));
 const showError = retry => showState(t('cin.errTitle'), t('cin.errSub'), { label: t('cin.tryAgain'), run: retry });
 const quoted = q => t('cin.quoted', { q });
 
@@ -1455,7 +1468,11 @@ async function loadPage(v) {
         setHeader(chipLabel(v.chip), `${esc(count)}<span class="muted">·</span>${esc(chipSub(v.chip))}`);
         announce(`${chipLabel(v.chip)}: ${count}`);
       }
-      if (!v.items.length) showEmpty();
+      if (!v.items.length) {   // a chip that lists nothing falls back to Trending; Trending itself only fails
+        if (v.kind === 'discover') showHome();
+        else showError(showHome);
+        return;
+      }
     }
     if (v.kind === 'home') homeSnaps[v.ctype] = { items: v.items.slice(), page: v.page, totalPages: v.totalPages };
     ok = true;
@@ -1514,13 +1531,7 @@ async function runTitle(q) {
     const d = await call(`/api/title-search?${new URLSearchParams({ q, type, lang: TMDB_LANG[lang] })}`, { signal: v.signal, timeout: 15000 });
     if (stale(v)) return;
     const items = (d.results || []).filter(r => r.poster_path).map(r => fromTMDB(r, type));
-    if (!items.length) {
-      setHeader(title, '');
-      showState(t('cin.noTitle', { q }), t('cin.noTitleHint'), { label: t(`cin.searchOther.${type}`), run: () => searchOtherTab(q) });
-      window.FFBot?.set('confused');
-      announce(t('cin.noTitle', { q }));
-      return;
-    }
+    if (!items.length) { await showClosest(v, q); return; }
     renderItems(v, items);
     const count = tn(typeCfg(type).count, v.items.length);
     // "Matched by AI" (or by its title in another language) when the list leads with a title the text didn't spell.
@@ -1539,8 +1550,38 @@ async function runTitle(q) {
   }
 }
 
+/* A title that matches nothing never ends the search: the closest films to its vibe (FFClosest,
+   /assets/closest.js), else what's trending. The vibe index has films only, so the TV tab goes
+   straight to Trending and offers the search on Films. */
+async function showClosest(v, q) {
+  const type = v.ctype, other = type === 'tv' ? 'movie' : 'tv', title = quoted(q);
+  setHeader(title, `<span>${esc(t('closest.finding'))}</span>`);
+  window.FFBot?.set('think');
+  const [found, otherHas] = await Promise.all([
+    type === 'movie' ? FFClosest.find(q, v.signal) : null,
+    type === 'tv' ? true : tmdb(`/search/${other}`, { query: q, include_adult: 'false' }, { signal: v.signal, timeout: 8000 })
+      .then(d => d.total_results > 0).catch(() => false),
+  ]);
+  if (stale(v)) return;
+  let items = (found?.movies || []).filter(r => r.poster_path).map(r => fromTMDB(r, 'movie'));
+  const note = t(items.length ? 'closest.vibe' : 'closest.popular');
+  if (!items.length) {
+    const d = await tmdb(typeCfg(type).trending, { page: 1 }, { signal: v.signal });
+    if (stale(v)) return;
+    items = (d.results || []).filter(r => r.poster_path).map(r => fromTMDB(r, type));
+    if (!items.length) throw new Error('nothing to show');
+  }
+  renderItems(v, items);
+  setHeader(title, `<span>${esc(note)}</span>` +
+    (otherHas ? `<button class="link-btn" type="button" data-search-other="${esc(q)}">${esc(t(`cin.searchOther.${type}`))}</button>` : ''));
+  window.FFBot?.found(false);
+  announce(note);
+}
+
 resultsSub.addEventListener('click', e => {
   if (e.target.closest('[data-wl-retry]')) showWatchlist();
+  const other = e.target.closest('[data-search-other]');
+  if (other) searchOtherTab(other.dataset.searchOther);
 });
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1727,7 +1768,7 @@ function getDetails(it) {
   const k = keyOf(it);
   if (!QV.cache.has(k)) {
     const append = it.type === 'tv'
-      ? 'credits,videos,images,content_ratings,watch/providers,recommendations'
+      ? 'credits,videos,images,content_ratings,watch/providers,recommendations,external_ids'
       : 'credits,videos,images,release_dates,watch/providers,recommendations';
     // In the page's language, with English art and trailers as the fallback (pickLogo, pickTrailer).
     QV.cache.set(k, tmdb(`/${it.type}/${it.id}`, { append_to_response: append, include_image_language: `${lang},en,null`, include_video_language: `${lang},en` })
@@ -1779,6 +1820,7 @@ function shellHTML(it) {
     <div class="qv-head">
       <div class="qv-titlebox"><h2 class="qv-title" id="qvTitle">${esc(it.title)}</h2></div>
       <div class="qv-meta" data-slot="meta">${metaLite}</div>
+      <div class="qv-score" data-slot="score" hidden></div>
       <div class="qv-actions" data-slot="actions"><span class="skel sk-pill"></span><span class="skel sk-pill sk-pill-w"></span></div>
     </div>
     <div class="qv-content">
@@ -1805,7 +1847,7 @@ async function shareItem(it, btn) {
   const url = `${location.origin}/?${it.type === 'tv' ? 'TVShows' : 'movie'}=${it.id}`;
   // The link's preview image (functions/og/) is drawn on first request, in a few
   // seconds: ask for it now so it's ready when the app it's pasted into unfurls it.
-  fetch(`/og/v1/${it.type === 'tv' ? 'tv' : 'movie'}/${it.id}.jpg`, { priority: 'low' }).catch(() => {});
+  fetch(`/og/v2/${it.type === 'tv' ? 'tv' : 'movie'}/${it.id}.jpg`, { priority: 'low' }).catch(() => {});
   if (navigator.share) {
     try { await navigator.share({ title: `${it.title} — FindFilm.ai`, url }); } catch { /* dismissed */ }
     return;
@@ -1941,6 +1983,38 @@ function fillQV(it, d) {
   settleImages(qvBody);
 }
 
+// The FindFilm score (FFScore, /assets/score.js) from OMDb's IMDb, Rotten Tomatoes and Metacritic
+// ratings, and what it's made of. It takes the place of TMDB's ★; a title OMDb doesn't know keeps that.
+const SCORES = new Map();
+async function loadScore(it, d, token) {
+  const imdbId = d.imdb_id || d.external_ids?.imdb_id;
+  if (!imdbId) return;
+  const k = keyOf(it);
+  if (!SCORES.has(k)) {
+    SCORES.set(k, call(`/api/omdb?i=${encodeURIComponent(imdbId)}&plot=short`, { timeout: 10000 })
+      .then(od => FFScore.fromOmdb(od?.Response === 'True' ? od : null))
+      .catch(() => { SCORES.delete(k); return null; }));
+  }
+  const r = await SCORES.get(k);
+  const box = token === QV.token && slot('score');
+  if (!box || !r) return;
+  const parts = FFScore.parts(r);
+  const srcs = [r.imdb && ['IMDb', fmtRating(r.imdb)], r.rt && ['RT', `${r.rt}%`], r.mc && ['MC', r.mc]].filter(Boolean);
+  box.innerHTML = `<div class="qv-score-top">
+      <span class="qv-score-star" aria-hidden="true">★</span><span class="qv-score-num">${fmtRating(FFScore.value(r))}</span>
+      <span class="qv-score-name">${esc(t('score.name'))}</span>
+      <div class="qv-score-srcs">${srcs.map(([name, v]) => `<span>${name} <b>${v}</b></span>`).join('')}</div>
+    </div>
+    <p class="qv-score-mix">${esc(parts.length === 1 ? t('score.onlyOne', { source: parts[0].name }) : FFScore.mix(r, lang))}</p>`;
+  box.hidden = false;
+  const tmdbStar = slot('meta')?.querySelector('.rating');
+  if (tmdbStar) {
+    if (tmdbStar.previousElementSibling?.classList.contains('dot')) tmdbStar.previousElementSibling.remove();
+    tmdbStar.remove();
+  }
+  FFScore.introduceWhenStill(() => (token === QV.token ? box.querySelector('.qv-score-num') : null), t('score.tip'), t('score.gotIt'));
+}
+
 // FindFilm AI's spoiler-free take on any title without an AI pick reason: who'll love it, the
 // experience, who might skip it. /api/fit-summary, cached there per title and language.
 const TAKES = new Map();
@@ -1981,6 +2055,7 @@ async function renderQV(it) {
     const d = await getDetails(it);
     if (token !== QV.token) return;
     fillQV(it, d);
+    loadScore(it, d, token);
   } catch (e) {
     if (token !== QV.token) return;
     slot('actions').innerHTML = `<button class="btn-glass" type="button" data-qv-retry>${esc(t('cin.tryAgain'))}</button>`;

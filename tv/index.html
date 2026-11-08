@@ -217,12 +217,12 @@
     return '#ef4444';
   }
 
-  // Same weighted blend as the main app's calcAvg().
+  // The FindFilm score: 50% IMDb, 25% RT, 25% Metacritic (FFScore in /assets/score.js).
   function unifiedRating(r) {
     var srcs = [];
-    if (r.imdb > 0) srcs.push({ v: r.imdb,    w: r.imdbV || 1000 });
-    if (r.rt   > 0) srcs.push({ v: r.rt / 10, w: 1000 });
-    if (r.mc   > 0) srcs.push({ v: r.mc / 10, w: 1000 });
+    if (r.imdb > 0) srcs.push({ v: r.imdb,    w: 0.5 });
+    if (r.rt   > 0) srcs.push({ v: r.rt / 10, w: 0.25 });
+    if (r.mc   > 0) srcs.push({ v: r.mc / 10, w: 0.25 });
     if (!srcs.length) return r.tmdb > 0 ? r.tmdb : null;
     var tw = srcs.reduce(function (s, x) { return s + x.w; }, 0);
     var sv = srcs.reduce(function (s, x) { return s + x.v * x.w; }, 0);
