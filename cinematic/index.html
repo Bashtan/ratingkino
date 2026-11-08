@@ -766,8 +766,8 @@ img.fade.loaded { opacity: 1; }
 <!-- Touch baseline + bottom-sheet drag, shared with Classic. -->
 <link rel="stylesheet" href="/assets/touch.css?v=fc8fd233">
 <!-- Social links + corner mascot, shared with Classic (index.html). -->
-<link rel="stylesheet" href="/assets/social.css?v=9d447772">
-<script src="/assets/social.js?v=dd864af6" defer></script>
+<link rel="stylesheet" href="/assets/social.css?v=6846bb47">
+<script src="/assets/social.js?v=38dce9fa" defer></script>
 <!-- Reloads a page left open across a deploy, when it comes back after 10+ min away (/build.json). -->
 <script src="/assets/fresh.js?v=887c34fa" defer></script>
 <script src="/assets/touch.js?v=fc8fd233" defer></script>
@@ -777,10 +777,10 @@ img.fade.loaded { opacity: 1; }
 <link rel="stylesheet" href="/assets/score.css?v=28152cc2">
 <script src="/assets/score.js?v=0768b69c"></script>
 <script src="/assets/closest.js?v=9f5a832b"></script>
-<link rel="stylesheet" href="/assets/dial.css?v=6cf9db9b">
-<script src="/assets/dial.js?v=e2f2e610"></script>
+<link rel="stylesheet" href="/assets/dial.css?v=5f3e602f">
+<script src="/assets/dial.js?v=47ab0774"></script>
 <!-- UI strings in 9 languages, shared with Classic (window.FF_I18N). Synchronous on purpose: the page script translates the page before it first paints. -->
-<script src="/assets/i18n.js?v=a94cd699"></script>
+<script src="/assets/i18n.js?v=886252e0"></script>
 <script>
 /* The saved language (rk_lang, shared with Classic) sets <html lang dir> now,
    so an Arabic page is right-to-left from its first paint. */
@@ -908,21 +908,12 @@ img.fade.loaded { opacity: 1; }
         <div class="cmd-progress" aria-hidden="true"></div>
       </form>
 
-      <div class="chips-wrap">
+      <div class="chips-wrap" data-ffm-after>
         <div class="chips" id="chips">
           <div class="chips-track" id="chipsTrack" role="group" aria-label="Quick picks" data-i18n-aria="cin.quickPicks"></div>
         </div>
       </div>
       <div id="ffDial"></div>
-      <!-- Social strip, the same markup as Classic's. -->
-      <div class="ffs ffs--hero noskim" role="group" aria-labelledby="ffsHeroLabel" data-ffs-place="hero" data-ffm-after>
-    <img class="ffs-bot" src="/assets/ff-bot-sm.webp" alt="" width="34" height="58" loading="lazy" decoding="async">
-    <span class="ffs-label" id="ffsHeroLabel" data-i18n="social.watchOn">Watch FindFilm on</span>
-    <span class="ffs-links">
-      <a class="ffs-btn ffs-tt" href="https://www.tiktok.com/@findfilmai" target="_blank" rel="noopener" data-ffs="tiktok"><svg aria-hidden="true" focusable="false"><use href="#ffs-i-tt"/></svg><span>TikTok</span></a>
-      <a class="ffs-btn ffs-yt" href="https://www.youtube.com/@FindfilmAI/shorts" target="_blank" rel="noopener" data-ffs="youtube"><svg aria-hidden="true" focusable="false"><use href="#ffs-i-yt"/></svg><span>YouTube Shorts</span></a>
-    </span>
-  </div>
     </div>
   </section>
 
@@ -1700,10 +1691,11 @@ function renderChips() {
   chipsTrack.innerHTML = typeCfg().chips.map(c =>
     `<button class="chip" type="button" data-chip="${c.id}" aria-pressed="${c.id === activeChip}">${esc(chipLabel(c))}</button>`
   ).join('');
+  FFDial.placeToggle(chipsTrack);   // this row's innerHTML just took it out
 }
 function setChip(id) {
   activeChip = id;
-  chipsTrack.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.chip === id)));
+  chipsTrack.querySelectorAll('.chip[data-chip]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.chip === id)));
 }
 chipsTrack.addEventListener('click', e => {
   const b = e.target.closest('[data-chip]');
@@ -2455,7 +2447,7 @@ async function openDeepLink() {
    BOOT
 ═══════════════════════════════════════════════════════════════ */
 try { if (sessionStorage.getItem('ff_ctype') === 'tv') ctype = 'tv'; } catch { /* not remembered */ }
-FFDial.mount($('#ffDial'), { t, onChange: runDial, onReset: showHome, onSee: revealResults });
+FFDial.mount($('#ffDial'), { t, toggleHost: chipsTrack, toggleClass: 'chip', onChange: runDial, onReset: showHome, onSee: revealResults });
 FFDial.setVisible(ctype === 'movie');
 applyTypeCopy();
 syncWL();

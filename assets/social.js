@@ -7,9 +7,9 @@
    - window.FFBot: the mascot's moods during AI searches (see Moods below),
      FFBot.welcome(): a first visit's tip pointing at the AI search, and
      FFBot.watch(): the mascot reacting to a trailer as it plays.
-   - Classic's hero mascot (#ffh) and the one peeking over "Your Taste DNA"
-     (.ffp), computers only: see their sections below.
-   - The corner mascot (#ffm, computers only) comes up once the hero strip
+   - Classic's mascot peeking over "Your Taste DNA" (.ffp), computers only:
+     see its section below.
+   - The corner mascot (#ffm, computers only) comes up once the search area
      ([data-ffm-after]) has scrolled out of view above, and goes back down
      while the footer band (.ffs-band, which has its own mascot) is on screen.
      Hover, focus or a click opens its bubble; its close button hides it for
@@ -101,7 +101,7 @@
      the page scrolls, or after WELCOME_SHOW_MS. Strings: mascot.welcome / mascot.try / results.close
      in /assets/i18n.js. Styles: .ffw in social.css. */
   var WELCOME_KEY = 'ff_welcome_seen', WELCOME_WAIT_MS = 90000, WELCOME_SHOW_MS = 15000;
-  var welcoming = false, welcomed = false;   // a tip waiting or up · shown on this page view (for hello below)
+  var welcoming = false;   // a tip waiting or up
   function say(key) {
     var all = window.FF_I18N || {}, lang;
     try { lang = localStorage.getItem('rk_lang'); } catch (e) { /* storage blocked */ }
@@ -127,7 +127,6 @@
   }
   function showWelcome(target, onTry) {
     try { localStorage.setItem(WELCOME_KEY, '1'); } catch (e) { /* shown this once anyway */ }
-    welcomed = true;
     var tip = document.createElement('div');
     tip.className = 'ffw';
     tip.setAttribute('role', 'status');
@@ -390,50 +389,6 @@
 
   function track(placement) {
     if (typeof window.gtag === 'function') window.gtag('event', 'mascot_click', { placement: placement });
-  }
-
-  /* ── Hero mascot (#ffh, Classic, computers ≥1200px) ────────────────────
-     Beside the search. It fades in once the sprite is in (.is-ready); hover
-     and focus make it wave and talk (CSS), and so does a first visit's
-     welcome tip, minus its bubble. On its own it says hello once per browser
-     (.is-hi for HELLO_SHOW_MS, localStorage ff_hello_seen): once it's on
-     screen and uncovered, and never on a page view that had the welcome tip,
-     so a visit gets one greeting (a first visit's is the tip; the hello comes
-     on the next). If the search is already in use it needn't say it at all.
-     Its click (the page's onclick) opens the AI search: mascot_click hero.
-     Strings: mascot.hello in /assets/i18n.js. Styles: .ffh in social.css. */
-  var HELLO_KEY = 'ff_hello_seen', HELLO_SHOW_MS = 6000;
-  var heroBot = document.getElementById('ffh');
-  var heroDesk = window.matchMedia('(min-width: 1200px) and (hover: hover)');
-  function heroUp() {
-    if (heroDesk.matches && !heroBot.classList.contains('is-ready')) warm(function () { heroBot.classList.add('is-ready'); hello(); });
-  }
-  function hello() {
-    try { if (localStorage.getItem(HELLO_KEY)) return; } catch (e) { return; }
-    var since = Date.now(), field = heroBot.parentNode.querySelector('input');
-    (function wait() {
-      if (welcomed || Date.now() - since > WELCOME_WAIT_MS) return;   // greeted already, or try again next visit
-      if (field && (field.value || document.activeElement === field)) { sayHello(false); return; }
-      if (!welcoming && heroDesk.matches && document.visibilityState === 'visible' && uncovered(heroBot)) sayHello(true);
-      else setTimeout(wait, 500);
-    })();
-  }
-  function sayHello(out) {
-    try { localStorage.setItem(HELLO_KEY, '1'); } catch (e) { /* once on this page anyway */ }
-    if (!out) return;
-    var timer = setTimeout(bye, HELLO_SHOW_MS);
-    function bye() {
-      clearTimeout(timer);
-      heroBot.classList.remove('is-hi');
-      heroBot.parentNode.removeEventListener('focusin', bye);
-    }
-    heroBot.classList.add('is-hi');
-    heroBot.parentNode.addEventListener('focusin', bye);   // the search took over (or the mascot's own click)
-  }
-  if (heroBot) {
-    heroBot.addEventListener('click', function () { track('hero'); });
-    if (heroDesk.addEventListener) heroDesk.addEventListener('change', heroUp);
-    heroUp();
   }
 
   /* ── Peeking mascot (.ffp, Classic's "Your Taste DNA" button) ──────────
