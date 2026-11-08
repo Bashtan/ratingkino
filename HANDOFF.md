@@ -2,12 +2,9 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-08) — UX Upgrade Phase 1: No Dead-End Searches; a True 50/25/25 Score That Explains Itself (READY TO DEPLOY)
+## ⚡ Most Recent Session (2026-11-08) — UX Upgrade Phase 1: No Dead-End Searches; a True 50/25/25 Score That Explains Itself
 
-Committed on `main` (`134e232`), **not deployed yet**. To ship, run both together, because the preview-card version moved to `v2` in the site and the sync Worker:
-1. `./deploy.sh --branch main`
-2. `npx wrangler deploy --config sync-worker.toml --env=""`
-3. `curl -s "https://ratingkino-sync.dimabashtan.workers.dev/sync-now?phase=cards"`, to redraw the Trending and Top Rated cards at the new score (about 2 minutes).
+All commits on `main`, live on https://findfilm.ai since 2026-11-08: Pages production **`6981e386`** from `e00ec45` (`/build.json` = `20261108T120835Z-e00ec45`; `./deploy.sh`: 18/18 sensitive paths unpublished, custom domains clean) and **`ratingkino-sync`** version **`486e7ed8`**. Preview cards redrawn at the new score: `/sync-now?phase=cards` gave `{listed: 79, had: 0, drawn: 77, failed: 2}` in 2 min 10 s, then `{had: 77, drawn: 2, failed: 0}`.
 
 **The owner's decisions (2026-11-08) for the 3-phase upgrade:**
 - **Score:** fixed weights, 50% IMDb, 25% RT, 25% Metacritic. Done here.
@@ -26,10 +23,11 @@ Committed on `main` (`134e232`), **not deployed yet**. To ship, run both togethe
 - **Classic:** the lighthouse query gives 6 films with reasons; `asdfghjkl` gives 20 popular films; typing on cancels (0 vibe calls for abandoned text); "Ted Lasso" on Movies offers the TV tab; TV gives popular series and the button leads to closest films; rating 10 + Brazil removes the rating; 9.5 + France shows 8+ with paging; every API failing shows Try Again.
 - **Cinematic:** the same queries and both tab buttons; Quick View shows Inception 8.4 with its chips; Game of Thrones (`external_ids`) shows "Only IMDb has rated this so far"; Godzilla Minus Zero (no OMDb data) keeps TMDB's ★.
 - **Tip:** on the grid, in Classic's modal and in Quick View; 375px and desktop. Note lines in `uk`, `ar`, `de`, `zh`. The preview card reads 8.4; `/og/v1/` answers 301; bad paths 404. Local console: only the known `/api/cache/*` 404s.
+- **Live:** `score.*`, `closest.js`, `i18n.js` match the commit on both pages; no "no results" string left; `/og/v2/` draws Inception at 8.4 and `/og/v1/` answers 301; this week's top 3 trending cards in 18–23 ms; Classic's lighthouse query gives closest films in about 5 s and `asdfghjkl` gives popular titles; Inception reads 8.4 with its mix line in Classic's modal and Cinematic's Quick View; no console errors. The owner tests the tip's timing on a real phone and reviews the translations.
 - **Test note:** the Browser pane was hidden, which freezes CSS transitions and `requestAnimationFrame`, so sheets were checked with animations off. Real-device timing of the tip after a sheet opens is untested.
 
 **Known limits:**
-- **Cinematic's grid cards still show TMDB's ★**, so a card and its Quick View can differ.
+- **Cinematic's grid cards keep TMDB's ★ (the owner's decision, 2026-11-08):** scoring every card would cost too many OMDb calls and slow the page. A card and its Quick View can differ.
 - The wizard and group picker keep their failure screens; those only appear if the request itself fails.
 
 ---
@@ -3476,8 +3474,8 @@ The site is fully installable as a PWA on all platforms.
 
 ## Pending / Next Steps
 
-- [ ] **Deploy `134e232`** (UX Phase 1): `./deploy.sh --branch main` and the sync Worker together, then `/sync-now?phase=cards`. See the 2026-11-08 block.
-- [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, not deployed yet).
+- [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
+- [ ] **Owner's checks on Phase 1:** the score tip's timing on a real phone; the new strings in the 8 non-English languages.
 - [ ] **UX Phase 2:** the Vibe Dial (test the axes on 30 films first), then Tonight's Three (`POST /api/tonight`; code picks the films).
 - [ ] **UX Phase 3 (Guest-First):** `assets/store.js` first (per-item dates, so merges can work), remove the first-visit quiz; then Google + Apple sign-in, `/api/me/import` (idempotent, newest change per film wins), ongoing sync. Needs a privacy policy page and the Apple Developer membership.
 - [ ] **`ratingkino.com`:** 301 to `findfilm.ai`, with a one-time transfer of guest data first.
