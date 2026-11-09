@@ -268,8 +268,16 @@ await test('every value is checked before it is used', async () => {
   assert.equal(taste.extra, undefined);
 });
 
-await test('an installed app stays put and offers to open the browser, with the code ready', async () => {
+await test('while switched off, an installed app shows nothing and sends nothing', async () => {
   const b = browser({ standalone: true, storage: fakeStorage({ rk_watchlist_v2: JSON.stringify([{ id: 3, type: 'movie' }]) }) });
+  await sleep();
+  assert.equal(b.replaced, null);
+  assert.equal(b.notes.length, 0);
+  assert.deepEqual(b.calls, []);
+});
+
+await test('an installed app stays put and offers to open the browser, with the code ready', async () => {
+  const b = browser({ standalone: true, storage: flagged({ rk_watchlist_v2: JSON.stringify([{ id: 3, type: 'movie' }]) }) });
   await sleep();
   assert.equal(b.replaced, null);
   assert.equal(b.notes.length, 1);

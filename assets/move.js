@@ -18,7 +18,7 @@
    ═══════════════════════════════════════ */
 (function () {
   'use strict';
-  var LIVE = false;                       // true: everyone on the old domain moves. false: only with ?move=1 once.
+  var LIVE = false;                       // true: everyone on the old domain moves, installed apps included. false: only with ?move=1 once.
   var FLAG_KEY = 'ff_flag_move', VOTE = 'ff_pitch_vote_', KEEP_CODE_MS = 480000, SHOW_ANYWAY_MS = 5000;
   var LOCAL_TEST = location.hostname === 'old.localhost';
   var ON_OLD_DOMAIN = LOCAL_TEST || /(^|\.)ratingkino\.com$/.test(location.hostname);
@@ -182,6 +182,7 @@
 
   if (!ON_OLD_DOMAIN) { arrive(); return; }
   if (/[?&]move=1/.test(location.search)) set(FLAG_KEY, '1');
+  if (!LIVE && get(FLAG_KEY) !== '1') return;
   if (window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches)) { offerFromInstalledApp(); return; }
-  if (LIVE || get(FLAG_KEY) === '1') leave();
+  leave();
 })();
