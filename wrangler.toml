@@ -24,6 +24,16 @@ binding       = "DB"
 database_name = "findfilm-pitch"
 database_id   = "261cc44d-36e9-4913-a1c9-b61e1aed949e"
 
+# Accounts (Phase 3): users, sign-in identities, sessions. Kept apart from the public Pitch data.
+# Numbered files in migrations/users/, applied preview first:
+#   npx wrangler d1 migrations apply findfilm-users-preview --env preview --remote
+#   npx wrangler d1 migrations apply findfilm-users --remote
+[[d1_databases]]
+binding        = "USERS"
+database_name  = "findfilm-users"
+database_id    = "0ddde35c-7cec-4ef9-bf81-e4ffa682abb3"
+migrations_dir = "migrations/users"
+
 [ai]
 binding = "AI"
 
@@ -50,6 +60,12 @@ id      = "c2367fa6be864a4c9e6e4a4f4d8d66c5"   # ratingkino-preview-cache
 binding       = "DB"
 database_name = "findfilm-pitch-preview"
 database_id   = "ce6003b6-4584-43e0-8d0a-39669f6810ab"
+
+[[env.preview.d1_databases]]
+binding        = "USERS"
+database_name  = "findfilm-users-preview"
+database_id    = "5fa01963-2a48-460b-b5c8-5d3f2240f1f8"
+migrations_dir = "migrations/users"
 
 [env.preview.ai]
 binding = "AI"
