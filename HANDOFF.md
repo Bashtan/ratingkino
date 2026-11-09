@@ -2,7 +2,23 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-09e) — Phase 3, Stage 4: Google Sign-In Is Public
+## ⚡ Most Recent Session (2026-11-09f) — Phase 3, Stage 6: The Move From ratingkino.com
+
+Committed on `main`, **NOT deployed.** Production is Pages `203ed0b3` from `ab63978`. `0003_transfers.sql` is applied to local and preview but **not** to production: apply it before deploying this (`npx wrangler d1 migrations apply findfilm-users --remote`).
+
+| Commit | Feature |
+|--------|---------|
+| `d24aafb` | **`assets/move.js`**: on the old domain `pack()` + `leave()` (POST the guest's data, then `location.replace` to the same page on findfilm.ai with `#transfer=<code>`; nothing saved = plain redirect; a failed POST stays put; unregisters the old service worker); installed apps get `offerFromInstalledApp()` (no redirect; a note that opens the browser, code prepared in advance and refreshed every 8 min). On arrival `arrive()` claims the code and `bringIn()` merges: `FFStore.mergeIn()` (newest change wins, marked unsent), richer taste wins, settings only if absent before arrival. `cleanItems` / `cleanValue` / `cleanTaste` / `cleanRated` and the `EXTRAS` rules check every value. A referrer other than the old domain gets a confirmation note first. **`LIVE = false`**: only `?move=1` (`ff_flag_move`) moves a browser; installed-app note shows regardless. **`functions/_lib/transfer.js`**: `POST /api/transfer` (old domain only), `POST /api/transfer/claim` (new domain only, one `DELETE … RETURNING`, so once only); `0003_transfers.sql` (`code_hash`, `payload`, `expires_at`, 10 min). `old.localhost` stands in for the old domain locally. i18n `move.*`. Classic's review date is now escaped. Privacy page gained a sentence about the transfer. |
+
+**Tested:** `node --no-warnings tools/move-test.mjs` (22 cases). Real browser, two origins (`old.localhost:8283` → `localhost:8283`) with old-format data and a deep link: watchlist merged, review, taste, language, Pitch voter id carried, film opened, code out of the address, API key not copied.
+
+**Not moved:** `rk_tmdb`, `rk_omdb` (a visitor's own keys), `/pitch/*` and `/tv/*` pages (they go with the 301).
+
+**To launch:** apply the migration, deploy, test on the real domain with `https://ratingkino.com/?move=1` and from an app installed from ratingkino.com, then `LIVE = true` in `assets/move.js`. **About 3 months later:** deploy `redirect-worker/` (true 301) and remove `OLD_DOMAIN` from `account-ui.js`, the old-domain half of `move.js`, and `old.localhost`.
+
+---
+
+## Session (2026-11-09e) — Phase 3, Stage 4: Google Sign-In Is Public
 
 **Public since 2026-11-09:** Pages production **`203ed0b3`** from `ab63978` (`/build.json` = `20261109T122658Z-ab63978`). Passed by the owner on desktop, Android and the installed iPhone app, syncing between them.
 
@@ -3208,6 +3224,7 @@ ratingkino/
 ├── assets/score.js / .css ← shared by index.html + cinematic/index.html: the FindFilm score
 │                           (FFScore: 50/25/25, the mix line, the one-time tip). ?v=<hash>.
 ├── assets/dial.js / .css ← shared by index.html + cinematic/index.html: FFDial, the mood sliders. ?v=<hash>.
+├── assets/move.js       ← shared: the move from ratingkino.com; load after watchlist.js. Tests: tools/move-test.mjs
 ├── assets/store.js      ← shared: FFStore, the guest's dated data; load before watchlist.js. ?v=<hash>. Tests: tools/store-test.mjs
 ├── assets/account.js    ← shared: FFAccount, keeps a signed-in browser in step; load after watchlist.js. Tests: tools/account-sync-test.mjs
 ├── assets/account-ui.js / .css ← shared: FFAccountUI, sign-in sheet and prompts; load after account.js. ?v=<hash>.
@@ -3648,8 +3665,8 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Music vibe on phones:** `.ss-music` in the search panel (`7055509`, live; real-phone tap being checked by the owner).
 - [x] **Tonight's Three** live and phone-approved (owner, 2026-11-09). Owner reviewing the `t3.*` translations at their own pace.
 - [x] **Phase 3, Stages 1–4** live and public on findfilm.ai (`203ed0b3`, 2026-11-09).
-- [ ] **Phase 3, Stage 5: Apple sign-in.** Waiting on the owner's $99 Apple Developer membership. The server route exists (`APPLE_CLIENT_ID` empty = off); the button doesn't.
-- [ ] **Phase 3, Stage 6: `ratingkino.com`.** One-time guest-data transfer and a script redirect first, a true 301 about 3 months later.
+- [ ] **Phase 3, Stage 5: Apple sign-in.** On hold: the owner is getting the $99 Apple Developer membership and will provide the credentials and domain setup. The server route exists (`APPLE_CLIENT_ID` empty = off); the button doesn't.
+- [ ] **Phase 3, Stage 6: `ratingkino.com`.** Built (`d24aafb`): deploy dark, test on the real domain, `LIVE = true`. True 301 about 3 months after that.
 
 - [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
 - [x] **Phase 1 on a real phone** (owner, 2026-11-08): tip placement, animation and the fallback approved.
