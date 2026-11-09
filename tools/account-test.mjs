@@ -2,12 +2,11 @@
      node tools/account-test.mjs
    Google can't be asked for a token here, so the routes get a stand-in for the provider check.
    Everything after that (cookies, sessions, cascades, limits) is the production code.
-   The database is SQLite through a small stand-in for D1's API, with foreign keys on as in D1. */
-import { readFileSync, readdirSync } from 'node:fs';
-import { DatabaseSync } from 'node:sqlite';
+   The database is SQLite through tools/fake-d1.mjs. */
 import assert from 'node:assert/strict';
 import { SignJWT, generateKeyPair, exportJWK, createLocalJWKSet, UnsecuredJWT } from 'jose';
 import { verifyIdToken, handleAuth, handleMe } from '../functions/_lib/account.js';
+import { fakeD1 } from './fake-d1.mjs';
 
 const results = [];
 const test = async (name, fn) => { await fn(); results.push(name); console.log('ok  ', name); };
@@ -39,28 +38,8 @@ await test('no subject fails', async () => rejects(verifyIdToken(await sign({ su
 await test('rubbish fails', async () => rejects(verifyIdToken('not.a.token', OK)));
 
 /* ── Routes on the real schema ── */
-function fakeD1() {
-  const sql = new DatabaseSync(':memory:');
-  sql.exec('PRAGMA foreign_keys = ON');
-  const statement = (text, args = []) => ({
-    bind: (...values) => statement(text, values),
-    runNow: () => sql.prepare(text).run(...args),
-    run: async () => sql.prepare(text).run(...args),
-    first: async column => { const row = sql.prepare(text).get(...args) ?? null; return column ? row?.[column] ?? null : row; },
-  });
-  return {
-    exec: text => sql.exec(text),
-    prepare: text => statement(text),
-    batch: async list => {
-      sql.exec('BEGIN');
-      try { list.forEach(s => s.runNow()); sql.exec('COMMIT'); } catch (e) { sql.exec('ROLLBACK'); throw e; }
-    },
-  };
-}
 const db = fakeD1();
 const env = { USERS: db };
-const migrations = new URL('../migrations/users/', import.meta.url);
-for (const file of readdirSync(migrations).sort()) db.exec(readFileSync(new URL(file, migrations), 'utf8'));
 
 const ORIGIN = 'https://findfilm.ai';
 let ip = 0;   // each test its own address, so the sign-in limit only bites where it's meant to

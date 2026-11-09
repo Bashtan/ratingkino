@@ -16,9 +16,11 @@
    POST /api/auth/apple   { credential, name? } → the same, while APPLE_CLIENT_ID is set; else 404
    POST /api/auth/logout  → { ok: true }
    GET  /api/me           → { user } or { user: null }
-   DELETE /api/me         → { ok: true }: the account and everything of theirs */
+   DELETE /api/me         → { ok: true }: the account and everything of theirs
+   POST /api/me/sync      merge saved data: functions/_lib/sync.js */
 
 import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { syncRequest } from './sync.js';
 
 export const GOOGLE_CLIENT_ID = '166585102182-p96f9a6e963b7dace3u0dum14bqav6kk.apps.googleusercontent.com';
 export const APPLE_CLIENT_ID = '';   // the Services ID from the Apple Developer account. Empty: Apple sign-in is off.
@@ -28,7 +30,7 @@ const SESSION_MS = 60 * DAY;
 const NONCE_SECONDS = 600;
 const MAX_BODY = 16384;              // an ID token is 1-2 KB
 const MAX_FIELD = 200;               // a name or email we'd keep
-const SIGN_INS_PER_WINDOW = 20, WINDOW_MS = 600000;
+const SIGN_INS_PER_WINDOW = 20, SYNCS_PER_WINDOW = 300, WINDOW_MS = 600000;
 
 const PROVIDERS = {
   google: { keys: createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs')), issuer: ['https://accounts.google.com', 'accounts.google.com'], audience: () => GOOGLE_CLIENT_ID },
@@ -89,13 +91,12 @@ function refused(request, env) {
   return null;
 }
 
-async function overLimit(db, request, now, waitUntil) {
-  const bucket = Math.floor(now / WINDOW_MS);
-  const id = `signin:${await sha256(request.headers.get('CF-Connecting-IP') || 'local')}:${bucket}`;
+async function overLimit(db, key, limit, now, waitUntil) {
+  const id = `${key}:${Math.floor(now / WINDOW_MS)}`;
   const row = await db.prepare('INSERT INTO rate_limits (id, count, expires_at) VALUES (?1, 1, ?2) ON CONFLICT(id) DO UPDATE SET count = count + 1 RETURNING count')
     .bind(id, now + 2 * WINDOW_MS).first();
   waitUntil?.(db.prepare('DELETE FROM rate_limits WHERE expires_at < ?1').bind(now).run().catch(() => {}));
-  return row.count > SIGN_INS_PER_WINDOW;
+  return row.count > limit;
 }
 
 const field = v => (typeof v === 'string' && v.trim() ? v.trim().slice(0, MAX_FIELD) : null);
@@ -123,7 +124,8 @@ async function findOrCreateUser(db, provider, claims, givenName, now) {
 async function signIn(request, env, provider, verify, waitUntil) {
   if (provider === 'apple' && !APPLE_CLIENT_ID) return json({ error: 'Not available' }, 404);
   const url = new URL(request.url), now = Date.now(), db = env.USERS;
-  if (await overLimit(db, request, now, waitUntil)) return json({ error: 'Too many attempts' }, 429);
+  const address = await sha256(request.headers.get('CF-Connecting-IP') || 'local');
+  if (await overLimit(db, `signin:${address}`, SIGN_INS_PER_WINDOW, now, waitUntil)) return json({ error: 'Too many attempts' }, 429);
 
   let body;
   try {
@@ -183,11 +185,21 @@ export async function handleAuth({ request, env, params, waitUntil }, verify = v
   return json({ error: 'Not found' }, 404);
 }
 
-export async function handleMe({ request, env, params }) {
+export async function handleMe({ request, env, params, waitUntil }) {
   const stop = refused(request, env);
   if (stop) return stop;
-  const url = new URL(request.url), now = Date.now();
-  if ((params.path || []).length) return json({ error: 'Not found' }, 404);
+  const url = new URL(request.url), now = Date.now(), route = (params.path || []).join('/');
+
+  if (route === 'sync') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+    const session = await currentSession(request, env, now);
+    if (!session) return json({ error: 'Not signed in' }, 401);
+    if (await overLimit(env.USERS, `sync:${session.user.id}`, SYNCS_PER_WINDOW, now, waitUntil)) return json({ error: 'Too many requests' }, 429);
+    const [status, body] = await syncRequest(env.USERS, session.user.id, await request.text(), now);
+    return json(body, status);
+  }
+
+  if (route) return json({ error: 'Not found' }, 404);
 
   if (request.method === 'GET') {
     const session = await currentSession(request, env, now);
