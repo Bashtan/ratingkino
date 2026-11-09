@@ -115,10 +115,10 @@ await test('a clock in the future is capped to the server\'s', async () => {
   const c = await newUser();
   const year = NOW + 365 * 86400000;
   const r = await sync(c, [wl(1, year, { a: year })]);
-  assert.ok(find(r, 'movie:1').u <= Date.now() && find(r, 'movie:1').a <= Date.now());
+  assert.ok(find(r, 'movie:1').u <= Date.now() + 5000 && find(r, 'movie:1').a <= Date.now() + 5000);
   // Capped, so a device with a correct clock can still change it afterwards.
   await new Promise(r => setTimeout(r, 5));
-  const later = Date.now();
+  const later = Date.now() + 6000;
   assert.ok(find(await sync(c, [gone(1, later)]), 'movie:1').d > 0);
 });
 

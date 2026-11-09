@@ -13,7 +13,7 @@
 
    Only what's in RULES is stored, so a device can't push anything else (rk_tmdb and rk_omdb can hold
    a visitor's own API keys). One bad item is skipped and counted; the rest still go through.
-   A time later than the server's clock is capped to it. */
+   A time much later than the server's clock is capped to it. */
 
 const RULES = new Map([
   ['watchlist', { key: /^(movie|tv):\d{1,10}$/, max: 200 }],
@@ -22,6 +22,10 @@ const RULES = new Map([
   // The taste blobs have no dates: the client sends their interaction count as u, so the richer one wins.
   ['profile',   { key: /^(taste|ratedFilms)$/, max: 64000 }],
 ]);
+
+// A device a moment ahead is normal. Capping exactly at the server's clock could make a quick second
+// change tie with the first, and a tie doesn't overwrite.
+const CLOCK_SLACK_MS = 5000;
 
 export const SYNC = {
   MAX_BATCH: 2000,        // items per request: a client with more sends them in turn
@@ -34,7 +38,7 @@ function cleanItem(x, now) {
   if (!x || typeof x !== 'object') return null;
   const rule = RULES.get(x.c);
   if (!rule || typeof x.k !== 'string' || !rule.key.test(x.k)) return null;
-  const time = n => (Number.isSafeInteger(n) && n > 0 ? Math.min(n, now) : 0);
+  const time = n => (Number.isSafeInteger(n) && n > 0 ? Math.min(n, now + CLOCK_SLACK_MS) : 0);
   const u = time(x.u), d = time(x.d);
   if (!u) return null;
   if (d) return { c: x.c, k: x.k, v: null, a: time(x.a) || u, u, d };

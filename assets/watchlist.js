@@ -72,6 +72,7 @@
   // The first run brings the older list in, undated and in its order. After that, the only thing
   // that can make the two differ is a tab still running the old code: its changes count.
   function absorbOld() {
+    if (FFStore.meta().owner) return;                   // an account's list comes from the server, not an old tab
     var old = readOld();
     if (!old) return;
     if (!FFStore.exists(COLLECTION)) {
@@ -111,6 +112,13 @@
     if (ev.key !== 'ff_store_' + COLLECTION && ev.key !== KEY && ev.key !== null) return;     // key === null: localStorage.clear()
     if (ev.key === KEY) absorbOld();
     refresh();
+    emit();
+  });
+
+  FFStore.onRemoteChange(function (collection) {        // another device's change, or signing out
+    if (collection !== COLLECTION) return;
+    refresh();
+    saveOldCopy();
     emit();
   });
 
