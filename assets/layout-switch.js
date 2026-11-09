@@ -45,7 +45,6 @@
     var vt = document.createElement('style');
     vt.textContent = '@view-transition { navigation: auto; }';
     document.head.appendChild(vt);
-    if (typeof window.gtag === 'function') window.gtag('event', 'layout_switch', { layout: layout });
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     // The query rides along, so an open ?movie= / ?TVShows= title reopens there.
     setTimeout(function () {

@@ -2,8 +2,6 @@
    Social links + mascot — SHARED by / (Classic) and /cinematic/.
    Styles and markup notes: /assets/social.css.
 
-   - Every brand link (a[data-ffs]) reports a GA `social_click` with its
-     network and its placement (the nearest [data-ffs-place]).
    - window.FFBot: the mascot's moods during AI searches (see Moods below),
      FFBot.welcome(): a first visit's tip pointing at the AI search, and
      FFBot.watch(): the mascot reacting to a trailer as it plays.
@@ -19,13 +17,6 @@
 (function () {
   'use strict';
   var OFF_KEY = 'ff_mascot_off';
-
-  document.addEventListener('click', function (e) {
-    var a = e.target && e.target.closest ? e.target.closest('a[data-ffs]') : null;
-    if (!a || typeof window.gtag !== 'function') return;
-    var place = a.closest('[data-ffs-place]');
-    window.gtag('event', 'social_click', { network: a.getAttribute('data-ffs'), placement: place ? place.getAttribute('data-ffs-place') : '' });
-  });
 
   /* ── Moods (window.FFBot): the mascot reacts to the AI ──────────────────
      FFBot.set('think' | 'idea' | 'success' | 'confused' | 'idle') paints every
@@ -387,16 +378,12 @@
     if (el && el.matches && el.matches('input[type="search"], input[type="text"], textarea')) warm();
   });
 
-  function track(placement) {
-    if (typeof window.gtag === 'function') window.gtag('event', 'mascot_click', { placement: placement });
-  }
-
   /* ── Peeking mascot (.ffp, Classic's "Your Taste DNA" button) ──────────
      It rises over its button the first time the button is on screen on a
      computer (.is-in, once the sprite is in), hopping twice the first time
      it's actually up (.is-hop). It ducks while its row (data-ffp-edge) slides
      under the sticky bar (data-ffp-under), which it would otherwise be drawn
-     over. Its click opens Taste DNA (the button's): mascot_click dna. */
+     over. Its click opens Taste DNA (the button's). */
   var desk = window.matchMedia('(min-width: 1024px) and (hover: hover)');
   document.querySelectorAll('.ffp').forEach(function (p) {
     var bar = document.querySelector(p.getAttribute('data-ffp-under'));
@@ -411,7 +398,6 @@
     function soon() { if (!frame && p.classList.contains('is-in')) frame = requestAnimationFrame(duck); }
     window.addEventListener('scroll', soon, { passive: true });
     window.addEventListener('resize', soon);
-    p.querySelector('.ffp-bot').addEventListener('click', function () { track('dna'); });
     if (!('IntersectionObserver' in window)) return;
     var io = new IntersectionObserver(function (entries) {
       if (!entries[0].isIntersecting || !desk.matches) return;
@@ -478,7 +464,6 @@
     m.classList.add('is-egg');
     var cheer = mood === 'idle';
     if (cheer) set('success');
-    if (typeof window.gtag === 'function') window.gtag('event', 'mascot_egg');
     setTimeout(function () {
       m.classList.remove('is-egg');
       egging = false;

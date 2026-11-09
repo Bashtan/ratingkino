@@ -56,14 +56,6 @@
   });
 })();
 </script>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-XF0GTFNRHX"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-XF0GTFNRHX');
-</script>
 <!-- interactive-widget=resizes-visual: when the virtual keyboard opens, resize ONLY the
      visual viewport, never the layout viewport / initial containing block. Without it,
      Android Chrome (and iOS 17+) shrink the layout viewport, which re-resolves every
@@ -5263,12 +5255,12 @@ if ('serviceWorker' in navigator) {
      rules must win over this file's own .logo rules (same values, plus the
      fixed logo width and the phone-only wordmark hide). -->
 <link rel="stylesheet" href="/assets/layout-switch.css?v=25800d7f">
-<script src="/assets/layout-switch.js?v=3b28858d" defer></script>
+<script src="/assets/layout-switch.js?v=8ffc32a1" defer></script>
 <!-- Touch baseline + bottom-sheet drag, shared with /cinematic/. -->
 <link rel="stylesheet" href="/assets/touch.css?v=9a940d58">
 <!-- Social links + corner mascot, shared with /cinematic/. -->
 <link rel="stylesheet" href="/assets/social.css?v=6846bb47">
-<script src="/assets/social.js?v=38dce9fa" defer></script>
+<script src="/assets/social.js?v=2d7f6758" defer></script>
 <!-- Reloads a page left open across a deploy, when it comes back after 10+ min away (/build.json). -->
 <script src="/assets/fresh.js?v=887c34fa" defer></script>
 <script src="/assets/touch.js?v=271cca50" defer></script>
@@ -5713,12 +5705,12 @@ if ('serviceWorker' in navigator) {
   </div>
 
   <!-- Social strip, phones only: after the first row, so search + first picks stay on the opening screen -->
-  <div id="ffsFeed" class="ffs ffs--feed noskim" role="group" aria-labelledby="ffsFeedLabel" data-ffs-place="feed">
+  <div id="ffsFeed" class="ffs ffs--feed noskim" role="group" aria-labelledby="ffsFeedLabel">
     <img class="ffs-bot" src="/assets/ff-bot-sm.webp" alt="" width="34" height="58" loading="lazy" decoding="async">
     <span class="ffs-label" id="ffsFeedLabel" data-i18n="social.watchOn">Watch FindFilm on</span>
     <span class="ffs-links">
-      <a class="ffs-btn ffs-tt" href="https://www.tiktok.com/@findfilmai" target="_blank" rel="noopener" data-ffs="tiktok"><svg aria-hidden="true" focusable="false"><use href="#ffs-i-tt"/></svg><span>TikTok</span></a>
-      <a class="ffs-btn ffs-yt" href="https://www.youtube.com/@FindfilmAI/shorts" target="_blank" rel="noopener" data-ffs="youtube"><svg aria-hidden="true" focusable="false"><use href="#ffs-i-yt"/></svg><span>YouTube Shorts</span></a>
+      <a class="ffs-btn ffs-tt" href="https://www.tiktok.com/@findfilmai" target="_blank" rel="noopener"><svg aria-hidden="true" focusable="false"><use href="#ffs-i-tt"/></svg><span>TikTok</span></a>
+      <a class="ffs-btn ffs-yt" href="https://www.youtube.com/@FindfilmAI/shorts" target="_blank" rel="noopener"><svg aria-hidden="true" focusable="false"><use href="#ffs-i-yt"/></svg><span>YouTube Shorts</span></a>
     </span>
   </div>
 
@@ -6854,9 +6846,8 @@ function renderMiniCard(m, opts = {}) {
   const score    = miniRatingPill(m);
   const newBadge = opts.showNew ? `<div class="mini-card-new-badge">${t('card.new')}</div>` : '';
   const reason   = opts.reason  ? `<div class="mini-card-reason"><span class="mcr-spark">✨</span>${esc(opts.reason)}</div>` : '';
-  const listArg  = opts.listName ? `,'${opts.listName}'` : '';
   const styleAttr = opts.style ? ` style="${opts.style}"` : '';
-  return `<div class="mini-card" onclick="openMovie(${m.id}${listArg})" title="${esc(m.title)}"${styleAttr}>
+  return `<div class="mini-card" onclick="openMovie(${m.id})" title="${esc(m.title)}"${styleAttr}>
     ${img}${score}${newBadge}
     <div class="mini-card-info">
       <div class="mini-card-title">${esc(m.title)}</div>
@@ -7046,7 +7037,7 @@ async function loadFeedSections() {
     onOpen: row => {
       const m = fromTMDbAs(row, 'movie');
       if (!MOVIES.find(x => x.id === m.id)) MOVIES.push(m);   // openMovie() looks titles up in MOVIES
-      openMovie(m.id, "Tonight's Three");
+      openMovie(m.id);
     },
     onPersonal: on => { document.getElementById('t3Badge').hidden = !on; document.getElementById('rowTonight').style.display = ''; },
     onEmpty: () => { document.getElementById('rowTonight').style.display = 'none'; },
@@ -7102,8 +7093,7 @@ async function loadFeedSections() {
     document.getElementById('rowBest').style.display = '';
     // Best row keeps its own "Explore Top Rated" CTA end-cap (its See-More affordance)
     const bestCards = best.map(m =>
-      renderMiniCard({ ...m, avg: m.tmdbScore != null ? m.tmdbScore.toFixed(1) : m.avg },
-                     { listName: 'Best Available Now' }));
+      renderMiniCard({ ...m, avg: m.tmdbScore != null ? m.tmdbScore.toFixed(1) : m.avg }));
     window._FEED_FULL['best'] = { elId: 'scrollBest', cards: bestCards, cta: true };
     renderTruncatedRow('best');
   } else {
@@ -7115,7 +7105,7 @@ async function loadFeedSections() {
   if (curatedRow.length) {
     curatedRow.forEach(m => renderedMovieIds.add(m.id));
     document.getElementById('rowPopular').style.display = '';
-    const cards = curatedRow.map(m => renderMiniCard(m, { listName: 'AI Curated' }));
+    const cards = curatedRow.map(m => renderMiniCard(m));
     renderFeedRow('scrollPopular', 'popular', cards);
   } else {
     document.getElementById('rowPopular').style.display = 'none';
@@ -9645,7 +9635,7 @@ function parseMediaDeepLink(search = location.search) {
 /* ═══════════════════════════════════
    MODAL
 ═══════════════════════════════════ */
-async function openMovie(tmdbId, listName = '') {
+async function openMovie(tmdbId) {
   let m = MOVIES.find(x => x.id === tmdbId);
   if (!m) {
     // Fallback: AI Curated / Discover movies live in _FEED_POOL but not in MOVIES
@@ -9666,19 +9656,6 @@ async function openMovie(tmdbId, listName = '') {
   // movie modal (z-index 200) surfaces when a wizard result card is clicked.
   const _wizOv = document.getElementById('wizardOverlay');
   if (_wizOv.classList.contains('open')) _wizOv.classList.remove('open');
-  // Auto-detect list context when not explicitly provided (main grid)
-  if (!listName) {
-    const q = (document.getElementById('searchInput')?.value || '').trim();
-    listName = q ? 'Search' : 'Browse';
-  }
-  // GA4: track which feed row drives modal opens
-  if (typeof gtag === 'function') {
-    gtag('event', 'select_content', {
-      content_type:   'movie',
-      item_id:        String(tmdbId),
-      item_list_name: listName,
-    });
-  }
   ACTIVE_MOVIE = m;
   TRAILER_OPEN = false;
   PENDING_STARS = 0;
@@ -10541,7 +10518,6 @@ async function loadSimilarMovies(m) {
       };
       return renderMiniCard(card, {
         reason:   matchInsight(m, raw),
-        listName: 'Similar',
         style:    `animation-delay:${i * 45}ms;opacity:0;animation:aimFadeIn 0.35s ease forwards`,
       });
     }).join('');
@@ -13431,28 +13407,28 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
 <!-- Skimlinks affiliate tracking — loads after all app JS -->
 <script type="text/javascript" src="https://s.skimresources.com/js/304950X1793141.skimlinks.js" async></script>
 <!-- Footer band: the mascot, full size, with the two channels. /assets/social.css -->
-<section class="ffs-band noskim" aria-labelledby="ffsBandTitle" data-ffs-place="footer">
+<section class="ffs-band noskim" aria-labelledby="ffsBandTitle">
   <img class="ffs-band-bot" src="/assets/ff-bot.webp" alt="" width="105" height="180" loading="lazy" decoding="async">
   <div class="ffs-band-body">
     <h2 class="ffs-band-title" id="ffsBandTitle" data-i18n="social.watchOn">Watch FindFilm on</h2>
     <span class="ffs-links">
-      <a class="ffs-btn ffs-tt" href="https://www.tiktok.com/@findfilmai" target="_blank" rel="noopener" data-ffs="tiktok"><svg aria-hidden="true" focusable="false"><use href="#ffs-i-tt"/></svg><span>TikTok</span></a>
-      <a class="ffs-btn ffs-yt" href="https://www.youtube.com/@FindfilmAI/shorts" target="_blank" rel="noopener" data-ffs="youtube"><svg aria-hidden="true" focusable="false"><use href="#ffs-i-yt"/></svg><span>YouTube Shorts</span></a>
+      <a class="ffs-btn ffs-tt" href="https://www.tiktok.com/@findfilmai" target="_blank" rel="noopener"><svg aria-hidden="true" focusable="false"><use href="#ffs-i-tt"/></svg><span>TikTok</span></a>
+      <a class="ffs-btn ffs-yt" href="https://www.youtube.com/@FindfilmAI/shorts" target="_blank" rel="noopener"><svg aria-hidden="true" focusable="false"><use href="#ffs-i-yt"/></svg><span>YouTube Shorts</span></a>
     </span>
   </div>
 </section>
 <!-- Mascot peeking from the bottom-right corner (computers only): comes up once
      the hero strip has scrolled away; hover/click opens its bubble; × hides it
      for good. /assets/social.css + social.js. -->
-<aside class="ffm noskim" id="ffm" data-ffs-place="mascot" aria-labelledby="ffmLabel">
+<aside class="ffm noskim" id="ffm" aria-labelledby="ffmLabel">
   <div class="ffm-bubble" id="ffmBubble">
     <button class="ffm-close" type="button" aria-label="Close" data-i18n-aria="results.close">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
     <span class="ffs-label" id="ffmLabel" data-i18n="social.watchOn">Watch FindFilm on</span>
     <span class="ffs-links">
-      <a class="ffs-btn ffs-tt" href="https://www.tiktok.com/@findfilmai" target="_blank" rel="noopener" data-ffs="tiktok"><svg aria-hidden="true" focusable="false"><use href="#ffs-i-tt"/></svg><span>TikTok</span></a>
-      <a class="ffs-btn ffs-yt" href="https://www.youtube.com/@FindfilmAI/shorts" target="_blank" rel="noopener" data-ffs="youtube"><svg aria-hidden="true" focusable="false"><use href="#ffs-i-yt"/></svg><span>YouTube Shorts</span></a>
+      <a class="ffs-btn ffs-tt" href="https://www.tiktok.com/@findfilmai" target="_blank" rel="noopener"><svg aria-hidden="true" focusable="false"><use href="#ffs-i-tt"/></svg><span>TikTok</span></a>
+      <a class="ffs-btn ffs-yt" href="https://www.youtube.com/@FindfilmAI/shorts" target="_blank" rel="noopener"><svg aria-hidden="true" focusable="false"><use href="#ffs-i-yt"/></svg><span>YouTube Shorts</span></a>
     </span>
   </div>
   <button class="ffm-bot ffb" type="button" aria-labelledby="ffmLabel" aria-expanded="false" aria-controls="ffmBubble" data-ffb>
