@@ -7,7 +7,7 @@
    opens, so a visitor who never signs in never contacts Google.
 
    Switched off for the public until PUBLIC is true. ?auth=1 turns it on for this browser (and
-   ?auth=0 off), for testing on real devices.
+   ?auth=0 off), for testing on real devices; seven quick taps on the footer do the same.
 
    window.FFAccountUI: setup({ t, host, lang }) · relabel · enabled
      host: the element the strip is drawn in. lang(): the page's language code.
@@ -29,6 +29,20 @@
     var url = new URL(location.href);
     url.searchParams.delete('auth');
     history.replaceState(history.state, '', url);
+  })();
+
+  // The installed iPhone app has no address bar for ?auth=1, so seven quick taps on the footer do the same.
+  if (!PUBLIC) (function footerSwitch() {
+    var taps = 0, last = 0;
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest || !e.target.closest('.site-footer, .foot') || e.target.closest('a')) return;
+      var now = Date.now();
+      taps = now - last < 700 ? taps + 1 : 1;
+      last = now;
+      if (taps < 7) return;
+      try { localStorage.setItem(FLAG_KEY, '1'); } catch (err) { return; }
+      location.reload();
+    });
   })();
 
   function enabled() {
