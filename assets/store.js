@@ -21,7 +21,7 @@
    If storage is blocked or full, this visit carries on from memory.
 
    window.FFStore: list · get · put · remove · seed · exists · reviewsFor · addReview · pref · setPref
-                   outgoing · markSent · applyRemote · onLocalChange · onRemoteChange · meta · setMeta · clearAll
+                   outgoing · markSent · applyRemote · mergeIn · onLocalChange · onRemoteChange · meta · setMeta · clearAll
 
    Loaded synchronously in <head>, before watchlist.js, by both documents as
    ?v=<8-char content hash>. After editing, bump ?v= in index.html and cinematic/index.html:
@@ -153,6 +153,19 @@
     });
   }
 
+  // Data from another site (assets/move.js). Per item the newest change wins; what's taken counts as unsent.
+  function mergeIn(rows) {
+    COLLECTIONS.forEach(function (c) {
+      var items = read(c), changed = false;
+      rows.forEach(function (r) {
+        if (r.c !== c || (items[r.k] && items[r.k].updatedAt >= r.u)) return;
+        items[r.k] = { value: r.v, addedAt: r.a, updatedAt: r.u, deletedAt: r.d, dirty: true };
+        changed = true;
+      });
+      if (changed) { write(c); remoteChanged(c); localChanged(); }
+    });
+  }
+
   function meta() {
     try { return JSON.parse(localStorage.getItem(META_KEY)) || metaInMemory || {}; } catch (e) { return metaInMemory || {}; }
   }
@@ -220,7 +233,7 @@
   window.FFStore = {
     list: list, get: get, put: put, remove: remove, seed: seed, exists: exists,
     reviewsFor: reviewsFor, addReview: addReview,
-    outgoing: outgoing, markSent: markSent, applyRemote: applyRemote, meta: meta, setMeta: setMeta, clearAll: clearAll,
+    outgoing: outgoing, markSent: markSent, applyRemote: applyRemote, mergeIn: mergeIn, meta: meta, setMeta: setMeta, clearAll: clearAll,
     onLocalChange: function (fn) { localListeners.push(fn); },
     onRemoteChange: function (fn) { remoteListeners.push(fn); },
     pref: function (name) { return get('prefs', name); },

@@ -75,7 +75,7 @@ function randomToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
-async function sha256(text) {
+export async function sha256(text) {
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
   return [...digest].map(b => b.toString(16).padStart(2, '0')).join('');
 }
@@ -91,7 +91,7 @@ function refused(request, env) {
   return null;
 }
 
-async function overLimit(db, key, limit, now, waitUntil) {
+export async function overLimit(db, key, limit, now, waitUntil) {
   const id = `${key}:${Math.floor(now / WINDOW_MS)}`;
   const row = await db.prepare('INSERT INTO rate_limits (id, count, expires_at) VALUES (?1, 1, ?2) ON CONFLICT(id) DO UPDATE SET count = count + 1 RETURNING count')
     .bind(id, now + 2 * WINDOW_MS).first();
