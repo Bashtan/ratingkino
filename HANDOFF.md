@@ -2,13 +2,14 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-09d) — Phase 3, Stage 3: Merge Backend
+## ⚡ Most Recent Session (2026-11-09d) — Phase 3, Stage 3: Merge and Sync
 
 Committed on `main`, on the preview only. **Not in production:** production runs `cb10adf`, and `0002_sync.sql` is applied to local and preview but **not** to production `findfilm-users`. Apply it before deploying this: `npx wrangler d1 migrations apply findfilm-users --remote`.
 
 | Commit | Feature |
 |--------|---------|
 | `323ee17` | **`POST /api/me/sync`** `{since, items:[{c,k,v,a,u,d}]}` → `{items, cursor, more, rejected}`, routed in `handleMe()`. **`functions/_lib/sync.js`**: `RULES` (allow-list: `watchlist`, `reviews`, `prefs`, `profile`, each with a key pattern and size cap), `cleanItems()`, `mergeItems()` (one D1 batch: `INSERT … SELECT … json_each(?2) … ON CONFLICT … WHERE excluded.updated_at > items.updated_at`, then `users.seq += n`), `changesSince()`, `syncRequest()`, `SYNC` limits (2,000 items/request, 5,000/page, 20,000/person, 1.5 MB body; 300 syncs/10 min). **`0002_sync.sql`**: `items` (`user_id`, `collection`, `item_key`, `value`, `added_at`, `updated_at`, `deleted_at`, `seq`), `users.seq`. `overLimit()` now takes a key and limit. `tools/fake-d1.mjs` shared by the tests. |
+| `7b86f58` | **Browser half.** **`assets/account.js` (`FFAccount`: `user · ready · adopt · syncNow · signOut · deleteAccount · onChange`)**: `exchange()` (first sync sends everything from `since: 0`; chunks of 2,000 / 1.2 MB, earlier chunks with `PUSH_ONLY`), `run()` (Web Locks `ff-sync`, retry backoff), `schedule()` (3 s after a change), `flush()` (keepalive on page hide), `checkSession()` (**only if `meta.signedIn`, so guests make no calls**), `profileItems()` / `applyProfile()` (`u` = interaction count, the richer profile wins). **`FFStore`**: items carry `dirty` until sent; `outgoing`, `markSent`, `applyRemote`, `onLocalChange`, `onRemoteChange`, `meta` / `setMeta` (`ff_store_meta`: `signedIn`, `owner`, `cursor`, `tasteSent`), `clearAll` (personal data only; language, layout, API keys stay). **`watchlist.js`**: repaints on remote changes; `absorbOld()` is skipped once an account owns the list. `sync.js`: `CLOCK_SLACK_MS` (5 s), because capping exactly at the server's clock could make a quick second change tie, and a tie doesn't overwrite. |
 
 **Changed from the roadmap, simpler:** one endpoint (the first sign-in is `since: 0` with everything) instead of import + sync; one `items` table mirroring `FFStore` instead of one per kind; no `imports` table, because newest-wins makes any retry harmless.
 
@@ -16,7 +17,9 @@ Committed on `main`, on the preview only. **Not in production:** production runs
 
 **Tested:** `node --no-warnings tools/sync-test.mjs` (20 cases). On real D1 through the deployed preview with a throwaway user: first sync, replay changes nothing, newer removal, older and undated saves can't undo it, `rk_tmdb` refused, 2,000 items in 476 ms, 2,003 pulled in 279 ms, deletion cascades, nothing left behind.
 
-**Next (Stage 3, browser half):** `FFStore` applies pulled rows and tracks what's unsent; push after a short delay, pull on load and focus, Web Locks for one tab; `owner` record so another account's data is never merged; sign-out sends pending changes then clears synced data; `profile` blobs send their interaction count as `u` (the richer one wins). Behind a flag until Stage 4.
+**Browser half tested:** `node --no-warnings tools/account-sync-test.mjs` (23 cases: several simulated devices running the real scripts against the real routes and schema). In a real browser on localhost with a throwaway session: guest made no account calls, first sign-in uploaded everything, another device's removal repainted the badge, a save went up by itself, Cinematic read the same account, sign-out cleared personal data and kept the layout. Preview re-run on real D1 clean.
+
+**Inert until Stage 4:** nothing calls `FFAccount.adopt()` yet, so no visitor can reach this. **A real Google token is still untested.**
 
 ---
 
@@ -3184,6 +3187,7 @@ ratingkino/
 │                           (FFScore: 50/25/25, the mix line, the one-time tip). ?v=<hash>.
 ├── assets/dial.js / .css ← shared by index.html + cinematic/index.html: FFDial, the mood sliders. ?v=<hash>.
 ├── assets/store.js      ← shared: FFStore, the guest's dated data; load before watchlist.js. ?v=<hash>. Tests: tools/store-test.mjs
+├── assets/account.js    ← shared: FFAccount, keeps a signed-in browser in step; load after watchlist.js. Tests: tools/account-sync-test.mjs
 ├── assets/tonight.js / .css ← shared by index.html + cinematic/index.html: FFTonight, the three picks. ?v=<hash>.
 ├── assets/closest.js     ← shared by index.html + cinematic/index.html: FFClosest, the closest
 │                           films when a search finds nothing (/api/vibe-search). ?v=<hash>.
@@ -3618,7 +3622,7 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Hero cleanup** (`0bb42c7`, `c71c486`, `6180cf6`), live on Pages `16d8d494`. Owner to review the new `search.modePlotPh`, `search.modePlotPhShort` and `cin.heroTitle` translations.
 - [x] **Music vibe on phones:** `.ss-music` in the search panel (`7055509`, live; real-phone tap being checked by the owner).
 - [x] **Tonight's Three** live and phone-approved (owner, 2026-11-09). Owner reviewing the `t3.*` translations at their own pace.
-- [ ] **Phase 3:** Stages 1 and 2 live (`ff56abdd`). Stage 3 merge backend on preview (`323ee17`, owner reviewing); browser half next, then deploy both, applying `0002_sync.sql` to production first. Then 4 Google sign-in + prompts + privacy page, 5 Apple (needs the membership), 6 `ratingkino.com` transfer then 301.
+- [ ] **Phase 3:** Stages 1 and 2 live (`ff56abdd`). Stage 3 backend + browser on preview (`323ee17`, `7b86f58`): owner's go-ahead, then apply `0002_sync.sql` to production and `./deploy.sh --branch main`. Then 4 Google sign-in + prompts + privacy page, 5 Apple (needs the membership), 6 `ratingkino.com` transfer then 301.
 
 - [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
 - [x] **Phase 1 on a real phone** (owner, 2026-11-08): tip placement, animation and the fallback approved.
