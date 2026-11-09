@@ -4,15 +4,14 @@
 
 ## ⚡ Most Recent Session (2026-11-09g) — Phase 3, Stage 6: Deployed Switched Off
 
-All commits on `main`. **Live, switched off:** Pages production `7949c2fd` from `3da1be4`. `LIVE = false` in `assets/move.js`, so only a browser that opened `https://ratingkino.com/?move=1` moves. `0003_transfers.sql` is applied to production.
+All commits on `main`. **Live, switched off:** Pages production `1b426c3d` from `2bc46a4`, sync Worker version `e606b909`. `LIVE = false` in `assets/move.js`, so only a browser that opened `https://ratingkino.com/?move=1` moves. `0003_transfers.sql` is applied to production.
 
 | Commit | Feature |
 |--------|---------|
 | `3da1be4` | **Installed apps wait for the switch too (`assets/move.js`).** The standalone branch (`offerFromInstalledApp()`) ran before the `LIVE` check, so apps installed from ratingkino.com showed the note and uploaded their data on the first deploy (Pages `425607d1`, live for a few minutes). Now `if (!LIVE && get(FLAG_KEY) !== '1') return;` comes first. `tools/move-test.mjs` is at 23 cases. |
+| `2bc46a4` | **Expired transfers are deleted within the minute.** `sweepTransfers(env)` in `sync-worker.js` on a new `* * * * *` cron (`sync-worker.toml`, now with a `USERS` D1 binding, production and `[env.preview]`). `TTL_MS` is 8 minutes in `functions/_lib/transfer.js`, `KEEP_CODE_MS` 6 in `assets/move.js`, so a code nobody claims is gone inside the ten minutes on `/privacy/`. `send()` still sweeps too. `tools/move-test.mjs` is at 25 cases. |
 
 **Tested on the real domains, 2026-11-09:** no flag = stays on ratingkino.com with no `/api/transfer` call. `/?movie=157336&move=1` with old-format `rk_watchlist_v2` = moved to findfilm.ai, film sheet open, watchlist and Pitch vote carried, `rk_tmdb` not copied, code gone from the address. A code claims once (200, then 404). Wrong-domain and foreign-origin requests get 403.
-
-**Must fix before `LIVE = true`:** `functions/_lib/transfer.js` only deletes expired rows when the next `POST /api/transfer` arrives, so an unclaimed row can outlive the "ten minutes at the latest" on `/privacy/`. Planned: a `* * * * *` cron in `sync-worker.js`/`sync-worker.toml` (needs a `USERS` D1 binding) running `DELETE FROM transfers WHERE expires_at < ?`, with `TTL_MS` cut to 8 minutes and `KEEP_CODE_MS` to 6 so deletion lands inside the promise. Needs the owner's go-ahead: it changes the separately deployed sync Worker.
 
 **Not testable while switched off:** the iPhone Home Screen app. Its storage is separate from Safari's and it has no address bar, so `?move=1` can't reach it. Test `offerFromInstalledApp()` in the simulator at switch-on. Android and desktop installed apps share storage with the browser, so the flag reaches them.
 
@@ -3682,7 +3681,7 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Tonight's Three** live and phone-approved (owner, 2026-11-09). Owner reviewing the `t3.*` translations at their own pace.
 - [x] **Phase 3, Stages 1–4** live and public on findfilm.ai (`203ed0b3`, 2026-11-09).
 - [ ] **Phase 3, Stage 5: Apple sign-in.** On hold: the owner is getting the $99 Apple Developer membership and will provide the credentials and domain setup. The server route exists (`APPLE_CLIENT_ID` empty = off); the button doesn't.
-- [ ] **Phase 3, Stage 6: `ratingkino.com`.** Deployed switched off (`3da1be4`, Pages `7949c2fd`). Owner testing `?move=1`. Before `LIVE = true`: per-minute cleanup of expired `transfers` rows (privacy page promises ten minutes). At switch-on: test the installed iPhone app in the simulator. True 301 about 3 months after that.
+- [ ] **Phase 3, Stage 6: `ratingkino.com`.** Deployed switched off (`2bc46a4`, Pages `1b426c3d`). Per-minute cleanup of expired `transfers` rows is live (`2bc46a4`). Owner testing `?move=1` signed in on findfilm.ai. At switch-on (`LIVE = true`): test the installed iPhone app in the simulator. True 301 about 3 months after that.
 
 - [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
 - [x] **Phase 1 on a real phone** (owner, 2026-11-08): tip placement, animation and the fallback approved.
