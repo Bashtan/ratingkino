@@ -2,7 +2,23 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-09b) — Phase 3, Stage 1: The Guest Data Store
+## ⚡ Most Recent Session (2026-11-09c) — Phase 3, Stage 2: Accounts Backend
+
+Committed on `main`. **Code NOT in production yet: waiting for the owner's go-ahead.** Production is still Pages `73e2d623` from `071879a`. Preview: https://auth.ratingkino.pages.dev (`a5311343`, its own empty database). The schema is applied to local, preview and production `findfilm-users` (production: 0 users).
+
+| Commit | Feature |
+|--------|---------|
+| `7d317ce` | **New D1 `findfilm-users`** (`0ddde35c…`) and **`findfilm-users-preview`** (`5fa01963…`), binding **`USERS`**, `migrations_dir = "migrations/users"`. `0001_accounts.sql`: `users`, `identities` (`provider`, `subject`), `sessions` (`token_hash`), `rate_limits`; foreign keys cascade from `users`. **`functions/_lib/account.js`**: `GOOGLE_CLIENT_ID`, `APPLE_CLIENT_ID` (empty = Apple off), `verifyIdToken()` (jose 6.2.13, RS256 only, `iss`, `aud`, `exp`, nonce), `findOrCreateUser()`, `signIn()`, `currentSession()`, `overLimit()` (20 per 10 min per hashed IP, in D1), `handleAuth()`, `handleMe()`. Routes in their own files, so no CORS: **`GET /api/auth/nonce`, `POST /api/auth/google`, `POST /api/auth/apple`, `POST /api/auth/logout`, `GET /api/me`, `DELETE /api/me`**. Cookie `__Host-ff_session` (`ff_session` on localhost), HttpOnly, Secure, SameSite=Lax, 60 days, renewed at most daily. State-changing requests need a same-origin `Origin`. Hosts: findfilm.ai, localhost, `*.ratingkino.pages.dev`; ratingkino.com is refused. |
+
+**Tested:** `node --no-warnings tools/account-test.mjs` (32 cases; `node:sqlite` stand-in for D1, foreign keys on). On real D1 (preview): cascade delete, `ON CONFLICT … RETURNING`. Over HTTP, locally and on the preview: guest, nonce cookie flags, other-site and no-`Origin` POSTs 403, rubbish token 401, Apple 404, main API unaffected. A token with Google's real key id and a forged signature fails at `ERR_JWS_SIGNATURE_VERIFICATION_FAILED`, so Google's keys are fetched and imported in the Workers runtime.
+
+**Not tested: a real Google-signed token.** It needs a person to sign in, which comes with the Stage 4 button.
+
+**To apply a new migration:** `npx wrangler d1 migrations apply findfilm-users-preview --env preview --remote`, then `npx wrangler d1 migrations apply findfilm-users --remote` (and `--local` for `wrangler pages dev`). After changing `wrangler.toml` bindings, restart the local server. Data tables in Stage 3 must use `REFERENCES users(id) ON DELETE CASCADE`.
+
+---
+
+## Session (2026-11-09b) — Phase 3, Stage 1: The Guest Data Store
 
 All commits on `main`, live on https://findfilm.ai since 2026-11-09: Pages production **`73e2d623`** from `071879a` (`/build.json` = `20261109T092401Z-071879a`; `./deploy.sh`: 18/18 sensitive paths unpublished, custom domains clean). Dates on guest data accumulate from this deploy.
 
@@ -3190,6 +3206,8 @@ ratingkino/
 ├── functions/
 │   ├── _lib/dial.js      ← the Vibe Dial's ranking (no route); also imported by tools/vibe/dial-bench.mjs
 │   ├── _lib/tonight.js   ← Tonight's Three: the picking rules (no route); also tested by tools/vibe/tonight-bench.mjs
+│   ├── _lib/account.js   ← sign-in, sessions, deletion (no route); tests: tools/account-test.mjs
+│   ├── api/auth/[[path]].js, api/me/[[path]].js ← account routes, separate so they carry no CORS
 │   ├── index.js          ← Pages Function for "/" only: link-preview tags for /?movie= · /?TVShows=
 │   ├── og/[[path]].js    ← /og/v1/<movie|tv>/<id>.jpg: the 1200×630 preview card (satori → resvg → mozjpeg)
 │   └── api/[[path]].js   ← Cloudflare Pages Function (API proxy + KV reader + AI)
@@ -3581,7 +3599,7 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Hero cleanup** (`0bb42c7`, `c71c486`, `6180cf6`), live on Pages `16d8d494`. Owner to review the new `search.modePlotPh`, `search.modePlotPhShort` and `cin.heroTitle` translations.
 - [x] **Music vibe on phones:** `.ss-music` in the search panel (`7055509`, live; real-phone tap being checked by the owner).
 - [x] **Tonight's Three** live and phone-approved (owner, 2026-11-09). Owner reviewing the `t3.*` translations at their own pace.
-- [ ] **Phase 3:** Stage 1 store live (`73e2d623`). Next: Stage 2 D1 + routes, 3 merge + sync, 4 Google sign-in + prompts + privacy page, 5 Apple (needs the membership), 6 `ratingkino.com` transfer then 301.
+- [ ] **Phase 3:** Stage 1 store live (`73e2d623`). Stage 2 accounts backend on preview (`7d317ce`): owner's go-ahead, then `./deploy.sh --branch main` (this also activates Web Analytics, if enabled). Next: Stage 3 merge + sync, 4 Google sign-in + prompts + privacy page, 5 Apple (needs the membership), 6 `ratingkino.com` transfer then 301.
 - [ ] **Enable Cloudflare Web Analytics** (owner, dashboard): see the 2026-11-09b block.
 
 - [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
