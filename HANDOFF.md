@@ -4,11 +4,12 @@
 
 ## ⚡ Most Recent Session (2026-11-09e) — Phase 3, Stage 4: Google Sign-In and Prompts
 
-Committed on `main`, **NOT deployed: waiting for the owner's review.** Production is still Pages `a814baa4` from `98d3520`.
+Live and hidden: Pages production **`39ef2918`** from `32960b8` (`/build.json` = `20261109T111429Z-32960b8`). `PUBLIC` is still `false`, so visitors see nothing; `/privacy/` is reachable by address, unlinked. Owner has added `http://localhost` and set the consent screen to In production, and is testing on real devices and getting the privacy wording checked.
 
 | Commit | Feature |
 |--------|---------|
 | `88abed1` | **`assets/account-ui.js` + `.css` (`FFAccountUI`: `setup({t, host, lang}) · relabel · enabled`)**: the strip (`.ffa-strip`, in Classic's `#acctStrip` in the watchlist drawer and Cinematic's `#acctStrip` on the watchlist view), the sheet (`.ffa-back`, `.ffa-sheet`: `openSignIn()`, `openAccount()`, `askDelete()`), `.ffa-note` (`maybeNudge()`: once, after the 5th saved film, `ff_acct_nudged`). Google's script (`loadGoogle()`) loads only when the sheet opens; `drawGoogleButton()` gets a new nonce per attempt (`/api/auth/nonce` also returns the client id); `gotCredential()` → `POST /api/auth/google` → `FFAccount.adopt()`. **`PUBLIC = false`**: off for everyone until the privacy wording is checked; `?auth=1` / `?auth=0` set `ff_flag_auth` for one browser. Footer links `[data-ffa-link]` follow the same switch. i18n `acct.*` (25 keys, 9 languages, my translations). **`privacy/` added to `PUBLIC` in `deploy.sh`**, draft comment removed, dated 9 November 2026. |
+| `32960b8` | **Footer switch for the installed iPhone app**, which has no address bar for `?auth=1`: seven quick taps on `.site-footer` / `.foot` set `ff_flag_auth` and reload. Only while `PUBLIC` is false. |
 
 **Tested locally:** flag off shows nothing and doesn't load Google; the real Google button renders in the sheet (desktop and 375px bottom sheet); a rejected token keeps the sheet open, says so and draws a fresh button; with a throwaway session: strip, account sheet, delete confirmation, sign-out; the reminder appears at the 5th film only, once; Cinematic's strip shows only on the watchlist view.
 
@@ -3643,7 +3644,7 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Hero cleanup** (`0bb42c7`, `c71c486`, `6180cf6`), live on Pages `16d8d494`. Owner to review the new `search.modePlotPh`, `search.modePlotPhShort` and `cin.heroTitle` translations.
 - [x] **Music vibe on phones:** `.ss-music` in the search panel (`7055509`, live; real-phone tap being checked by the owner).
 - [x] **Tonight's Three** live and phone-approved (owner, 2026-11-09). Owner reviewing the `t3.*` translations at their own pace.
-- [ ] **Phase 3:** Stages 1–3 live (`a814baa4`). Stage 4 built (`88abed1`): owner review, deploy dark, real Google test with `?auth=1` on phones, legal check of `/privacy/`, then `PUBLIC = true`. Then 5 Apple (needs the membership), 6 `ratingkino.com` transfer then 301.
+- [ ] **Phase 3:** Stage 4 live and hidden (`39ef2918`). Owner testing a real Google sign-in on desktop and iPhone (including the installed app) and checking `/privacy/`. Then `PUBLIC = true`. Then 5 Apple (needs the membership), 6 `ratingkino.com` transfer then 301.
 
 - [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
 - [x] **Phase 1 on a real phone** (owner, 2026-11-08): tip placement, animation and the fallback approved.
