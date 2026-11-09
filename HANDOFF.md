@@ -2,7 +2,24 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-09) — Tonight's Three; Music Search in the Phone Search Panel
+## ⚡ Most Recent Session (2026-11-09b) — Phase 3, Stage 1: The Guest Data Store
+
+Committed on `main`, **NOT deployed yet: waiting for the owner's review.** Live is still Pages `ecdd7444` from `9ffe813`.
+
+| Commit | Feature |
+|--------|---------|
+| `2e916c1` | **`assets/store.js` (`FFStore`)**: `list · get · put · remove · seed · exists · reviewsFor · addReview · pref · setPref`. localStorage `ff_store_<watchlist\|reviews\|prefs>`: `{key: {value, addedAt, updatedAt, deletedAt}}`; a removal stays as a tombstone. **`assets/watchlist.js`**: same `FFWatchlist` API on the store; `absorbOld()` imports `rk_watchlist_v2` undated (`updatedAt` 1, `addedAt` = its order) and afterwards treats differences as an old tab's changes; `saveOldCopy()` keeps writing the old key for rollback. **Ratings:** `FFStore.addReview` / `reviewsFor` (new ones carry `type`; old ones `type: null`, shown on either); `getReviews()` delegates, `saveReviews()` deleted, `rk_rev_<id>` still written; `tonight.js`'s `rated()` reads the store. **Filters:** `_rememberFilters()` / `_applyRememberedFilters()` keep only country and minimum rating, and only when chosen in the drawer. `_filtersTouched` (saved as `touched` in `ff_session`) stops remembered values hiding the home page and Tonight's Three: `_browseFilter` counts them only after a change on this visit. The logo returns to the remembered values; the drawer's Reset forgets them. **First-visit quiz removed:** `#fvOverlay`, `.fv-*`, `initFirstVisit`, `dismissFirstVisit`, `startOnboardFromIntro`, `onboard.sub/personalize/browseNow`; `welcomeFirstVisit()` keeps the mascot's tip. `_applySuggestion` no longer needs `CACHE_MOVIES`. |
+| `064dd65` | **Draft `privacy/index.html`**: not published (`privacy` isn't in `deploy.sh`'s `PUBLIC`). Written for the Google launch; see the comment at its top. |
+
+**Tested:** `node tools/store-test.mjs` (18 cases: import, order, tombstones, old tabs, two tabs, clock moved back, junk, blocked and full storage). In the browser with old-format data: nothing lost, ratings keep their dates, new rating via the real panel, Cinematic reads the same list, brand-new visitor sees no overlay, filters across a new session with Tonight's Three still showing.
+
+**Phase 3 decisions (owner, 2026-11-09):** remember only country and minimum rating. Google Client ID `166585102182-p96f9a6e963b7dace3u0dum14bqav6kk.apps.googleusercontent.com` (public; origins findfilm.ai, ratingkino.com, localhost:8283). No Apple membership yet: build for it, deploy Google only. Privacy page: owner FindFilm.ai, contact support@findfilm.ai.
+
+**Not built:** recent searches: the site has no such feature.
+
+---
+
+## Session (2026-11-09) — Tonight's Three; Music Search in the Phone Search Panel
 
 All commits on `main`, live on https://findfilm.ai since 2026-11-09: Pages production **`ecdd7444`** from `9ffe813` (`/build.json` = `20261109T075056Z-9ffe813`; `./deploy.sh`: 18/18 sensitive paths unpublished, custom domains clean). Owner is testing on a real phone.
 
@@ -3129,6 +3146,7 @@ ratingkino/
 ├── assets/score.js / .css ← shared by index.html + cinematic/index.html: the FindFilm score
 │                           (FFScore: 50/25/25, the mix line, the one-time tip). ?v=<hash>.
 ├── assets/dial.js / .css ← shared by index.html + cinematic/index.html: FFDial, the mood sliders. ?v=<hash>.
+├── assets/store.js      ← shared: FFStore, the guest's dated data; load before watchlist.js. ?v=<hash>. Tests: tools/store-test.mjs
 ├── assets/tonight.js / .css ← shared by index.html + cinematic/index.html: FFTonight, the three picks. ?v=<hash>.
 ├── assets/closest.js     ← shared by index.html + cinematic/index.html: FFClosest, the closest
 │                           films when a search finds nothing (/api/vibe-search). ?v=<hash>.
@@ -3504,6 +3522,7 @@ Taste profile stored in `localStorage['rk_taste_v1']`: `{ genres: {}, directors:
 | **REMOVED 2026-11-08 (hero cleanup):** `ff_hello_seen` | `'1'` once Classic's hero mascot has said "Need a recommendation?" by itself, or the search was already in use (`hello()`, `assets/social.js`) |
 | `ff_search_mode` | `'title'` or `'ai'`, only when the visitor picks a mode in Classic's search menu (`chooseSearchMode()`); absent = vibe search. |
 | `ff_t3_shuffle` | `{day, n}`: how many times today "Show me three others" was pressed (`assets/tonight.js`). |
+| `ff_store_watchlist`, `ff_store_reviews`, `ff_store_prefs` | The guest's data with dates and tombstones (`assets/store.js`). `rk_watchlist_v2` and `rk_rev_<id>` are still written, for rollback. |
 | `ff_fresh_reload` (**sessionStorage**) | The `/build.json` build `assets/fresh.js` last reloaded the page for — it never reloads twice for the same build |
 | `rk_ios_pwa_dismissed` | Timestamp of last iOS PWA bottom-sheet dismiss (15-day cooldown) |
 | `rk_install_banner_dismissed` | Timestamp of last mobile install banner dismiss (7-day cooldown) |
@@ -3558,7 +3577,9 @@ The site is fully installable as a PWA on all platforms.
 
 - [x] **Hero cleanup** (`0bb42c7`, `c71c486`, `6180cf6`), live on Pages `16d8d494`. Owner to review the new `search.modePlotPh`, `search.modePlotPhShort` and `cin.heroTitle` translations.
 - [x] **Music vibe on phones:** `.ss-music` in the search panel (`7055509`, live; real-phone tap being checked by the owner).
-- [ ] **Tonight's Three** live: owner testing the phone music panel and reviewing the `t3.*` translations. Then Phase 3.
+- [x] **Tonight's Three** live and phone-approved (owner, 2026-11-09). Owner reviewing the `t3.*` translations at their own pace.
+- [ ] **Phase 3:** Stage 1 store built (owner review, then deploy). Then Stage 2 D1 + routes, 3 merge + sync, 4 Google sign-in + prompts + privacy page, 5 Apple (needs the membership), 6 `ratingkino.com` transfer then 301.
+- [ ] **`llms.txt` line 25** says there is no third-party analytics, but both layouts load Google Analytics (`G-XF0GTFNRHX`): owner to decide.
 
 - [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
 - [x] **Phase 1 on a real phone** (owner, 2026-11-08): tip placement, animation and the fallback approved.
