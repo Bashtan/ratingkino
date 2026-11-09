@@ -51,6 +51,7 @@ PUBLIC=(
   assets
   functions
   pitch
+  privacy
   tv
   cinematic      # the Cinematic layout (/cinematic/), chosen by the router in index.html
 )

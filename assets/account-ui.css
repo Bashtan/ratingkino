@@ -1,0 +1,51 @@
+/* Sign-in, the save-and-sync prompts and the account sheet. /assets/account-ui.js */
+.ffa-strip {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  background: rgba(124, 58, 237, 0.14); border: 1px solid rgba(167, 139, 250, 0.32); border-radius: 12px;
+  color: #fff; text-align: start;
+}
+.ffa-strip-text { display: flex; flex-direction: column; flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.35; color: rgba(255, 255, 255, 0.68); }
+.ffa-strip-text strong { font-size: 14px; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; }
+.ffa-avatar { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #7c3aed; color: #fff; font-weight: 700; }
+
+.ffa-btn, .ffa-quiet, .ffa-danger, .ffa-link {
+  flex: none; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; border-radius: 999px; padding: 9px 16px; white-space: nowrap;
+}
+.ffa-btn { background: #fff; color: #0b0b10; border: 1px solid #fff; }
+.ffa-quiet { background: rgba(255, 255, 255, 0.08); color: #fff; border: 1px solid rgba(255, 255, 255, 0.16); }
+.ffa-danger { background: #b91c1c; color: #fff; border: 1px solid #b91c1c; }
+.ffa-link { padding: 6px 8px; background: none; border: 0; color: #c4b5fd; }
+.ffa-wide { width: 100%; white-space: normal; }
+.ffa-btn:focus-visible, .ffa-quiet:focus-visible, .ffa-danger:focus-visible, .ffa-link:focus-visible, .ffa-x:focus-visible, .ffa-x-small:focus-visible { outline: 2px solid #c4b5fd; outline-offset: 2px; }
+
+html.ffa-open { overflow: hidden; }
+.ffa-back { position: fixed; inset: 0; z-index: 12000; display: grid; place-items: center; padding: 20px; background: rgba(0, 0, 0, 0.62); }
+.ffa-back[hidden] { display: none; }
+.ffa-sheet {
+  position: relative; width: min(400px, 100%); padding: 28px 24px 22px; color: #fff; text-align: center;
+  background: #15151c; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 18px; box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.ffa-x { position: absolute; top: 10px; inset-inline-end: 10px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: none; color: rgba(255, 255, 255, 0.7); font-size: 15px; cursor: pointer; }
+.ffa-title { margin: 0 28px 8px; font-size: 21px; line-height: 1.25; font-weight: 800; color: #fff; overflow-wrap: anywhere; }
+.ffa-sub { margin: 0 0 20px; font-size: 14.5px; line-height: 1.5; color: rgba(255, 255, 255, 0.72); overflow-wrap: anywhere; }
+.ffa-google { display: flex; justify-content: center; min-height: 44px; color-scheme: normal; }
+.ffa-actions { display: flex; flex-direction: column; gap: 10px; }
+.ffa-status { min-height: 18px; margin: 12px 0 0; font-size: 13px; color: #fcd34d; }
+.ffa-small { margin: 10px 0 0; font-size: 12px; line-height: 1.45; color: rgba(255, 255, 255, 0.5); }
+.ffa-small a { color: #c4b5fd; }
+
+.ffa-note {
+  position: fixed; z-index: 11500; left: 50%; bottom: 22px; transform: translateX(-50%); width: max-content; max-width: min(460px, calc(100vw - 24px));
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  background: #1c1c26; border: 1px solid rgba(167, 139, 250, 0.4); border-radius: 14px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  color: #fff; font: 500 14px/1.35 Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.ffa-x-small { flex: none; width: 28px; height: 28px; border: 0; border-radius: 50%; background: none; color: rgba(255, 255, 255, 0.65); cursor: pointer; }
+
+@media (max-width: 560px) {
+  .ffa-back { place-items: end center; padding: 0; }
+  .ffa-sheet { width: 100%; border-radius: 18px 18px 0 0; padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
+  .ffa-note { bottom: calc(12px + env(safe-area-inset-bottom)); }
+  .ffa-strip { flex-wrap: wrap; }
+}

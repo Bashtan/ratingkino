@@ -10,7 +10,7 @@
    state-changing request from another origin, and answer only on findfilm.ai, localhost and
    *.ratingkino.pages.dev: ratingkino.com has its own browser storage, so nobody should sign in there.
 
-   GET  /api/auth/nonce   → { nonce }, also set as a short-lived cookie. It goes into the sign-in,
+   GET  /api/auth/nonce   → { nonce, google: the client id }, the nonce also set as a short-lived cookie. It goes into the sign-in,
                             comes back inside the token, and ties that token to this browser.
    POST /api/auth/google  { credential } → { user }, session cookie set
    POST /api/auth/apple   { credential, name? } → the same, while APPLE_CLIENT_ID is set; else 404
@@ -172,7 +172,7 @@ export async function handleAuth({ request, env, params, waitUntil }, verify = v
   const url = new URL(request.url), route = (params.path || []).join('/');
   if (route === 'nonce' && request.method === 'GET') {
     const nonce = randomToken();
-    return json({ nonce }, 200, [setCookie(url, 'ff_nonce', nonce, NONCE_SECONDS)]);
+    return json({ nonce, google: GOOGLE_CLIENT_ID }, 200, [setCookie(url, 'ff_nonce', nonce, NONCE_SECONDS)]);
   }
   if ((route === 'google' || route === 'apple') && request.method === 'POST') {
     return signIn(request, env, route, verify, waitUntil);

@@ -4968,6 +4968,7 @@ html.ff-layout-switched #mobileInstallBanner { display: none !important; }
 }
 .wl-close:hover { background: rgba(255,255,255,0.14); color: #fff; }
 
+.wl-account:not(:empty) { padding: 10px 14px 0; flex-shrink: 0; }
 .wl-body {
   flex: 1; overflow-y: auto; padding: 8px 0;
   scrollbar-width: thin; scrollbar-color: rgba(124,58,237,0.28) transparent;
@@ -5268,6 +5269,8 @@ if ('serviceWorker' in navigator) {
 <script src="/assets/store.js?v=cee80136"></script>
 <script src="/assets/watchlist.js?v=4b34a7b8"></script>
 <script src="/assets/account.js?v=f57a0d2c"></script>
+<link rel="stylesheet" href="/assets/account-ui.css?v=b71dc23d">
+<script src="/assets/account-ui.js?v=2dfc853c"></script>
 <!-- The FindFilm score (formula, first-exposure tip) and the closest-films fallback: shared with Cinematic. -->
 <link rel="stylesheet" href="/assets/score.css?v=28152cc2">
 <script src="/assets/score.js?v=0768b69c"></script>
@@ -5277,7 +5280,7 @@ if ('serviceWorker' in navigator) {
 <link rel="stylesheet" href="/assets/tonight.css?v=770ae6e2">
 <script src="/assets/tonight.js?v=d367da52"></script>
 <!-- UI strings in 9 languages, shared with Cinematic (window.FF_I18N → TRANSLATIONS). Synchronous on purpose: the page script reads it at once. -->
-<script src="/assets/i18n.js?v=cc7a7b04"></script>
+<script src="/assets/i18n.js?v=566843b5"></script>
 </head>
 <body>
 <!-- Social brand icons for the .ffs / .ffm / .ffs-band blocks (/assets/social.css),
@@ -6227,6 +6230,7 @@ function applyTranslations() {
   });
   // Feed row titles (static HTML)
   window._ffTonight?.relabel();
+  window.FFAccountUI?.relabel();
   // Watchlist drawer title
   const wlTitleSpan = document.getElementById('wlTitleText');
   if (wlTitleSpan) wlTitleSpan.textContent = t('wl.title');
@@ -13301,6 +13305,7 @@ async function init() {
   if (deepTV) { CONTENT_TYPE = 'tv'; syncContentTypeUI('tv'); }
 
   await detectLang();
+  FFAccountUI.setup({ t, host: document.getElementById('acctStrip'), lang: () => CURRENT_LANG });
   await loadGenres();
   buildCountryOptionsUI(); // populate the custom country dropdown from #fCountry's <option>s
   // Saved filters carry genre ids from whichever tab they were set on, and a TV
@@ -13439,7 +13444,7 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
 <footer class="site-footer">
   Data provided by <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">TMDB</a> and <a href="https://www.omdbapi.com" target="_blank" rel="noopener noreferrer">OMDB</a>. &nbsp;·&nbsp;
   As an Amazon Associate, FindFilm.ai earns from qualifying purchases. &nbsp;·&nbsp;
-  FindFilm.ai is an official NordVPN affiliate partner — we may earn a commission if you subscribe through our links.
+  FindFilm.ai is an official NordVPN affiliate partner — we may earn a commission if you subscribe through our links. <a href="/privacy/" data-ffa-link hidden>Privacy</a>
 </footer>
 
 <!-- ════════════ iOS PWA INSTALL — Stage 1: native-look alert ════════════ -->
@@ -13645,6 +13650,7 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
     </div>
     <button class="wl-close" onclick="closeWatchlist()" aria-label="Close">✕</button>
   </div>
+  <div class="wl-account" id="acctStrip"></div>
   <div class="wl-body" id="wlBody"></div>
   <div class="wl-footer">
     <button class="wl-clear-btn" onclick="clearWatchlist()" data-i18n="wl.clear">Clear all</button>
