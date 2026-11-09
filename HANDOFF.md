@@ -3402,7 +3402,7 @@ curl -sf https://findfilm.ai | grep -c "<landmark_string>"
 
 ### Cloudflare Worker — `ratingkino-sync`
 - Deployed separately: `npx wrangler deploy --config sync-worker.toml --env=""` (https://ratingkino-sync.dimabashtan.workers.dev)
-- Cron: `55 23 * * *` (phase 0), `0 0 * * *`, `5 0 * * *`, `10 0 * * *` (phases 1–3), **`20 0 * * *` (trailer arcs, `syncTrailerArcs`)**, **`30 0 * * *` (new releases into vibe search, `syncVibeIndex`)**, **`40 0 * * *` (the listed titles' preview cards, `syncPreviewCards`)**
+- Cron: `55 23 * * *` (phase 0), `0 0 * * *`, `5 0 * * *`, `10 0 * * *` (phases 1–3), **`20 0 * * *` (trailer arcs, `syncTrailerArcs`)**, **`30 0 * * *` (new releases into vibe search, `syncVibeIndex`)**, **`40 0 * * *` (the listed titles' preview cards, `syncPreviewCards`)** **`* * * * *`** (every minute: `sweepTransfers`, deletes expired guest-data transfers).
 - Writes to `MOVIES_CACHE` KV: keys `popular`, `new-releases`, `random-pool`, `last-sync` (incl. `.rx` and `.vibe` stats), **`rx:v1:<type>:<id>`**; and to **Vectorize `findfilm-films`**
 - Bindings: `MOVIES_CACHE`, **`AI`** (the arcs' 70B; the vibe tags and bge-m3), **`VECTORIZE`** (`findfilm-films`). Manual runs: `/sync-now?phase=popular|0|1|2|rx|vibe` (`rx` and `vibe` wait and answer with their stats; `vibe&dry=1`, `vibe&max=N`)
 - The account is on **Workers Paid** (the Shorts bot's Containers need it): 10,000 subrequests per invocation, so the "50 subrequests" notes in `sync-worker.js`'s header are stale
