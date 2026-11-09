@@ -31,7 +31,11 @@
     history.replaceState(history.state, '', url);
   })();
 
+  // ratingkino.com keeps its own browser storage, so the server refuses sign-in there. Hidden rather than broken.
+  var OLD_DOMAIN = /(^|\.)ratingkino\.com$/.test(location.hostname);
+
   function enabled() {
+    if (OLD_DOMAIN) return false;
     if (PUBLIC || FFAccount.user() || FFStore.meta().signedIn) return true;
     try { return localStorage.getItem(FLAG_KEY) === '1'; } catch (e) { return false; }
   }
