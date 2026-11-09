@@ -21,6 +21,8 @@ const LADDER = {
   comfort:  [{ votes: [5000], rating: 70, notNew: true }, { votes: [2000], rating: 66, notNew: true }, { votes: [500], rating: 60 }],
 };
 export const TONIGHT_STEPS = 3;
+// Specials are filed under Comedy or Music; and some subjects don't belong on the front page unasked.
+const NOT_A_MOVIE_NIGHT = /\b(stand[- ]?up|concert film|pa?edophil\w*|child abuse|sexual abuse|child molest\w*|rape|incest)\b/;
 
 // One phrase per role per day, so a daily visitor doesn't keep meeting the same films.
 const FEELS = ['absorbing and beautifully made', 'gripping and unforgettable', 'smart, moving and rewarding', 'thrilling and satisfying', 'acclaimed and deeply loved', 'tense, clever and rewatchable', 'epic and spectacular'];
@@ -67,7 +69,7 @@ export function tonightFilter(role, step, thisYear) {
 
 function allowed(role, m) {
   const g = genresOf(m), words = `${m.vt || ''}|${m.kw || ''}`.toLowerCase();
-  if (!m.p || g.some(x => NOT_A_PICK.includes(x)) || ADULT.test(words)) return false;
+  if (!m.p || g.some(x => NOT_A_PICK.includes(x)) || ADULT.test(words) || NOT_A_MOVIE_NIGHT.test(words)) return false;
   if (role !== 'comfort') return true;
   return !g.some(x => x === 'Horror' || x === 'War') && !ATROCITY.test(words) && tagScore('mood', m) < 0;
 }

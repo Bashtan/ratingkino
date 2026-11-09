@@ -2666,7 +2666,7 @@ async function handleVibeSearch(request, url, env, cors, waitUntil) {
  * → { day, personal, sets: [{ safe, surprise, comfort }, ...] }. Each film is a TMDB-shaped row plus
  * runtime, why (the one-line feel written at ingest) and stream ({name, logo} or null).
  * The code picks the films (functions/_lib/tonight.js). Among a role's candidates, films the visitor
- * can stream in their country go first. KV: t3:v1:<day>:<taste>:<country>, about a day and a half.
+ * can stream in their country go first. KV: t3:v2:<day>:<taste>:<country>, about a day and a half.
  * ?debug=1 skips the cache and takes any day, for tools/vibe/tonight-bench.mjs.
  */
 async function handleTonight(request, url, env, cors, waitUntil) {
@@ -2684,7 +2684,7 @@ async function handleTonight(request, url, env, cors, waitUntil) {
   const asked = /^\d{4}-\d{2}-\d{2}$/.test(String(body.day)) ? String(body.day) : '';
   const day = debug && asked ? asked : nearby.includes(asked) ? asked : nearby[1];
   const country = _resolveRegion(request, url);
-  const cacheKey = `t3:v1:${day}:${taste.join('-') || 'any'}:${country}`;
+  const cacheKey = `t3:v2:${day}:${taste.join('-') || 'any'}:${country}`;
   if (!debug) {
     const hit = await env.MOVIES_CACHE?.get(cacheKey, 'json').catch(() => null);
     if (hit) return json(hit);
