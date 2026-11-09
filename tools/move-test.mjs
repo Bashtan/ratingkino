@@ -32,12 +32,13 @@ function browser({ host = 'ratingkino.com', path = '/', search = '', hash = '', 
   const location = { hostname: host, port: '', pathname: path, search, hash, href: origin + path + search + hash, replace: u => { b.replaced = u; }, reload: () => { b.reloaded += 1; } };
   const style = {};
   Object.defineProperty(style, 'visibility', { get: () => b.vis, set: v => { b.vis = v; } });
-  const window = { navigator: { standalone }, matchMedia: () => ({ matches: false }), open: u => { b.opened = u; }, addEventListener() {}, stop() {}, FF_I18N: { en: { 'move.moved': 'moved', 'move.open': 'open', 'move.ask': 'ask', 'move.yes': 'yes', 'results.close': 'x' } } };
+  const ready = [];
+  const window = { navigator: { standalone }, matchMedia: () => ({ matches: false }), open: u => { b.opened = u; }, addEventListener() {}, stop() {} };
   const context = {
     window, location, localStorage: storage, console, navigator: window.navigator,
     history: { state: null, replaceState: (s, t, u) => { location.search = ''; location.hash = ''; b.urlAfter = u; } },
     setTimeout: () => 1, setInterval: () => 1, clearTimeout() {},
-    document: { referrer, readyState: 'complete', documentElement: { style }, addEventListener() {}, createElement: () => { const el = fakeElement(); b.notes.push(el); return el; }, body: { appendChild() {} } },
+    document: { referrer, readyState: 'loading', documentElement: { style }, addEventListener: (name, fn) => { if (name === 'DOMContentLoaded') ready.push(fn); }, createElement: () => { const el = fakeElement(); b.notes.push(el); return el; }, body: { appendChild() {} } },
     matchMedia: window.matchMedia,
     fetch: async (url, init) => {
       b.calls.push(url);
@@ -53,6 +54,9 @@ function browser({ host = 'ratingkino.com', path = '/', search = '', hash = '', 
   vm.runInContext(SOURCES[1], context);
   context.FFWatchlist = window.FFWatchlist;
   vm.runInContext(SOURCES[2], context);
+  window.FF_I18N = { en: { 'move.moved': 'moved', 'move.open': 'open', 'move.ask': 'ask', 'move.yes': 'yes', 'results.close': 'x' } };   // i18n.js comes after move.js in both pages
+  context.document.readyState = 'interactive';
+  ready.forEach(fn => fn());
   return Object.assign(b, { store: window.FFStore, list: window.FFWatchlist });
 }
 
@@ -281,6 +285,8 @@ await test('an installed app stays put and offers to open the browser, with the 
   await sleep();
   assert.equal(b.replaced, null);
   assert.equal(b.notes.length, 1);
+  assert.equal(b.notes[0].children[0].textContent, 'moved');
+  assert.equal(b.notes[0].children[1].textContent, 'open');
   b.notes[0].children[1].click();
   assert.ok(b.opened.startsWith('https://findfilm.ai/#transfer='));
 });

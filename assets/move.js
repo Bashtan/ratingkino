@@ -46,14 +46,15 @@
       .then(function (r) { if (!r.ok) throw new Error('move ' + r.status); return r.json(); });
   }
 
-  function note(text, button, action) {
+  // Takes translation keys: this file loads before i18n.js, so the text can only be looked up once the page is ready.
+  function note(textKey, buttonKey, action) {
     function place() {
       var el = document.createElement('div');
       el.className = 'ffa-note';
       el.setAttribute('role', 'status');
       el.innerHTML = '<span></span><button class="ffa-btn" type="button"></button><button class="ffa-x-small" type="button" aria-label="' + say('results.close') + '">✕</button>';
-      el.children[0].textContent = text;
-      el.children[1].textContent = button;
+      el.children[0].textContent = say(textKey);
+      el.children[1].textContent = say(buttonKey);
       el.children[1].addEventListener('click', function () { el.remove(); action(); });
       el.children[2].addEventListener('click', function () { el.remove(); });
       document.body.appendChild(el);
@@ -91,7 +92,7 @@
     function refresh() { if (data) post('/api/transfer', data).then(function (d) { code = d.code; }, function () {}); }
     refresh();
     setInterval(refresh, KEEP_CODE_MS);
-    note(say('move.moved'), say('move.open'), function () {
+    note('move.moved', 'move.open', function () {
       window.open(HOME + '/' + (code ? '#transfer=' + code : ''), '_blank');
     });
   }
@@ -177,7 +178,7 @@
       return post('/api/transfer/claim', { code: match[1] }).then(function (data) { bringIn(data, had); location.reload(); });
     }
     if (FROM_OLD_DOMAIN.test(document.referrer)) { hide(); claim().catch(show); }
-    else note(say('move.ask'), say('move.yes'), function () { claim().catch(function () {}); });
+    else note('move.ask', 'move.yes', function () { claim().catch(function () {}); });
   }
 
   if (!ON_OLD_DOMAIN) { arrive(); return; }
