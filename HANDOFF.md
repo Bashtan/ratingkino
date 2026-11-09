@@ -2,9 +2,27 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-09d) — Phase 3, Stage 3: Merge and Sync
+## ⚡ Most Recent Session (2026-11-09e) — Phase 3, Stage 4: Google Sign-In and Prompts
 
-Committed on `main`, on the preview only. **Not in production:** production runs `cb10adf`, and `0002_sync.sql` is applied to local and preview but **not** to production `findfilm-users`. Apply it before deploying this: `npx wrangler d1 migrations apply findfilm-users --remote`.
+Committed on `main`, **NOT deployed: waiting for the owner's review.** Production is still Pages `a814baa4` from `98d3520`.
+
+| Commit | Feature |
+|--------|---------|
+| `88abed1` | **`assets/account-ui.js` + `.css` (`FFAccountUI`: `setup({t, host, lang}) · relabel · enabled`)**: the strip (`.ffa-strip`, in Classic's `#acctStrip` in the watchlist drawer and Cinematic's `#acctStrip` on the watchlist view), the sheet (`.ffa-back`, `.ffa-sheet`: `openSignIn()`, `openAccount()`, `askDelete()`), `.ffa-note` (`maybeNudge()`: once, after the 5th saved film, `ff_acct_nudged`). Google's script (`loadGoogle()`) loads only when the sheet opens; `drawGoogleButton()` gets a new nonce per attempt (`/api/auth/nonce` also returns the client id); `gotCredential()` → `POST /api/auth/google` → `FFAccount.adopt()`. **`PUBLIC = false`**: off for everyone until the privacy wording is checked; `?auth=1` / `?auth=0` set `ff_flag_auth` for one browser. Footer links `[data-ffa-link]` follow the same switch. i18n `acct.*` (25 keys, 9 languages, my translations). **`privacy/` added to `PUBLIC` in `deploy.sh`**, draft comment removed, dated 9 November 2026. |
+
+**Tested locally:** flag off shows nothing and doesn't load Google; the real Google button renders in the sheet (desktop and 375px bottom sheet); a rejected token keeps the sheet open, says so and draws a fresh button; with a throwaway session: strip, account sheet, delete confirmation, sign-out; the reminder appears at the 5th film only, once; Cinematic's strip shows only on the watchlist view.
+
+**Not tested: a real Google sign-in** (needs the owner). **Google Cloud, owner:** add `http://localhost` as well as `http://localhost:8283` to Authorized JavaScript origins for local tests; set the OAuth consent screen to In production with `https://findfilm.ai/privacy/`.
+
+**To go public:** set `PUBLIC = true` in `assets/account-ui.js`, bump its `?v=`, deploy. **Unknown until tried:** Google's popup in the installed iPhone app. If it fails, add `ux_mode: 'redirect'` for standalone mode.
+
+**Not built:** the Apple button (Stage 5); the server route exists.
+
+---
+
+## Session (2026-11-09d) — Phase 3, Stage 3: Merge and Sync
+
+Live: Pages production **`a814baa4`** from `98d3520` (`/build.json` = `20261109T101018Z-98d3520`), with `0002_sync.sql` applied to production first. Guests make no account calls (checked live).
 
 | Commit | Feature |
 |--------|---------|
@@ -3188,6 +3206,8 @@ ratingkino/
 ├── assets/dial.js / .css ← shared by index.html + cinematic/index.html: FFDial, the mood sliders. ?v=<hash>.
 ├── assets/store.js      ← shared: FFStore, the guest's dated data; load before watchlist.js. ?v=<hash>. Tests: tools/store-test.mjs
 ├── assets/account.js    ← shared: FFAccount, keeps a signed-in browser in step; load after watchlist.js. Tests: tools/account-sync-test.mjs
+├── assets/account-ui.js / .css ← shared: FFAccountUI, sign-in sheet and prompts; load after account.js. ?v=<hash>.
+├── privacy/index.html   ← the privacy policy; published (in deploy.sh's PUBLIC).
 ├── assets/tonight.js / .css ← shared by index.html + cinematic/index.html: FFTonight, the three picks. ?v=<hash>.
 ├── assets/closest.js     ← shared by index.html + cinematic/index.html: FFClosest, the closest
 │                           films when a search finds nothing (/api/vibe-search). ?v=<hash>.
@@ -3566,6 +3586,7 @@ Taste profile stored in `localStorage['rk_taste_v1']`: `{ genres: {}, directors:
 | **REMOVED 2026-11-08 (hero cleanup):** `ff_hello_seen` | `'1'` once Classic's hero mascot has said "Need a recommendation?" by itself, or the search was already in use (`hello()`, `assets/social.js`) |
 | `ff_search_mode` | `'title'` or `'ai'`, only when the visitor picks a mode in Classic's search menu (`chooseSearchMode()`); absent = vibe search. |
 | `ff_t3_shuffle` | `{day, n}`: how many times today "Show me three others" was pressed (`assets/tonight.js`). |
+| `ff_flag_auth`, `ff_acct_nudged`, `ff_store_meta` | `ff_flag_auth`: sign-in UI on for this browser before it's public (`?auth=1`). `ff_acct_nudged`: the 5th-film note was shown. `ff_store_meta`: `signedIn`, `owner`, `cursor`, `tasteSent`. |
 | `ff_store_watchlist`, `ff_store_reviews`, `ff_store_prefs` | The guest's data with dates and tombstones (`assets/store.js`). `rk_watchlist_v2` and `rk_rev_<id>` are still written, for rollback. |
 | `ff_fresh_reload` (**sessionStorage**) | The `/build.json` build `assets/fresh.js` last reloaded the page for — it never reloads twice for the same build |
 | `rk_ios_pwa_dismissed` | Timestamp of last iOS PWA bottom-sheet dismiss (15-day cooldown) |
@@ -3622,7 +3643,7 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Hero cleanup** (`0bb42c7`, `c71c486`, `6180cf6`), live on Pages `16d8d494`. Owner to review the new `search.modePlotPh`, `search.modePlotPhShort` and `cin.heroTitle` translations.
 - [x] **Music vibe on phones:** `.ss-music` in the search panel (`7055509`, live; real-phone tap being checked by the owner).
 - [x] **Tonight's Three** live and phone-approved (owner, 2026-11-09). Owner reviewing the `t3.*` translations at their own pace.
-- [ ] **Phase 3:** Stages 1 and 2 live (`ff56abdd`). Stage 3 backend + browser on preview (`323ee17`, `7b86f58`): owner's go-ahead, then apply `0002_sync.sql` to production and `./deploy.sh --branch main`. Then 4 Google sign-in + prompts + privacy page, 5 Apple (needs the membership), 6 `ratingkino.com` transfer then 301.
+- [ ] **Phase 3:** Stages 1–3 live (`a814baa4`). Stage 4 built (`88abed1`): owner review, deploy dark, real Google test with `?auth=1` on phones, legal check of `/privacy/`, then `PUBLIC = true`. Then 5 Apple (needs the membership), 6 `ratingkino.com` transfer then 301.
 
 - [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
 - [x] **Phase 1 on a real phone** (owner, 2026-11-08): tip placement, animation and the fallback approved.
