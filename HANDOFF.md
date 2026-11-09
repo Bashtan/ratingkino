@@ -2,21 +2,22 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-09e) — Phase 3, Stage 4: Google Sign-In and Prompts
+## ⚡ Most Recent Session (2026-11-09e) — Phase 3, Stage 4: Google Sign-In Is Public
 
-Live and hidden: Pages production **`8327a9ee`** from `8a66a6b` (`/build.json` = `20261109T113721Z-8a66a6b`). `PUBLIC` is still `false`, so visitors see nothing; `/privacy/` is reachable by address, unlinked. Owner has added `http://localhost` and set the consent screen to In production, and is testing on real devices and getting the privacy wording checked.
+**Public since 2026-11-09:** Pages production **`7e22e625`** from `f95056f` (`/build.json` = `20261109T122531Z-f95056f`). Passed by the owner on desktop, Android and the installed iPhone app, syncing between them.
 
 | Commit | Feature |
 |--------|---------|
 | `88abed1` | **`assets/account-ui.js` + `.css` (`FFAccountUI`: `setup({t, host, lang}) · relabel · enabled`)**: the strip (`.ffa-strip`, in Classic's `#acctStrip` in the watchlist drawer and Cinematic's `#acctStrip` on the watchlist view), the sheet (`.ffa-back`, `.ffa-sheet`: `openSignIn()`, `openAccount()`, `askDelete()`), `.ffa-note` (`maybeNudge()`: once, after the 5th saved film, `ff_acct_nudged`). Google's script (`loadGoogle()`) loads only when the sheet opens; `drawGoogleButton()` gets a new nonce per attempt (`/api/auth/nonce` also returns the client id); `gotCredential()` → `POST /api/auth/google` → `FFAccount.adopt()`. **`PUBLIC = false`**: off for everyone until the privacy wording is checked; `?auth=1` / `?auth=0` set `ff_flag_auth` for one browser. Footer links `[data-ffa-link]` follow the same switch. i18n `acct.*` (25 keys, 9 languages, my translations). **`privacy/` added to `PUBLIC` in `deploy.sh`**, draft comment removed, dated 9 November 2026. |
 | `32960b8` | **Footer switch for the installed iPhone app**, which has no address bar for `?auth=1`: seven quick taps on `.site-footer` / `.foot` set `ff_flag_auth` and reload. Only while `PUBLIC` is false. |
 | `8a66a6b` | **Footer switch fixed for iOS.** It only ever reloaded, and depended on `click`, which iOS doesn't send for a tap on plain text. Now `touchend` + `click` (deduplicated), and the 7th tap sets `flagOn` (held in memory for the visit), repaints and opens the sign-in sheet with no reload. `.site-footer, .foot { touch-action: manipulation }` stops double-tap zoom. |
+| `f95056f` | **Sign-in is public.** `PUBLIC = true` in `assets/account-ui.js`, kept as the off switch (false hides it all again; `?auth=1` then turns it on for one browser). The footer test switch and `.site-footer, .foot { touch-action }` are removed. |
 
 **Tested locally:** flag off shows nothing and doesn't load Google; the real Google button renders in the sheet (desktop and 375px bottom sheet); a rejected token keeps the sheet open, says so and draws a fresh button; with a throwaway session: strip, account sheet, delete confirmation, sign-out; the reminder appears at the 5th film only, once; Cinematic's strip shows only on the watchlist view.
 
-**Real Google sign-in confirmed by the owner on desktop and Android (2026-11-09), syncing between them; production database showed 1 account, 2 sessions, 7 items.** Still open: the installed iPhone app. **Google Cloud, owner:** add `http://localhost` as well as `http://localhost:8283` to Authorized JavaScript origins for local tests; set the OAuth consent screen to In production with `https://findfilm.ai/privacy/`.
+**Real Google sign-in confirmed by the owner on desktop and Android (2026-11-09), syncing between them; production database showed 1 account, 2 sessions, 7 items.** The installed iPhone app passed too: Google's panel closed, signed in, desktop films synced. So `ux_mode: 'redirect'` isn't needed. **Google Cloud, owner:** add `http://localhost` as well as `http://localhost:8283` to Authorized JavaScript origins for local tests; set the OAuth consent screen to In production with `https://findfilm.ai/privacy/`.
 
-**To go public:** set `PUBLIC = true` in `assets/account-ui.js`, bump its `?v=`, deploy. **Unknown until tried:** Google's popup in the installed iPhone app. If it fails, add `ux_mode: 'redirect'` for standalone mode.
+**iOS note:** iOS sends no `click` for a tap on plain text (not on a link or button), so a gesture on plain text needs `touchend`. iPhone simulators work here now (`xcode-select` points to Xcode); a Home Screen install in the simulator reproduces standalone mode.
 
 **Not built:** the Apple button (Stage 5); the server route exists.
 
@@ -3645,7 +3646,9 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Hero cleanup** (`0bb42c7`, `c71c486`, `6180cf6`), live on Pages `16d8d494`. Owner to review the new `search.modePlotPh`, `search.modePlotPhShort` and `cin.heroTitle` translations.
 - [x] **Music vibe on phones:** `.ss-music` in the search panel (`7055509`, live; real-phone tap being checked by the owner).
 - [x] **Tonight's Three** live and phone-approved (owner, 2026-11-09). Owner reviewing the `t3.*` translations at their own pace.
-- [ ] **Phase 3:** Stage 4 live and hidden (`39ef2918`). Owner testing a real Google sign-in on desktop and iPhone (including the installed app) and checking `/privacy/`. Then `PUBLIC = true`. Then 5 Apple (needs the membership), 6 `ratingkino.com` transfer then 301.
+- [x] **Phase 3, Stages 1–4** live and public (`7e22e625`, 2026-11-09).
+- [ ] **Phase 3, Stage 5: Apple sign-in.** Waiting on the owner's $99 Apple Developer membership. The server route exists (`APPLE_CLIENT_ID` empty = off); the button doesn't.
+- [ ] **Phase 3, Stage 6: `ratingkino.com`.** One-time guest-data transfer and a script redirect first, a true 301 about 3 months later.
 
 - [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
 - [x] **Phase 1 on a real phone** (owner, 2026-11-08): tip placement, animation and the fallback approved.
