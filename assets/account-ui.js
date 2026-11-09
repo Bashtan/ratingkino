@@ -20,7 +20,7 @@
   'use strict';
   var PUBLIC = false;
   var FLAG_KEY = 'ff_flag_auth', NUDGED_KEY = 'ff_acct_nudged', NUDGE_AT = 5, NOTE_MS = 12000;
-  var t, host, lang, sheet = null, opener = null, resumeAfter = null, gis = null, note = null;
+  var t, host, lang, sheet = null, opener = null, resumeAfter = null, gis = null, note = null, flagOn = false;
 
   (function readFlag() {
     var m = /[?&]auth=([01])/.exec(location.search);
@@ -31,22 +31,31 @@
     history.replaceState(history.state, '', url);
   })();
 
-  // The installed iPhone app has no address bar for ?auth=1, so seven quick taps on the footer do the same.
+  // The installed iPhone app has no address bar for ?auth=1, so seven quick taps on the footer do the
+  // same and open the sheet straight away. touchend as well as click, because iOS sends no click for a
+  // tap on plain text. No reload: flagOn holds for this visit even if storage doesn't.
   if (!PUBLIC) (function footerSwitch() {
-    var taps = 0, last = 0;
-    document.addEventListener('click', function (e) {
-      if (!e.target.closest || !e.target.closest('.site-footer, .foot') || e.target.closest('a')) return;
+    var taps = 0, last = 0, lastTouch = 0;
+    function tap(e) {
       var now = Date.now();
-      taps = now - last < 700 ? taps + 1 : 1;
+      if (e.type === 'touchend') lastTouch = now;
+      else if (now - lastTouch < 800) return;           // the click that can follow a touch
+      if (!t || !e.target.closest || !e.target.closest('.site-footer, .foot') || e.target.closest('a')) return;
+      taps = now - last < 900 ? taps + 1 : 1;
       last = now;
       if (taps < 7) return;
-      try { localStorage.setItem(FLAG_KEY, '1'); } catch (err) { return; }
-      location.reload();
-    });
+      taps = 0;
+      flagOn = true;
+      try { localStorage.setItem(FLAG_KEY, '1'); } catch (err) { /* this visit only */ }
+      paint();
+      if (FFAccount.user()) openAccount(); else openSignIn();
+    }
+    document.addEventListener('touchend', tap, { passive: true });
+    document.addEventListener('click', tap);
   })();
 
   function enabled() {
-    if (PUBLIC || FFAccount.user() || FFStore.meta().signedIn) return true;
+    if (PUBLIC || flagOn || FFAccount.user() || FFStore.meta().signedIn) return true;
     try { return localStorage.getItem(FLAG_KEY) === '1'; } catch (e) { return false; }
   }
 

@@ -43,6 +43,9 @@ html.ffa-open { overflow: hidden; }
 }
 .ffa-x-small { flex: none; width: 28px; height: 28px; border: 0; border-radius: 50%; background: none; color: rgba(255, 255, 255, 0.65); cursor: pointer; }
 
+/* Rapid taps on the footer shouldn't zoom the page (the test switch in account-ui.js). */
+.site-footer, .foot { touch-action: manipulation; }
+
 @media (max-width: 560px) {
   .ffa-back { place-items: end center; padding: 0; }
   .ffa-sheet { width: 100%; border-radius: 18px 18px 0 0; padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
