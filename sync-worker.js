@@ -80,6 +80,13 @@ const CARD_URL    = 'https://findfilm.ai/og/v2';   // CARD_VERSION in functions/
 const CARD_KV     = 'ogimg:v2';                    // its KV key prefix
 const CARD_POOL   = 3;                             // cards drawn at once (each ~3–4 s)
 
+// Guests' saved data on its way from ratingkino.com to findfilm.ai (functions/_lib/transfer.js). A code
+// lasts 8 minutes and this runs every minute, which is what makes the privacy page's "ten minutes at the
+// latest" true for a code nobody ever claims.
+async function sweepTransfers(env) {
+  await env.USERS.prepare('DELETE FROM transfers WHERE expires_at < ?1').bind(Date.now()).run();
+}
+
 export default {
   async scheduled(event, env, ctx) {
     const cron = event.cron;
@@ -90,6 +97,7 @@ export default {
     else if (cron === '20 0 * * *')  ctx.waitUntil(syncTrailerArcs(env));
     else if (cron === '30 0 * * *')  ctx.waitUntil(syncVibeIndex(env));
     else if (cron === '40 0 * * *')  ctx.waitUntil(syncPreviewCards(env));
+    else if (cron === '* * * * *')   ctx.waitUntil(sweepTransfers(env));
   },
 
   // Manual trigger: GET /sync-now?phase=popular|0|1|2|rx|vibe|cards

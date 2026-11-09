@@ -19,7 +19,8 @@ compatibility_date = "2024-11-01"
 # Trailer arcs (00:20): FF Bot's arc for each Trending / Top Rated title's trailer
 # Vibe index (00:30): the new releases into vibe search's Vectorize index (syncVibeIndex)
 # Preview cards (00:40): the Trending / Top Rated titles' link-preview images, drawn ahead (syncPreviewCards)
-crons = ["55 23 * * *", "0 0 * * *", "5 0 * * *", "10 0 * * *", "20 0 * * *", "30 0 * * *", "40 0 * * *"]
+# Every minute: deletes expired guest-data transfers (sweepTransfers); the privacy page promises ten minutes
+crons = ["55 23 * * *", "0 0 * * *", "5 0 * * *", "10 0 * * *", "20 0 * * *", "30 0 * * *", "40 0 * * *", "* * * * *"]
 
 [[kv_namespaces]]
 binding = "MOVIES_CACHE"
@@ -34,6 +35,12 @@ binding = "AI"
 [[vectorize]]
 binding    = "VECTORIZE"
 index_name = "findfilm-films"
+
+# The accounts database, for sweepTransfers only (wrangler.toml binds the same one).
+[[d1_databases]]
+binding       = "USERS"
+database_name = "findfilm-users"
+database_id   = "0ddde35c-7cec-4ef9-bf81-e4ffa682abb3"
 
 # Dev only, never deployed: the Worker against the preview index and the preview
 # KV, to try a change to the nightly jobs without touching production:
@@ -53,3 +60,9 @@ remote  = true
 binding    = "VECTORIZE"
 index_name = "findfilm-films-preview"
 remote     = true
+
+[[env.preview.d1_databases]]
+binding       = "USERS"
+database_name = "findfilm-users-preview"
+database_id   = "5fa01963-2a48-460b-b5c8-5d3f2240f1f8"
+remote        = true

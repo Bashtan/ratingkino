@@ -5,12 +5,13 @@
      POST /api/transfer         on the old domain only. Any JSON object → { code }
      POST /api/transfer/claim   on the new domain only. { code } → that object, or 404
 
-   The code is random, works once, and expires after ten minutes. The server treats the payload as an
+   The code is random, works once, and expires after eight minutes; sweepTransfers() in sync-worker.js
+   deletes an expired one within the minute, which keeps the privacy page's ten minutes true. The server treats the payload as an
    opaque blob: the page that claims it checks every value before using it. Tests: tools/move-test.mjs. */
 
 import { overLimit, sha256 } from './account.js';
 
-const TTL_MS = 600000;
+const TTL_MS = 480000;
 const MAX_BODY = 1500000;           // one bound value in D1 is at most 2 MB
 const PER_WINDOW = 30;
 

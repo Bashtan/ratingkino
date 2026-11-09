@@ -292,5 +292,24 @@ await test('an ordinary visit to findfilm.ai does nothing', async () => {
   assert.equal(b.replaced, null);
 });
 
+await test('a code lasts eight minutes, so deletion lands inside the ten the privacy page promises', async () => {
+  const before = Date.now();
+  await handleTransfer({ request: new Request('https://ratingkino.com/api/transfer', { method: 'POST', headers: { Origin: 'https://ratingkino.com', 'CF-Connecting-IP': 'ttl-test' }, body: '{"a":1}' }), env, params: { path: [] } });
+  const { latest } = await db.prepare('SELECT max(expires_at) AS latest FROM transfers').first();
+  assert.ok(latest - before >= 479000 && latest - before <= 481000);
+});
+
+await test('the per-minute job deletes expired codes, keeps live ones, and runs nothing else', async () => {
+  const { default: worker } = await import('../sync-worker.js');
+  await db.prepare('DELETE FROM transfers').run();
+  await db.prepare("INSERT INTO transfers (code_hash, payload, expires_at) VALUES ('old', '{}', ?1), ('live', '{}', ?2)").bind(Date.now() - 1000, Date.now() + 60000).run();
+  const jobs = [];
+  await worker.scheduled({ cron: '* * * * *' }, { USERS: db }, { waitUntil: p => jobs.push(p) });
+  assert.equal(jobs.length, 1);
+  await Promise.all(jobs);
+  const { results } = await db.prepare('SELECT code_hash FROM transfers').all();
+  assert.deepEqual(results.map(r => r.code_hash), ['live']);
+});
+
 console.log(`\nAll ${passed} passed.`);
 process.exit(0);

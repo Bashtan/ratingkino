@@ -19,7 +19,7 @@
 (function () {
   'use strict';
   var LIVE = false;                       // true: everyone on the old domain moves, installed apps included. false: only with ?move=1 once.
-  var FLAG_KEY = 'ff_flag_move', VOTE = 'ff_pitch_vote_', KEEP_CODE_MS = 480000, SHOW_ANYWAY_MS = 5000;
+  var FLAG_KEY = 'ff_flag_move', VOTE = 'ff_pitch_vote_', KEEP_CODE_MS = 360000, SHOW_ANYWAY_MS = 5000;
   var LOCAL_TEST = location.hostname === 'old.localhost';
   var ON_OLD_DOMAIN = LOCAL_TEST || /(^|\.)ratingkino\.com$/.test(location.hostname);
   var HOME = LOCAL_TEST ? 'http://localhost:' + location.port : 'https://findfilm.ai';
