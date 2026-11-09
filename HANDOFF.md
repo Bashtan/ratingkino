@@ -2,9 +2,27 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-09c) — Phase 3, Stage 2: Accounts Backend
+## ⚡ Most Recent Session (2026-11-09d) — Phase 3, Stage 3: Merge Backend
 
-Committed on `main`. **Code NOT in production yet: waiting for the owner's go-ahead.** Production is still Pages `73e2d623` from `071879a`. Preview: https://auth.ratingkino.pages.dev (`a5311343`, its own empty database). The schema is applied to local, preview and production `findfilm-users` (production: 0 users).
+Committed on `main`, on the preview only. **Not in production:** production runs `cb10adf`, and `0002_sync.sql` is applied to local and preview but **not** to production `findfilm-users`. Apply it before deploying this: `npx wrangler d1 migrations apply findfilm-users --remote`.
+
+| Commit | Feature |
+|--------|---------|
+| `323ee17` | **`POST /api/me/sync`** `{since, items:[{c,k,v,a,u,d}]}` → `{items, cursor, more, rejected}`, routed in `handleMe()`. **`functions/_lib/sync.js`**: `RULES` (allow-list: `watchlist`, `reviews`, `prefs`, `profile`, each with a key pattern and size cap), `cleanItems()`, `mergeItems()` (one D1 batch: `INSERT … SELECT … json_each(?2) … ON CONFLICT … WHERE excluded.updated_at > items.updated_at`, then `users.seq += n`), `changesSince()`, `syncRequest()`, `SYNC` limits (2,000 items/request, 5,000/page, 20,000/person, 1.5 MB body; 300 syncs/10 min). **`0002_sync.sql`**: `items` (`user_id`, `collection`, `item_key`, `value`, `added_at`, `updated_at`, `deleted_at`, `seq`), `users.seq`. `overLimit()` now takes a key and limit. `tools/fake-d1.mjs` shared by the tests. |
+
+**Changed from the roadmap, simpler:** one endpoint (the first sign-in is `since: 0` with everything) instead of import + sync; one `items` table mirroring `FFStore` instead of one per kind; no `imports` table, because newest-wins makes any retry harmless.
+
+**Why a counter, not dates, for "what's new":** `updated_at` comes from device clocks; `seq` is assigned by the server, per row. The cursor is the last row returned, never `users.seq`, so a change committed at the same moment can't be skipped.
+
+**Tested:** `node --no-warnings tools/sync-test.mjs` (20 cases). On real D1 through the deployed preview with a throwaway user: first sync, replay changes nothing, newer removal, older and undated saves can't undo it, `rk_tmdb` refused, 2,000 items in 476 ms, 2,003 pulled in 279 ms, deletion cascades, nothing left behind.
+
+**Next (Stage 3, browser half):** `FFStore` applies pulled rows and tracks what's unsent; push after a short delay, pull on load and focus, Web Locks for one tab; `owner` record so another account's data is never merged; sign-out sends pending changes then clears synced data; `profile` blobs send their interaction count as `u` (the richer one wins). Behind a flag until Stage 4.
+
+---
+
+## Session (2026-11-09c) — Phase 3, Stage 2: Accounts Backend
+
+Live: Pages production **`ff56abdd`** from `cb10adf` (`/build.json` = `20261109T094002Z-cb10adf`), which also activated Cloudflare Web Analytics (beacon confirmed in both layouts). Routes are live but nothing links to them. Preview: https://auth.ratingkino.pages.dev (its own database).
 
 | Commit | Feature |
 |--------|---------|
@@ -3207,6 +3225,7 @@ ratingkino/
 │   ├── _lib/dial.js      ← the Vibe Dial's ranking (no route); also imported by tools/vibe/dial-bench.mjs
 │   ├── _lib/tonight.js   ← Tonight's Three: the picking rules (no route); also tested by tools/vibe/tonight-bench.mjs
 │   ├── _lib/account.js   ← sign-in, sessions, deletion (no route); tests: tools/account-test.mjs
+│   ├── _lib/sync.js      ← merging saved data, newest change wins (no route); tests: tools/sync-test.mjs
 │   ├── api/auth/[[path]].js, api/me/[[path]].js ← account routes, separate so they carry no CORS
 │   ├── index.js          ← Pages Function for "/" only: link-preview tags for /?movie= · /?TVShows=
 │   ├── og/[[path]].js    ← /og/v1/<movie|tv>/<id>.jpg: the 1200×630 preview card (satori → resvg → mozjpeg)
@@ -3599,8 +3618,7 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Hero cleanup** (`0bb42c7`, `c71c486`, `6180cf6`), live on Pages `16d8d494`. Owner to review the new `search.modePlotPh`, `search.modePlotPhShort` and `cin.heroTitle` translations.
 - [x] **Music vibe on phones:** `.ss-music` in the search panel (`7055509`, live; real-phone tap being checked by the owner).
 - [x] **Tonight's Three** live and phone-approved (owner, 2026-11-09). Owner reviewing the `t3.*` translations at their own pace.
-- [ ] **Phase 3:** Stage 1 store live (`73e2d623`). Stage 2 accounts backend on preview (`7d317ce`): owner's go-ahead, then `./deploy.sh --branch main` (this also activates Web Analytics, if enabled). Next: Stage 3 merge + sync, 4 Google sign-in + prompts + privacy page, 5 Apple (needs the membership), 6 `ratingkino.com` transfer then 301.
-- [ ] **Enable Cloudflare Web Analytics** (owner, dashboard): see the 2026-11-09b block.
+- [ ] **Phase 3:** Stages 1 and 2 live (`ff56abdd`). Stage 3 merge backend on preview (`323ee17`, owner reviewing); browser half next, then deploy both, applying `0002_sync.sql` to production first. Then 4 Google sign-in + prompts + privacy page, 5 Apple (needs the membership), 6 `ratingkino.com` transfer then 301.
 
 - [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
 - [x] **Phase 1 on a real phone** (owner, 2026-11-08): tip placement, animation and the fallback approved.
