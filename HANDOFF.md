@@ -4,15 +4,16 @@
 
 ## ⚡ Most Recent Session (2026-11-09) — Tonight's Three; Music Search in the Phone Search Panel
 
-Committed on `main`, **NOT deployed yet: waiting for the owner's go-ahead.** Live is still Pages `16d8d494` from `6180cf6`.
+All commits on `main`, live on https://findfilm.ai since 2026-11-09: Pages production **`├──────────────────────────────────────┼─────────────┼────────┼─────────┼───────────────────────────────────────┼────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤`** from `9ffe813` (`/build.json` = `20261109T075056Z-9ffe813`; `./deploy.sh`: 18/18 sensitive paths unpublished, custom domains clean). Owner is testing on a real phone.
 
 | Commit | Feature |
 |--------|---------|
-| `7055509` | **Tonight's Three.** New **`POST /api/tonight`** `{genres?, day?}` → `{day, personal, sets}` (`handleTonight()`, `_tonightStream()`); four sets of `{safe, surprise, comfort}`. No language model at request time: **`functions/_lib/tonight.js`** (`tonightQueries`, `tonightFilter`, `tonightCandidates`, `tonightSets`; `LADDER` relaxes each role's rules, `FEELS` / `SURPRISES` / `COMFORTS` rotate daily, `DRAW` 24 shuffled by a day seed). `why` = the `f` line written at ingest. Films streamable in the visitor's country go first. KV `t3:v1:<day>:<taste>:<country>`, 36h. `?debug=1` skips KV and takes any day. **Shared UI `assets/tonight.js` + `.css`:** `FFTonight.mount(host, {t, lang, onOpen, onPersonal, onEmpty, genreId})` → `{load, refresh, relabel, shownIds}`; `.ff3-*`; localStorage `ff_t3_shuffle`; skips films with `rk_rev_<id>`; non-English pages get title and plot from `/api/tmdb/movie/<id>`. **Classic:** `#rowTonight` / `#tonightThree` replace `#rowForYou` (the Personalize and Taste DNA buttons stay, hint removed); `window._ffTonight`; `renderForYouRow`, `scoredForProfile`, `genRecommendReason` deleted. **Cinematic:** `#tonightWrap` above `.results-head`, home view on Movies only (`startView`, `tonightOff`). i18n `t3.*` (9 languages, my translations); `feed.forYou`, `onboard.refineSub` removed. **Phones:** `.ss-music` in `#searchSuggestions` opens `openVibeCheck('music')`; the panel now shows on phones with only that button (`.ss-label`, `.ss-pills` hidden). |
+| `7055509` | **Tonight's Three.** New **`POST /api/tonight`** `{genres?, day?}` → `{day, personal, sets}` (`handleTonight()`, `_tonightStream()`); four sets of `{safe, surprise, comfort}`. No language model at request time: **`functions/_lib/tonight.js`** (`tonightQueries`, `tonightFilter`, `tonightCandidates`, `tonightSets`; `LADDER` relaxes each role's rules, `FEELS` / `SURPRISES` / `COMFORTS` rotate daily, `DRAW` 24 shuffled by a day seed). `why` = the `f` line written at ingest. Films streamable in the visitor's country go first. KV `t3:v2:<day>:<taste>:<country>`, 36h. `?debug=1` skips KV and takes any day. **Shared UI `assets/tonight.js` + `.css`:** `FFTonight.mount(host, {t, lang, onOpen, onPersonal, onEmpty, genreId})` → `{load, refresh, relabel, shownIds}`; `.ff3-*`; localStorage `ff_t3_shuffle`; skips films with `rk_rev_<id>`; non-English pages get title and plot from `/api/tmdb/movie/<id>`. **Classic:** `#rowTonight` / `#tonightThree` replace `#rowForYou` (the Personalize and Taste DNA buttons stay, hint removed); `window._ffTonight`; `renderForYouRow`, `scoredForProfile`, `genRecommendReason` deleted. **Cinematic:** `#tonightWrap` above `.results-head`, home view on Movies only (`startView`, `tonightOff`). i18n `t3.*` (9 languages, my translations); `feed.forYou`, `onboard.refineSub` removed. **Phones:** `.ss-music` in `#searchSuggestions` opens `openVibeCheck('music')`; the panel now shows on phones with only that button (`.ss-label`, `.ss-pills` hidden). |
+| `9ffe813` | **Tonight's Three content guard.** `NOT_A_MOVIE_NIGHT` in `functions/_lib/tonight.js`: no stand-up or concert specials (a Ricky Gervais special was the first live Surprise), no child-abuse or sexual-violence subjects on the front page. KV key → `t3:v2`. |
 
 **Tested:** `tools/vibe/tonight-bench.mjs` (10 tastes × 14 days through the real index): always 4 sets, no film twice in a run, floors held; a daily visitor gets 7–14 different first picks per role in 14 days. Locally at 1440×900 and 375: Classic row 288–537; Cinematic block 328–571, Trending's posters from 670; all three cards on a phone screen; open, shuffle, reload, rated-film skip, hidden on TV/chips/search, Ukrainian titles and labels.
 
-**Browser pane caveat:** a hidden pane doesn't fire `focus`, so the phone panel was tested with a dispatched event. Worth a tap on a real phone.
+**Browser pane caveat:** a hidden pane doesn't fire `focus`, so the phone panel was tested with a dispatched event (locally and live).
 
 **Bloodstream:** TMDB lists it for Disney classics; `_tonightStream()` skips it. JustWatch credit: `.ff3-credit`.
 
@@ -3556,8 +3557,8 @@ The site is fully installable as a PWA on all platforms.
 ## Pending / Next Steps
 
 - [x] **Hero cleanup** (`0bb42c7`, `c71c486`, `6180cf6`), live on Pages `16d8d494`. Owner to review the new `search.modePlotPh`, `search.modePlotPhShort` and `cin.heroTitle` translations.
-- [x] **Music vibe on phones:** `.ss-music` in the search panel (`7055509`, deploy pending).
-- [ ] **Tonight's Three** built (`7055509`): owner's go-ahead, then `./deploy.sh --branch main`. Owner to review the `t3.*` translations.
+- [x] **Music vibe on phones:** `.ss-music` in the search panel (`7055509`, live; real-phone tap being checked by the owner).
+- [ ] **Tonight's Three** live: owner testing the phone music panel and reviewing the `t3.*` translations. Then Phase 3.
 
 - [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
 - [x] **Phase 1 on a real phone** (owner, 2026-11-08): tip placement, animation and the fallback approved.
