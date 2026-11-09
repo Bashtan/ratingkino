@@ -4,7 +4,7 @@
 
 ## ⚡ Most Recent Session (2026-11-09) — Tonight's Three; Music Search in the Phone Search Panel
 
-All commits on `main`, live on https://findfilm.ai since 2026-11-09: Pages production **`├──────────────────────────────────────┼─────────────┼────────┼─────────┼───────────────────────────────────────┼────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤`** from `9ffe813` (`/build.json` = `20261109T075056Z-9ffe813`; `./deploy.sh`: 18/18 sensitive paths unpublished, custom domains clean). Owner is testing on a real phone.
+All commits on `main`, live on https://findfilm.ai since 2026-11-09: Pages production **`ecdd7444`** from `9ffe813` (`/build.json` = `20261109T075056Z-9ffe813`; `./deploy.sh`: 18/18 sensitive paths unpublished, custom domains clean). Owner is testing on a real phone.
 
 | Commit | Feature |
 |--------|---------|
