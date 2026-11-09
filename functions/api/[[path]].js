@@ -8,6 +8,7 @@
  *   /api/cache/new-releases → KV: movies released in the last 30 days
  *   /api/cache/random-pool  → KV: 500 lightweight movies for roulette
  *   /api/cache/status       → KV: last sync timestamp + stats
+ *   /api/tonight       → Tonight's Three (POST {genres?, day?}); rules in functions/_lib/tonight.js
  *   /api/search        → two-step: TMDB /search/movie (title-first) + AI semantic fallback
  *   /api/ai-search     → Cloudflare AI semantic search over KV catalog (Enter-key mode)
  *   /api/watchmode/sources → api.watchmode.com/v1/title/{type}-{tmdb_id}/sources/
@@ -21,7 +22,8 @@
  * never exposed in HTML source.
  */
 
-import { cleanDial, dialQuery, dialFilter, rankDial, DIAL_KEYS } from '../_lib/dial.js';
+import { cleanDial, dialQuery, dialFilter, rankDial, DIAL_KEYS, GENRE } from '../_lib/dial.js';
+import { TONIGHT_ROLES, TONIGHT_STEPS, TONIGHT_CANDIDATES, tonightQueries, tonightFilter, tonightCandidates, tonightSets } from '../_lib/tonight.js';
 
 // Shared by the /tmdb/* proxy and /watchmode/sources — resolves the visitor's
 // region with the same priority everywhere: Cloudflare's edge geo-IP
@@ -90,6 +92,11 @@ export async function onRequest({ request, env, params, waitUntil }) {
   /* ── /api/vibe-check ── photo/music → vibe translation → movie curation ── */
   if (path === '/vibe-dial') {
     return handleVibeDial(request, env, cors, waitUntil);
+  }
+
+  /* ── /api/tonight ── Tonight's Three: a Safe Bet, a Surprise, a Comfort Pick ── */
+  if (path === '/tonight') {
+    return handleTonight(request, url, env, cors, waitUntil);
   }
 
   if (path === '/vibe-check') {
@@ -2654,6 +2661,84 @@ async function handleVibeSearch(request, url, env, cors, waitUntil) {
 /* The mood sliders (functions/_lib/dial.js). POST {dial: {mood, tone, novelty}, text?} → {movies}, best
    first. Embeds one sentence and searches; no language model, so it answers quickly, and a dial alone
    has only 124 possible answers, kept for a day like any other. */
+/* ─── /api/tonight — Tonight's Three ───
+ * POST { genres?: [TMDB ids, the visitor's top two], day?: 'YYYY-MM-DD' (their own date) }
+ * → { day, personal, sets: [{ safe, surprise, comfort }, ...] }. Each film is a TMDB-shaped row plus
+ * runtime, why (the one-line feel written at ingest) and stream ({name, logo} or null).
+ * The code picks the films (functions/_lib/tonight.js). Among a role's candidates, films the visitor
+ * can stream in their country go first. KV: t3:v1:<day>:<taste>:<country>, about a day and a half.
+ * ?debug=1 skips the cache and takes any day, for tools/vibe/tonight-bench.mjs.
+ */
+async function handleTonight(request, url, env, cors, waitUntil) {
+  const json = (body, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...cors } });
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body' }, 400); }
+  if (!env.VECTORIZE || !env.AI) return json({ error: 'Picks unavailable' }, 503);
+
+  const debug = url.searchParams.get('debug') === '1';
+  const taste = [...new Set((Array.isArray(body.genres) ? body.genres : []).map(Number).filter(id => GENRE[id]))].slice(0, 2).sort((a, b) => a - b);
+  const utc = Date.now();
+  const nearby = [-1, 0, 1].map(n => new Date(utc + n * 86400000).toISOString().slice(0, 10));   // time zones run a day apart
+  const asked = /^\d{4}-\d{2}-\d{2}$/.test(String(body.day)) ? String(body.day) : '';
+  const day = debug && asked ? asked : nearby.includes(asked) ? asked : nearby[1];
+  const country = _resolveRegion(request, url);
+  const cacheKey = `t3:v1:${day}:${taste.join('-') || 'any'}:${country}`;
+  if (!debug) {
+    const hit = await env.MOVIES_CACHE?.get(cacheKey, 'json').catch(() => null);
+    if (hit) return json(hit);
+  }
+
+  try {
+    const queries = tonightQueries(day, taste);
+    const emb = await env.AI.run(VIBE_EMBED_MODEL, { text: TONIGHT_ROLES.map(role => queries[role]) });
+    const vectors = emb?.data || emb?.response?.data || emb?.response || [];
+    if (vectors.length !== TONIGHT_ROLES.length) throw new Error('embedding failed');
+
+    const seed = `${day}|${taste.join('-')}`, year = Number(day.slice(0, 4));
+    const pools = await Promise.all(TONIGHT_ROLES.map(async (role, i) => {
+      const found = new Map();
+      let list = [];
+      for (let step = 0; step < TONIGHT_STEPS && list.length < TONIGHT_CANDIDATES; step++) {
+        const { matches } = await env.VECTORIZE.query(vectors[i], { topK: 50, returnMetadata: 'all', filter: tonightFilter(role, step, year) });
+        for (const x of matches) if (!found.has(x.id)) found.set(x.id, x);
+        list = tonightCandidates(role, [...found.values()], { seed, taste });
+      }
+      return [role, list];
+    }));
+
+    const everyone = new Map(pools.flatMap(([, list]) => list).map(x => [x.id, x]));
+    const stream = new Map(await Promise.all([...everyone.keys()].map(async id => [id, await _tonightStream(_tonightId(id), country, env)])));
+    const sets = tonightSets(Object.fromEntries(pools), { taste, streamable: x => !!stream.get(x.id) }).map(set =>
+      Object.fromEntries(TONIGHT_ROLES.map(role => {
+        const x = set[role];
+        return [role, { ..._vibeRow(_tonightId(x.id), x.metadata), runtime: x.metadata.runtime || null, why: x.metadata.f || '', stream: stream.get(x.id) || null }];
+      })));
+
+    const payload = { day, personal: taste.length > 0, sets };
+    if (sets.length && !debug && waitUntil) waitUntil(env.MOVIES_CACHE?.put(cacheKey, JSON.stringify(payload), { expirationTtl: 129600 }).catch(() => {}));
+    return json(payload);
+  } catch (e) {
+    console.error('[tonight] failed:', e.message);
+    return json({ error: 'Picks failed' }, 502);
+  }
+}
+
+const _tonightId = vectorId => Number(String(vectorId).slice(1));
+
+// The service that has this film on subscription in this country, or null.
+async function _tonightStream(id, country, env) {
+  try {
+    const r = await fetch(`https://api.themoviedb.org/3/movie/${id}/watch/providers?api_key=${env.TMDB_KEY}`, { headers: { 'User-Agent': 'FindFilm.ai/1.0' } });
+    if (!r.ok) return null;
+    const services = (await r.json()).results?.[country]?.flatrate || [];
+    // Lowest display_priority is TMDB's own "best known here". Bloodstream lists Disney classics it doesn't plausibly carry.
+    const service = services.filter(p => !/bloodstream/i.test(p.provider_name)).sort((a, b) => (a.display_priority ?? 999) - (b.display_priority ?? 999))[0];
+    return service ? { name: service.provider_name, logo: service.logo_path || null } : null;
+  } catch { return null; }
+}
+
 async function handleVibeDial(request, env, cors, waitUntil) {
   const json = (body, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...cors } });

@@ -1,0 +1,39 @@
+/* Tonight's Three: three cards side by side, stacked on a phone. /assets/tonight.js */
+.ff3-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.ff3-card {
+  display: flex; gap: 12px; min-width: 0; min-height: 157px; padding: 10px;
+  color: #fff; font: inherit; text-align: start; cursor: pointer;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px;
+  transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ff3-card:not(.ff3-skel):hover { background: rgba(255, 255, 255, 0.09); border-color: rgba(255, 255, 255, 0.24); transform: translateY(-2px); }
+}
+.ff3-card:focus-visible, .ff3-shuffle:focus-visible { outline: 2px solid #c4b5fd; outline-offset: 2px; }
+.ff3-skel { cursor: default; }
+.ff3-poster { flex: none; width: 90px; height: 135px; object-fit: cover; border-radius: 8px; background: #1a1a1f; }
+.ff3-body { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 4px; }
+.ff3-role { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.ff3-safe .ff3-role { color: #6ee7b7; }
+.ff3-surprise .ff3-role { color: #f0abfc; }
+.ff3-comfort .ff3-role { color: #fcd34d; }
+.ff3-title, .ff3-why { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.ff3-why[hidden] { display: none; }
+.ff3-title { font-size: 17px; font-weight: 700; line-height: 1.2; }
+.ff3-meta { font-size: 12px; color: rgba(255, 255, 255, 0.62); }
+.ff3-why { font-size: 13px; line-height: 1.35; color: rgba(255, 255, 255, 0.8); }
+.ff3-stream { display: inline-flex; align-items: center; gap: 6px; margin-top: auto; font-size: 12px; font-weight: 600; }
+.ff3-stream img { border-radius: 4px; }
+.ff3-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; }
+.ff3-credit { font-size: 10.5px; color: rgba(255, 255, 255, 0.42); }
+.ff3-shuffle {
+  display: inline-flex; align-items: center; gap: 6px; margin-inline-start: auto; padding: 6px 4px;
+  background: none; border: 0; color: #c4b5fd; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) { .ff3-shuffle:hover { color: #fff; } }
+@media (max-width: 860px) {
+  .ff3-cards { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .ff3-card { min-height: 118px; padding: 8px; }
+  .ff3-poster { width: 68px; height: 102px; }
+  .ff3-title { font-size: 15.5px; -webkit-line-clamp: 1; }
+}

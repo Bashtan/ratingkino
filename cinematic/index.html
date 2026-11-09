@@ -398,6 +398,9 @@ img.fade.loaded { opacity: 1; }
   min-height: calc(100vh - var(--header-h));
   min-height: calc(100dvh - var(--header-h));
 }
+.t3 { margin-bottom: 14px; }
+.t3[hidden] { display: none; }
+.t3 .t3-title { margin-bottom: 12px; font-size: clamp(1.25rem, 2vw, 1.5rem); }   /* after .results-title's margin: 0 in specificity */
 .results-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; min-height: 58px; margin-bottom: 22px; }
 .results-lead { display: flex; align-items: flex-end; gap: 14px; min-width: 0; }
 .results-text { min-width: 0; }
@@ -772,8 +775,10 @@ img.fade.loaded { opacity: 1; }
 <script src="/assets/closest.js?v=342743a9"></script>
 <link rel="stylesheet" href="/assets/dial.css?v=2cf76d83">
 <script src="/assets/dial.js?v=47ab0774"></script>
+<link rel="stylesheet" href="/assets/tonight.css?v=770ae6e2">
+<script src="/assets/tonight.js?v=08885f0d"></script>
 <!-- UI strings in 9 languages, shared with Classic (window.FF_I18N). Synchronous on purpose: the page script translates the page before it first paints. -->
-<script src="/assets/i18n.js?v=ab91c98c"></script>
+<script src="/assets/i18n.js?v=bbfccb0b"></script>
 <script>
 /* The saved language (rk_lang, shared with Classic) sets <html lang dir> now,
    so an Arabic page is right-to-left from its first paint. */
@@ -906,6 +911,11 @@ img.fade.loaded { opacity: 1; }
   </section>
 
   <section class="results" id="results" aria-labelledby="resultsTitle">
+    <!-- Tonight's Three, on the Movies tab's home view only (FFTonight, /assets/tonight.js) -->
+    <div class="t3" id="tonightWrap" hidden>
+      <h2 class="results-title t3-title" data-i18n="t3.title">Tonight’s Three</h2>
+      <div id="tonightThree"></div>
+    </div>
     <div class="results-head">
       <div class="results-lead">
         <!-- The mascot's mood follows the search (FFBot, /assets/social.js): think → idea → success, or confused. -->
@@ -1290,7 +1300,8 @@ const qvClose = $('#qvClose'), qvBack = $('#qvBack'), qvHandle = $('#qvHandle');
 // on screen and uncovered, e.g. by a Quick View a shared link opened.
 if (firstVisit) addEventListener('DOMContentLoaded', () => window.FFBot?.welcome(cmd.querySelector('.cmd-field'), () => cmdInput.focus()));
 const wlBtn = $('#wlBtn'), wlCount = $('#wlCount'), clearLabel = $('#clearLabel'), toastEl = $('#toast');
-const seg = $('#seg');
+const seg = $('#seg'), tonightWrap = $('#tonightWrap');
+let tonight, tonightOff = false;                // FFTonight; no picks to show today
 
 // Shared with Classic (/assets/watchlist.js). If that script is blocked the buttons stay inert (toggle → null) instead of taking the page down.
 const WL = window.FFWatchlist || { has: () => false, toggle: () => null, list: () => [], count: () => 0, onChange: () => () => {} };
@@ -1370,6 +1381,7 @@ function startView(kind, extra = {}) {
   // every new view starts from not-busy; searches switch it back on themselves.
   setBusy(false);
   clearBtn.hidden = kind === 'home';
+  tonightWrap.hidden = tonightOff || kind !== 'home' || ctype !== 'movie';
   clearLabel.textContent = t(kind === 'watchlist' ? 'results.close' : 'cin.clear');   // "Clear" there would read as emptying the list
   wlBtn.setAttribute('aria-pressed', String(kind === 'watchlist'));
   window.FFBot?.set(kind === 'title' || kind === 'vibe' ? 'think' : 'idle');   // the mascot thinks through a search
@@ -1477,6 +1489,7 @@ function showHome() {
   const v = startView('home');
   const cfg = typeCfg(v.ctype);
   setHeader(t(cfg.homeTitle), esc(t(cfg.homeSub)));
+  if (v.ctype === 'movie' && !tonightOff) tonight.load();
   const snap = homeSnaps[v.ctype];
   if (snap) {
     v.page = snap.page;
@@ -2414,6 +2427,7 @@ function relabel() {
   if (!view) return;                           // still booting: showHome() comes next
   clearLabel.textContent = t(view.kind === 'watchlist' ? 'results.close' : 'cin.clear');
   FFDial.relabel();
+  tonight.relabel();
   if (view.kind === 'home') showHome();
   else if (view.kind === 'discover') runDiscover(view.chip);
   else if (view.kind === 'title') runTitle(view.q);
@@ -2464,6 +2478,12 @@ async function openDeepLink() {
 try { if (sessionStorage.getItem('ff_ctype') === 'tv') ctype = 'tv'; } catch { /* not remembered */ }
 FFDial.mount($('#ffDial'), { t, toggleHost: chipsTrack, toggleClass: 'chip', onChange: runDial, onReset: showHome, onSee: revealResults });
 FFDial.setVisible(ctype === 'movie');
+tonight = FFTonight.mount($('#tonightThree'), {
+  t,
+  lang: () => TMDB_LANG[lang],
+  onOpen: (row, el) => openQuickView(fromTMDB(row, 'movie'), el),
+  onEmpty: () => { tonightOff = true; tonightWrap.hidden = true; },
+});
 applyTypeCopy();
 syncWL();
 showSkeletons(18);

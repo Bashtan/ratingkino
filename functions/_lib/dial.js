@@ -9,7 +9,7 @@
    the query drowns the words: the full phrases gave The Grinch for "a heist" + Cozy, and even one
    adjective ("A familiar film about Paris") gave The Princess and the Frog. */
 
-const GENRE = { 28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime', 99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History', 27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance', 878: 'Science Fiction', 10770: 'TV Movie', 53: 'Thriller', 10752: 'War', 37: 'Western' };
+export const GENRE = { 28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime', 99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History', 27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance', 878: 'Science Fiction', 10770: 'TV Movie', 53: 'Thriller', 10752: 'War', 37: 'Western' };
 export const genresOf = m => String(m.g || '').split(',').map(n => GENRE[n]).filter(Boolean);
 export const tagsOf = m => String(m.vt || '').split('|').map(t => t.toLowerCase().trim()).filter(Boolean);
 
@@ -40,9 +40,9 @@ export const DIAL_STOPS = {
   novelty: { '-2': 'a crowd-pleasing mainstream favorite', '-1': 'popular and accessible', 1: 'offbeat and unconventional', 2: 'an experimental, surreal art film' },
 };
 
-const NOT_A_PICK = ['Documentary', 'TV Movie'];   // stand-up specials and making-ofs read as "funny" and "serious"
-const ADULT = /\b(erotic\w*|softcore|sexploitation|bdsm|sadomasochism|porn\w*|nymphomaniac)\b/;
-const ATROCITY = /\b(nazi\w*|holocaust|concentration camp|genocide|slavery|auschwitz)\b/;   // "uplifting" and "hopeful" tags aren't cozy here
+export const NOT_A_PICK = ['Documentary', 'TV Movie'];   // stand-up specials and making-ofs read as "funny" and "serious"
+export const ADULT = /\b(erotic\w*|softcore|sexploitation|bdsm|sadomasochism|porn\w*|nymphomaniac)\b/;
+export const ATROCITY = /\b(nazi\w*|holocaust|concentration camp|genocide|slavery|auschwitz)\b/;   // "uplifting" and "hopeful" tags aren't cozy here
 
 // -2 to 2 per axis; anything else is 0.
 export function cleanDial(raw) {

@@ -381,6 +381,7 @@ header {
   color: rgba(167, 139, 250, 0.45);
 }
 .ss-pills { display: flex; flex-wrap: wrap; gap: 7px; }
+.ss-music { display: none; }   /* phones only: the bar has no room for its music button there */
 .ss-pill {
   display: inline-flex; align-items: center;
   padding: 5px 13px;
@@ -411,7 +412,12 @@ header {
    already does for its popover. Scoped to the visible state so the wrap drops
    back to its resting level the moment the panel closes. */
 #searchWrap:has(.search-suggestions.ss-visible) { z-index: 130; }
-@media (max-width: 768px) { .search-suggestions { display: none; } }
+/* Phones: the panel holds only the music search (the bar has no room for that button); the prompt
+   pills stay off so the panel doesn't cover the page under the keyboard. */
+@media (max-width: 768px) {
+  .search-suggestions { padding: 10px; }
+  .ss-label, .ss-pills { display: none; }
+}
 
 /* ─── AI results banner ──────────────────────────────────────── */
 .ai-banner {
@@ -3720,6 +3726,11 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
   /* The short placeholder needs the room: it matches the typed text, and the music button goes (phones only). */
   .search-wrap--hero .search-ph-overlay { left: 4px; right: 0; font-size: 15px; }
   #searchMusicBtn { display: none; }
+  .ss-music {
+    display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px;
+    background: rgba(124, 58, 237, 0.28); border: 1px solid rgba(167, 139, 250, 0.75); border-radius: 20px;
+    color: #e9d5ff; font: 600 13px 'Inter', sans-serif; cursor: pointer;
+  }
   .search-wrap--hero .sw-mode-trigger { height: 44px; font-size: 12px; padding: 0 8px 0 9px; gap: 4px; }
   /* Mode menu (#smMenu) — its nowrap options made it as wide as the longest label.
      French "Décrivez ce dont vous vous souvenez" is 310px, so at 320px the menu ran
@@ -3746,7 +3757,7 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
 
   /* "★ Based on your taste" pill is desktop-only — hide on phones to save
      vertical space in the "Start here tonight" row. */
-  #rowForYou .feed-row-badge { display: none; }
+  #rowTonight .feed-row-badge { display: none; }
 
   /* Hero band is hidden by default (base rule); mobile keeps it hidden. */
   /* Compact mobile value-prop — shrink type + tighten gaps so the block fits
@@ -4085,6 +4096,8 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
   font-family: 'Montserrat', sans-serif; letter-spacing: 0.6px;
 }
 .feed-row-badge svg { opacity: 0.85; }
+.feed-row-badge[hidden] { display: none; }
+#tonightThree { padding: 0 20px 4px; }
 .foryou-refine {
   margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
   background: none; border: 1px solid rgba(124,58,237,0.4);
@@ -4098,13 +4111,6 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
 .foryou-refine:hover { background: rgba(124,58,237,0.14); border-color: rgba(124,58,237,0.65); }
 .foryou-refine:hover .foryou-refine-spark { color: #c4b5fd; }
 /* Explanatory micro-copy under the personalized row — how to activate AI personalization. */
-.foryou-hint {
-  display: flex; align-items: center; gap: 6px;
-  margin: -4px 18px 12px; padding: 0;
-  font-size: 12px; line-height: 1.4; color: #94a3b8; /* slate-400 */
-  font-family: 'Inter', system-ui, sans-serif; font-weight: 500;
-}
-.foryou-hint-spark { flex-shrink: 0; color: #a78bfa; opacity: 0.9; }
 .feed-scroll {
   display: flex; gap: 12px; overflow-x: auto;
   padding: 4px 18px 12px; scroll-behavior: smooth;
@@ -4295,13 +4301,7 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
   .ai-status-text { white-space: normal; text-align: center; line-height: 1.5; }
 }
 /* "For You" row: extra purple tint on cards */
-.feed-row.for-you .mini-card {
-  border-color: rgba(99,102,241,0.22);
-}
-.feed-row.for-you .mini-card:hover {
-  box-shadow: 0 12px 32px rgba(99,102,241,0.3);
-}
-/* Dominant primary row — "Start here tonight" gets extra visual weight so the
+/* Dominant primary row — Tonight's Three gets extra visual weight so the
    eye lands here first instead of treating every carousel equally. */
 .feed-row--primary {
   background: linear-gradient(180deg, rgba(124,58,237,0.12), rgba(124,58,237,0));
@@ -4320,6 +4320,7 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
 .feed-row--primary .mini-card { flex-basis: 158px; }
 @media (max-width: 768px) {
   .feed-row--primary { margin-left: 8px; margin-right: 8px; }
+  #tonightThree { padding: 0 10px 2px; }
   .feed-row--primary .feed-row-title { font-size: 15px; }
   .feed-row--primary .mini-card { flex-basis: 140px; }
   /* Keep the header on ONE line — the two action chips never stack vertically.
@@ -4431,7 +4432,6 @@ main.browse-collapsed > .load-wrap { display: none !important; }
 @media (hover: none) {
   .mini-card { transition: transform 0.22s ease-out, box-shadow 0.22s ease; }
   .mini-card:hover,
-  .feed-row.for-you .mini-card:hover { transform: none; box-shadow: none; }
   .mini-card:active { transform: scale(0.96); transition-duration: 0.06s; }
 }
 /* Skeleton mini cards */
@@ -5452,8 +5452,10 @@ if ('serviceWorker' in navigator) {
 <script src="/assets/closest.js?v=342743a9"></script>
 <link rel="stylesheet" href="/assets/dial.css?v=2cf76d83">
 <script src="/assets/dial.js?v=47ab0774"></script>
+<link rel="stylesheet" href="/assets/tonight.css?v=770ae6e2">
+<script src="/assets/tonight.js?v=08885f0d"></script>
 <!-- UI strings in 9 languages, shared with Cinematic (window.FF_I18N → TRANSLATIONS). Synchronous on purpose: the page script reads it at once. -->
-<script src="/assets/i18n.js?v=ab91c98c"></script>
+<script src="/assets/i18n.js?v=bbfccb0b"></script>
 </head>
 <body>
 <!-- Social brand icons for the .ffs / .ffm / .ffs-band blocks (/assets/social.css),
@@ -5702,6 +5704,10 @@ if ('serviceWorker' in navigator) {
     </svg>
     <!-- Clickable suggestion pills — shown on focus when input is empty -->
     <div class="search-suggestions" id="searchSuggestions" role="listbox" aria-label="Search suggestions" aria-hidden="true">
+      <button class="ss-music" type="button" onmousedown="event.preventDefault(); hideSuggestions(); document.getElementById('searchInput').blur(); openVibeCheck('music')">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>
+        <span data-i18n="vibe.musicTip">Search by music</span>
+      </button>
       <span class="ss-label" data-i18n="search.suggestLabel">Try searching for:</span>
       <div class="ss-pills" id="ssPills"></div>
     </div>
@@ -5870,13 +5876,13 @@ if ('serviceWorker' in navigator) {
 <!-- ════════════ FEED SECTIONS (horizontal rows) ════════════ -->
 <div class="feed-sections" id="feedSections">
 
-  <!-- "Start here tonight" — dominant personalized row (shown after enough interactions) -->
-  <div class="feed-row for-you feed-row--primary" id="rowForYou" style="display:none">
+  <!-- Tonight's Three: a Safe Bet, a Surprise, a Comfort Pick (FFTonight, /assets/tonight.js) -->
+  <div class="feed-row feed-row--primary" id="rowTonight">
     <div class="feed-row-header">
-      <h2 class="feed-row-title">🌙 Start here tonight</h2>
-      <span class="feed-row-badge">
+      <h2 class="feed-row-title" data-i18n="t3.title">Tonight’s Three</h2>
+      <span class="feed-row-badge" id="t3Badge" hidden>
         <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
-        Based on your taste
+        <span data-i18n="feed.forYouBadge">Based on your taste</span>
       </span>
       <button class="foryou-refine" onclick="openOnboardQuiz()" data-i18n-title="onboard.refineHint" title="Answer a few quick questions so our AI learns your taste.">
         <svg class="foryou-refine-spark" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/><path d="M18.5 3.5l.7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7z"/></svg>
@@ -5889,14 +5895,10 @@ if ('serviceWorker' in navigator) {
         <span class="refine-short" data-i18n="dna.entryShort">DNA</span>
         <!-- The mascot peeking over this button (computers only); ducks while the row
              slides under the sticky Movies / TV bar. .ffp in /assets/social.css. -->
-        <span class="ffp" aria-hidden="true" data-ffp-under=".filters-bar" data-ffp-edge="#rowForYou"><i class="ffp-bot"></i></span>
+        <span class="ffp" aria-hidden="true" data-ffp-under=".filters-bar" data-ffp-edge="#rowTonight"><i class="ffp-bot"></i></span>
       </button>
     </div>
-    <p class="foryou-hint" id="forYouHint">
-      <svg class="foryou-hint-spark" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg>
-      <span data-i18n="onboard.refineSub">Rate at least 3 movies to let our AI learn your taste.</span>
-    </p>
-    <div class="feed-scroll" id="scrollForYou"></div>
+    <div id="tonightThree"></div>
   </div>
 
   <!-- Best Available Now — high-confidence, critic/vote-weighted -->
@@ -6429,10 +6431,7 @@ function applyTranslations() {
     el.setAttribute('data-tip', t(el.dataset.i18nTip));
   });
   // Feed row titles (static HTML)
-  const forYouTitle = document.querySelector('#rowForYou .feed-row-title');
-  if (forYouTitle) forYouTitle.textContent = t('feed.forYou');
-  const forYouBadge = document.querySelector('#rowForYou .feed-row-badge');
-  if (forYouBadge) { const svg = forYouBadge.querySelector('svg'); forYouBadge.textContent = ' ' + t('feed.forYouBadge'); if (svg) forYouBadge.prepend(svg); }
+  window._ffTonight?.relabel();
   // Watchlist drawer title
   const wlTitleSpan = document.getElementById('wlTitleText');
   if (wlTitleSpan) wlTitleSpan.textContent = t('wl.title');
@@ -6714,7 +6713,7 @@ function toggleSynopsis() {
    TASTE PROFILE — client-side personalization
 ═══════════════════════════════════ */
 const TASTE_KEY = 'rk_taste_v1';
-const TASTE_THRESHOLD = 3; // interactions needed before showing "For You"
+const TASTE_THRESHOLD = 3; // interactions before Tonight's Three is tailored (TASTE_MIN in /assets/tonight.js)
 
 function getTasteProfile() {
   let p;
@@ -6747,10 +6746,6 @@ function recordInteraction(m) {
   // Parallel log of the actual films engaged with — powers Taste DNA (most-recent 40,
   // de-duped by title+year). Kept separate from the weighted rk_taste_v1 aggregate.
   logRatedFilm(m);
-  // Refresh "For You" row if we just crossed the threshold
-  if (p.total >= TASTE_THRESHOLD && window._FEED_POOL?.length) {
-    renderForYouRow();
-  }
 }
 
 const RATED_FILMS_KEY = 'rk_rated_films';
@@ -6773,20 +6768,6 @@ function logRatedFilm(m) {
     director: m.director || null,
   });
   try { localStorage.setItem(RATED_FILMS_KEY, JSON.stringify(log.slice(0, RATED_FILMS_MAX))); } catch {}
-}
-
-function scoredForProfile(movies) {
-  const p = getTasteProfile();
-  return movies
-    .map(m => {
-      let score = 0;
-      for (const g of (m.genres || [])) score += (p.genres[g] || 0) * 2;
-      if (m.director && p.directors[m.director]) score += p.directors[m.director] * 3;
-      return { m, score };
-    })
-    .filter(x => x.score > 0)
-    .sort((a, b) => b.score - a.score || (b.m.avg || 0) - (a.m.avg || 0))
-    .map(x => x.m);
 }
 
 /* ═══════════════════════════════════
@@ -7170,55 +7151,6 @@ let renderedMovieIds = new Set();
 
 // Returns a short, dynamic reason string for a "For You" card.
 // Priority: director affinity → critical acclaim → genre+decade combo → fallback.
-function genRecommendReason(m, profile) {
-  const genres = m.genres || [];
-  const year   = parseInt(m.year)   || 0;
-  const avg    = parseFloat(m.avg)  || 0;
-  const imdb   = parseFloat(m.imdb) || 0;
-  const rt     = parseInt(m.rt)     || 0;
-  const mc     = parseInt(m.mc)     || 0;
-  const p      = profile || {};
-
-  // 1. Director affinity — user has opened ≥2 films by this director
-  if (m.director && (p.directors?.[m.director] || 0) >= 2) {
-    const lastName = m.director.split(' ').pop();
-    return `Fan of ${lastName}`;
-  }
-
-  // 2. Decade label
-  const decade = year >= 2023 ? ''
-    : year >= 2020 ? 'Recent'
-    : year >= 2010 ? '2010s'
-    : year >= 2000 ? '2000s'
-    : year >= 1990 ? '90s'
-    : year >= 1980 ? '80s'
-    : year >  0    ? 'Classic'
-    : '';
-
-  // 3. Critical-acclaim labels (genre-enriched where it fits)
-  const primaryGenre = genres[0] || '';
-  if (avg >= 8.5 || imdb >= 8.5) return primaryGenre ? `Acclaimed ${primaryGenre}` : 'Critically Acclaimed';
-  if (rt >= 95)                  return 'Near-Perfect Score';
-  if (avg >= 8.0 || imdb >= 8.0) return 'IMDb Top Pick';
-  if (rt >= 88 || mc >= 85)      return 'Critics\' Favorite';
-
-  // 4. Taste-matched genre + decade combo
-  const genreScores = p.genres || {};
-  const matchedGenre = genres.find(g => (genreScores[g] || 0) > 0);
-  if (matchedGenre) {
-    if (decade && decade !== 'Recent') return `${decade} ${matchedGenre}`;
-    return `Top ${matchedGenre} Pick`;
-  }
-
-  // 5. Decade + primary genre fallback
-  if (year >= 2023 && primaryGenre) return `New ${primaryGenre}`;
-  if (decade && primaryGenre)       return `${decade} ${primaryGenre}`;
-
-  // 6. Generic fallback
-  if (avg >= 7.5) return 'Highly Rated';
-  return primaryGenre ? `${primaryGenre} Pick` : 'Recommended';
-}
-
 // Homepage collection rows are truncated to a single scannable row to avoid
 // scroll fatigue; a "See all" end-cap reveals the rest in place.
 // Mobile/tablet stays lean at 6; wide desktop (≥992px) shows up to 10 so the
@@ -7282,21 +7214,6 @@ window.addEventListener('resize', () => {
   }, 150);
 });
 
-function renderForYouRow() {
-  const profile = getTasteProfile();
-  if (profile.total < TASTE_THRESHOLD || !window._FEED_POOL.length) return;
-  const scored = scoredForProfile(window._FEED_POOL)
-    .filter(m => !isThinRecord(m))             // strict: high-confidence recs only
-    .filter(m => !renderedMovieIds.has(m.id))  // global dedup — no repeats from other rows
-    .slice(0, 20);
-  if (!scored.length) return;
-  scored.forEach(m => renderedMovieIds.add(m.id));
-  document.getElementById('rowForYou').style.display = '';
-  const cards = scored.map(m =>
-    renderMiniCard(m, { reason: genRecommendReason(m, profile), listName: 'For You' }));
-  renderFeedRow('scrollForYou', 'forYou', cards);
-}
-
 async function loadFeedSections() {
   // Only show feed rows on Movies (not TV)
   if (CONTENT_TYPE !== 'movie') {
@@ -7306,6 +7223,19 @@ async function loadFeedSections() {
   document.getElementById('feedSections').style.display = '';
   renderFeedSkeletons('scrollBest', 8);
   renderFeedSkeletons('scrollPopular', 8);
+  if (!window._ffTonight) window._ffTonight = FFTonight.mount(document.getElementById('tonightThree'), {
+    t,
+    lang: () => TMDB_LANG[CURRENT_LANG] || 'en-US',
+    genreId: name => Object.keys(GENRES).find(id => GENRES[id] === name),
+    onOpen: row => {
+      const m = fromTMDbAs(row, 'movie');
+      if (!MOVIES.find(x => x.id === m.id)) MOVIES.push(m);   // openMovie() looks titles up in MOVIES
+      openMovie(m.id, "Tonight's Three");
+    },
+    onPersonal: on => { document.getElementById('t3Badge').hidden = !on; document.getElementById('rowTonight').style.display = ''; },
+    onEmpty: () => { document.getElementById('rowTonight').style.display = 'none'; },
+  });
+  const tonightReady = window._ffTonight.load();
 
   // Reset global deduplication for this render pass
   renderedMovieIds = new Set();
@@ -7339,8 +7269,9 @@ async function loadFeedSections() {
     if (!window._FEED_POOL.find(x => x.id === m.id)) window._FEED_POOL.push(m);
   }
 
-  // ── 1. For You (personalized, top priority; strict-filtered) ──────────
-  renderForYouRow();
+  // ── 1. Tonight's Three goes first: the rows below don't repeat its films (if it's here in time) ──
+  await Promise.race([tonightReady, new Promise(r => setTimeout(r, 900))]);
+  window._ffTonight.shownIds().forEach(id => renderedMovieIds.add(id));
 
   // ── 2. Best Available Now (high-confidence subset of the added catalog) ─
   // Keep up to the desktop max so wide screens can fill the row; the row is
@@ -12351,8 +12282,8 @@ function finishOnboardQuiz() {
        <button class="onboard-finish" onclick="finishOnboardDone()">${esc(t('onboard.finish'))}</button>
      </div>`;
 
-  // Light up the "For You" row now that the profile is seeded.
-  try { if (window._FEED_POOL?.length) renderForYouRow(); } catch {}
+  // Tonight's Three can be tailored now that the profile is seeded.
+  window._ffTonight?.refresh();
 }
 
 function finishOnboardDone() {
