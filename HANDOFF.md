@@ -4,7 +4,7 @@
 
 ## ⚡ Most Recent Session (2026-11-09e) — Phase 3, Stage 4: Google Sign-In Is Public
 
-**Public since 2026-11-09:** Pages production **`7e22e625`** from `f95056f` (`/build.json` = `20261109T122531Z-f95056f`). Passed by the owner on desktop, Android and the installed iPhone app, syncing between them.
+**Public since 2026-11-09:** Pages production **`203ed0b3`** from `ab63978` (`/build.json` = `20261109T122658Z-ab63978`). Passed by the owner on desktop, Android and the installed iPhone app, syncing between them.
 
 | Commit | Feature |
 |--------|---------|
@@ -12,6 +12,7 @@
 | `32960b8` | **Footer switch for the installed iPhone app**, which has no address bar for `?auth=1`: seven quick taps on `.site-footer` / `.foot` set `ff_flag_auth` and reload. Only while `PUBLIC` is false. |
 | `8a66a6b` | **Footer switch fixed for iOS.** It only ever reloaded, and depended on `click`, which iOS doesn't send for a tap on plain text. Now `touchend` + `click` (deduplicated), and the 7th tap sets `flagOn` (held in memory for the visit), repaints and opens the sign-in sheet with no reload. `.site-footer, .foot { touch-action: manipulation }` stops double-tap zoom. |
 | `f95056f` | **Sign-in is public.** `PUBLIC = true` in `assets/account-ui.js`, kept as the off switch (false hides it all again; `?auth=1` then turns it on for one browser). The footer test switch and `.site-footer, .foot { touch-action }` are removed. |
+| `ab63978` | **No sign-in offer on ratingkino.com.** `OLD_DOMAIN` makes `enabled()` false there: the server refuses sign-in on that host, so the button only produced "couldn't reach Google". Remove with Stage 6. |
 
 **Tested locally:** flag off shows nothing and doesn't load Google; the real Google button renders in the sheet (desktop and 375px bottom sheet); a rejected token keeps the sheet open, says so and draws a fresh button; with a throwaway session: strip, account sheet, delete confirmation, sign-out; the reminder appears at the 5th film only, once; Cinematic's strip shows only on the watchlist view.
 
@@ -3646,7 +3647,7 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Hero cleanup** (`0bb42c7`, `c71c486`, `6180cf6`), live on Pages `16d8d494`. Owner to review the new `search.modePlotPh`, `search.modePlotPhShort` and `cin.heroTitle` translations.
 - [x] **Music vibe on phones:** `.ss-music` in the search panel (`7055509`, live; real-phone tap being checked by the owner).
 - [x] **Tonight's Three** live and phone-approved (owner, 2026-11-09). Owner reviewing the `t3.*` translations at their own pace.
-- [x] **Phase 3, Stages 1–4** live and public (`7e22e625`, 2026-11-09).
+- [x] **Phase 3, Stages 1–4** live and public on findfilm.ai (`203ed0b3`, 2026-11-09).
 - [ ] **Phase 3, Stage 5: Apple sign-in.** Waiting on the owner's $99 Apple Developer membership. The server route exists (`APPLE_CLIENT_ID` empty = off); the button doesn't.
 - [ ] **Phase 3, Stage 6: `ratingkino.com`.** One-time guest-data transfer and a script redirect first, a true 301 about 3 months later.
 
