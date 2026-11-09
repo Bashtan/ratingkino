@@ -2,7 +2,23 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-08d) — Hero Cleanup: Search and First Films Above the Fold
+## ⚡ Most Recent Session (2026-11-09) — Tonight's Three; Music Search in the Phone Search Panel
+
+Committed on `main`, **NOT deployed yet: waiting for the owner's go-ahead.** Live is still Pages `16d8d494` from `6180cf6`.
+
+| Commit | Feature |
+|--------|---------|
+| `7055509` | **Tonight's Three.** New **`POST /api/tonight`** `{genres?, day?}` → `{day, personal, sets}` (`handleTonight()`, `_tonightStream()`); four sets of `{safe, surprise, comfort}`. No language model at request time: **`functions/_lib/tonight.js`** (`tonightQueries`, `tonightFilter`, `tonightCandidates`, `tonightSets`; `LADDER` relaxes each role's rules, `FEELS` / `SURPRISES` / `COMFORTS` rotate daily, `DRAW` 24 shuffled by a day seed). `why` = the `f` line written at ingest. Films streamable in the visitor's country go first. KV `t3:v1:<day>:<taste>:<country>`, 36h. `?debug=1` skips KV and takes any day. **Shared UI `assets/tonight.js` + `.css`:** `FFTonight.mount(host, {t, lang, onOpen, onPersonal, onEmpty, genreId})` → `{load, refresh, relabel, shownIds}`; `.ff3-*`; localStorage `ff_t3_shuffle`; skips films with `rk_rev_<id>`; non-English pages get title and plot from `/api/tmdb/movie/<id>`. **Classic:** `#rowTonight` / `#tonightThree` replace `#rowForYou` (the Personalize and Taste DNA buttons stay, hint removed); `window._ffTonight`; `renderForYouRow`, `scoredForProfile`, `genRecommendReason` deleted. **Cinematic:** `#tonightWrap` above `.results-head`, home view on Movies only (`startView`, `tonightOff`). i18n `t3.*` (9 languages, my translations); `feed.forYou`, `onboard.refineSub` removed. **Phones:** `.ss-music` in `#searchSuggestions` opens `openVibeCheck('music')`; the panel now shows on phones with only that button (`.ss-label`, `.ss-pills` hidden). |
+
+**Tested:** `tools/vibe/tonight-bench.mjs` (10 tastes × 14 days through the real index): always 4 sets, no film twice in a run, floors held; a daily visitor gets 7–14 different first picks per role in 14 days. Locally at 1440×900 and 375: Classic row 288–537; Cinematic block 328–571, Trending's posters from 670; all three cards on a phone screen; open, shuffle, reload, rated-film skip, hidden on TV/chips/search, Ukrainian titles and labels.
+
+**Browser pane caveat:** a hidden pane doesn't fire `focus`, so the phone panel was tested with a dispatched event. Worth a tap on a real phone.
+
+**Bloodstream:** TMDB lists it for Disney classics; `_tonightStream()` skips it. JustWatch credit: `.ff3-credit`.
+
+---
+
+## Session (2026-11-08d) — Hero Cleanup: Search and First Films Above the Fold
 
 All commits on `main`, live on https://findfilm.ai since 2026-11-08: Pages production **`16d8d494`** from `6180cf6` (`/build.json` = `20261108T164152Z-6180cf6`; `./deploy.sh`: 18/18 sensitive paths unpublished, custom domains clean).
 
@@ -3112,6 +3128,7 @@ ratingkino/
 ├── assets/score.js / .css ← shared by index.html + cinematic/index.html: the FindFilm score
 │                           (FFScore: 50/25/25, the mix line, the one-time tip). ?v=<hash>.
 ├── assets/dial.js / .css ← shared by index.html + cinematic/index.html: FFDial, the mood sliders. ?v=<hash>.
+├── assets/tonight.js / .css ← shared by index.html + cinematic/index.html: FFTonight, the three picks. ?v=<hash>.
 ├── assets/closest.js     ← shared by index.html + cinematic/index.html: FFClosest, the closest
 │                           films when a search finds nothing (/api/vibe-search). ?v=<hash>.
 ├── assets/social.css / .js ← shared by index.html + cinematic/index.html: TikTok +
@@ -3150,6 +3167,7 @@ ratingkino/
 │                           by deploy.sh into dist/, a new id per deploy) has changed.
 ├── functions/
 │   ├── _lib/dial.js      ← the Vibe Dial's ranking (no route); also imported by tools/vibe/dial-bench.mjs
+│   ├── _lib/tonight.js   ← Tonight's Three: the picking rules (no route); also tested by tools/vibe/tonight-bench.mjs
 │   ├── index.js          ← Pages Function for "/" only: link-preview tags for /?movie= · /?TVShows=
 │   ├── og/[[path]].js    ← /og/v1/<movie|tv>/<id>.jpg: the 1200×630 preview card (satori → resvg → mozjpeg)
 │   └── api/[[path]].js   ← Cloudflare Pages Function (API proxy + KV reader + AI)
@@ -3432,6 +3450,8 @@ Key JS functions: `t(key, vars)`, `detectLang()`, `switchLang(lang)`, `applyTran
 
 ## Feed Architecture
 
+**2026-11-09:** the first row is Tonight's Three (`#rowTonight`, `FFTonight`), for every visitor. The old For You carousel (`#rowForYou`, `renderForYouRow`) is gone; anything below that describes it is history.
+
 Three horizontal scroll rows above the main grid:
 
 | Row | Data source | Condition to show |
@@ -3482,6 +3502,7 @@ Taste profile stored in `localStorage['rk_taste_v1']`: `{ genres: {}, directors:
 | `ff_flag_vibe` | `'0'` = this browser opted out of vibe search (`?vibe=0`; `?vibe=1` clears it). Read by Classic (`readVibeFlag()` / `vibeSearchOn()`) and Cinematic (`runAI()`). Missing = on, the default since 2026-10-31 |
 | **REMOVED 2026-11-08 (hero cleanup):** `ff_hello_seen` | `'1'` once Classic's hero mascot has said "Need a recommendation?" by itself, or the search was already in use (`hello()`, `assets/social.js`) |
 | `ff_search_mode` | `'title'` or `'ai'`, only when the visitor picks a mode in Classic's search menu (`chooseSearchMode()`); absent = vibe search. |
+| `ff_t3_shuffle` | `{day, n}`: how many times today "Show me three others" was pressed (`assets/tonight.js`). |
 | `ff_fresh_reload` (**sessionStorage**) | The `/build.json` build `assets/fresh.js` last reloaded the page for — it never reloads twice for the same build |
 | `rk_ios_pwa_dismissed` | Timestamp of last iOS PWA bottom-sheet dismiss (15-day cooldown) |
 | `rk_install_banner_dismissed` | Timestamp of last mobile install banner dismiss (7-day cooldown) |
@@ -3535,8 +3556,8 @@ The site is fully installable as a PWA on all platforms.
 ## Pending / Next Steps
 
 - [x] **Hero cleanup** (`0bb42c7`, `c71c486`, `6180cf6`), live on Pages `16d8d494`. Owner to review the new `search.modePlotPh`, `search.modePlotPhShort` and `cin.heroTitle` translations.
-- [ ] **Music vibe on phones:** the search bar's music button is hidden at ≤768px and was its only entry point (`openVibeCheck('music')`). Add another entry if phones should keep it.
-- [ ] **Tonight's Three** is next (owner, 2026-11-08): placement to confirm, then `POST /api/tonight`.
+- [x] **Music vibe on phones:** `.ss-music` in the search panel (`7055509`, deploy pending).
+- [ ] **Tonight's Three** built (`7055509`): owner's go-ahead, then `./deploy.sh --branch main`. Owner to review the `t3.*` translations.
 
 - [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
 - [x] **Phase 1 on a real phone** (owner, 2026-11-08): tip placement, animation and the fallback approved.
@@ -3545,7 +3566,6 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Vibe Dial live** (`3b9bfbd`, Pages `276fca60`, 2026-11-08).
 - [ ] **Owner's phone test of the sliders** (feel under a thumb, the UI), and their review of the `dial.*` strings.
 - [ ] **After that test (owner agreed):** narrow topic + a mood it doesn't suit: search more films per query (`topK` above 50 needs a metadata fetch; a little slower).
-- [ ] **UX Phase 2, next:** Tonight's Three (`POST /api/tonight`; code picks the films, on `functions/_lib/dial.js`'s ranking).
 - [ ] **UX Phase 3 (Guest-First):** `assets/store.js` first (per-item dates, so merges can work), remove the first-visit quiz; then Google + Apple sign-in, `/api/me/import` (idempotent, newest change per film wins), ongoing sync. Needs a privacy policy page and the Apple Developer membership.
 - [ ] **`ratingkino.com`:** 301 to `findfilm.ai`, with a one-time transfer of guest data first.
 - [x] **Trailer reactions, Step 1** (`1a40069`): FF Bot watches trailers in Cinematic's quick view and Classic's Trailer player, synced to YouTube, genre arcs on today's 5 poses; live 2026-11-01 (production `d247140a`)
@@ -3640,7 +3660,6 @@ The site is fully installable as a PWA on all platforms.
 - [ ] **Sync Worker monitoring** — no alerting if nightly cron fails; consider health-check script against `/api/cache/status`
 - [ ] **AI description translation quality** — m2m100-1.2b; consider switching to llama-3.3-70b-instruct for translation
 - [ ] **OMDb rate limit** — free tier 1000 req/day; monitor under traffic spike
-- [ ] **For You row threshold** — shows after 3 interactions; consider lowering to 2
 - [x] **Mobile RTL layout**: Arabic at 375px and 320px has no horizontal overflow, and the filter bar and feed rows render correctly (2026-10-27, `615bb8f` + `31a26d5`)
 - [ ] **Star hover state bug** — dual CSS + inline colour on review stars; can leave stuck state on rapid mouse exit (pre-existing)
 - [ ] **Admin password on mobile modal** — client-side toggle only, no real auth
