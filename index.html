@@ -3652,7 +3652,6 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
   .rev-star:hover,
   .review-submit:not(:disabled):hover,
   .share-native:hover,
-  .fv-cta:hover,
   .gpill:hover,
   .src-btn:hover,
   .wiz-broaden:hover,
@@ -5074,177 +5073,6 @@ html.ff-layout-switched #mobileInstallBanner { display: none !important; }
   50%      { opacity: 0.5; transform: scale(1.18); }
 }
 
-/* ─── First-visit onboarding overlay ──────────────────── */
-.fv-overlay {
-  position: fixed; inset: 0; z-index: 10000;
-  /* Tease the catalog instead of hiding it. Legibility here is bought by BLUR,
-     not by darkness — which is why the scrim can keep dropping (0.86 -> 0.62 at
-     centre, 0.55 -> 0.24 at the edges) as long as the blur goes up to match.
-     Two faint accent washes sit on top of the scrim so the whole plane reads as
-     a lit field rather than a sheet of black. */
-  background:
-    radial-gradient(ellipse 62% 46% at 50% 42%, rgba(124,58,237,0.17) 0%, rgba(124,58,237,0) 70%),
-    radial-gradient(ellipse 72% 52% at 50% 62%, rgba(34,211,238,0.11) 0%, rgba(34,211,238,0) 72%),
-    radial-gradient(ellipse 80% 62% at 50% 46%,
-      rgba(5,0,20,0.56) 0%, rgba(5,0,20,0.42) 42%, rgba(5,0,20,0.18) 100%);
-  /* 10px, not 15px: past roughly a dozen pixels a poster stops being a poster and
-     becomes a colour field, which defeats the point of showing it at all. The
-     copy is protected by .fv-content's local scrim instead, so the global plane
-     is free to stay sharp enough to still read as artwork. */
-  -webkit-backdrop-filter: blur(10px) saturate(1.35);
-  backdrop-filter: blur(10px) saturate(1.35);
-  display: flex; align-items: center; justify-content: center;
-  opacity: 1; transition: opacity 0.28s ease;
-}
-/* The "energy field": a slow violet/cyan aurora behind the copy. Only opacity and
-   transform animate, so the expensive blur() rasterises once and is then composited
-   — no per-frame filter cost. */
-.fv-overlay::before {
-  content: ''; position: absolute; inset: 0; margin: auto;
-  width: min(560px, 96vw); height: min(560px, 78vh);
-  background:
-    radial-gradient(ellipse at 38% 34%, rgba(124,58,237,0.30) 0%, rgba(124,58,237,0) 62%),
-    radial-gradient(ellipse at 66% 66%, rgba(34,211,238,0.22) 0%, rgba(34,211,238,0) 60%);
-  filter: blur(26px); pointer-events: none;
-  animation: fvField 5.5s ease-in-out infinite;
-}
-@keyframes fvField {
-  0%, 100% { opacity: 0.6; transform: scale(1)    rotate(0deg); }
-  50%      { opacity: 1;   transform: scale(1.06) rotate(4deg); }
-}
-.fv-overlay.hidden { opacity: 0; pointer-events: none; }
-.fv-content {
-  display: flex; flex-direction: column; align-items: center; gap: 18px;
-  text-align: center; padding: 32px 24px; max-width: 380px;
-  /* z-index needed because the aurora above is positioned and would otherwise
-     paint over this static in-flow content. */
-  position: relative; z-index: 1;
-  /* Local scrim, so the copy never depends on whatever poster happens to land
-     behind it. Feathered to fully transparent so it reads as depth, not a card.
-     Nudged up (0.60 -> 0.66) to buy back what the lighter global scrim gave away:
-     multiplied together the text still sits on ~0.87 effective, while the edges
-     of the screen are now more than twice as clear as before. */
-  background: radial-gradient(ellipse 76% 60% at 50% 50%,
-    rgba(5,0,20,0.66) 0%, rgba(5,0,20,0.38) 55%, rgba(5,0,20,0) 78%);
-}
-/* Entrance choreography. Every delay below used to be multiples longer — the
-   skip link did not exist until 3.7s + 0.5s, so for the first four seconds the
-   screen was a wall of text with nothing clickable on it. The whole sequence now
-   finishes inside ~0.6s: still staged, no longer a queue. */
-.fv-logo-mark {
-  animation: fvLogoIn 0.42s cubic-bezier(0.34,1.56,0.64,1) both;
-  filter: drop-shadow(0 0 28px rgba(124,58,237,0.75));
-}
-@keyframes fvLogoIn {
-  from { opacity: 0; transform: scale(0.4) rotate(-12deg); }
-  to   { opacity: 1; transform: scale(1) rotate(0deg); }
-}
-.fv-wordmark {
-  font-family: 'Montserrat', sans-serif; font-size: 26px; font-weight: 900;
-  letter-spacing: -0.5px; color: #fff; margin-top: -10px;
-  animation: fvDismissIn 0.28s ease 0.12s both;
-}
-.fv-wordmark span { color: var(--accent); }
-.fv-text {
-  font-family: 'Montserrat', sans-serif;
-  font-size: clamp(16px, 4vw, 28px);
-  font-weight: 900; letter-spacing: -0.5px;
-  background: linear-gradient(90deg, #7C3AED, #22D3EE, #7C3AED);
-  background-size: 200% 100%;
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: fvGradShift 3s linear infinite;
-  min-height: 1.3em; min-width: 2ch;
-  /* text-shadow cannot work here: -webkit-text-fill-color is transparent, so the
-     shadow would trace the glyph boxes, not the gradient. drop-shadow() filters
-     the painted result instead, which is the gradient itself. Static, so the only
-     moving part of the headline stays the gradient sweep. */
-  filter: drop-shadow(0 0 14px rgba(124,58,237,0.55))
-          drop-shadow(0 0 32px rgba(34,211,238,0.28));
-}
-@keyframes fvGradShift { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
-.fv-cursor {
-  display: inline-block;
-  -webkit-text-fill-color: rgba(167,139,250,0.9);
-  animation: fvBlink 0.75s step-end infinite;
-}
-@keyframes fvBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-/* Single value-proposition line. This replaced three icon+text bullet rows: the
-   headline already says "find your movie using AI", so the AI bullet was
-   restating it, and the remaining two compress into one sentence. Slightly
-   brighter than the old bullets (0.72 vs 0.6) because it now sits over posters
-   rather than near-black, with a text-shadow for the same reason. */
-.fv-sub {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 13.5px; line-height: 1.5; font-weight: 600;
-  color: rgba(255,255,255,0.72);
-  text-shadow: 0 1px 12px rgba(5,0,20,0.9);
-  max-width: 30ch; margin: -4px auto 2px;
-  animation: fvDismissIn 0.28s ease 0.2s both;
-}
-/* Live-status LED, so the line reads as a system readout rather than marketing
-   copy. margin-inline-end (not margin-right) so it sits on the correct side in
-   the Arabic RTL build. */
-.fv-sub::before {
-  content: ''; display: inline-block;
-  width: 5px; height: 5px; border-radius: 50%;
-  margin-inline-end: 8px; vertical-align: 2px;
-  background: #22D3EE; box-shadow: 0 0 8px rgba(34,211,238,0.9);
-  animation: fvStatusPulse 1.8s ease-in-out infinite;
-}
-@keyframes fvStatusPulse {
-  0%, 100% { opacity: 1;    box-shadow: 0 0 8px  rgba(34,211,238,0.9); }
-  50%      { opacity: 0.45; box-shadow: 0 0 3px  rgba(34,211,238,0.4); }
-}
-.fv-sub strong { color: #fff; font-weight: 800; }
-/* Both actions share a footprint so "just browse" reads as a real alternative
-   rather than an afterthought. Weight, not size, is what still makes Personalize
-   the primary: solid accent fill + drop shadow vs. outlined glass. */
-.fv-cta, .fv-skip-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  width: 100%; max-width: 260px; box-sizing: border-box;
-  font-family: 'Montserrat', sans-serif; font-size: 14.5px; font-weight: 800;
-  letter-spacing: 0.3px; padding: 14px 28px; border-radius: 11px; cursor: pointer;
-}
-.fv-cta {
-  background: var(--accent); color: #fff; border: 1.5px solid transparent;
-  box-shadow: 0 6px 24px rgba(229,9,20,0.45);
-  transition: background 0.18s, transform 0.15s, box-shadow 0.18s;
-  animation: fvDismissIn 0.28s ease 0.28s both;
-}
-.fv-cta:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(229,9,20,0.55); }
-@keyframes fvDismissIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-/* Was a 12.5px underlined text link that people missed. Now a glass button: the
-   backdrop-filter keeps it legible over posters without needing a solid fill,
-   which would have made it compete with the primary. */
-.fv-skip-btn {
-  margin-top: -4px;
-  background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.9);
-  border: 1.5px solid rgba(255,255,255,0.28);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  text-shadow: 0 1px 10px rgba(5,0,20,0.9);
-  animation: fvDismissIn 0.28s ease 0.34s both;
-  transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.15s;
-}
-.fv-skip-btn:hover {
-  background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.5);
-  color: #fff; transform: translateY(-2px);
-}
-/* A full-screen animated takeover is exactly the case this media query exists
-   for: land the whole thing already assembled, and let the JS skip the
-   typewriter (it reads the same flag). */
-@media (prefers-reduced-motion: reduce) {
-  .fv-logo-mark, .fv-wordmark, .fv-sub, .fv-cta, .fv-skip-btn {
-    animation: none !important;
-  }
-  .fv-text   { animation: none !important; background-position: 0 50%; }
-  .fv-cursor { display: none; }
-  /* The ambient loops are decorative; hold them at their resting frame rather
-     than removing the elements, so the composition is unchanged. */
-  .fv-overlay::before { animation: none !important; opacity: 0.8; }
-  .fv-sub::before     { animation: none !important; }
-}
-
 /* ─── iOS PWA Install Prompt ─────────────────────── */
 /* ═══ iOS PWA — Stage 1: native-look centered "OS alert" ═══ */
 .ios-pwa-backdrop {
@@ -5445,7 +5273,8 @@ if ('serviceWorker' in navigator) {
 <script src="/assets/fresh.js?v=887c34fa" defer></script>
 <script src="/assets/touch.js?v=271cca50" defer></script>
 <!-- Watchlist storage, shared with /cinematic/: one typed list (rk_watchlist_v2). Synchronous on purpose: initWatchlist() below reads it at once. -->
-<script src="/assets/watchlist.js?v=64c31e42"></script>
+<script src="/assets/store.js?v=5d3e4030"></script>
+<script src="/assets/watchlist.js?v=d27858ac"></script>
 <!-- The FindFilm score (formula, first-exposure tip) and the closest-films fallback: shared with Cinematic. -->
 <link rel="stylesheet" href="/assets/score.css?v=28152cc2">
 <script src="/assets/score.js?v=0768b69c"></script>
@@ -5453,9 +5282,9 @@ if ('serviceWorker' in navigator) {
 <link rel="stylesheet" href="/assets/dial.css?v=2cf76d83">
 <script src="/assets/dial.js?v=47ab0774"></script>
 <link rel="stylesheet" href="/assets/tonight.css?v=770ae6e2">
-<script src="/assets/tonight.js?v=08885f0d"></script>
+<script src="/assets/tonight.js?v=d367da52"></script>
 <!-- UI strings in 9 languages, shared with Cinematic (window.FF_I18N → TRANSLATIONS). Synchronous on purpose: the page script reads it at once. -->
-<script src="/assets/i18n.js?v=bbfccb0b"></script>
+<script src="/assets/i18n.js?v=cc7a7b04"></script>
 </head>
 <body>
 <!-- Social brand icons for the .ffs / .ffm / .ffs-band blocks (/assets/social.css),
@@ -5722,33 +5551,6 @@ if ('serviceWorker' in navigator) {
   </div>
   <div id="ffDial"></div>
 </section>
-
-<!-- ════════════ FIRST-VISIT ONBOARDING ════════════ -->
-<div class="fv-overlay" id="fvOverlay">
-  <div class="fv-content">
-    <div class="fv-logo-mark">
-      <svg width="72" height="72" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="fvLogoG" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#7C3AED"/>
-            <stop offset="100%" stop-color="#22D3EE"/>
-          </linearGradient>
-        </defs>
-        <path d="M7 6 L7 30 M7 6 L24 6 M7 17 L19 17"
-              stroke="url(#fvLogoG)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M19 20.5 L30 25.5 L19 30.5 Z" fill="url(#fvLogoG)"/>
-      </svg>
-    </div>
-    <div class="fv-wordmark">FindFilm<span>.ai</span></div>
-    <div class="fv-text">
-      <span id="fvTyped"></span><span class="fv-cursor">|</span>
-    </div>
-    <!-- Single status-readout value proposition -->
-    <p class="fv-sub" data-i18n-html="onboard.sub"><strong>IMDb + RT + Metacritic</strong> in one score — plus where to stream.</p>
-    <button class="fv-cta" onclick="startOnboardFromIntro()" data-i18n="onboard.personalize">Personalize in 30s →</button>
-    <button class="fv-skip-btn" onclick="dismissFirstVisit()" data-i18n="onboard.browseNow">Skip — just browse</button>
-  </div>
-</div>
 
 <!-- ════════════ MOBILE SEARCH OVERLAY ════════════ -->
 <div class="mob-search-overlay" id="mobSearchOverlay">
@@ -6833,6 +6635,7 @@ let DETECTED_COUNTRY = 'US';  // ISO-3166-1 from /api/geo-lang; used for watch p
 // ── AI search state ──────────────────────────────────────────
 let CACHE_MOVIES      = [];    // snapshot of the 119 KV movies for AI search
 let AI_SEARCH_ACTIVE  = false;
+let _filtersTouched   = false;   // country or minimum rating changed on this visit. Remembered values alone leave the home page as it is.
 let SEARCH_MODE       = 'ai';      // 'ai' = vibe/plot search, Enter's default (a plain film name still gets the title search) · 'title' = title search only
 let AI_SEARCH_TIMER   = null;
 let _lastQuery        = '';        // last AI query for follow-up context
@@ -6858,6 +6661,7 @@ function saveSession() {
       country: document.getElementById('fCountry')?.value   || '',
       rating:  document.getElementById('fMinRating')?.value || '',
       sort:    SORT_SRC || '',
+      touched: _filtersTouched,
     }));
   } catch {}
 }
@@ -6871,6 +6675,7 @@ function restoreSession() {
   // would be flagged as "has state" the moment the slider first renders.
   const hasState = !!(s.query || s.genre || s.country || parseFloat(s.rating) > 0 || s.sort);
   if (!hasState) return false;
+  _filtersTouched = !!s.touched;
 
   // Restore search input
   const inp = document.getElementById('searchInput');
@@ -6902,6 +6707,20 @@ function restoreSession() {
   syncCountrySelectUI();
   syncRatingSlider();
   return true;
+}
+
+/* Only country and minimum rating last between visits, and only when chosen in the Filters drawer. */
+function _rememberFilters() {
+  _filtersTouched = true;
+  FFStore.setPref('country', document.getElementById('fCountry').value);
+  FFStore.setPref('minRating', parseFloat(document.getElementById('fMinRating').value) || 0);
+}
+function _applyRememberedFilters() {
+  document.getElementById('fCountry').value = FFStore.pref('country') || '';
+  document.getElementById('fMinRating').value = String(FFStore.pref('minRating') || 0);
+  syncCountrySelectUI();
+  syncRatingSlider();
+  updateFilterCount();
 }
 
 /* ── Global reset — the logo is the "take me back to a fresh page" button ─────
@@ -6977,12 +6796,8 @@ function resetToHome(e) {
   ACTIVE_GENRE = '';
   document.querySelectorAll('.gpill').forEach(p => p.classList.remove('active'));
   document.getElementById('pill-all')?.classList.add('active');
-  const fCountry = document.getElementById('fCountry');
-  const fRating  = document.getElementById('fMinRating');
-  if (fCountry) fCountry.value = '';
-  if (fRating)  fRating.value  = '0'; // slider's "Any" position, not ''
-  syncCountrySelectUI();
-  syncRatingSlider();
+  _filtersTouched = false;
+  _applyRememberedFilters();   // a fresh page is what a new visit shows
   SORT_SRC = null;
   ['IMD', 'RT', 'MC', 'AVG'].forEach(s => document.getElementById('btn' + s)?.classList.remove('on'));
   updateFilterCount();
@@ -7070,6 +6885,7 @@ function feedCtaCard() {
 function exploreTopRated() {
   const mr = document.getElementById('fMinRating');
   if (mr) mr.value = '8';
+  _filtersTouched = true;
   syncRatingSlider();
   if (SORT_SRC !== 'avg') toggleSrc('avg');   // enable Avg★ sort if not already
   applyFilters();
@@ -8151,9 +7967,9 @@ function updateCardInGrid(tmdbId) {
 }
 
 /* The first FindFilm score a browser shows gets a one-time tip (FFScore.introduce); the modal's
-   line and the card's tooltip explain it from then on. Never over the first-visit intro. */
+   line and the card's tooltip explain it from then on. */
 function _introduceScore(anchor) {
-  if (!anchor || document.getElementById('fvOverlay')) return;
+  if (!anchor) return;
   window.FFScore.introduce(anchor, t('score.tip'), t('score.gotIt'));
 }
 function _introduceScoreOnGrid() {
@@ -8384,6 +8200,7 @@ function resetAllFilters() {
   const rEl = document.getElementById('fMinRating'); if (rEl) rEl.value = '0'; // slider's "Any" position
   syncCountrySelectUI();
   syncRatingSlider();
+  _rememberFilters();
   // Sort
   SORT_SRC = null;
   ['IMD','RT','MC','AVG'].forEach(s => document.getElementById('btn'+s)?.classList.remove('on'));
@@ -8594,7 +8411,7 @@ async function loadMovies(page = 1, append = false, scrollToGrid = true) {
   // When one is active the discovery feed rows (For You / Fresh / Masterpieces) are
   // hidden and the grid is scrolled into view — otherwise the (unfiltered) feed rows
   // stay pinned above the filtered grid and the filter looks like it did nothing.
-  const _browseFilter = !!(sq || ACTIVE_GENRE || _country || _rating > 0);
+  const _browseFilter = !!(sq || ACTIVE_GENRE || (_filtersTouched && (_country || _rating > 0)));
   const _isFiltered = !!(_browseFilter || AI_SEARCH_ACTIVE);
   if (_cRow) _cRow.classList.toggle('searching', _isFiltered);
   if (CONTENT_TYPE === 'movie') {
@@ -8889,7 +8706,7 @@ function _applySuggestion(text) {
   // Prefer AI semantic search for NL phrases; fall back to title search
   clearTimeout(filterTimer);
   clearTimeout(AI_SEARCH_TIMER);
-  if (CACHE_MOVIES.length && CONTENT_TYPE === 'movie') {
+  if (CONTENT_TYPE === 'movie') {
     aiSearch(text);
   } else {
     loadMovies(1, false);
@@ -10508,6 +10325,7 @@ function selectCountryOption(value) {
   sel.value = value;
   syncCountrySelectUI();
   toggleCountrySelect(false);
+  _rememberFilters();
   applyFilters(); // already calls updateFilterCount()
 }
 function filterCountryOptions(q) {
@@ -10804,7 +10622,7 @@ function refreshModalRatings(m) {
   </div>${localBadge}${mixLine}`;
   if (parts.length) {
     window.FFScore.introduceWhenStill(
-      () => document.getElementById('overlay')?.classList.contains('open') && !document.getElementById('fvOverlay') ? el.querySelector('.mr-avg-num') : null,
+      () => document.getElementById('overlay')?.classList.contains('open') ? el.querySelector('.mr-avg-num') : null,
       t('score.tip'), t('score.gotIt'));
   }
 }
@@ -12178,17 +11996,6 @@ const ONBOARD_QUESTIONS = [
 let ONBOARD_STATE = {};   // { pace, ending, realism, tone, era }
 let ONBOARD_STEP  = 0;
 
-// Entry from the first-visit intro: dismiss the intro, then launch the quiz.
-function startOnboardFromIntro() {
-  localStorage.setItem('hasSeenOnboarding', 'true');
-  localStorage.setItem('rk_visited', '1');
-  const overlay = document.getElementById('fvOverlay');
-  if (overlay) { overlay.classList.add('hidden'); setTimeout(() => overlay.remove(), 320); }
-  document.dispatchEvent(new CustomEvent('ff:fv-dismissed'));
-  openOnboardQuiz();
-  welcomeToAISearch();   // shows once the quiz is closed
-}
-
 function openOnboardQuiz() {
   ONBOARD_STATE = {};
   ONBOARD_STEP  = 0;
@@ -12414,16 +12221,7 @@ function toggleTrailer() {
    USER REVIEWS (localStorage)
 ═══════════════════════════════════ */
 function getReviews(tmdbId) {
-  try {
-    return JSON.parse(localStorage.getItem(`rk_rev_${tmdbId}`) || '[]');
-  } catch { return []; }
-}
-function saveReviews(tmdbId, reviews) {
-  try {
-    localStorage.setItem(`rk_rev_${tmdbId}`, JSON.stringify(reviews));
-  } catch (e) {
-    console.warn('[reviews] localStorage write failed:', e.message);
-  }
+  return FFStore.reviewsFor(tmdbId, ACTIVE_MOVIE?.id === tmdbId ? mediaTypeOf(ACTIVE_MOVIE) : null);
 }
 
 function calcLocalRating(tmdbId) {
@@ -12503,16 +12301,13 @@ function submitReview() {
   if (!PENDING_STARS || !ACTIVE_MOVIE) return;
   const text     = document.getElementById('reviewText').value.trim();
   const userName = (document.getElementById('reviewName')?.value || '').trim() || null;
-  const reviews  = getReviews(ACTIVE_MOVIE.id);
-  reviews.push({
-    movieId:   ACTIVE_MOVIE.id,
+  FFStore.addReview(ACTIVE_MOVIE.id, mediaTypeOf(ACTIVE_MOVIE), {
     stars:     PENDING_STARS,
     userName,
     text,
     createdAt: new Date().toISOString(),
     date:      new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }),
   });
-  saveReviews(ACTIVE_MOVIE.id, reviews);
   renderReviews(ACTIVE_MOVIE.id);
   refreshModalRatings(ACTIVE_MOVIE); // refresh to show updated FindFilm rating badge
   const suc = document.getElementById('reviewSuccess');
@@ -13492,50 +13287,20 @@ function initMobileInstallBanner() {
 }
 
 /* ═══════════════════════════════════
-   FIRST-VISIT AI INTRO
+   FIRST VISIT
+   Nothing stands between a guest and the page: the only welcome is the mascot's tip.
 ═══════════════════════════════════ */
-function initFirstVisit() {
-  const overlay = document.getElementById('fvOverlay');
-  if (!overlay) return;
-  // Check both keys: new 'hasSeenOnboarding' and legacy 'rk_visited'
-  if (localStorage.getItem('hasSeenOnboarding') || localStorage.getItem('rk_visited')) {
-    overlay.remove();
-    return;
-  }
-  // Typewriter animation for the tagline. Was 900ms of dead air followed by 62ms
-  // per character — 2.4s before the headline even finished, on a screen whose
-  // buttons did not appear until 3.5s. Now ~0.75s end to end.
-  const text  = 'find your movie using AI';
-  const typed = document.getElementById('fvTyped');
-  if (!typed) return;
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    typed.textContent = text;   // CSS drops the cursor and the entrances to match
-    return;
-  }
-  let i = 0;
-  const type = () => {
-    typed.textContent = text.slice(0, i);
-    i++;
-    if (i <= text.length) setTimeout(type, 26);
-  };
-  setTimeout(type, 120);
-}
-
-function dismissFirstVisit() {
-  // Persist so the overlay never appears again
-  localStorage.setItem('hasSeenOnboarding', 'true');
-  localStorage.setItem('rk_visited', '1'); // keep for backward compat
-  const overlay = document.getElementById('fvOverlay');
-  if (!overlay) return;
-  overlay.classList.add('hidden');
-  setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 320); // matches the 0.28s fade
-  document.dispatchEvent(new CustomEvent('ff:fv-dismissed'));
+function welcomeFirstVisit() {
+  try {
+    if (localStorage.getItem('hasSeenOnboarding') || localStorage.getItem('rk_visited')) return;
+    localStorage.setItem('hasSeenOnboarding', 'true');
+    localStorage.setItem('rk_visited', '1');
+  } catch { return; }
   welcomeToAISearch();
 }
 
-// After the first-visit intro, the mascot's tip points at the AI search, once per
-// browser (FFBot.welcome, /assets/social.js). It waits until the search is on screen
-// and uncovered — so after the taste quiz, if the intro led there. "Try it" switches
+// On a first visit the mascot's tip points at the AI search, once per browser
+// (FFBot.welcome, /assets/social.js). It waits until the search is on screen and uncovered. "Try it" switches
 // the bar to "Describe what you remember" and puts the cursor in it.
 function welcomeToAISearch() {
   window.FFBot?.welcome(document.getElementById('searchWrap'), tryAISearch);
@@ -13563,7 +13328,7 @@ async function init() {
   buildCountryOptionsUI(); // populate the custom country dropdown from #fCountry's <option>s
   // Saved filters carry genre ids from whichever tab they were set on, and a TV
   // link opens on a fresh TV tab — so it skips them.
-  if (!deepTV) restoreSession(); // re-populate inputs before the first loadMovies call
+  if (!deepTV && !restoreSession()) _applyRememberedFilters(); // re-populate inputs before the first loadMovies call
   loadFeedSections(); // fire and forget — loads KV rows in parallel (Movies tab only)
   loadCatalogFreshness(); // fire and forget — stamps the hero + ratings modal
   await loadMovies(1, false);
@@ -13604,7 +13369,7 @@ async function init() {
 init();
 initSearchSuggestions();
 initWatchlist();
-initFirstVisit();
+welcomeFirstVisit();
 initIOSPrompt();
 initInstallButton();
 initMobileInstallBanner();
@@ -13874,7 +13639,7 @@ window.addEventListener('orientationchange', () => setTimeout(syncFiltersTop, 15
         <span class="rating-slider-val" id="ratingSliderVal" data-i18n="filter.any">Any</span>
       </div>
       <input type="range" class="rating-slider" id="fMinRating" min="0" max="10" step="0.5" value="0"
-             oninput="syncRatingSlider()" onchange="applyFilters()" aria-label="Minimum rating">
+             oninput="syncRatingSlider()" onchange="_rememberFilters(); applyFilters()" aria-label="Minimum rating">
     </div>
     <div class="fd-group">
       <span class="fd-label" data-i18n="filter.sort">Sort</span>

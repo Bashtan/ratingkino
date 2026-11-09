@@ -33,10 +33,7 @@
   function stored(key, fallback) {
     try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch (e) { return fallback; }
   }
-  function rated(id) {
-    var reviews = stored('rk_rev_' + id, []);
-    return Array.isArray(reviews) && reviews.length > 0;
-  }
+  function rated(id) { return window.FFStore.reviewsFor(id, 'movie').length > 0; }
 
   function mount(host, options) {
     var t = options.t, sets = null, day = '', offset = 0, shown = [], pending = null, details = {};

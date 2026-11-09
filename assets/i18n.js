@@ -315,7 +315,6 @@ window.FF_I18N = {
     'pwa.addBtn':          'Add',
     'pwa.notNow':          'Not now',
     // First-visit onboarding
-    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> in one score — plus where to stream.',
     'onboard.cta':         'Let\'s go! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'Spoiler-Free Fit',
@@ -339,8 +338,6 @@ window.FF_I18N = {
     'group.needTwo':       'Add at least 2 people.',
     'group.appealsLabel':  'Appeals to',
     // Taste onboarding quiz
-    'onboard.personalize': 'Personalize in 30s →',
-    'onboard.browseNow':   'Skip — just browse',
     'onboard.refine':      'Personalize Your Picks',
     'onboard.refineShort': 'Picks',
     'onboard.refineHint':  'Answer a few quick questions so our AI learns your taste.',
@@ -837,7 +834,6 @@ window.FF_I18N = {
     'pwa.addToHome':       'Añadir <span>FindFilm.ai</span> a la pantalla de inicio',
     'pwa.addBtn':          'Añadir',
     'pwa.notNow':          'Ahora no',
-    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> en una nota — y dónde verla.',
     'onboard.cta':         '¡Vamos! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'Sin spoilers',
@@ -861,8 +857,6 @@ window.FF_I18N = {
     'group.needTwo':       'Añade al menos 2 personas.',
     'group.appealsLabel':  'Atrae a',
     // Taste onboarding quiz
-    'onboard.personalize': 'Personalizar en 30s →',
-    'onboard.browseNow':   'Omitir — solo explorar',
     'onboard.refine':      'Personaliza tus elecciones',
     'onboard.refineShort': 'Elige',
     'onboard.refineHint':  'Responde unas preguntas rápidas para que la IA aprenda tus gustos.',
@@ -1354,7 +1348,6 @@ window.FF_I18N = {
     'pwa.addToHome':       'Ajouter <span>FindFilm.ai</span> à l\'écran d\'accueil',
     'pwa.addBtn':          'Ajouter',
     'pwa.notNow':          'Pas maintenant',
-    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> en une note — et où la voir.',
     'onboard.cta':         'C\'est parti ! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'Sans spoilers',
@@ -1378,8 +1371,6 @@ window.FF_I18N = {
     'group.needTwo':       'Ajoutez au moins 2 personnes.',
     'group.appealsLabel':  'Plaît à',
     // Taste onboarding quiz
-    'onboard.personalize': 'Personnaliser en 30s →',
-    'onboard.browseNow':   'Ignorer — juste explorer',
     'onboard.refine':      'Personnaliser vos choix',
     'onboard.refineShort': 'Choix',
     'onboard.refineHint':  'Répondez à quelques questions pour que l\'IA apprenne vos goûts.',
@@ -1871,7 +1862,6 @@ window.FF_I18N = {
     'pwa.addToHome':       '将 <span>FindFilm.ai</span> 添加到主屏幕',
     'pwa.addBtn':          '添加',
     'pwa.notNow':          '暂不安装',
-    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> 合成一个评分 — 附播放平台。',
     'onboard.cta':         '开始探索！→',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    '无剧透匹配',
@@ -1895,8 +1885,6 @@ window.FF_I18N = {
     'group.needTwo':       '至少添加 2 人。',
     'group.appealsLabel':  '吸引',
     // Taste onboarding quiz
-    'onboard.personalize': '30秒个性化 →',
-    'onboard.browseNow':   '跳过——直接浏览',
     'onboard.refine':      '个性化你的推荐',
     'onboard.refineShort': '精选',
     'onboard.refineHint':  '回答几个小问题，让 AI 了解你的口味。',
@@ -2385,7 +2373,6 @@ window.FF_I18N = {
     'pwa.addToHome':       'أضف <span>FindFilm.ai</span> إلى الشاشة الرئيسية',
     'pwa.addBtn':          'إضافة',
     'pwa.notNow':          'ليس الآن',
-    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> في تقييم واحد — وأين تشاهده.',
     'onboard.cta':         'هيا بنا! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'بلا حرق للأحداث',
@@ -2409,8 +2396,6 @@ window.FF_I18N = {
     'group.needTwo':       'أضف شخصين على الأقل.',
     'group.appealsLabel':  'يعجب',
     // Taste onboarding quiz
-    'onboard.personalize': 'التخصيص في 30 ثانية →',
-    'onboard.browseNow':   'تخطَّ — تصفّح فقط',
     'onboard.refine':      'خصّص اختياراتك',
     'onboard.refineShort': 'اختياراتك',
     'onboard.refineHint':  'أجب عن بضعة أسئلة سريعة ليتعرّف الذكاء الاصطناعي على ذوقك.',
@@ -2915,7 +2900,6 @@ window.FF_I18N = {
     'pwa.addToHome':       'Додати <span>FindFilm.ai</span> на головний екран',
     'pwa.addBtn':          'Додати',
     'pwa.notNow':          'Не зараз',
-    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> в одному рейтингу — і де дивитися.',
     'onboard.cta':         'Поїхали! →',
     // Spoiler-Free Fit summary (movie modal)
     'modal.fitSummary':    'Без спойлерів',
@@ -2939,8 +2923,6 @@ window.FF_I18N = {
     'group.needTwo':       'Додайте щонайменше 2 людей.',
     'group.appealsLabel':  'Сподобається',
     // Taste onboarding quiz
-    'onboard.personalize': 'Персоналізувати за 30с →',
-    'onboard.browseNow':   'Пропустити — просто огляд',
     'onboard.refine':      'Персоналізувати добірку',
     'onboard.refineShort': 'Добірка',
     'onboard.refineHint':  'Дайте відповідь на кілька запитань, щоб ШІ вивчив ваш смак.',
@@ -3438,7 +3420,6 @@ window.FF_I18N = {
     'pwa.addToHome':       '<span>FindFilm.ai</span> zum Startbildschirm hinzufügen',
     'pwa.addBtn':          'Hinzufügen',
     'pwa.notNow':          'Nicht jetzt',
-    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> in einer Wertung — plus wo du ihn siehst.',
     'onboard.cta':         'Los geht’s! →',
     'modal.fitSummary':    'Spoilerfreie Einschätzung',
     'modal.aiInsights':    'Warum er zu dir passt',
@@ -3459,8 +3440,6 @@ window.FF_I18N = {
     'group.restart':       'Neu starten',
     'group.needTwo':       'Füge mindestens 2 Personen hinzu.',
     'group.appealsLabel':  'Spricht an',
-    'onboard.personalize': 'In 30 Sek. personalisieren →',
-    'onboard.browseNow':   'Überspringen – nur stöbern',
     'onboard.refine':      'Personalisiere deine Tipps',
     'onboard.refineShort': 'Tipps',
     'onboard.refineHint':  'Beantworte ein paar kurze Fragen, damit unsere KI deinen Geschmack lernt.',
@@ -3951,7 +3930,6 @@ window.FF_I18N = {
     'pwa.addToHome':       'Lägg till <span>FindFilm.ai</span> på hemskärmen',
     'pwa.addBtn':          'Lägg till',
     'pwa.notNow':          'Inte nu',
-    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> i ett betyg — plus var du ser den.',
     'onboard.cta':         'Nu kör vi! →',
     'modal.fitSummary':    'Spoilerfri bedömning',
     'modal.aiInsights':    'Varför den passar dig',
@@ -3972,8 +3950,6 @@ window.FF_I18N = {
     'group.restart':       'Börja om',
     'group.needTwo':       'Lägg till minst 2 personer.',
     'group.appealsLabel':  'Tilltalar',
-    'onboard.personalize': 'Anpassa på 30 sek →',
-    'onboard.browseNow':   'Hoppa över – bara bläddra',
     'onboard.refine':      'Anpassa dina tips',
     'onboard.refineShort': 'Tips',
     'onboard.refineHint':  'Svara på några snabba frågor så lär sig vår AI din smak.',
@@ -4464,7 +4440,6 @@ window.FF_I18N = {
     'pwa.addToHome':       'Legg <span>FindFilm.ai</span> til på hjemskjermen',
     'pwa.addBtn':          'Legg til',
     'pwa.notNow':          'Ikke nå',
-    'onboard.sub':         '<strong>IMDb + RT + Metacritic</strong> i én vurdering — pluss hvor du ser den.',
     'onboard.cta':         'Nå kjører vi! →',
     'modal.fitSummary':    'Spoilerfri vurdering',
     'modal.aiInsights':    'Hvorfor den passer deg',
@@ -4485,8 +4460,6 @@ window.FF_I18N = {
     'group.restart':       'Start på nytt',
     'group.needTwo':       'Legg til minst 2 personer.',
     'group.appealsLabel':  'Appellerer til',
-    'onboard.personalize': 'Tilpass på 30 sek →',
-    'onboard.browseNow':   'Hopp over – bare bla',
     'onboard.refine':      'Tilpass tipsene dine',
     'onboard.refineShort': 'Tips',
     'onboard.refineHint':  'Svar på noen raske spørsmål så lærer AI-en vår smaken din.',

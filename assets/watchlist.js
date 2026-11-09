@@ -1,9 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    Watchlist storage — SHARED by / (Classic) and /cinematic/.
 
-   One list for both layouts. localStorage `rk_watchlist_v2` holds
-   [{ id, type: 'movie' | 'tv' }], oldest first. TMDB numbers movies and TV
-   shows separately (1396 is both Breaking Bad and the film Mirror), so an id
+   One list for both layouts, kept in FFStore's `watchlist` collection (/assets/store.js)
+   with the date of every change. localStorage `rk_watchlist_v2` still holds
+   [{ id, type: 'movie' | 'tv' }], oldest first, for rollback. TMDB numbers movies and
+   TV shows separately (1396 is both Breaking Bad and the film Mirror), so an id
    alone can name the wrong title: the type always travels with it.
 
    Classic used to store bare ids under `rk_watchlist`. When the new key does
@@ -24,6 +25,7 @@
   'use strict';
   var KEY = 'rk_watchlist_v2';
   var LEGACY = 'rk_watchlist';
+  var COLLECTION = 'watchlist';
   var items = [];
   var listeners = [];
 
@@ -47,18 +49,42 @@
     return out;
   }
 
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(items)); } catch (e) { /* storage blocked: the list lasts for this visit */ }
+  function keyOf(e) { return e.type + ':' + e.id; }
+
+  // The rollback copy. A half-written copy would read as changes made in an old tab, so it goes instead.
+  function saveOldCopy() {
+    try { localStorage.setItem(KEY, JSON.stringify(items)); } catch (e) {
+      try { localStorage.removeItem(KEY); } catch (e2) { /* storage blocked */ }
+    }
   }
 
-  // The stored list, or null when storage cannot be read at all.
-  function read() {
+  // The older list, or null when there's nothing to read from it.
+  function readOld() {
     var raw;
     try { raw = localStorage.getItem(KEY); } catch (e) { return null; }
     if (raw !== null) {
-      try { return clean(JSON.parse(raw)); } catch (e) { return []; }
+      try { return clean(JSON.parse(raw)); } catch (e) { return null; }
     }
+    if (FFStore.exists(COLLECTION)) return null;
     try { return clean(JSON.parse(localStorage.getItem(LEGACY) || '[]')); } catch (e) { return []; }
+  }
+
+  // The first run brings the older list in, undated and in its order. After that, the only thing
+  // that can make the two differ is a tab still running the old code: its changes count.
+  function absorbOld() {
+    var old = readOld();
+    if (!old) return;
+    if (!FFStore.exists(COLLECTION)) {
+      FFStore.seed(COLLECTION, old.map(function (e, i) { return { key: keyOf(e), value: e, addedAt: i + 1, updatedAt: 1 }; }));
+      return;
+    }
+    var live = {}, inOld = {};
+    FFStore.list(COLLECTION).forEach(function (x) { live[x.key] = true; });
+    old.forEach(function (e) {
+      inOld[keyOf(e)] = true;
+      if (!live[keyOf(e)]) FFStore.put(COLLECTION, keyOf(e), e);
+    });
+    Object.keys(live).forEach(function (key) { if (!inOld[key]) FFStore.remove(COLLECTION, key); });
   }
 
   function indexOf(e) {
@@ -74,17 +100,16 @@
 
   // Another tab may have written since this one last looked.
   function refresh() {
-    var fresh = read();
-    if (fresh) items = fresh;
+    items = clean(FFStore.list(COLLECTION).map(function (x) { return x.value; }));
   }
 
+  absorbOld();
   refresh();
-  var imported = false;
-  try { imported = localStorage.getItem(KEY) === null && items.length > 0; } catch (e) { /* unreadable */ }
-  if (imported) save();
+  if (items.length) saveOldCopy();
 
   window.addEventListener('storage', function (ev) {
-    if (ev.key !== KEY && ev.key !== null) return;     // key === null: localStorage.clear()
+    if (ev.key !== 'ff_store_' + COLLECTION && ev.key !== KEY && ev.key !== null) return;     // key === null: localStorage.clear()
+    if (ev.key === KEY) absorbOld();
     refresh();
     emit();
   });
@@ -99,25 +124,28 @@
       var e = entry(id, type);
       if (!e) return false;
       refresh();
-      var i = indexOf(e);
-      if (i === -1) items.push(e); else items.splice(i, 1);
-      save();
+      var absent = indexOf(e) === -1;
+      if (absent) FFStore.put(COLLECTION, keyOf(e), e); else FFStore.remove(COLLECTION, keyOf(e));
+      refresh();
+      saveOldCopy();
       emit();
-      return i === -1;
+      return absent;
     },
     remove: function (id, type) {
       var e = entry(id, type);
       if (!e) return;
       refresh();
-      var i = indexOf(e);
-      if (i === -1) return;
-      items.splice(i, 1);
-      save();
+      if (indexOf(e) === -1) return;
+      FFStore.remove(COLLECTION, keyOf(e));
+      refresh();
+      saveOldCopy();
       emit();
     },
     clear: function () {
-      items = [];
-      save();
+      refresh();
+      items.forEach(function (e) { FFStore.remove(COLLECTION, keyOf(e)); });
+      refresh();
+      saveOldCopy();
       emit();
     },
     list: function () {
