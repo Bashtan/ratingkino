@@ -4,18 +4,21 @@
 
 ## ⚡ Most Recent Session (2026-11-09b) — Phase 3, Stage 1: The Guest Data Store
 
-Committed on `main`, **NOT deployed yet: waiting for the owner's review.** Live is still Pages `ecdd7444` from `9ffe813`.
+All commits on `main`, live on https://findfilm.ai since 2026-11-09: Pages production **`73e2d623`** from `071879a` (`/build.json` = `20261109T092401Z-071879a`; `./deploy.sh`: 18/18 sensitive paths unpublished, custom domains clean). Dates on guest data accumulate from this deploy.
 
 | Commit | Feature |
 |--------|---------|
 | `2e916c1` | **`assets/store.js` (`FFStore`)**: `list · get · put · remove · seed · exists · reviewsFor · addReview · pref · setPref`. localStorage `ff_store_<watchlist\|reviews\|prefs>`: `{key: {value, addedAt, updatedAt, deletedAt}}`; a removal stays as a tombstone. **`assets/watchlist.js`**: same `FFWatchlist` API on the store; `absorbOld()` imports `rk_watchlist_v2` undated (`updatedAt` 1, `addedAt` = its order) and afterwards treats differences as an old tab's changes; `saveOldCopy()` keeps writing the old key for rollback. **Ratings:** `FFStore.addReview` / `reviewsFor` (new ones carry `type`; old ones `type: null`, shown on either); `getReviews()` delegates, `saveReviews()` deleted, `rk_rev_<id>` still written; `tonight.js`'s `rated()` reads the store. **Filters:** `_rememberFilters()` / `_applyRememberedFilters()` keep only country and minimum rating, and only when chosen in the drawer. `_filtersTouched` (saved as `touched` in `ff_session`) stops remembered values hiding the home page and Tonight's Three: `_browseFilter` counts them only after a change on this visit. The logo returns to the remembered values; the drawer's Reset forgets them. **First-visit quiz removed:** `#fvOverlay`, `.fv-*`, `initFirstVisit`, `dismissFirstVisit`, `startOnboardFromIntro`, `onboard.sub/personalize/browseNow`; `welcomeFirstVisit()` keeps the mascot's tip. `_applySuggestion` no longer needs `CACHE_MOVIES`. |
 | `064dd65` | **Draft `privacy/index.html`**: not published (`privacy` isn't in `deploy.sh`'s `PUBLIC`). Written for the Google launch; see the comment at its top. |
+| `071879a` | **Google Analytics removed** (owner, 2026-11-09: no cookie banner on a first visit). The `gtag` tag in both layouts, `select_content` in `openMovie()` (and its `listName` parameter, `renderMiniCard`'s `opts.listName`), `layout_switch`, `social_click`, `mascot_click`, `mascot_egg`, and the `data-ffs` / `data-ffs-place` attributes that only fed them. Privacy draft updated. `llms.txt`'s "no third-party analytics" is now true. |
 
 **Tested:** `node tools/store-test.mjs` (18 cases: import, order, tombstones, old tabs, two tabs, clock moved back, junk, blocked and full storage). In the browser with old-format data: nothing lost, ratings keep their dates, new rating via the real panel, Cinematic reads the same list, brand-new visitor sees no overlay, filters across a new session with Tonight's Three still showing.
 
 **Phase 3 decisions (owner, 2026-11-09):** remember only country and minimum rating. Google Client ID `166585102182-p96f9a6e963b7dace3u0dum14bqav6kk.apps.googleusercontent.com` (public; origins findfilm.ai, ratingkino.com, localhost:8283). No Apple membership yet: build for it, deploy Google only. Privacy page: owner FindFilm.ai, contact support@findfilm.ai.
 
-**Not built:** recent searches: the site has no such feature.
+**Not built:** recent searches: the site has no such feature (owner agreed).
+
+**Cloudflare Web Analytics is not on yet:** the live HTML has no beacon. Owner to enable it: Workers & Pages → ratingkino → Metrics → Web Analytics → Enable; Cloudflare adds the snippet on the next deploy. It reports page views, not custom events, so per-feature numbers are gone.
 
 ---
 
@@ -3578,8 +3581,8 @@ The site is fully installable as a PWA on all platforms.
 - [x] **Hero cleanup** (`0bb42c7`, `c71c486`, `6180cf6`), live on Pages `16d8d494`. Owner to review the new `search.modePlotPh`, `search.modePlotPhShort` and `cin.heroTitle` translations.
 - [x] **Music vibe on phones:** `.ss-music` in the search panel (`7055509`, live; real-phone tap being checked by the owner).
 - [x] **Tonight's Three** live and phone-approved (owner, 2026-11-09). Owner reviewing the `t3.*` translations at their own pace.
-- [ ] **Phase 3:** Stage 1 store built (owner review, then deploy). Then Stage 2 D1 + routes, 3 merge + sync, 4 Google sign-in + prompts + privacy page, 5 Apple (needs the membership), 6 `ratingkino.com` transfer then 301.
-- [ ] **`llms.txt` line 25** says there is no third-party analytics, but both layouts load Google Analytics (`G-XF0GTFNRHX`): owner to decide.
+- [ ] **Phase 3:** Stage 1 store live (`73e2d623`). Next: Stage 2 D1 + routes, 3 merge + sync, 4 Google sign-in + prompts + privacy page, 5 Apple (needs the membership), 6 `ratingkino.com` transfer then 301.
+- [ ] **Enable Cloudflare Web Analytics** (owner, dashboard): see the 2026-11-09b block.
 
 - [x] **UX Phase 1.2, no dead-end searches** and **1.1, the score explained** (`134e232`, live 2026-11-08 as `6981e386`, sync `486e7ed8`).
 - [x] **Phase 1 on a real phone** (owner, 2026-11-08): tip placement, animation and the fallback approved.
