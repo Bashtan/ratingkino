@@ -218,6 +218,9 @@ header {
   padding-top: env(safe-area-inset-top);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+  /* The row can never widen the page, whatever the language or text size.
+     clip, not hidden: the language menu still has to hang below the bar. */
+  overflow-x: clip;
 }
 .header-inner {
   max-width: 1200px; margin: 0 auto;
@@ -635,7 +638,9 @@ header {
    Educate users that they can search by how they want to FEEL. Each chip
    auto-fills the search box + fires an AI search (see vibeSearch()). */
 .vibe-chips {
-  display: flex; flex-wrap: nowrap; justify-content: center; gap: 8px;
+  /* wrap: just above the phone layout (769–895px) one row didn't fit and widened
+     the page. Phones override this with a scrolling row. */
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
   width: 100%; max-width: none;
   transition: opacity 0.18s ease;
 }
@@ -3857,6 +3862,9 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
      instead of forcing the column wider than the viewport (mobile overflow root cause). */
   .m-sec       { padding: 14px; min-width: 0; }
   .meta-item span, .provider-chip span { overflow-wrap: break-word; word-break: break-word; }
+  /* A long service name wraps inside its chip instead of pushing the chip past the card. */
+  .provider-chip { max-width: 100%; }
+  .provider-chip-name { white-space: normal; min-width: 0; }
   /* Trailer: modern aspect-ratio replaces the padding-bottom:56.25% hack — no wasted height */
   .trailer-wrap { padding-bottom: 0; height: auto; aspect-ratio: 16 / 9; margin-bottom: 10px; }
   /* Description: tighter margins so content above the fold */
@@ -3978,14 +3986,23 @@ a.rq-card.reddit:hover { background: rgba(255,69,0,0.05); }
   }
 }
 
+/* ─── Where the language name doesn't fit ──────── */
+/* With its name showing, the language button made the top row wider than the
+   screen at 441–529px (phones) and 769–824px (tablets, foldable inner screens,
+   where the Install button is in the row too); the widest name is "Українська".
+   On a phone that stretches the whole page past the screen, so everything
+   full-width runs off the right edge: the language menu, the film sheet and
+   its ✕. Globe + chevron is enough in these two ranges. */
+@media (max-width: 540px), (min-width: 769px) and (max-width: 860px) {
+  .lang-btn-name { display: none; }
+}
+
 /* ─── 430px (Plus / Max phones) ────────────── */
 @media (max-width: 430px) {
-  /* Hide language label — globe icon + chevron is enough on small row-1 */
-  .lang-btn-name { display: none; }
   .hero-title   { font-size: 11.5px; }
   .movie-grid   { gap: 8px; }
   /* Pull the content-type toggle up tight under the vibe chips (trim top pad) */
-  .filter-row-1 { padding: 2px 12px 0; }
+  .filter-row-1 { padding: 2px 12px 0; flex-wrap: wrap; }   /* Filters drops under the toggle below ~292px */
   .filter-row-2 { padding: 5px 12px 7px; }
   .ct-toggle    { flex-shrink: 0; }
 }
@@ -4608,7 +4625,7 @@ main.browse-collapsed > .load-wrap { display: none !important; }
 
 .lang-menu {
   display: none; position: absolute; top: calc(100% + 7px); right: 0;
-  min-width: 152px;
+  min-width: 152px; max-width: calc(100vw - 20px);
   background: rgba(8,2,22,0.97);
   backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(99,102,241,0.28); border-radius: 12px;
@@ -5255,7 +5272,7 @@ if ('serviceWorker' in navigator) {
      render them identically. Linked after the main <style> on purpose: its
      rules must win over this file's own .logo rules (same values, plus the
      fixed logo width and the phone-only wordmark hide). -->
-<link rel="stylesheet" href="/assets/layout-switch.css?v=25800d7f">
+<link rel="stylesheet" href="/assets/layout-switch.css?v=6bb2c8ef">
 <script src="/assets/layout-switch.js?v=8ffc32a1" defer></script>
 <!-- Touch baseline + bottom-sheet drag, shared with /cinematic/. -->
 <link rel="stylesheet" href="/assets/touch.css?v=9a940d58">

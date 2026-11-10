@@ -65,6 +65,12 @@ html { scrollbar-gutter: stable; }
   .logo { width: 28px; }
   .logo-text { display: none; }
 }
+/* Below 320px (the narrowest foldable outer screens) Classic's row needs 319px
+   with the icon, so the icon goes too. Set here, for both layouts, so the
+   toggle stays on the same pixels. */
+@media (max-width: 319px) {
+  .logo { display: none; }
+}
 
 /* ── Classic | Cinematic toggle ─────────────────────────────────────────── */
 /* The pressed option carries the white fill. While switching, the fill moves
