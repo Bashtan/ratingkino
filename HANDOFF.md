@@ -2,7 +2,23 @@
 
 ---
 
-## ⚡ Most Recent Session (2026-11-09g) — Phase 3, Stage 6: Deployed Switched Off
+## ⚡ Most Recent Session (2026-11-10) — The Top Bar Can't Widen the Page on Phones
+
+All commits on `main`, all live on https://findfilm.ai (Pages production `fc58e2b5` from `f3bc9c4`). The ratingkino.com move is still switched off (`LIVE = false`).
+
+| Commit | Feature |
+|--------|---------|
+| `f3bc9c4` | **Language menu and film sheet no longer run off the right edge.** One root cause: on a phone, content wider than the screen stretches the layout viewport (`innerWidth` > screen, `visualViewport.scale` stays 1), so every `position: fixed` / full-width element (`.lang-menu`, `#overlay .modal`, `.m-close`, `.provider-chip`) extends past the edge. Offenders and fixes: `.header-inner` row at 441–529px and 769–824px → `.lang-btn-name` hidden by `@media (max-width: 540px), (min-width: 769px) and (max-width: 860px)`; `.header-inner` at 281–309px → `.logo { display: none }` below 320px in `assets/layout-switch.css` (`?v=6bb2c8ef`, both layouts, so `.ffl` stays on the same pixels); `.filter-row-1` at ≤291px → `flex-wrap: wrap` in the 430px block; `.vibe-chips` at 769–895px → base `flex-wrap: wrap`. Guards: `header { overflow-x: clip }` (clip, not hidden, so `.lang-menu` still hangs below the bar), `.lang-menu { max-width: calc(100vw - 20px) }`, and in the ≤768px block `.provider-chip { max-width: 100% }` + `.provider-chip-name { white-space: normal; min-width: 0 }`. |
+
+**Verified in true Android phone emulation (CDP `Emulation.setDeviceMetricsOverride` with `mobile: true`, throwaway profile, real domain).** A resized desktop window does not show this bug. Fresh loads matter: after a resize Chrome zooms out to fit and hides it. 160 combinations of width, language and layout on production (468 locally, all 9 languages, 280–1280px): `innerWidth` equals the screen, menu fully on screen, smallest gap 8px (441px only), `.ffl` identical in both layouts. Film sheet: `.m-close` 11px from the edge at every phone width. A 320px element forced into `.header-btns` leaves the page at 412px. Not tested on a physical foldable.
+
+**Keep in mind when adding anything to the top row:** it has room for about 319px (≤350), 447px (≤440 without wordmark), 529px with the longest language name. Add a control only after re-checking those widths.
+
+**Still open:** the owner's flicker answers (their last template had unselected placeholders) and the signed-in `?move=1` result, both needed before `LIVE = true`.
+
+---
+
+## Session (2026-11-09g) — Phase 3, Stage 6: Deployed Switched Off
 
 All commits on `main`. **Live, switched off:** Pages production `23d5d2dd` from `4f1c92a`, sync Worker version `e606b909`. `LIVE = false` in `assets/move.js`, so only a browser that opened `https://ratingkino.com/?move=1` moves. `0003_transfers.sql` is applied to production.
 
